@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Champion Arena</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="login-screen" class="login-screen active">
+      <div class="login-container">
+        <h2>Bem-vindo à Arena de CoHA (UCLA RPG)!</h2>
+        <input
+          type="text"
+          id="username-input"
+          placeholder="Digite seu nome de usuário"
+        />
+        <button id="join-arena-btn">Entrar na Arena</button>
+        <p id="login-message"></p>
+      </div>
+    </div>
+
+    <div id="main-content" class="main-content hidden">
+      <div id="disconnection-message" class="message hidden"></div>
+      <!-- New disconnection message element -->
+      <header>
+        <h1>Arena dos Campeões - UCLA RPG</h1>
+        <button id="end-turn-btn">Finalizar Turno</button>
+        <div class="turn-display">
+          <p>Turno 1</p>
+        </div>
+      </header>
+
+      <main class="arena">
+        <div class="player-name-display" data-team="1">
+          <span id="player1-name-display">Jogador 1</span>:
+          <span id="score-team-1">0</span>
+        </div>
+        <div class="team-container team-1" data-team="1"></div>
+        <div class="player-name-display" data-team="2">
+          <span id="player2-name-display">Jogador 2</span>:
+          <span id="score-team-2">0</span>
+        </div>
+        <div class="team-container team-2" data-team="2"></div>
+      </main>
+      <div
+        class="back-champion-display"
+        id="backChampionDisplayTeam1"
+        data-team="1"
+      >
+        <!-- Back champion for Team 1 will be displayed here -->
+      </div>
+      <div
+        class="back-champion-display"
+        id="backChampionDisplayTeam2"
+        data-team="2"
+      >
+        <!-- Back champion for Team 2 will be displayed here -->
+      </div>
+      <div id="combat-log">
+        <h1 id="combat-log-header">Log de Combate</h1>
+      </div>
+    </div>
+
+    <!-- Champion Selection Screen -->
+    <div
+      id="champion-selection-screen"
+      class="champion-selection-screen hidden"
+    >
+      <div class="selection-container">
+        <h2>Selecione seus 3 Campeões e defina a ordem!</h2>
+        <p class="selection-message">
+          Arraste e solte para ordenar seus campeões.
+        </p>
+
+        <div class="available-champions-grid" id="availableChampionsGrid">
+          <!-- Champions will be loaded here by JavaScript -->
+        </div>
+
+        <div class="selected-champions-area">
+          <h3>Sua Equipe:</h3>
+          <div class="selected-champions-slots" id="selectedChampionsSlots">
+            <div class="champion-slot" data-slot-index="0"></div>
+            <div class="champion-slot" data-slot-index="1"></div>
+            <div class="champion-slot" data-slot-index="2"></div>
+          </div>
+          <button id="confirmTeamBtn" disabled>Confirmar Equipe</button>
+        </div>
+        <p id="team-selection-message" class="selection-message"></p>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="./core/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+      eruda.init();
+    </script>
+    <!-- Game Over Overlay -->
+    <!-- Overlay de Vitória/Derrota (10 segundos) -->
+    <div id="gameOverOverlay" class="game-over-overlay hidden">
+      <div id="gameOverContent" class="game-over-content">
+        <h2 id="gameOverMessage"></h1>
+      </div>
+    </div>
+
+    <!-- Timer Overlay (120 segundos - aparece depois) -->
+    <div id="timerOverlay" class="timer-overlay hidden">
+      <div class="timer-overlay-content">
+        <p id="returnToLoginCountdown"></p>
+        <button id="returnToLoginBtn">Voltar ao Login Agora</button>
+      </div>
+    </div>
+  </body>
+</html>
