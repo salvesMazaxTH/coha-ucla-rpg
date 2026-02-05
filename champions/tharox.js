@@ -74,31 +74,32 @@ const tharoxSkills = [
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
-      const {enemy} = targets;
-      const baseDamage = 15 + user.Attack + (user.Defense / 5);
+      const { enemy } = targets;
+      const baseDamage = 15 + user.Attack + user.Defense / 5;
       const result = DamageEngine.resolveRaw({
         user,
         baseDamage,
-        enemy,
-        context
-      })
-      return result
-    }
+        target: enemy,
+        skill: this.name,
+        context,
+      });
+      return result;
+    },
   },
 
   {
     key: "apoteose_do_monolito",
     name: "Apoteoso do Monólito",
     description: `Cooldown: 3 turnos
-Tharox libera sua forma de guerra.
-Ao ativar:
-Ganha +50 HP
-Ganha +10 DEF
-Cura a si mesmo em:
-10 HP para cada +5 DEF adicional que ele tiver acima da DEF base (50)
-Enquanto estiver ativo:
-Ataque Básico passa a causar dano adicional:
-+ (3/5 da DEF)`,
+    Tharox libera sua forma de guerra.
+    Ao ativar:
+    Ganha +50 HP
+    Ganha +10 DEF
+    Cura a si mesmo em:
+    10 HP para cada +5 DEF adicional que ele tiver acima da DEF base (50)
+    Enquanto estiver ativo:
+    Ataque Básico passa a causar dano adicional:
+    + (3/5 da DEF)`,
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],
@@ -107,10 +108,8 @@ Ataque Básico passa a causar dano adicional:
       return {
         log: `${user.name} executou                             Apoteose do Monólito, liberando sua forma de guerra. Defesa e HP aumentados; cura recebida; Ataques Básicos passam a causae um bônus de 60% da Defesa.`,
       };
-    }
-  }
-
-
+    },
+  },
 ];
 
 export default tharoxSkills;
