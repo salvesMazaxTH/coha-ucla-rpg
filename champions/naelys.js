@@ -135,8 +135,6 @@ Aliado ativo recupera:
         },
       });
 
-      user.updateUI();
-
       return {
         log: `${user.name} invoca o Mar Primordial! HP máximo dobrado; efeito "Mar em Ascensão" ativo neste e nos próximos 2 turnos.`,
       };

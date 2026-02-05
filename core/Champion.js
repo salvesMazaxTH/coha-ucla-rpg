@@ -402,9 +402,11 @@ export class Champion {
   }
 
   purgeExpiredModifiers(currentTurn) {
-    this.damageModifiers = this.damageModifiers.filter(
-      (m) => m.expiresAtTurn > currentTurn,
-    );
+    this.damageModifiers = this.damageModifiers.filter((m) => {
+      if (m.permanent) return true; // permanente 
+      // temporário
+      return m.expiresAtTurn > currentTurn;
+    });
   }
 
   getDamageModifiers() {

@@ -77,6 +77,16 @@ export const DamageEngine = {
     };
   },
   // -------------------------------------------------
+
+  defenseToPercent(defense) {
+    if (!defense) return 0;
+
+    const effective = defense < 20 ? defense : defense - 15;
+
+    return Math.min(effective, 80) / 100;
+  },
+
+  // ----------------
   // Modificadores
   applyDamageModifiers({ baseDamage, user, target, skill }) {
     if (!user?.getDamageModifiers) return baseDamage;
@@ -173,8 +183,13 @@ export const DamageEngine = {
       damage = damage + critExtra;
       finalDamage = this.roundToFive(damage);
       const defense = target.Defense || 0;
-      const reduction = target.getTotalDamageReduction?.() || 0;
-      finalDamage = Math.max(finalDamage - defense - reduction, 0);
+      const defReduction = this.defenseToPercent(defense); // percentual redução de defesa em número decimal
+      // reduções extras
+      const extraReduction = target.getTotalDamageReduction?.() || 0;
+      finalDamage = Math.max(
+        finalDamage - finalDamage * defReduction - extraReduction,
+        0,
+      );
       finalDamage = Math.max(finalDamage, 10);
       finalDamage = this.roundToFive(finalDamage);
     }
@@ -333,8 +348,12 @@ export const DamageEngine = {
     const reduction = target.damageReduction || 0;
     const defense = target.Defense || 0;
 
+    const defReduction = this.defenseToPercent(defense); // percentual redução de defesa em número decimal
+    // reduções extras
+    const extraReduction = target.getTotalDamageReduction?.() || 0;
+
     const finalDirect = Math.max(direct - reduction, 0);
-    const finalRaw = Math.max(raw - defense - reduction, 0);
+    const finalRaw = Math.max(raw - (raw * defReduction) - extraReduction, 0);
 
     if (editMode) {
       totalDamage = 999;

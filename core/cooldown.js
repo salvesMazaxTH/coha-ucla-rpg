@@ -5,9 +5,7 @@ export function isSkillOnCooldown(user, skill, currentTurn) {
   if (!entry) return null;
 
   if (currentTurn < entry.availableAt) {
-    return {
-      availableAt: entry.availableAt,
-    };
+    return entry;
   }
 
   // cooldown acabou
@@ -38,11 +36,15 @@ export function checkAndValidateCooldowns({
   if (editMode) return null;
 
   const cooldownInfo = isSkillOnCooldown(user, skill, currentTurn);
-
   if (!cooldownInfo) return null;
 
+  const { isUltimateLock, availableAt } = cooldownInfo;
+
   return {
-    message: `Habilidade ${skill.name} está em cooldown. Retorna no turno ${cooldownInfo.availableAt}.`,
-    availableAt: cooldownInfo.availableAt,
+    message: isUltimateLock
+      ? `${skill.name} é uma Ultimate e está bloqueada no início da partida.`
+      : `${skill.name} está em cooldown. Retorna no turno ${availableAt}.`,
+    isUltimateLock,
+    availableAt,
   };
 }

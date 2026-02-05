@@ -89,7 +89,7 @@ const tharoxSkills = [
 
   {
     key: "apoteose_do_monolito",
-    name: "Apoteoso do Monólito",
+    name: "Apoteose do Monólito",
     description: `Cooldown: 3 turnos
     Tharox libera sua forma de guerra.
     Ao ativar:
@@ -98,15 +98,32 @@ const tharoxSkills = [
     Cura a si mesmo em:
     10 HP para cada +5 DEF adicional que ele tiver acima da DEF base (50)
     Enquanto estiver ativo:
-    Ataque Básico passa a causar dano adicional:
-    + (3/5 da DEF)`,
+    Ataques que causam dano passam a causar um bônus de dano igual a 60% da DEF atual de Tharox.`,
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],
     execute({ user, context }) {
-      // Lógica da habilidade aqui
+      user.maxHP += 50; // aumentar máximo de HP
+      user.heal(50); // Cura imediata de 50 HP, para refletir o aumento do máximo
+      user.Defense += 10; // cura proporcional à defesa acima da base (50)
+      const proportionalHeal = Math.floor((user.Defense - 50) / 5) * 10;
+      user.heal(proportionalHeal);
+
+      // Aplica o modificador de dano permanentemente
+      user.addDamageModifier({
+        id: "apoteose-do-monolito",
+
+       // permanente
+        permanent: true,
+
+        apply: ({ baseDamage, user }) => {
+          const bonus = Math.floor(user.Defense * 0.6);
+          return baseDamage + bonus;
+        },
+      });
+
       return {
-        log: `${user.name} executou                             Apoteose do Monólito, liberando sua forma de guerra. Defesa e HP aumentados; cura recebida; Ataques Básicos passam a causae um bônus de 60% da Defesa.`,
+        log: `${user.name} executou Apoteose do Monólito, liberando sua forma de guerra. Defesa e HP aumentados; cura recebida; Ataques que causam dano passam a causar um bônus de 60% da Defesa.`,
       };
     },
   },
