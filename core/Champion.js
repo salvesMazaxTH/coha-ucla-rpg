@@ -44,6 +44,7 @@ export class Champion {
     this.statModifiers = []; // New array to track temporary stat changes
     this.provokeEffects = []; // New array to track provoke effects applied to this champion
     this.damageReductionModifiers = []; // New array to track temporary damage reduction
+    this.keywords = new Map(); // Map to track active keywords with durations and metadata
 
     this.alive = true;
     this.cooldowns = new Map();
@@ -73,6 +74,78 @@ export class Champion {
       `[ULT LOCK] ${this.name} → ${ultimate.name} bloqueada até o turno ${availableAt}`,
     );
   }
+
+  // ======== Keyword System ========
+  /**
+   * Apply a keyword effect to this champion
+   * @param {string} keywordName - Name of the keyword (e.g., 'inerte', 'imunidade absoluta')
+   * @param {number} duration - Number of turns the keyword lasts
+   * @param {object} context - Context with currentTurn
+   * @param {object} metadata - Additional data to store with the keyword
+   */
+  applyKeyword(keywordName, duration, context, metadata = {}) {
+    const { currentTurn } = context;
+    this.keywords.set(keywordName, {
+      expiresAtTurn: currentTurn + duration,
+      duration,
+      appliedAtTurn: currentTurn,
+      ...metadata,
+    });
+    console.log(
+      `[Champion] ${this.name} aplicou keyword "${keywordName}" até o turno ${currentTurn + duration}.`,
+    );
+  }
+
+  /**
+   * Check if champion has an active keyword
+   * @param {string} keywordName - Name of the keyword
+   * @returns {boolean}
+   */
+  hasKeyword(keywordName) {
+    return this.keywords.has(keywordName);
+  }
+
+  /**
+   * Get keyword data
+   * @param {string} keywordName - Name of the keyword
+   * @returns {object|null}
+   */
+  getKeyword(keywordName) {
+    return this.keywords.get(keywordName) || null;
+  }
+
+  /**
+   * Remove a keyword immediately
+   * @param {string} keywordName - Name of the keyword to remove
+   */
+  removeKeyword(keywordName) {
+    if (this.keywords.has(keywordName)) {
+      this.keywords.delete(keywordName);
+      console.log(
+        `[Champion] Keyword "${keywordName}" removido de ${this.name}.`,
+      );
+    }
+  }
+
+  /**
+   * Purge all expired keywords at turn end
+   * @param {number} currentTurn - Current turn number
+   * @returns {array} List of removed keyword names
+   */
+  purgeExpiredKeywords(currentTurn) {
+    const removedKeywords = [];
+    for (const [keywordName, keywordData] of this.keywords.entries()) {
+      if (keywordData.expiresAtTurn <= currentTurn) {
+        this.keywords.delete(keywordName);
+        removedKeywords.push(keywordName);
+        console.log(
+          `[Champion] Keyword "${keywordName}" expirou para ${this.name}.`,
+        );
+      }
+    }
+    return removedKeywords;
+  }
+  // ======== End Keyword System ========
 
   // Method to mark that the champion has acted
   markActionTaken() {
@@ -403,7 +476,7 @@ export class Champion {
 
   purgeExpiredModifiers(currentTurn) {
     this.damageModifiers = this.damageModifiers.filter((m) => {
-      if (m.permanent) return true; // permanente 
+      if (m.permanent) return true; // permanente
       // temporário
       return m.expiresAtTurn > currentTurn;
     });

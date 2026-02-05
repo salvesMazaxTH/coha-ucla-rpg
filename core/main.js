@@ -1083,16 +1083,6 @@ function closeTargetOverlay(overlay) {
   }, 200);
 }
 
-function logSkillResult(result) {
-  if (!result) return;
-
-  if (Array.isArray(result)) {
-    result.forEach((r) => logCombat(r.log));
-  } else {
-    logCombat(result.log);
-  }
-}
-
 async function handleSkillUsage(button) {
   if (gameEnded) {
     alert("O jogo já terminou. Nenhuma ação pode ser realizada.");
@@ -1127,7 +1117,7 @@ function logCombat(text) {
   const log = document.getElementById("combat-log");
   if (!log) return;
 
-let turnHeader;
+  let turnHeader;
 
   if (lastLoggedTurn !== currentTurn) {
     // criar o header de turno
@@ -1136,6 +1126,12 @@ let turnHeader;
     turnHeader.classList.add("turn-header");
     turnHeader.textContent = `Turno ${currentTurn}`;
     log.appendChild(turnHeader);
+  }
+
+  // colocar uma quebra de linha antes de line.innerHTML se já houver linhas no log
+  if (log.children.length > 1) {
+    const br = document.createElement("br");
+    log.appendChild(br);
   }
 
   const line = document.createElement("p");

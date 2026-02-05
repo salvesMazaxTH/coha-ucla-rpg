@@ -49,13 +49,13 @@ export const championDB = {
       name: "Mar que Retorna",
       description: `
         Sempre que Naelys receber dano,
-        ele se cura em +5 para cada 20 de HP perdido neste acerto.
+        ele se cura em +5 para cada 25 de HP perdido neste acerto.
         (Máx. +35 por acerto)`,
       afterDamage({ target, damage }) {
         if (damage <= 0) return;
 
-        // +5 for every 20 damage taken
-        let heal = Math.floor(damage / 20) * 5;
+        // +5 for every 25 damage taken
+        let heal = Math.floor(damage / 25) * 5;
 
         // Cap at 35
         heal = Math.min(heal, 35);
@@ -72,7 +72,7 @@ export const championDB = {
         );
 
         return {
-          log: `[PASSIVA — Mar que Retorna] ${self.name} recovered ${heal} HP.`,
+          log: `[PASSIVA — Mar que Retorna] ${self.name} recuperou ${heal} HP.`,
         };
       },
     },

@@ -74,19 +74,25 @@ Aliado ativo recupera:
   {
     key: "forma_aquatica",
     name: "Forma Aquática",
-    description:
-      `Transforma-se em uma massa de água pura, ficando Inerte, incapaz de agir, mas ganhando Imunidade Absoluta enquanto durar o efeito, exceto se for acertado por uma Habilidade ⚡.
-       O efeito dura por 2 turnos a contar deste, mas também pode ser interrompido caso Naelys execute alguma ação.
-      `,
-    cooldown: 0,
-    priority: 0, // Default priority
+    description: `Transforma-se em uma massa de água pura.
+    Efeitos: Inerte + Imunidade Absoluta
+    Duração: 2 turnos (pode ser interrompido se executar uma ação)`,
+    cooldown: 2,
+    priority: 0,
     targetSpec: ["self"],
 
-    execute({user, context}) {
+    execute({ user, context }) {
       const { currentTurn } = context;
+
+      // Apply keywords
+      user.applyKeyword("inerte", 2, context, {
+        canBeInterruptedByAction: true,
+      });
+      user.applyKeyword("imunidade absoluta", 2, context);
+
       return {
-        log: `${user.name} usa Forma Aquática e está Inerte e com Imunidade Absoluta. O efeito desfaz naturalmente no turno ${currentTurn + 2}.`
-      }
+        log: `${user.name} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + 2}. (Pode ser interrompido por ação do usuário).`,
+      };
     },
   },
 

@@ -276,6 +276,39 @@ function removeChampionFromGame(championId, playerTeam) {
   }, SERVER_DELAY_AFTER_ANIMATION + CLIENT_DEATH_ANIMATION_DURATION);
 }
 
+function validateCanAct(user, socket) {
+  // morto
+  if (!user.alive) return (socket.emit("skillDenied", "Campeão morto."), false);
+
+  // já agiu
+  if (user.hasActedThisTurn)
+    return (socket.emit("skillDenied", "Já agiu neste turno."), false);
+
+  // keyword: inerte
+  if (user.hasKeyword?.("inerte")) {
+    const k = user.getKeyword("inerte");
+
+    // Pode interromper
+    if (k?.canBeInterruptedByAction) {
+      user.removeKeyword("inerte");
+
+      io.emit(
+        "combatLog",
+        `O efeito "Inerte" de ${user.name} foi interrompido!`,
+      );
+
+      return true;
+    }
+
+    return (
+      socket.emit("skillDenied", `${user.name} está Inerte e não pode agir!`),
+      false
+    );
+  }
+
+  return true;
+}
+
 io.on("connection", (socket) => {
   // console.log("Um usuário conectado:", socket.id);
 
@@ -776,8 +809,7 @@ io.on("connection", (socket) => {
     const skill = user.skills.find((s) => s.key === skillKey);
     if (!skill) return socket.emit("skillDenied", "Skill inválida.");
 
-    if (user.hasActedThisTurn)
-      return socket.emit("skillDenied", "Já agiu neste turno.");
+    if (!validateCanAct(user, socket)) return;
 
     let cdError;
 
@@ -1082,6 +1114,19 @@ io.on("connection", (socket) => {
         const expired = champion.purgeExpiredStatModifiers(currentTurn);
         if (expired.length > 0) {
           revertedStats.push(...expired);
+        }
+      });
+
+      // Purge expired keywords from all active champions
+      activeChampions.forEach((champion) => {
+        const expiredKeywords = champion.purgeExpiredKeywords(currentTurn);
+        if (expiredKeywords.length > 0) {
+          expiredKeywords.forEach((keyword) => {
+            io.emit(
+              "combatLog",
+              `Efeito "${keyword}" expirou para ${champion.name}.`,
+            );
+          });
         }
       });
 

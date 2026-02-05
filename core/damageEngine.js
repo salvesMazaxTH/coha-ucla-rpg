@@ -113,6 +113,17 @@ export const DamageEngine = {
   // Calculadora de dano propriamente dito
   // Dano que sofre defesa
   resolveRaw({ baseDamage, user, target, skill, context, options = {} }) {
+    // Checar por Imunidade Absoluta
+    if (target.hasKeyword?.("imunidade absoluta")) {
+      return {
+        baseDamage,
+        crit: { level: 0, didCrit: false, bonus: 0, roll: null },
+        totalDamage: 0,
+        finalHP: target.HP,
+        log: `${target.name} está com Imunidade Absoluta! ${user.name} não consegue causar dano.`,
+      };
+    }
+
     let crit = {
       level: 0,
       didCrit: false,
@@ -270,6 +281,19 @@ export const DamageEngine = {
     context,
     options = {},
   }) {
+    //  Checar por Imunidade Absoluta
+    if (target.hasKeyword?.("imunidade absoluta")) {
+      return {
+        baseDamage,
+        crit: { level: 0, didCrit: false, bonus: 0, roll: null },
+        directDamage: 0,
+        rawDamage: 0,
+        totalDamage: 0,
+        finalHP: target.HP,
+        log: `${target.name} está com Imunidade Absoluta! ${user.name} não consegue causar dano.`,
+      };
+    }
+
     let crit = {
       level: 0,
       didCrit: false,
