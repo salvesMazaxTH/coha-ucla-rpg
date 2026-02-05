@@ -381,8 +381,42 @@ socket.on("championRemoved", (championId) => {
   }
 });
 
-socket.on("actionFailed", (message) => {
+socket.on("skillDenied", (message) => {
+  console.warn("[SkillDenied]", message);
+
+  alert(message); 
+  // Se quiser algo mais elegante depois:
+});
+
+/*socket.on("actionFailed", (message) => {
   alert(`Ação falhou: ${message}`);
+});*/
+
+socket.on("skillApproved", async ({ userId, skillKey }) => {
+  const user = activeChampions.get(userId);
+  if (!user) return;
+
+  const skill = user.skills.find(s => s.key === skillKey);
+  if (!skill) return;
+
+  // Resolve seleção de alvos
+  const targets = await resolveTargets(user, skill);
+  if (!targets) return;
+
+  const targetIds = {};
+  for (const role in targets) {
+    targetIds[role] = targets[role].id;
+  }
+
+  // 🔥 Marca ação somente AGORA
+  user.markActionTaken();
+  user.updateUI();
+
+  socket.emit("useSkill", {
+    userId,
+    skillKey,
+    targetIds
+  });
 });
 
 socket.on("combatLog", (message) => {
@@ -1079,23 +1113,13 @@ async function handleSkillUsage(button) {
     alert(`${user.name} já agiu neste turno.`);
     return;
   }
-
-  /* if (checkSkillCooldown(user, skill)) return; */
-
-  const targets = await resolveTargets(user, skill);
-  if (!targets) return;
-
-  // Envia o uso da habilidade para o servidor
-  const targetIds = {};
-  for (const role in targets) {
-    targetIds[role] = targets[role].id;
-  }
-  // Marca o campeão como tendo agido neste turno
-  user.markActionTaken();
-  user.updateUI(); // Atualiza a UI para refletir o status de ação realizada, se necessário
-
-  socket.emit("useSkill", { userId, skillKey, targetIds });
+    // ⭐ NOVO: pedir autorização ao servidor
+  socket.emit("requestSkillUse", {
+    userId,
+    skillKey,
+  });
 }
+
 
 // variável auxiliar para rastreaer headers de turno no log
 let lastLoggedTurn = null;

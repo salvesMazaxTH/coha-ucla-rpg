@@ -29,3 +29,21 @@ export function startCooldown(user, skill, currentTurn) {
     `[COOLDOWN] ${skill.name} usado no turno ${currentTurn}, disponível no ${availableAt}`,
   );
 }
+
+export function checkAndValidateCooldowns({
+  user,
+  skill,
+  currentTurn,
+  editMode
+}) {
+  if (editMode) return null;
+
+  const cooldownInfo = isSkillOnCooldown(user, skill, currentTurn);
+
+  if (!cooldownInfo) return null;
+
+  return {
+    message: `Habilidade ${skill.name} está em cooldown. Retorna no turno ${cooldownInfo.availableAt}.`,
+    availableAt: cooldownInfo.availableAt,
+  };
+}
