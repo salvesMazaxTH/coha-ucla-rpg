@@ -1127,6 +1127,8 @@ function logCombat(text) {
   const log = document.getElementById("combat-log");
   if (!log) return;
 
+let turnHeader;
+
   if (lastLoggedTurn !== currentTurn) {
     // criar o header de turno
     lastLoggedTurn = currentTurn;
@@ -1137,9 +1139,9 @@ function logCombat(text) {
   }
 
   const line = document.createElement("p");
-  line.textContent = text.replace(/\n/g, "<br>");
+  line.innerHTML = text.replace(/\n/g, "<br>");
 
-  let turnHeader = log.querySelector(".turn-header");
+  turnHeader = log.querySelector(".turn-header");
 
   log.appendChild(line);
 }
