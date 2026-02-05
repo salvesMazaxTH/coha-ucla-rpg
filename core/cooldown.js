@@ -1,22 +1,20 @@
 export function isSkillOnCooldown(user, skill, currentTurn) {
-  // 🔥 Ultimate começa travada
-  const isUlt = user?.skills && user.skills[user.skills.length - 1] === skill;
-
-  if (isUlt && currentTurn < skill.cooldown) {
-    return {
-      type: "ultimate-lock",
-      availableAt: skill.cooldown,
-    };
-  }
+  if (!skill.cooldown || skill.cooldown <= 0) return null;
 
   const entry = user.cooldowns.get(skill.key);
   if (!entry) return null;
 
-  return {
-    type: "cooldown",
-    availableAt: entry.availableAt,
-  };
+  if (currentTurn < entry.availableAt) {
+    return {
+      availableAt: entry.availableAt,
+    };
+  }
+
+  // cooldown acabou
+  user.cooldowns.delete(skill.key);
+  return null;
 }
+
 
 export function startCooldown(user, skill, currentTurn) {
   if (!skill.cooldown || skill.cooldown <= 0) return;
@@ -27,4 +25,7 @@ export function startCooldown(user, skill, currentTurn) {
     availableAt,
     duration: skill.cooldown,
   });
+  console.log(
+    `[COOLDOWN] ${skill.name} usado no turno ${currentTurn}, disponível no ${availableAt}`,
+  );
 }

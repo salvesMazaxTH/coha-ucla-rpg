@@ -48,6 +48,30 @@ export class Champion {
     this.alive = true;
     this.cooldowns = new Map();
     this.hasActedThisTurn = false; // New property to track if the champion has acted this turn
+    // 🔥 ULTIMATE LOCK (cooldown inicial)
+    this.initUltimateLock();
+  }
+
+  // Método para inicializar o bloqueio da ultimate no início do combate
+  initUltimateLock() {
+    if (!this.skills || this.skills.length === 0) return;
+
+    // Convenção: última skill = ultimate
+    const ultimate = this.skills[this.skills.length - 1];
+
+    if (!ultimate.cooldown || ultimate.cooldown <= 0) return;
+
+    const availableAt = ultimate.cooldown;
+
+    this.cooldowns.set(ultimate.key, {
+      availableAt,
+      duration: ultimate.cooldown,
+      isUltimateLock: true, // só pra debug
+    });
+
+    console.log(
+      `[ULT LOCK] ${this.name} → ${ultimate.name} bloqueada até o turno ${availableAt}`,
+    );
   }
 
   // Method to mark that the champion has acted

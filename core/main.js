@@ -352,7 +352,9 @@ socket.on("championRemoved", (championId) => {
     `[data-champion-id="${championId}"]`,
   );
   if (championElement) {
-    console.log(`[Client] Iniciando animação de morte para o campeão ${championId}`);
+    console.log(
+      `[Client] Iniciando animação de morte para o campeão ${championId}`,
+    );
     championElement.classList.add("dying"); // Adiciona classe para acionar a animação
     dyingChampionIds.add(championId); // Marca o campeão como morrendo
 
@@ -365,13 +367,17 @@ socket.on("championRemoved", (championId) => {
       dyingChampionIds.delete(championId); // Remove do conjunto de morrendo
     }, CHAMPION_DEATH_ANIMATION_DURATION);
   } else {
-    console.log(`[Client] Nenhum elemento DOM encontrado para o campeão ${championId}`);
+    console.log(
+      `[Client] Nenhum elemento DOM encontrado para o campeão ${championId}`,
+    );
   }
   const championInstance = activeChampions.get(championId);
   if (championInstance) {
     activeChampions.delete(championId);
   } else {
-    console.warn(`[Client] Nenhuma instância de Campeão encontrada para o ID ${championId}`);
+    console.warn(
+      `[Client] Nenhuma instância de Campeão encontrada para o ID ${championId}`,
+    );
   }
 });
 
@@ -849,27 +855,6 @@ function closeOverlay() {
 // --------------------------------
 // Relacionado ao uso de habilidades
 
-function checkSkillCooldown(user, skill) {
-  const status = isSkillOnCooldown(user, skill, currentTurn);
-
-  if (!status) return false;
-
-  let message;
-
-  if (status.type === "ultimate-lock") {
-    message =
-      `Essa habilidade é uma ULTIMATE.\n` +
-      `Ela só desbloqueia no turno ${status.availableAt}.`;
-  } else {
-    message =
-      `${user.name} não pode usar ${skill.name}.\n` +
-      `Retorna no turno ${status.availableAt}.`;
-  }
-
-  alert(message);
-  return true;
-}
-
 function getSkillContext(button) {
   const userId = button.dataset.championId;
   const skillKey = button.dataset.skillKey;
@@ -1112,57 +1097,29 @@ async function handleSkillUsage(button) {
   socket.emit("useSkill", { userId, skillKey, targetIds });
 }
 
+// variável auxiliar para rastreaer headers de turno no log
+let lastLoggedTurn = null;
+
 function logCombat(text) {
   const log = document.getElementById("combat-log");
   if (!log) return;
 
-  const line = document.createElement("p");
-  line.innerHTML = text.replace(/\n/g, "<br>");
-
-  let turnHeader = log.querySelector(".turn-header");
-
-  const currentHeaderTurn = turnHeader
-    ? parseInt(turnHeader.textContent.replace(/\D/g, ""), 10)
-    : null;
-
-  // Se o cabeçalho não existe ou é de outro turno, cria um novo
-  if (!turnHeader || currentHeaderTurn !== currentTurn) {
+  if (lastLoggedTurn !== currentTurn) {
+    // criar o header de turno
+    lastLoggedTurn = currentTurn;
     turnHeader = document.createElement("h2");
     turnHeader.classList.add("turn-header");
     turnHeader.textContent = `Turno ${currentTurn}`;
     log.appendChild(turnHeader);
   }
 
+  const line = document.createElement("p");
+  line.textContent = text.replace(/\n/g, "<br>");
+
+  let turnHeader = log.querySelector(".turn-header");
+
   log.appendChild(line);
 }
-
-// A função useSkill agora é tratada inteiramente no servidor.
-// O cliente apenas emite o evento 'useSkill'.
-/*
-function useSkill(championId, skillKey, targets) {
-  console.log("USE SKILL CALLED:", skillKey);
-  const user = activeChampions.get(championId);
-  if (!user) return null;
-
-  const skill = user.skills.find((s) => s.key === skillKey);
-  if (!skill) {
-    console.error("Habilidade não encontrada:", skillKey);
-    return null;
-  }
-  // ⏳ Inicia o cooldown se executado
-  startCooldown(user, skill, currentTurn);
-
-  const context = { currentTurn };
-
-  //console.log("ORDEM DOS ALVOS:", targets.map(t => t.name));
-  const result = skill.execute({ user, targets, context });
-
-  // Atualiza a UI de todos os campeões após a execução da habilidade
-  activeChampions.forEach((champion) => champion.updateUI());
-
-  return result;
-}
-*/
 
 // --------------------------------
 

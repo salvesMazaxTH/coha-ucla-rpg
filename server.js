@@ -397,6 +397,10 @@ io.on("connection", (socket) => {
       playerNames.delete(disconnectedSlot); // Remove o nome do jogador
       playerTeamsSelected[disconnectedSlot] = false; // Redefine o status de seleção da equipe
 
+      // Limpa o estado da confirmação de fim de turno
+      playersReadyToEndTurn.delete(disconnectedSlot);
+      pendingActions = []; // Cancela todas as ações pendentes
+
       const currentConnectedPlayers = players.filter((p) => p !== null).length;
       io.emit("playerCountUpdate", currentConnectedPlayers);
       io.emit("playerNamesUpdate", Array.from(playerNames.entries())); // Atualiza os nomes dos jogadores
@@ -657,18 +661,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (!editMode && isSkillOnCooldown(user, skill, currentTurn)) {
+    if (!editMode) {
       const cooldownInfo = isSkillOnCooldown(user, skill, currentTurn);
       if (cooldownInfo) {
-        let message;
-
-        if (cooldownInfo.type === "ultimate-lock") {
-          message = `${skill.name} é uma Ultimate e só desbloqueia no turno ${cooldownInfo.availableAt}.`;
-        } else {
-          message = `${skill.name} está em cooldown. Disponível no turno ${cooldownInfo.availableAt}.`;
-        }
-
-        socket.emit("actionFailed", message);
+        socket.emit(
+          "actionFailed",
+          `Habilidade ${skill.name} está em cooldown. Retorna no turno ${cooldownInfo.availableAt}.`,
+        );
+        return;
       }
     }
 
@@ -722,6 +722,17 @@ io.on("connection", (socket) => {
     io.emit("playerConfirmedEndTurn", playerSlot); // Notifica os clientes que este jogador confirmou
 
     if (playersReadyToEndTurn.size === 2) {
+      // Verifica se ambos os jogadores ainda estão conectados antes de processar o fim do turno
+      if (players[0] === null || players[1] === null) {
+        // Um dos jogadores desconectou enquanto o outro confirmava, cancela a resolução
+        playersReadyToEndTurn.clear();
+        socket.emit(
+          "actionFailed",
+          "Seu oponente foi desconectado. O turno foi cancelado.",
+        );
+        return;
+      }
+
       // Ambos os jogadores confirmaram, prossegue para resolver as ações e encerrar o turno
       // console.log(
       //   "[Server] Ambos os jogadores confirmaram o fim do turno. Resolvendo ações.",
@@ -877,7 +888,9 @@ io.on("connection", (socket) => {
         // Após a execução da habilidade, verifica se algum alvo morreu e chama seu método die
         Object.values(currentTargets).forEach((target) => {
           if (target.HP <= 0) {
-            console.log(`[Server] ${target.name} morreu devido ao dano da habilidade`);
+            console.log(
+              `[Server] ${target.name} morreu devido ao dano da habilidade`,
+            );
             removeChampionFromGame(target.id, target.team);
           }
         });
