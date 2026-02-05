@@ -47,6 +47,83 @@ let pendingActions = []; // Array para armazenar ações para o turno atual
 let disconnectionTimers = new Map(); // Mapeia o slot do jogador para um timer de desconexão
 const DISCONNECT_TIMEOUT = 30 * 1000; // 30 segundos
 
+// ======== Turn History Tracking System ========
+// Armazena histórico de eventos por turno para suportar habilidades baseadas em histórico
+let turnHistory = new Map(); // { turnNumber: { events: [...], championsDeadThisTurn: [], skillsUsedThisTurn: {} } }
+
+/**
+ * Log de um evento que aconteceu durante o turno atual
+ * @param {string} eventType - Tipo do evento (e.g., 'skillUsed', 'championDied', 'statChanged')
+ * @param {object} eventData - Dados do evento
+ */
+function logTurnEvent(eventType, eventData) {
+  if (!turnHistory.has(currentTurn)) {
+    turnHistory.set(currentTurn, {
+      events: [],
+      championsDeadThisTurn: [],
+      skillsUsedThisTurn: {},
+      damageDealtThisTurn: {},
+    });
+  }
+
+  const turnData = turnHistory.get(currentTurn);
+  turnData.events.push({
+    type: eventType,
+    ...eventData,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * Verifica se um campeão morreu em um turno específico
+ * @param {string} championId - ID do campeão
+ * @param {number} turnNumber - Número do turno (padrão: turno anterior)
+ * @returns {boolean}
+ */
+function didChampionDieInTurn(championId, turnNumber = currentTurn - 1) {
+  if (!turnHistory.has(turnNumber)) return false;
+  const turnData = turnHistory.get(turnNumber);
+  return turnData.championsDeadThisTurn.includes(championId);
+}
+
+/**
+ * Verifica se um campeão usou uma habilidade específica em um turno
+ * @param {string} championId - ID do campeão
+ * @param {string} skillKey - Chave da habilidade
+ * @param {number} turnNumber - Número do turno (padrão: turno anterior)
+ * @returns {boolean}
+ */
+function didChampionUseSkillInTurn(
+  championId,
+  skillKey,
+  turnNumber = currentTurn - 1,
+) {
+  if (!turnHistory.has(turnNumber)) return false;
+  const turnData = turnHistory.get(turnNumber);
+  return turnData.skillsUsedThisTurn[championId]?.includes(skillKey) ?? false;
+}
+
+/**
+ * Obtém todos os eventos de um turno específico
+ * @param {number} turnNumber - Número do turno
+ * @returns {array}
+ */
+function getTurnEvents(turnNumber) {
+  if (!turnHistory.has(turnNumber)) return [];
+  return turnHistory.get(turnNumber).events;
+}
+
+/**
+ * Obtém dados completos de um turno
+ * @param {number} turnNumber - Número do turno
+ * @returns {object}
+ */
+function getTurnData(turnNumber) {
+  return turnHistory.get(turnNumber) || null;
+}
+
+// ======== End Turn History Tracking System ========
+
 function getGameState() {
   const championsData = Array.from(activeChampions.values()).map((c) => ({
     id: c.id,
@@ -123,6 +200,24 @@ function removeChampionFromGame(championId, playerTeam) {
     console.error(`[Server] Campeão ${championId} não encontrado.`);
     return;
   }
+
+  // Log do evento de morte do campeão no histórico de turnos
+  logTurnEvent("championDied", {
+    championId: championId,
+    championName: championToRemove.name,
+    team: championToRemove.team,
+  });
+
+  // Adicionando à lista de campeões mortos neste turno
+  if (!turnHistory.has(currentTurn)) {
+    turnHistory.set(currentTurn, {
+      events: [],
+      championsDeadThisTurn: [],
+      skillsUsedThisTurn: {},
+      damageDealtThisTurn: {},
+    });
+  }
+  turnHistory.get(currentTurn).championsDeadThisTurn.push(championId);
 
   // Determina qual jogador pontuou
   const scoringTeam = championToRemove.team === 1 ? 2 : 1; // Se o campeão do time 1 morre, o time 2 pontua
@@ -414,6 +509,7 @@ io.on("connection", (socket) => {
         // console.log("Todos os jogadores desconectados. Redefinindo o estado do jogo.");
         activeChampions.clear(); // Limpa todos os campeões
         currentTurn = 1; // Redefine o turno
+        turnHistory.clear(); // Limpa o histórico de turnos
         playerScores = [0, 0]; // Redefine as pontuações
         gameEnded = false; // Redefine a flag de jogo terminado
         io.emit("gameStateUpdate", getGameState()); // Envia o estado vazio do jogo
@@ -450,6 +546,7 @@ io.on("connection", (socket) => {
           playerNames.delete(remainingPlayerSlot);
           activeChampions.clear(); // Limpa todos os campeões
           currentTurn = 1; // Redefine o turno
+          turnHistory.clear(); // Limpa o histórico de turnos
           playerScores = [0, 0]; // Redefine as pontuações
           gameEnded = false; // Redefine a flag de jogo terminado
           io.emit(
@@ -528,6 +625,7 @@ io.on("connection", (socket) => {
       if (checkAllTeamsSelected()) {
         activeChampions.clear(); // Limpa quaisquer campeões anteriores
         currentTurn = 1; // Redefine o turno para um novo jogo
+        turnHistory.clear(); // Limpa o histórico de turnos para um novo jogo
         playerScores = [0, 0]; // Redefine as pontuações para um novo jogo
         gameEnded = false; // Redefine a flag de jogo terminado
         io.emit("scoreUpdate", {
@@ -598,10 +696,20 @@ io.on("connection", (socket) => {
       return;
     }
 
+    const oldHP = champion.HP;
     champion.HP += amount;
     console.log(
       `[Server] HP do campeão ${champion.name} alterado para ${champion.HP}`,
     ); // ← ESSE
+
+    // Log de mudança de HP no histórico de turnos
+    logTurnEvent("hpChanged", {
+      championId: championId,
+      championName: champion.name,
+      oldHP: oldHP,
+      newHP: champion.HP,
+      amount: amount,
+    });
 
     if (champion.HP <= 0) {
       console.log(
@@ -637,10 +745,21 @@ io.on("connection", (socket) => {
 
     const step = statSteps[stat] || 5;
     const delta = action === "up" ? step : -step;
+    const oldValue = champion[stat];
 
     if (stat in champion) {
       champion[stat] += delta;
       if (champion[stat] < 0) champion[stat] = 0;
+
+      // Log de mudança de stat no histórico de turnos
+      logTurnEvent("statChanged", {
+        championId: championId,
+        championName: champion.name,
+        stat: stat,
+        oldValue: oldValue,
+        newValue: champion[stat],
+        delta: delta,
+      });
     }
     io.emit("gameStateUpdate", getGameState());
   });
@@ -897,6 +1016,31 @@ io.on("connection", (socket) => {
           allChampions: activeChampions, // Passa todos os campeões ativos
           context,
         });
+
+        // Log de uso da habilidade no histórico de turnos
+        logTurnEvent("skillUsed", {
+          championId: user.id,
+          championName: user.name,
+          skillKey: skill.key,
+          skillName: skill.name,
+          targetIds: action.targetIds,
+          targetNames: Object.values(currentTargets).map((t) => t.name),
+        });
+
+        // Adiciona à lista de habilidades usadas neste turno
+        if (!turnHistory.has(currentTurn)) {
+          turnHistory.set(currentTurn, {
+            events: [],
+            championsDeadThisTurn: [],
+            skillsUsedThisTurn: {},
+            damageDealtThisTurn: {},
+          });
+        }
+        const turnData = turnHistory.get(currentTurn);
+        if (!turnData.skillsUsedThisTurn[user.id]) {
+          turnData.skillsUsedThisTurn[user.id] = [];
+        }
+        turnData.skillsUsedThisTurn[user.id].push(skill.key);
 
         // Registra o resultado do combate (se houver)
         if (result) {
