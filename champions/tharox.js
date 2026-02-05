@@ -64,31 +64,53 @@ const tharoxSkills = [
   },
 
   {
-    key: "hab_2",
-    name: "Habilidade 2",
-    description: `Cooldown: x turnos,`,
+    key: "impacto_da_couraça",
+    name: "Impacto da Couraça",
+    description: `Cooldown: 1 turno,
+    Contato: Sim
+    Dano:
+    Base => 15 + ATQ + 20% DEF`,
     cooldown: 2,
     priority: 0,
-    targetSpec: ["self"],
-    execute({ user, context }) {
-        // Lógica da habilidade aqui
+    targetSpec: ["enemy"],
+    execute({ user, targets, context }) {
+      const {enemy} = targets;
+      const baseDamage = 15 + user.Attack + (user.Defense / 5);
+      const result = DamageEngine.resolveRaw({
+        user,
+        baseDamage,
+        enemy,
+        context
+      })
+      return result
     }
   },
 
   {
-    key: "hab_ultimate",
-    name: "Habilidade Ultimate",
-    description: `Cooldown: x turnos,  lorem`,
+    key: "apoteose_do_monolito",
+    name: "Apoteoso do Monólito",
+    description: `Cooldown: 3 turnos
+Tharox libera sua forma de guerra.
+Ao ativar:
+Ganha +50 HP
+Ganha +10 DEF
+Cura a si mesmo em:
+10 HP para cada +5 DEF adicional que ele tiver acima da DEF base (50)
+Enquanto estiver ativo:
+Ataque Básico passa a causar dano adicional:
++ (3/5 da DEF)`,
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],
     execute({ user, context }) {
       // Lógica da habilidade aqui
       return {
-        log: `${user.name} executou Habilidade Ultimate.`,
+        log: `${user.name} executou                             Apoteose do Monólito, liberando sua forma de guerra. Defesa e HP aumentados; cura recebida; Ataques Básicos passam a causae um bônus de 60% da Defesa.`,
       };
     }
   }
+
+
 ];
 
 export default tharoxSkills;
