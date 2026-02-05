@@ -6,7 +6,11 @@ import { fileURLToPath } from "url";
 
 import { championDB } from "./data/championDB.js";
 import { Champion } from "./core/Champion.js";
-import { isSkillOnCooldown, startCooldown, checkAndValidateCooldowns } from "./core/cooldown.js";
+import {
+  isSkillOnCooldown,
+  startCooldown,
+  checkAndValidateCooldowns,
+} from "./core/cooldown.js";
 import { generateId } from "./core/id.js";
 const editMode = false; // Define como true para ignorar o login e a seleção de campeões
 
@@ -643,36 +647,34 @@ io.on("connection", (socket) => {
 
   // Lida com o uso de habilidades
   socket.on("requestSkillUse", ({ userId, skillKey }) => {
-  const playerSlot = connectedSockets.get(socket.id);
-  const player = players[playerSlot];
-  const user = activeChampions.get(userId);
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const user = activeChampions.get(userId);
 
-  if (!player || !user || user.team !== player.team)
-    return socket.emit("skillDenied", "Sem permissão.");
+    if (!player || !user || user.team !== player.team)
+      return socket.emit("skillDenied", "Sem permissão.");
 
-  const skill = user.skills.find(s => s.key === skillKey);
-  if (!skill)
-    return socket.emit("skillDenied", "Skill inválida.");
+    const skill = user.skills.find((s) => s.key === skillKey);
+    if (!skill) return socket.emit("skillDenied", "Skill inválida.");
 
-  if (user.hasActedThisTurn)
-    return socket.emit("skillDenied", "Já agiu neste turno.");
-    
-  let cdError;  
-  
-  if (!editMode) {
-   cdError = checkAndValidateCooldowns({
-    user,
-    skill,
-    currentTurn,
-    editMode
+    if (user.hasActedThisTurn)
+      return socket.emit("skillDenied", "Já agiu neste turno.");
+
+    let cdError;
+
+    if (!editMode) {
+      cdError = checkAndValidateCooldowns({
+        user,
+        skill,
+        currentTurn,
+        editMode,
+      });
+    }
+
+    if (cdError) return socket.emit("skillDenied", cdError.message);
+
+    socket.emit("skillApproved", { userId, skillKey });
   });
-  }
-  
-  if (cdError)
-    return socket.emit("skillDenied", cdError.message);
-
-  socket.emit("skillApproved", { userId, skillKey });
-});
 
   socket.on("useSkill", ({ userId, skillKey, targetIds }) => {
     const playerSlot = connectedSockets.get(socket.id);

@@ -15,7 +15,6 @@ export function isSkillOnCooldown(user, skill, currentTurn) {
   return null;
 }
 
-
 export function startCooldown(user, skill, currentTurn) {
   if (!skill.cooldown || skill.cooldown <= 0) return;
 
@@ -34,7 +33,7 @@ export function checkAndValidateCooldowns({
   user,
   skill,
   currentTurn,
-  editMode
+  editMode,
 }) {
   if (editMode) return null;
 

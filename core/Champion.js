@@ -11,7 +11,7 @@ export class Champion {
     LifeSteal,
     skills,
     team,
-    passive
+    passive,
   }) {
     this.id = id;
     this.team = team;

@@ -384,7 +384,7 @@ socket.on("championRemoved", (championId) => {
 socket.on("skillDenied", (message) => {
   console.warn("[SkillDenied]", message);
 
-  alert(message); 
+  alert(message);
   // Se quiser algo mais elegante depois:
 });
 
@@ -396,7 +396,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   const user = activeChampions.get(userId);
   if (!user) return;
 
-  const skill = user.skills.find(s => s.key === skillKey);
+  const skill = user.skills.find((s) => s.key === skillKey);
   if (!skill) return;
 
   // Resolve seleção de alvos
@@ -415,7 +415,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   socket.emit("useSkill", {
     userId,
     skillKey,
-    targetIds
+    targetIds,
   });
 });
 
@@ -1113,13 +1113,12 @@ async function handleSkillUsage(button) {
     alert(`${user.name} já agiu neste turno.`);
     return;
   }
-    // ⭐ NOVO: pedir autorização ao servidor
+  // ⭐ NOVO: pedir autorização ao servidor
   socket.emit("requestSkillUse", {
     userId,
     skillKey,
   });
 }
-
 
 // variável auxiliar para rastreaer headers de turno no log
 let lastLoggedTurn = null;
