@@ -81,7 +81,7 @@ export const DamageEngine = {
   defenseToPercent(defense) {
     if (!defense) return 0;
     
-    const K = 41;
+    const K = 38;
   const effective = defense / (defense + K);
 
     return effective
