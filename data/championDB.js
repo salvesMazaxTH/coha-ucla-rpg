@@ -143,7 +143,7 @@ export const championDB = {
     portrait: "assets/portraits/voltexz.png",
     HP: 285,
     Attack: 115,
-    Defense: 25,
+    Defense: 10,
     Speed: 85,
     Critical: 0,
     LifeSteal: 0,
