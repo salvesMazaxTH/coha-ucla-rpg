@@ -99,7 +99,7 @@ Aliado ativo recupera:
   {
     key: "transbordar_do_mar_primordial",
     name: "Transbordar do Mar Primordial",
-    description: `Naelys duplica seu HP máximo. Além disso, ele recupera: 
+    description: `Naelys aumenta seu HP em 65%. Além disso, ele recupera: 
     +50 de HP
     Por 3 turnos (inclui o atual):
     Naelys ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
@@ -116,16 +116,20 @@ Aliado ativo recupera:
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 
       const oldMax = user.maxHP;
-      const factor = 2;
+      const factor = 1.65;
 
-      // Dobra o máximo
+      // Aumenta o máximo (+65%)
       user.maxHP = oldMax * factor;
 
-      // Dobra o HP atual proporcionalmente
+      // Aumenta o HP atual proporcionalmente
       user.HP = Math.round(user.HP * factor);
 
       // Cura +50 sem passar do novo máximo
       user.HP = Math.min(user.HP + 50, user.maxHP);
+      
+      // Em qualquer caso o limite global de HP é 999
+      user.HP = Math.min(user.HP, 999);
+      user.maxHP = Math.min(user.maxHP, 999);
 
       // 🔮 Aplica o modificador de dano por 3 turnos (inclui o atual)
       user.addDamageModifier({

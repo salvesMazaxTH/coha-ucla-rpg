@@ -119,7 +119,7 @@ export const championDB = {
         const self = target;
         // Só ativa para Dano Bruto e se realmente tiver tomado dano
         if (damageType === "raw" && damage > 0) {
-          self.Defense += 5;
+          self.Defense = Math.min(self.Defense + 5, 99); // limite global do stat DEF é 99
           self.HP = Math.min(self.HP + 5, self.maxHP + 5); // Cura 5 de HP, aumentando o máximo também
           self.maxHP += 5;
           console.log(
