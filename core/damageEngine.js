@@ -162,8 +162,8 @@ export const DamageEngine = {
     let passiveLog = null;
 
     // Passiva ANTES do dano
-    if (target.passive?.beforeDamage) {
-      const passiveResult = target.passive.beforeDamage({
+    if (target.passive?.beforeTakingDamage) {
+      const passiveResult = target.passive.beforeTakingDamage({
         attacker: user,
         target,
         damage: finalDamage,
@@ -212,8 +212,8 @@ export const DamageEngine = {
     const hpAfterDamage = target.HP;
 
     // Passiva DEPOIS do dano (pode curar)
-    if (target.passive?.afterDamage && target.HP > 0) {
-      const passiveResult = target.passive.afterDamage({
+    if (target.passive?.afterTakingDamage && target.HP > 0) {
+      const passiveResult = target.passive.afterTakingDamage({
         attacker: user,
         target,
         damage: finalDamage,
@@ -254,6 +254,21 @@ export const DamageEngine = {
       const healAmount = this.roundToFive((finalDamage * user.LifeSteal) / 100);
       user.heal(healAmount);
       finalLog += `\n${user.name} roubou ${healAmount} de vida. HP atual: ${user.HP}/${user.maxHP}`;
+    }
+
+    // Passiva DO ATACANTE DEPOIS de fazer dano
+    if (user.passive?.afterDoingDamage && finalDamage > 0) {
+      const passiveResult = user.passive.afterDoingDamage({
+        attacker: user,
+        target,
+        damage: finalDamage,
+        damageType: "raw",
+        crit,
+        context,
+      });
+      if (passiveResult?.log) {
+        finalLog += `\n${passiveResult.log}`;
+      }
     }
 
     return {
@@ -336,8 +351,8 @@ export const DamageEngine = {
     let passiveLog = null;
 
     // Passiva ANTES do dano
-    if (target.passive?.beforeDamage) {
-      const passiveResult = target.passive.beforeDamage({
+    if (target.passive?.beforeTakingDamage) {
+      const passiveResult = target.passive.beforeTakingDamage({
         attacker: user,
         target,
         critExtra,
@@ -377,7 +392,7 @@ export const DamageEngine = {
     const extraReduction = target.getTotalDamageReduction?.() || 0;
 
     const finalDirect = Math.max(direct - reduction, 0);
-    const finalRaw = Math.max(raw - (raw * defReduction) - extraReduction, 0);
+    const finalRaw = Math.max(raw - raw * defReduction - extraReduction, 0);
 
     if (editMode) {
       totalDamage = 999;
@@ -394,8 +409,8 @@ export const DamageEngine = {
     const hpAfterDamage = target.HP;
 
     // Passiva DEPOIS do dano (pode curar)
-    if (target.passive?.afterDamage && target.HP > 0) {
-      const passiveResult = target.passive.afterDamage({
+    if (target.passive?.afterTakingDamage && target.HP > 0) {
+      const passiveResult = target.passive.afterTakingDamage({
         attacker: user,
         target,
         damage: totalDamage,
@@ -437,6 +452,21 @@ export const DamageEngine = {
       const finalHeal = Math.max(healAmount, 5);
       user.heal(finalHeal);
       finalLog += `\n${user.name} roubou ${finalHeal} de vida. HP atual: ${user.HP}/${user.maxHP}`;
+    }
+
+    // Passiva DO ATACANTE DEPOIS de fazer dano
+    if (user.passive?.afterDoingDamage && totalDamage > 0) {
+      const passiveResult = user.passive.afterDoingDamage({
+        attacker: user,
+        target,
+        damage: totalDamage,
+        damageType: "hybrid",
+        crit,
+        context,
+      });
+      if (passiveResult?.log) {
+        finalLog += `\n${passiveResult.log}`;
+      }
     }
 
     return {

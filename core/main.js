@@ -2,6 +2,7 @@ import { championDB } from "/data/championDB.js";
 import { Champion } from "/core/Champion.js";
 import { isSkillOnCooldown, startCooldown } from "/core/cooldown.js";
 //Mimport { generateId } from "/core/id.js";
+import { StatusIndicator } from "/core/statusIndicator.js";
 
 const socket = io(); // Inicializa o cliente Socket.IO
 let playerId = null;
@@ -21,7 +22,7 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-const editMode = false; // Definido como true para auto-entrar para testes
+const editMode = true; // Definido como true para auto-entrar para testes
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(
@@ -43,6 +44,9 @@ const CHAMPION_SELECTION_TIME = 120; // 120 segundos
 let championSelectionTimeLeft = CHAMPION_SELECTION_TIME;
 let playerTeamConfirmed = false; // Flag para evitar reconfirmar a equipe
 let allAvailableChampionKeys = []; // Para armazenar todas as chaves de campeões do DB
+
+// Adicionar ao início do arquivo, para garantir que StatusIndicator está disponível globalmente se necessário
+window.StatusIndicator = StatusIndicator;
 
 socket.on("connect", () => {
   if (editMode) {
@@ -342,6 +346,15 @@ socket.on("turnUpdate", (turn) => {
   const turnDisplay = document.querySelector(".turn-display");
   const turnText = turnDisplay.querySelector("p");
   turnText.innerHTML = `Turno ${currentTurn}`;
+  hasConfirmedEndTurn = false; // Redefine a confirmação para um novo turno
+  endTurnBtn.disabled = false; // Reabilita o botão para um novo turno
+  enableChampionActions(); // Reabilita todas as ações do campeão
+  activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
+  activeChampions.forEach((champion) => {
+    champion.updateUI(); // Atualiza a UI para todos os campeões
+    StatusIndicator.updateChampionIndicators(champion); // Atualiza indicadores de status
+  });
+  logCombat(`Início do Turno ${currentTurn}`);
 });
 
 const CHAMPION_DEATH_ANIMATION_DURATION = 2000; // 2 segundos
@@ -1101,7 +1114,7 @@ async function handleSkillUsage(button) {
     return;
   }
 
-  if (user.hasActedThisTurn) {
+  if (!editMode && user.hasActedThisTurn) {
     alert(`${user.name} já agiu neste turno.`);
     return;
   }
@@ -1228,7 +1241,10 @@ socket.on("turnUpdate", (turn) => {
   endTurnBtn.disabled = false; // Reabilita o botão para um novo turno
   enableChampionActions(); // Reabilita todas as ações do campeão
   activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
-  activeChampions.forEach((champion) => champion.updateUI()); // Atualiza a UI para todos os campeões
+  activeChampions.forEach((champion) => {
+    champion.updateUI(); // Atualiza a UI para todos os campeões
+    StatusIndicator.updateChampionIndicators(champion); // Atualiza indicadores de status
+  });
   logCombat(`Início do Turno ${currentTurn}`);
 });
 

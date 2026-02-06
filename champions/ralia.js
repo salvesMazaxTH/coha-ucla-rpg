@@ -36,8 +36,13 @@ const raliaSkills = [
     execute({ user, targets, context }) {
       user.takeDamage(10); // dano direto
 
-      user.modifyStat("Defense", -30, 2, context); // -30 Defense for 2 turns
-      user.modifyStat("Attack", 35, 2, context); // +35 Attack for 2 turns
+      user.modifyStat({
+        statName: "Defense",
+        amount: -30,
+        duration: 2,
+        context,
+      }); // -30 Defense for 2 turns
+      user.modifyStat({ statName: "Attack", amount: 35, duration: 2, context }); // +35 Attack for 2 turns
       const { enemy } = targets;
       const result = DamageEngine.resolveRaw({
         baseDamage: user.Attack,
@@ -46,7 +51,7 @@ const raliaSkills = [
         skill: this.name,
         context,
       });
-      const log = `${user.name} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`
+      const log = `${user.name} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
       // colocar dentro de result.log
       result.log = log + " " + result.log;
       return result;
@@ -131,12 +136,17 @@ const raliaSkills = [
           skill: this.name,
           context,
         });
-        enemy.modifyStat("Attack", -20, 2, context); // -20 Attack por 2 turnos
+        enemy.modifyStat({
+          statName: "Attack",
+          amount: -20,
+          duration: 2,
+          context,
+        }); // -20 Attack por 2 turnos
 
         results.push(damageResult);
       });
 
-      return results
+      return results;
     },
   },
 ];

@@ -1,3 +1,5 @@
+import { StatusIndicator } from "./statusIndicator.js";
+
 export class Champion {
   constructor({
     id,
@@ -94,6 +96,9 @@ export class Champion {
     console.log(
       `[Champion] ${this.name} aplicou keyword "${keywordName}" até o turno ${currentTurn + duration}.`,
     );
+
+    // 🎨 Atualiza os indicadores visuais
+    StatusIndicator.animateIndicatorAdd(this, keywordName);
   }
 
   /**
@@ -124,6 +129,9 @@ export class Champion {
       console.log(
         `[Champion] Keyword "${keywordName}" removido de ${this.name}.`,
       );
+
+      // 🎨 Anima a remoção do indicador
+      StatusIndicator.animateIndicatorRemove(this, keywordName);
     }
   }
 
@@ -141,6 +149,9 @@ export class Champion {
         console.log(
           `[Champion] Keyword "${keywordName}" expirou para ${this.name}.`,
         );
+
+        // 🎨 Anima a remoção do indicador com delay visual
+        StatusIndicator.animateIndicatorRemove(this, keywordName);
       }
     }
     return removedKeywords;
@@ -157,24 +168,64 @@ export class Champion {
     this.hasActedThisTurn = false;
   }
 
-  modifyStat(statName, amount, duration, context) {
+  roundToFive(x) {
+    return Math.round(x / 5) * 5;
+  }
+
+  modifyStat({
+    statName,
+    amount,
+    duration,
+    context,
+    isPermanent = false,
+  } = {}) {
     if (!(statName in this)) {
-      console.warn(`Attempted to modify non-existent stat: ${statName}`);
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
       return;
     }
 
-    // Apply the stat change
-    this[statName] += amount;
+    amount = this.roundToFive(amount); // funciona inclusive para negativos
 
-    // Store the modification for later reversion
+    // Aplicar a modificação imediatamente
+    this[statName] = Math.max(10, Math.min(this[statName] + amount, 99)); // Limite de 10-99 para stats que não sejam HP
+
+    // Armazenar o modificador para reverter depois, se não for permanente
     this.statModifiers.push({
       statName: statName,
-      amount: amount, // Store the amount applied, so we can revert it
+      amount: amount,
       expiresAtTurn: context.currentTurn + duration,
+      isPermanent: isPermanent, // Identifica se a mudança é permanente
     });
     console.log(
-      `[Champion] ${this.name} ${statName} changed by ${amount}. Will revert at turn ${context.currentTurn + duration}.`,
+      `[Champion] ${this.name} teve ${statName} alterado em ${amount}. ` +
+        (isPermanent
+          ? "A alteração é permanente e não será revertida."
+          : `A alteração será revertida no turno ${context.currentTurn + duration}.`),
     );
+  }
+
+  modifyHP(amount, options = {}) {
+    const { maxHPOnly = false, affectMax = false } = options;
+
+    amount = this.roundToFive(amount);
+
+    // Ajuste de maxHP
+    if (maxHPOnly || affectMax) {
+      this.maxHP += amount;
+    }
+
+    // Ajuste de HP atual
+    if (!maxHPOnly) {
+      if (amount > 0) {
+        this.heal(amount);
+      } else if (amount < 0) {
+        this.takeDamage(-amount);
+      }
+    }
+
+    // Clamps finais para garantir que HP não ultrapasse 999, o limite global
+    this.maxHP = Math.max(5, Math.min(this.maxHP, 999));
+    this.HP = Math.max(0, Math.min(this.HP, this.maxHP));
   }
 
   applyProvoke(provokerId, duration, context) {
@@ -213,8 +264,8 @@ export class Champion {
   purgeExpiredStatModifiers(currentTurn) {
     const revertedStats = [];
     this.statModifiers = this.statModifiers.filter((modifier) => {
-      if (modifier.expiresAtTurn <= currentTurn) {
-        // Revert the stat change
+      if (modifier.expiresAtTurn <= currentTurn && !modifier.isPermanent) {
+        // Revert the stat change only if not permanent
         this[modifier.statName] -= modifier.amount;
         revertedStats.push({
           championId: this.id,
@@ -227,7 +278,8 @@ export class Champion {
         );
         return false; // Remove expired modifier
       }
-      return true; // Keep active modifier
+      // Keep active or permanent modifiers
+      return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
     });
 
     this.provokeEffects = this.provokeEffects.filter((effect) => {
@@ -252,122 +304,121 @@ export class Champion {
       },
     );
 
-    return revertedStats; // Return any stats that were reverted
+    return revertedStats;
   }
 
   // 🖥️ Cria o HTML e se “materializa” no mundo
   render(container, handlers = {}) {
-    const div = this.createChampionElement(handlers);
+    // Função auxiliar: criar elemento do campeão
+    const createChampionElement = (handlers = {}) => {
+      const div = document.createElement("div");
+      div.classList.add("champion");
+      div.dataset.championId = this.id;
+      div.dataset.team = this.team;
 
-    this.bindChampionHandlers(div, handlers);
+      div.innerHTML = buildChampionHTML({ editMode: handlers.editMode });
+
+      return div;
+    };
+
+    // Função auxiliar: construir HTML do campeão
+    const buildChampionHTML = ({ editMode = false } = {}) => {
+      const statRow = (label, className, value) => `
+        <div class="stat-row" data-stat="${className}" data-id="${this.id}">
+          <span class="stat-label">${label}:</span>
+          <span class="${className}">${value}</span>
+        </div>
+      `;
+
+      const buildSkillsHTML = () => {
+        return this.skills
+          .map((skill, index) => {
+            const isUlt = index === this.skills.length - 1;
+            const isBasicAttack = index === 0;
+            const label = isUlt ? "ULT" : isBasicAttack ? "AB" : `Hab.${index}`;
+
+            return `
+              <button 
+                class="skill-btn ${isUlt ? "ultimate" : ""}"
+                data-champion-id="${this.id}"
+                data-skill-key="${skill.key}"
+                data-skill-index="${index}"
+                title="${skill.name}\n${skill.description || ""}"
+              >
+                <span class="skill-label">${label}</span>
+              </button>
+            `;
+          })
+          .join("");
+      };
+
+      const skillsHTML = buildSkillsHTML();
+
+      return `
+        <img 
+          class="portrait"
+          data-id="${this.id}"
+          src="${this.portrait}"
+        >
+        <h3 class="champion-name">${this.name}</h3>
+
+        <p>HP: <span class="hp">${this.HP}/${this.maxHP}</span></p>
+
+        <div class="hp-bar">
+          <div class="hp-fill"></div>
+        </div>
+
+
+        ${statRow("Ataque", "Attack", this.Attack)}
+        ${statRow("Defesa", "Defense", this.Defense)}
+        ${statRow("Velocidade", "Speed", this.Speed)}
+        ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical) : ""}
+        ${this.LifeSteal > 0 ? statRow("Roubo de Vida", "LifeSteal", this.LifeSteal) : ""}
+
+        <div class="skills-bar">
+          ${skillsHTML}
+        </div>
+        ${
+          editMode // no modo de edição, mostra o botão de deletar
+            ? `
+          <div class="delete">
+            <button class="delete-btn" data-id="${this.id}">
+              <i class='bx bx-trash'></i>
+            </button>
+          </div>
+        `
+            : ""
+        }
+
+      `;
+    };
+
+    // Função auxiliar: vincular handlers aos elementos
+    const bindChampionHandlers = (div, handlers = {}) => {
+      const { onSkillClick, onDelete } = handlers;
+
+      // botões das skills
+      div.querySelectorAll(".skill-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          onSkillClick?.(btn);
+        });
+      });
+      // botão de deletar
+      div.querySelector(".delete-btn")?.addEventListener("click", () => {
+        onDelete?.(this.id);
+      });
+      // abrir o overlay do card do campeão
+      div.querySelector(".portrait")?.addEventListener("click", (e) => {
+        handlers.onPortraitClick?.(this);
+      });
+    };
+
+    // Executar o fluxo
+    const div = createChampionElement(handlers);
+    bindChampionHandlers(div, handlers);
 
     this.el = div;
-    /*   console.log(
-      `[Client] render() - Setting this.el for ${this.name} (ID: ${this.id})`,
-    ); */
-    /*     console.log(`[Client] this.el:`, this.el); */
     container.appendChild(div);
-  }
-
-  createChampionElement(handlers = {}) {
-    const div = document.createElement("div");
-    div.classList.add("champion");
-    div.dataset.championId = this.id;
-    div.dataset.team = this.team;
-
-    div.innerHTML = this.buildChampionHTML(handlers);
-
-    return div;
-  }
-
-  buildChampionHTML({ editMode = false } = {}) {
-    const statRow = (label, className, value) => `
-    <div class="stat-row" data-stat="${className}" data-id="${this.id}">
-      <span class="stat-label">${label}:</span>
-      <span class="${className}">${value}</span>
-    </div>
-  `;
-
-    const skillsHTML = this.buildSkillsHTML();
-
-    return `
-    <img 
-      class="portrait"
-      data-id="${this.id}"
-      src="${this.portrait}"
-    >
-    <h3 class="champion-name">${this.name}</h3>
-
-    <p>HP: <span class="hp">${this.HP}/${this.maxHP}</span></p>
-
-    <div class="hp-bar">
-      <div class="hp-fill"></div>
-    </div>
-
-
-    ${statRow("Ataque", "Attack", this.Attack)}
-    ${statRow("Defesa", "Defense", this.Defense)}
-    ${statRow("Velocidade", "Speed", this.Speed)}
-    ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical) : ""}
-    ${this.LifeSteal > 0 ? statRow("Roubo de Vida", "LifeSteal", this.LifeSteal) : ""}
-
-    <div class="skills-bar">
-      ${skillsHTML}
-    </div>
-    ${
-      editMode // no modo de edição, mostra o botão de deletar
-        ? `
-      <div class="delete">
-        <button class="delete-btn" data-id="${this.id}">
-          <i class='bx bx-trash'></i>
-        </button>
-      </div>
-    `
-        : ""
-    }
-
-  `;
-  }
-
-  buildSkillsHTML() {
-    return this.skills
-      .map((skill, index) => {
-        const isUlt = index === this.skills.length - 1;
-        const isBasicAttack = index === 0;
-        const label = isUlt ? "ULT" : isBasicAttack ? "AB" : `Hab.${index}`;
-
-        return `
-        <button 
-          class="skill-btn ${isUlt ? "ultimate" : ""}"
-          data-champion-id="${this.id}"
-          data-skill-key="${skill.key}"
-          data-skill-index="${index}"
-          title="${skill.name}\n${skill.description || ""}"
-        >
-          <span class="skill-label">${label}</span>
-        </button>
-      `;
-      })
-      .join("");
-  }
-
-  bindChampionHandlers(div, handlers = {}) {
-    const { onSkillClick, onDelete } = handlers;
-
-    // botões das skills
-    div.querySelectorAll(".skill-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        onSkillClick?.(btn);
-      });
-    });
-    // botão de deletar
-    div.querySelector(".delete-btn")?.addEventListener("click", () => {
-      onDelete?.(this.id);
-    });
-    // abrir o overlay do card do campeão
-    div.querySelector(".portrait")?.addEventListener("click", (e) => {
-      handlers.onPortraitClick?.(this);
-    });
   }
 
   // 🔄 Atualiza UI sem buscar no DOM toda vez
@@ -422,6 +473,9 @@ export class Champion {
     updateStat("Speed");
     updateStat("Critical");
     updateStat("LifeSteal");
+
+    // 🎨 Atualiza os indicadores de status
+    StatusIndicator.updateChampionIndicators(this);
 
     this.el.classList.toggle("dead", !this.alive);
   }
@@ -483,8 +537,8 @@ export class Champion {
   purgeExpiredModifiers(currentTurn) {
     this.damageModifiers = this.damageModifiers.filter((m) => {
       if (m.permanent) return true; // permanente
-      // temporário
-      return m.expiresAtTurn > currentTurn;
+
+      return m.expiresAtTurn > currentTurn; // temporário
     });
   }
 

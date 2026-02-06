@@ -103,18 +103,16 @@ const tharoxSkills = [
     priority: 0,
     targetSpec: ["self"],
     execute({ user, context }) {
-      user.maxHP += 50; // aumentar máximo de HP
-      user.heal(50); // Cura imediata de 50 HP, para refletir o aumento do máximo
-      user.Defense += 10; // cura proporcional à defesa acima da base (50)
+      user.modifyHP(50, { maxHPOnly: true }); // Aumenta HP máximo em 50
+      user.modifyStat({statName: "Defense", amount: 10, context, isPermanent: true}); // Aumenta DEF permanentemente
       const proportionalHeal = Math.floor((user.Defense - 50) / 5) * 10;
       user.heal(proportionalHeal);
 
       // Aplica o modificador de dano permanentemente
       user.addDamageModifier({
         id: "apoteose-do-monolito",
-
-       // permanente
-        permanent: true,
+        name: "Bônus de Apoteose do Monólito",
+        expiresAtTurn: context.currentTurn + 3, // Dura para o turno atual e os próximos 3 turnos, casando com a volta do cooldown
 
         apply: ({ baseDamage, user }) => {
           const bonus = Math.floor(user.Defense * 0.6);
@@ -123,7 +121,7 @@ const tharoxSkills = [
       });
 
       return {
-        log: `${user.name} executou Apoteose do Monólito, liberando sua forma de guerra. Defesa e HP aumentados; cura recebida; Ataques que causam dano passam a causar um bônus de 60% da Defesa.`,
+        log: `${user.name} executou Apoteose do Monólito, liberando sua forma de guerra. Ganhou +${10} Defesa e +50 HP Máximo. Além disso, curou ${proportionalHeal} HP! (Defense: ${user.Defense}, HP: ${user.HP}/${user.maxHP})`,
       };
     },
   },

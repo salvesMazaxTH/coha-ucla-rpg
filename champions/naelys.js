@@ -56,7 +56,7 @@ Aliado ativo recupera:
 
       // 💧 Cura no aliado (se existir)
       if (ally) {
-        ally.HP = Math.min(ally.HP + healAmount, ally.maxHP);
+        ally.heal(healAmount);
         ally.updateUI();
         allyLog = `${user.name} cura ${ally.name} em ${healAmount} de HP.`;
       } else {
@@ -114,22 +114,13 @@ Aliado ativo recupera:
     execute({ user, context }) {
       const { currentTurn } = context;
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
-
-      const oldMax = user.maxHP;
+      
       const factor = 1.65;
 
-      // Aumenta o máximo (+65%)
-      user.maxHP = oldMax * factor;
-
-      // Aumenta o HP atual proporcionalmente
-      user.HP = Math.round(user.HP * factor);
+      user.modifyHP(user.maxHP * (factor - 1), { affectMax: true }); // Aumenta o HP atual proporcionalmente ao aumento do máximo
 
       // Cura +50 sem passar do novo máximo
-      user.HP = Math.min(user.HP + 50, user.maxHP);
-      
-      // Em qualquer caso o limite global de HP é 999
-      user.HP = Math.min(user.HP, 999);
-      user.maxHP = Math.min(user.maxHP, 999);
+      user.heal(50);
 
       // 🔮 Aplica o modificador de dano por 3 turnos (inclui o atual)
       user.addDamageModifier({
