@@ -77,7 +77,11 @@
       class="champion-selection-screen hidden"
     >
       <div class="selection-container">
-        <h2>Selecione seus 3 Campeões e defina a ordem!</h2>
+        <h2>
+          Selecione seus
+          <!-- 3 -->
+          2 Campeões e defina a ordem!
+        </h2>
         <p class="selection-message">
           Arraste e solte para ordenar seus campeões.
         </p>
@@ -89,9 +93,7 @@
         <div class="selected-champions-area">
           <h3>Sua Equipe:</h3>
           <div class="selected-champions-slots" id="selectedChampionsSlots">
-            <div class="champion-slot" data-slot-index="0"></div>
-            <div class="champion-slot" data-slot-index="1"></div>
-            <div class="champion-slot" data-slot-index="2"></div>
+            <!-- Slots will be generated dynamically by JavaScript -->
           </div>
           <button id="confirmTeamBtn" disabled>Confirmar Equipe</button>
         </div>
@@ -109,7 +111,7 @@
     <!-- Overlay de Vitória/Derrota (10 segundos) -->
     <div id="gameOverOverlay" class="game-over-overlay hidden">
       <div id="gameOverContent" class="game-over-content">
-        <h2 id="gameOverMessage"></h1>
+        <h2 id="gameOverMessage"></h2>
       </div>
     </div>
 

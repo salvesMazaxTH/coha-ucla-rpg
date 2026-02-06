@@ -14,6 +14,8 @@ import {
 import { generateId } from "./core/id.js";
 const editMode = false; // Define como true para ignorar o login e a seleção de campeões
 
+const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
+
 // Helper para __dirname em módulos ES
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -362,7 +364,7 @@ io.on("connection", (socket) => {
         for (let i = 0; i < players.length; i++) {
           if (players[i] && !playerTeamsSelected[i]) {
             let currentSelection = [];
-            while (currentSelection.length < 3) {
+            while (currentSelection.length < TEAM_SIZE) {
               let randomChamp = getRandomChampionKey(currentSelection);
               if (randomChamp) {
                 currentSelection.push(randomChamp);
@@ -386,19 +388,21 @@ io.on("connection", (socket) => {
             players[1].team,
             players[1].selectedTeam.slice(0, 2),
           );
-
-          players[0].backChampion = players[0].selectedTeam[2];
+          
+          // descomentar quando o rol total de campeões for maior que 6 para maior variedade
+          /*           players[0].backChampion = players[0].selectedTeam[2];
           players[1].backChampion = players[1].selectedTeam[2];
-
+ */
           io.emit("gameStateUpdate", getGameState());
-          io.emit("backChampionUpdate", {
+          // descomentar quando o rol total de campeões for maior que 6 para maior variedade
+          /*           io.emit("backChampionUpdate", {
             team: players[0].team,
             championKey: players[0].backChampion,
           });
           io.emit("backChampionUpdate", {
             team: players[1].team,
             championKey: players[1].backChampion,
-          });
+          }); */
         }
       } else {
         socket.emit(
@@ -463,7 +467,7 @@ io.on("connection", (socket) => {
                 let currentSelection = players[i].selectedTeam.filter(
                   (c) => c !== null,
                 );
-                while (currentSelection.length < 3) {
+                while (currentSelection.length < TEAM_SIZE) {
                   let randomChamp = getRandomChampionKey(currentSelection);
                   if (randomChamp) {
                     currentSelection.push(randomChamp);
@@ -620,7 +624,7 @@ io.on("connection", (socket) => {
       const allChampionKeys = Object.keys(championDB);
 
       // Valida e preenche campeões ausentes
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < TEAM_SIZE; i++) {
         if (!finalTeam[i] || !allChampionKeys.includes(finalTeam[i])) {
           // Encontra um campeão aleatório que ainda não esteja na equipe
           let randomChamp;

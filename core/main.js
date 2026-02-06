@@ -21,7 +21,7 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-let editMode = true; // Definido como true para auto-entrar para testes
+const editMode = false; // Definido como true para auto-entrar para testes
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(
@@ -36,7 +36,8 @@ const selectedChampionsSlots = document.getElementById(
 const confirmTeamBtn = document.getElementById("confirmTeamBtn");
 const teamSelectionMessage = document.getElementById("team-selection-message");
 
-let selectedChampions = [null, null, null]; // Array para armazenar as chaves dos campeões selecionados em ordem
+const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
+let selectedChampions = Array(TEAM_SIZE).fill(null); // Array para armazenar as chaves dos campeões selecionados em ordem
 let championSelectionTimer = null;
 const CHAMPION_SELECTION_TIME = 120; // 120 segundos
 let championSelectionTimeLeft = CHAMPION_SELECTION_TIME;
@@ -170,7 +171,7 @@ socket.on("allPlayersConnected", () => {
   }
 
   // Redefine o estado de seleção do lado do cliente para o próximo jogo
-  selectedChampions = [null, null, null];
+  selectedChampions = Array(TEAM_SIZE).fill(null);
   playerTeamConfirmed = false;
   confirmTeamBtn.disabled = true;
   if (championSelectionTimer) {
@@ -214,14 +215,14 @@ function updatePlayerNamesUI() {
     if (playerTeam === 1) {
       player1NameDisplayEl.textContent = "Você";
     } else {
-      player1NameDisplayEl.textContent = player1Name || "Oponente";
+      player1NameDisplayEl.textContent = `Oponente (${player1Name || "Desconhecido"})`;
     }
   }
   if (player2NameDisplayEl) {
     if (playerTeam === 2) {
       player2NameDisplayEl.textContent = "Você";
     } else {
-      player2NameDisplayEl.textContent = player2Name || "Oponente";
+      player2NameDisplayEl.textContent = `Oponente (${player2Name || "Desconhecido"})`;
     }
   }
 
@@ -686,7 +687,7 @@ socket.on("allTeamsSelected", () => {
   mainContent.classList.remove("hidden");
   mainContent.classList.add("visible");
   // Redefine o estado de seleção do lado do cliente para o próximo jogo
-  selectedChampions = [null, null, null];
+  selectedChampions = Array(TEAM_SIZE).fill(null);
   playerTeamConfirmed = false;
   confirmTeamBtn.disabled = true;
   if (championSelectionTimer) {
@@ -721,6 +722,7 @@ function createNewChampion(championData) {
     onSkillClick: handleSkillUsage,
     onDelete: deleteChampion,
     onPortraitClick: handlePortraitClick,
+    editMode,
   });
 
   return champion;

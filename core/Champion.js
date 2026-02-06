@@ -257,7 +257,7 @@ export class Champion {
 
   // 🖥️ Cria o HTML e se “materializa” no mundo
   render(container, handlers = {}) {
-    const div = this.createChampionElement();
+    const div = this.createChampionElement(handlers);
 
     this.bindChampionHandlers(div, handlers);
 
@@ -269,18 +269,18 @@ export class Champion {
     container.appendChild(div);
   }
 
-  createChampionElement() {
+  createChampionElement(handlers = {}) {
     const div = document.createElement("div");
     div.classList.add("champion");
     div.dataset.championId = this.id;
     div.dataset.team = this.team;
 
-    div.innerHTML = this.buildChampionHTML();
+    div.innerHTML = this.buildChampionHTML(handlers);
 
     return div;
   }
 
-  buildChampionHTML() {
+  buildChampionHTML({ editMode = false } = {}) {
     const statRow = (label, className, value) => `
     <div class="stat-row" data-stat="${className}" data-id="${this.id}">
       <span class="stat-label">${label}:</span>
@@ -314,12 +314,18 @@ export class Champion {
     <div class="skills-bar">
       ${skillsHTML}
     </div>
+    ${
+      editMode // no modo de edição, mostra o botão de deletar
+        ? `
+      <div class="delete">
+        <button class="delete-btn" data-id="${this.id}">
+          <i class='bx bx-trash'></i>
+        </button>
+      </div>
+    `
+        : ""
+    }
 
-    <div class="delete">
-      <button class="delete-btn" data-id="${this.id}">
-        <i class='bx bx-trash'></i>
-      </button>
-    </div>
   `;
   }
 
