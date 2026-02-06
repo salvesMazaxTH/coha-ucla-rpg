@@ -23,6 +23,9 @@ export const StatusIndicator = {
     console.log("Updating indicators for:", champion.name);
     if (!champion.el) return;
 
+    console.log("EL:", champion.el);
+    console.log("HTML:", champion.el?.innerHTML);
+
     const nameElement = champion.el.querySelector(".champion-name");
     console.log("[updateChampionIndicators]nameElement:", nameElement);
 

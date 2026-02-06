@@ -185,6 +185,10 @@ export const DamageEngine = {
         crit.didCrit = false;
         critExtra = 0;
       }
+
+      if (passiveResult?.takeBonusDamage) {
+        damage += passiveResult.takeBonusDamage;
+      }
     }
 
     // Calcula dano final
@@ -350,7 +354,7 @@ export const DamageEngine = {
     let totalDamage = 0;
     let passiveLog = null;
 
-    // Passiva ANTES do dano
+    // Passiva ANTES do alvo receber o dano
     if (target.passive?.beforeTakingDamage) {
       const passiveResult = target.passive.beforeTakingDamage({
         attacker: user,
@@ -373,6 +377,10 @@ export const DamageEngine = {
       if (passiveResult?.cancelCrit === true) {
         crit.didCrit = false;
         critExtra = 0;
+      }
+
+      if (passiveResult?.takeBonusDamage) {
+        damage += passiveResult.takeBonusDamage;
       }
     }
 
@@ -408,7 +416,7 @@ export const DamageEngine = {
     // ✅ HP APÓS DANO (antes da passiva curar)
     const hpAfterDamage = target.HP;
 
-    // Passiva DEPOIS do dano (pode curar)
+    // Passiva DEPOIS de receber o dano (pode curar)
     if (target.passive?.afterTakingDamage && target.HP > 0) {
       const passiveResult = target.passive.afterTakingDamage({
         attacker: user,

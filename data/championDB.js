@@ -150,33 +150,37 @@ export const championDB = {
     skills: skillsByChampion.voltexz,
     passive: {
       name: "Sobrecarga Instável",
-      description: `Sempre que Voltexz causar dano, ela sofre 20% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Energizado". Ao atacar um alvo "Energizado", Voltexz causa 15% de dano adicional (consome o status); além disso, tem 50% de chance de aplicar "Paralisado".`,
+      description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Energizado". Ao atacar um alvo "Energizado", Voltexz causa 15% de dano adicional (consome o status) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
 
       afterDoingDamage({ attacker, target, damage, damageType, context }) {
         const self = attacker;
+        if (self !== attacker) return; // Garantir que estamos no atacante
         let log = "";
 
-        // PARTE 1: Recuo de dano (20% do dano causado)
-        const recoilDamage = Math.ceil((damage * 20) / 100);
-        self.takeDamage(recoilDamage);
-        log += `⚡ ${self.name} sofreu ${recoilDamage} de recuo por Sobrecarga Instável!`;
+        if (damage > 0) { // se causou dano, aplica recuo
+          const roundedDamage = Math.round(damage / 5) * 5;
+          const recoilDamage = Math.ceil((roundedDamage * 25) / 100);
+
+          if (recoilDamage > 0) { // se o recuo for maior que 0, aplica o dano de recuo
+            self.takeDamage(recoilDamage);
+            log += `⚡ ${self.name} sofreu ${recoilDamage} de recuo por Sobrecarga Instável!`;
+          }
+        }
 
         // PARTE 2: Marcar alvo com "Energizado" (1 turno)
-        target.applyKeyword("energizado", 1, context);
+        target.applyKeyword("energizado", 2, context);
         log += `\n⚡ ${target.name} foi marcado com "Energizado"!`;
 
         return { log };
       },
 
       // PARTE 3: Bonus de dano e chance de aplicar Paralisado ao atacar alvo "Energizado"
-      beforeTakingDamage({ attacker, target, crit, context }) {
-        // Verifica se o ATACANTE tem a passiva e se o ALVO está Energizado
-        // Nota: Este hook é chamado no alvo, então precisamos verificar o atacante
-        if (!attacker.passive?.name?.includes("Sobrecarga")) return;
+      beforeTakingDamage({ attacker, target, damage, context }) {
+        // Verifica se o  o ALVO está Energizado
         if (!target.hasKeyword?.("energizado")) return;
 
         // Aumenta o damage em 15%
-        const bonusDamage = Math.ceil((target.takingDamageAmount * 15) / 100);
+        const bonusDamage = Math.ceil((damage * 15) / 100);
 
         // Remove o keyword "energizado" (consome)
         target.removeKeyword("energizado");
@@ -193,7 +197,7 @@ export const championDB = {
         }
 
         return {
-          reducedCritExtra: bonusDamage,
+          takeBonusDamage: bonusDamage,
           log,
         };
       },

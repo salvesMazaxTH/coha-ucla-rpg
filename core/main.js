@@ -265,7 +265,7 @@ socket.on("playerCountUpdate", (count) => {
 });
 
 socket.on("gameStateUpdate", (gameState) => {
-  // console.log("Estado do jogo atualizado:", gameState);
+  console.log("GAME STATE RECEBIDO:", gameState.champions);
 
   const existingChampionElements = new Map();
   document.querySelectorAll(".champion").forEach((el) => {
@@ -295,6 +295,8 @@ socket.on("gameStateUpdate", (gameState) => {
       champion.Critical = championData.Critical;
       champion.cooldowns = new Map(championData.cooldowns); // Garante que os cooldowns sejam atualizados
       champion.alive = championData.HP > 0; // Atualiza o status de vivo com base no HP
+
+      champion.keywords = new Map(championData.keywords);
 
       champion.updateUI();
       existingChampionElements.delete(championData.id); // Marca como processado
@@ -352,7 +354,10 @@ socket.on("turnUpdate", (turn) => {
   activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
   activeChampions.forEach((champion) => {
     champion.updateUI(); // Atualiza a UI para todos os campeões
-    StatusIndicator.updateChampionIndicators(champion); // Atualiza indicadores de status
+    // Espera DOM estabilizar
+    requestAnimationFrame(() => {
+      StatusIndicator.updateChampionIndicators(champion);
+    });
   });
   logCombat(`Início do Turno ${currentTurn}`);
 });

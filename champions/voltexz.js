@@ -35,14 +35,14 @@ const voltexzSkills = [
     priority: 0, // prioridade padrão
     targetSpec: ["enemy", "enemy"],
     execute({ user, targets, context }) {
-      const [primaryTarget, secondaryTarget] = targets;
+      const {enemy: primary, enemy2: secondary} = targets;
       const baseDamage = 10 + user.Attack;
       const results = [];
 
       const primaryResult = DamageEngine.resolveRaw({
         baseDamage,
         user,
-        target: primaryTarget,
+        target: primary,
         skill: this.name,
         context,
       });
@@ -51,7 +51,7 @@ const voltexzSkills = [
       const secondaryResult = DamageEngine.resolveRaw({
         baseDamage,
         user,
-        target: secondaryTarget,
+        target: secondary,
         skill: this.name,
         context,
       });
@@ -68,7 +68,7 @@ const voltexzSkills = [
     Contato: ❌
     Dano:
     Fixo 40 (Direto);
-    Efeito: Alvo é paralisado por 1 turno (perde a próxima ação).`,
+    Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
     cooldown: 2,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
