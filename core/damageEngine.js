@@ -18,53 +18,51 @@ export const DamageEngine = {
 
   rollCrit(user, context, options = {}) {
     const { force = false, disable = false } = options;
+    
+    let roll = null;
+    let didCrit = false;
+    let wasForced = force;
+    
+    const level = user.Critical || 0;
+    const entry = this.critTable[level];
+    
+    // Sem nível de crítico
+    if (!entry) {
+        didCrit = false;
+        bonus = 0;
+        wasForced = false;
+        disabled = false;
+    }
+    
+    const { bonus, chance } = entry;
+    
+     // ✅ Crítico garantido
+    if (wasForced) {
+      didCrit = true;
+    } else {
+      /*     roll = 0.1; // 0.1 para testes */
+      roll = Math.random(); // Descomente para uso normal
+      didCrit = roll < chance;
+    }
 
     // ❌ Crítico bloqueado
     if (disable) {
-      return {
+      didCrit = false;
+      bonus = 0;
+      disabled = true;
+      /* return {
         didCrit: false,
         bonus: 0,
         roll: null,
         forced: false,
         disabled: true,
-      };
+      }; */
     }
+    
 
-    const level = user.Critical || 0;
-    const entry = this.critTable[level];
-
-    // Sem nível de crítico
-    if (!entry) {
-      return {
-        didCrit: false,
-        bonus: 0,
-        roll: null,
-        forced: false,
-        disabled: false,
-      };
-    }
-
-    const { bonus, chance } = entry;
-
-    // ✅ Crítico garantido
-    if (force) {
-      return {
-        didCrit: true,
-        bonus,
-        roll: null,
-        forced: true,
-        disabled: false,
-      };
-    }
-
-    /*     const roll = 0.1; // 0.1 para testes */
-    const roll = Math.random(); // Descomente para uso normal
-    const didCrit = roll < chance;
-
-    if (didCrit) {
-      if (user?.passive?.onCriticalHit) {
+    if (didCrit && user?.passive?.onCriticalHit) {
         /* console.log(`[DamageEngine] Passiva onCritical encontrada! Executando...`); */
-        user.passive.onCriticalHit({ user, context });
+        user.passive.onCriticalHit({ user, context, forced: wasForced });
       } else {
         /*        console.log(`[DamageEngine] Usuário ${user.name} não tem passiva onCritical`) */
       }
@@ -74,6 +72,7 @@ export const DamageEngine = {
       didCrit,
       bonus: didCrit ? bonus : 0,
       roll,
+      forced: wasForced,
     };
   },
   // -------------------------------------------------
