@@ -33,13 +33,10 @@ const voltexzSkills = [
     `,
     cooldown: 2,
     priority: 0, // prioridade padrão
-    targetSpec: [
-    {type: "enemy"},
-    {type: "enemy"}
-    ],
-    
+    targetSpec: [{ type: "enemy" }, { type: "enemy" }],
+
     execute({ user, targets, context }) {
-      const {enemy: primary, enemy2: secondary} = targets;
+      const { enemy: primary, enemy2: secondary } = targets;
       const baseDamage = 10 + user.Attack;
       const results = [];
 

@@ -59,9 +59,9 @@ const vaelSkills = [
     cooldown: 2,
     priority: 0, // Example priority for testing
     targetSpec: [
-  { type: "enemy", unique: true },
-  { type: "enemy", unique: true }
-],
+      { type: "enemy", unique: true },
+      { type: "enemy", unique: true },
+    ],
 
     execute({ user, targets, context }) {
       const { enemy: primary, enemy2: secondary } = targets;

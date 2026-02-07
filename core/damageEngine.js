@@ -18,25 +18,26 @@ export const DamageEngine = {
 
   rollCrit(user, context, options = {}) {
     const { force = false, disable = false } = options;
-    
+
+    let disabled = false;
     let roll = null;
     let didCrit = false;
     let wasForced = force;
-    
+
     const level = user.Critical || 0;
     const entry = this.critTable[level];
-    
+
     // Sem nível de crítico
     if (!entry) {
-        didCrit = false;
-        bonus = 0;
-        wasForced = false;
-        disabled = false;
+      didCrit = false;
+      bonus = 0;
+      wasForced = false;
+      disabled = false;
     }
-    
+
     const { bonus, chance } = entry;
-    
-     // ✅ Crítico garantido
+
+    // ✅ Crítico garantido
     if (wasForced) {
       didCrit = true;
     } else {
@@ -58,14 +59,12 @@ export const DamageEngine = {
         disabled: true,
       }; */
     }
-    
 
     if (didCrit && user?.passive?.onCriticalHit) {
-        /* console.log(`[DamageEngine] Passiva onCritical encontrada! Executando...`); */
-        user.passive.onCriticalHit({ user, context, forced: wasForced });
-      } else {
-        /*        console.log(`[DamageEngine] Usuário ${user.name} não tem passiva onCritical`) */
-      }
+      /* console.log(`[DamageEngine] Passiva onCritical encontrada! Executando...`); */
+      user.passive.onCriticalHit({ user, context, forced: wasForced });
+    } else {
+      /*        console.log(`[DamageEngine] Usuário ${user.name} não tem passiva onCritical`) */
     }
 
     return {
@@ -79,15 +78,11 @@ export const DamageEngine = {
 
   defenseToPercent(defense) {
     if (!defense) return 0;
-    
-    const K = 
-    defense >= 25 && defense <= 45 
-    ? 61
-    : 38
-    ;
-  const effective = defense / (defense + K);
 
-    return effective
+    const K = defense >= 25 && defense <= 45 ? 61 : 38;
+    const effective = defense / (defense + K);
+
+    return effective;
   },
 
   // ----------------

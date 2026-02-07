@@ -186,17 +186,16 @@ export class Champion {
 
     amount = this.roundToFive(amount); // funciona inclusive para negativos
 
-    
-     // Limite de 10-99 para stats que não sejam HP, exceto ATQ
-    
+    // Limite de 10-99 para stats que não sejam HP, exceto ATQ
+
     const limits = {
-  Attack: { min: 10, max: 150 },
-  default: { min: 10, max: 99 },
-};
+      Attack: { min: 10, max: 150 },
+      default: { min: 10, max: 99 },
+    };
 
-const { min, max } = limits[statName] || limits.default;
+    const { min, max } = limits[statName] || limits.default;
 
-this[statName] = Math.max(min, Math.min(this[statName] + amount, max));
+    this[statName] = Math.max(min, Math.min(this[statName] + amount, max));
 
     // Armazenar o modificador para reverter depois, se não for permanente
     this.statModifiers.push({

@@ -927,10 +927,10 @@ async function resolveTargets(user, skill) {
     // console.error("Habilidade sem targetSpec:", skill.name);
     return null;
   }
-  
-  const normalizedSpec = skill.targetSpec.map(s =>
-  typeof s === "string" ? { type: s } : s
-);
+
+  const normalizedSpec = skill.targetSpec.map((s) =>
+    typeof s === "string" ? { type: s } : s,
+  );
 
   // Se há alvos globais, nenhuma seleção é necessária
   const hasGlobalTargets = skill.targetSpec.some(
@@ -954,10 +954,10 @@ async function resolveTargets(user, skill) {
       user,
       championsInField,
       enemyCounter,
-      chosenTargets
-      spec.unique === true
+      chosenTargets,
+      spec.unique === true,
     );
-    
+
     // Cancelou a habilidade inteira
     if (target === null) return null;
 
@@ -980,7 +980,7 @@ async function resolveTargetRole(
   championsInField,
   enemyCounter,
   chosenTargets,
-  enforceUnique
+  enforceUnique,
 ) {
   // helper pra aplicar filtro de unicidade
   const filterUnique = (list) => {
@@ -997,7 +997,7 @@ async function resolveTargetRole(
   // 🔹 ALLY automático
   if (role === "ally") {
     let allies = championsInField.filter(
-      (c) => c.team === user.team && c.id !== user.id
+      (c) => c.team === user.team && c.id !== user.id,
     );
 
     allies = filterUnique(allies);
@@ -1010,9 +1010,7 @@ async function resolveTargetRole(
 
   // 🔹 SELECT ALLY
   if (role === "select:ally") {
-    let candidates = championsInField.filter(
-      (c) => c.team === user.team
-    );
+    let candidates = championsInField.filter((c) => c.team === user.team);
 
     candidates = filterUnique(candidates);
 
@@ -1020,7 +1018,7 @@ async function resolveTargetRole(
 
     const target = await createTargetSelectionOverlay(
       candidates,
-      "Escolha um Aliado (ou você)"
+      "Escolha um Aliado (ou você)",
     );
 
     if (!target) return undefined;
@@ -1034,9 +1032,7 @@ async function resolveTargetRole(
     enemyCounter.count++;
     const index = enemyCounter.count;
 
-    let candidates = championsInField.filter(
-      (c) => c.team !== user.team
-    );
+    let candidates = championsInField.filter((c) => c.team !== user.team);
 
     candidates = filterUnique(candidates);
 
@@ -1044,9 +1040,7 @@ async function resolveTargetRole(
 
     const target = await createTargetSelectionOverlay(
       candidates,
-      index === 1
-        ? "Selecione o INIMIGO"
-        : `Selecione o INIMIGO ${index}`
+      index === 1 ? "Selecione o INIMIGO" : `Selecione o INIMIGO ${index}`,
     );
 
     if (!target) return null;
@@ -1064,7 +1058,7 @@ async function resolveTargetRole(
 
   const target = await createTargetSelectionOverlay(
     candidates,
-    `Selecione o alvo (${role})`
+    `Selecione o alvo (${role})`,
   );
 
   if (!target) return undefined;
