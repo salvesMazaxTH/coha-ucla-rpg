@@ -99,7 +99,7 @@ export const DamageEngine = {
         context,
         forced: crit.forced,
       });
-      return { crit, critBonusFactor, critExtra };
+      return crit
     }
   },
 
@@ -138,285 +138,130 @@ export const DamageEngine = {
 
   // ----------------
   // Modificadores
-  applyDamageModifiers({ baseDamage, user, target, skill }) {
-    if (!user?.getDamageModifiers) return baseDamage;
+  _applyDamageModifiers(damage,user,target,skill,context){
+  if (!user?.getDamageModifiers) return damage;
 
-    user.purgeExpiredModifiers(currentTurn);
+  user.purgeExpiredModifiers(context.currentTurn);
 
-    let damage = baseDamage;
-
-    for (const mod of user.getDamageModifiers()) {
-      if (typeof mod.apply === "function") {
-        damage = mod.apply({
-          baseDamage: damage,
-          user,
-          target,
-          skill,
-        });
-      }
+  for(const mod of user.getDamageModifiers()){
+    if(mod.apply){
+      const out = mod.apply({ baseDamage:damage,user,target,skill });
+      if(typeof out==="number") damage = out;
     }
+  }
+  return damage;
+},
+    
+    _applyBeforePassive(mode,damage,crit,user,target,context){
+  if(!target.passive?.beforeTakingDamage)
+    return { damage, didCrit:crit.didCrit, critExtra:crit.critExtra };
 
-    return damage;
-  },
+  const r = target.passive.beforeTakingDamage({
+    attacker:user,
+    target,
+    damage,
+    critExtra:crit.critExtra,
+    damageType:mode,
+    crit,
+    context
+  });
 
-  // -------------------------------------------------
-  // Calculadora de dano propriamente dito
-  // Dano que sofre defesa
-  resolveRaw({ baseDamage, user, target, skill, context, options = {} }) {
-    if (debugMode)
-      console.group(`⚔️ [RESOLVE RAW] ${user?.name} → ${target?.name}`);
+  if(r?.cancelCrit){
+    crit.didCrit=false;
+    crit.critExtra=0;
+  }
 
-    // Checar por Imunidade Absoluta
-    if (target.hasKeyword?.("imunidade absoluta")) {
-      if (debugMode) {
-        console.log(`🛡️ IMUNIDADE ABSOLUTA DETECTADA`);
-        console.groupEnd();
-      }
-      return {
-        baseDamage,
-        crit: { level: 0, didCrit: false, bonus: 0, roll: null },
-        totalDamage: 0,
-        finalHP: target.HP,
-        log: `${target.name} está com Imunidade Absoluta! ${user.name} não consegue causar dano.`,
-      };
-    }
+  if(r?.reducedCritExtra!==undefined)
+    crit.critExtra=Math.max(r.reducedCritExtra,0);
 
-    if (debugMode) console.log(`📊 Base Damage: ${baseDamage}`);
+  if(r?.takeBonusDamage)
+    damage+=r.takeBonusDamage;
 
-    // 🎲 CRITICAL ROLL
-    const crit = this.processCrit({
-      baseDamage,
-      user,
-      target,
-      context,
-      options,
-    });
+  return { damage, didCrit:crit.didCrit, critExtra:crit.critExtra };
+},
+    
+    _composeFinalDamage(mode,damage,crit,direct,target,context){
+  let final = crit.didCrit ? damage + crit.critExtra : damage;
 
-    const { didCrit, critBonusFactor, critExtra } = crit;
+  if(editMode) return 999;
 
-    // Debug
-    if (debugMode && didCrit) {
-      console.log(`\n💥 CRIT CALCULATION:`);
-      console.log(
-        `  Bonus: ${crit.bonus}%  Mult: ${(1 + critBonusFactor).toFixed(3)}x`,
-      );
-      console.log(`  Extra: ${critExtra.toFixed(2)}`);
-    }
+  const defPct=this.defenseToPercent(target.Defense||0);
+  const flat=target.getTotalDamageReduction?.()||0;
 
-    let damage = baseDamage;
+  if(mode==="raw"){
+    final = Math.max(final-final*defPct-flat,0);
+  }else{
+    const d=Math.min(direct,final);
+    const r=final-d;
+    final = Math.max(d-flat,0) + Math.max(r-r*defPct-flat,0);
+  }
 
-    // 🧬 APLICA MODIFICADORES
-    if (user?.getDamageModifiers) {
-      user.purgeExpiredModifiers(context.currentTurn);
-      const mods = user.getDamageModifiers();
+  final=Math.max(final,10);
+  return this.roundToFive(final);
+},
+    
+    _applyDamage(target,val){
+  target.takeDamage(val);
+  return target.HP;
+},
+    
+    _applyAfterPassive(mode,val,user,target,context){
+  if(!target.passive?.afterTakingDamage || target.HP<=0) return null;
 
-      if (debugMode && mods.length > 0)
-        console.log(`\n🧬 MODIFIERS (${mods.length}):`);
+  const r=target.passive.afterTakingDamage({
+    attacker:user,
+    target,
+    damage:val,
+    damageType:mode,
+    context
+  });
 
-      for (const mod of mods) {
-        if (typeof mod.apply === "function") {
-          const before = damage;
-          const modified = mod.apply({
-            baseDamage,
-            user,
-            target,
-            skill,
-          });
-          if (typeof modified === "number") {
-            damage = modified;
-            if (debugMode)
-              console.log(`  ${mod.name || "Unnamed"}: ${before} → ${damage}`);
-          }
-        }
-      }
-    }
+  return r?.log||null;
+},
+    
+    _buildLog(user,target,skill,dmg,crit,hpAfter,passiveLog){
+  let log=`${user.name} usou ${skill} e causou ${dmg} a ${target.name}`;
 
-    // 🔄 PASSIVE beforeTakingDamage
-    let passiveLog = null;
-    let adjustedCritExtra = critExtra;
+  if(crit.didCrit)
+    log+=` (CRÍTICO ${(1+crit.critBonusFactor).toFixed(2)}x)`;
 
-    if (target.passive?.beforeTakingDamage) {
-      if (debugMode) console.log(`\n🔄 PASSIVE beforeTakingDamage:`);
+  log+=`\nHP: ${hpAfter}/${target.maxHP}`;
 
-      const passiveResult = target.passive.beforeTakingDamage({
-        attacker: user,
-        target,
-        damage,
-        critExtra: adjustedCritExtra,
-        damageType: "raw",
-        crit,
-        context,
-      });
+  if(passiveLog) log+=`\n${passiveLog}`;
 
-      if (passiveResult?.damageReduction) {
-        adjustedCritExtra = Math.max(
-          adjustedCritExtra - passiveResult.damageReduction,
-          0,
-        );
-        if (debugMode)
-          console.log(
-            `  Redução: -${passiveResult.damageReduction} (critExtra agora: ${adjustedCritExtra})`,
-          );
-      }
+  return log;
+},
+    
+    _applyLifeSteal(user,dmg,log){
+  if(user.LifeSteal>0 && dmg>0){
+    const heal=Math.max(5,this.roundToFive(dmg*user.LifeSteal/100));
+    user.heal(heal);
+    log+=`\nRoubo de vida: ${heal}`;
+  }
+},
+    
+    _triggerAfterAttack(user,target,dmg,mode,crit,context,log){
+  if(!user.passive?.afterDoingDamage || dmg<=0) return;
 
-      if (passiveResult?.reducedCritExtra !== undefined) {
-        adjustedCritExtra = Math.max(passiveResult.reducedCritExtra, 0);
-        if (debugMode)
-          console.log(`  CritExtra alterado para: ${adjustedCritExtra}`);
-      }
+  const r=user.passive.afterDoingDamage({
+    attacker:user,
+    target,
+    damage:dmg,
+    damageType:mode,
+    crit,
+    context
+  });
 
-      if (passiveResult?.cancelCrit === true) {
-        didCrit = false;
-        adjustedCritExtra = 0;
-        if (debugMode) console.log(`  ❌ Crítico cancelado`);
-      }
+  if(r?.log) log+=`\n${r.log}`;
+}
+    
+    
 
-      if (passiveResult?.takeBonusDamage) {
-        damage += passiveResult.takeBonusDamage;
-        if (debugMode)
-          console.log(
-            `  Dano bônus: +${passiveResult.takeBonusDamage} (damage agora: ${damage})`,
-          );
-      }
-    }
-
-    // 📐 DAMAGE CALCULATION (com crítico incluído)
-    let finalDamage = didCrit ? damage + adjustedCritExtra : damage;
-
-    if (debugMode) {
-      console.log(`\n📐 DAMAGE CALCULATION:`);
-      console.log(`  Base: ${damage.toFixed(2)}`);
-      if (didCrit) {
-        console.log(`  Crit Extra: ${adjustedCritExtra.toFixed(2)}`);
-        console.log(`  Total com crítico: ${finalDamage.toFixed(2)}`);
-      }
-    }
-
-    // 🛡️ APPLY DEFENSE
-    if (!editMode) {
-      const defense = target.Defense || 0;
-      const defReduction = this.defenseToPercent(defense);
-      const extraReduction = target.getTotalDamageReduction?.() || 0;
-
-      if (debugMode) console.log(`\n🛡️ DEFENSE APPLICATION:`);
-      if (debugMode) console.log(`  Target Defense: ${defense}`);
-      if (debugMode)
-        console.log(
-          `  Defense Reduction %: ${(defReduction * 100).toFixed(2)}%`,
-        );
-      if (debugMode) console.log(`  Extra Reduction: ${extraReduction}`);
-
-      finalDamage = Math.max(
-        damage - damage * defReduction - extraReduction,
-        0,
-      );
-
-      if (debugMode) {
-        console.log(
-          `  Cálculo: ${damage.toFixed(2)} - (${damage.toFixed(2)} * ${(defReduction * 100).toFixed(2)}%) - ${extraReduction}`,
-        );
-        console.log(`  = ${finalDamage.toFixed(2)}`);
-      }
-
-      finalDamage = Math.max(finalDamage, 10);
-      if (debugMode && finalDamage < 10)
-        console.log(`  ⬆️ Mínimo 10: ${finalDamage}`);
-
-      finalDamage = this.roundToFive(finalDamage);
-      if (debugMode) console.log(`  🔢 Arredondado para 5: ${finalDamage}`);
-    } else {
-      finalDamage = 999;
-      if (debugMode) console.log(`  ⚙️ EDIT MODE: finalDamage = 999`);
-    }
-
-    // Aplica o dano
-    target.takeDamage(finalDamage);
-    const hpAfterDamage = target.HP;
-
-    // Passiva DEPOIS do dano (pode curar)
-    if (target.passive?.afterTakingDamage && target.HP > 0) {
-      const passiveResult = target.passive.afterTakingDamage({
-        attacker: user,
-        target,
-        damage: finalDamage,
-        damageType: "raw",
-        context,
-      });
-      if (passiveResult?.log) {
-        passiveLog = passiveResult.log;
-      }
-    }
-
-    const finalHP = target.HP;
-
-    // 📝 LOG CONSTRUCTION
-    let finalLog = `${user.name} usou ${skill} e causou ${finalDamage} de dano a ${target.name}`;
-
-    // Adiciona crítico
-    if (didCrit) {
-      finalLog += ` (CRÍTICO ${(1 + critBonusFactor).toFixed(2)}x !!!)`;
-    }
-
-    // ✅ HP após dano (antes da cura)
-    finalLog += `.\nHP do alvo após dano: ${hpAfterDamage}/${target.maxHP}`;
-
-    // ✅ Log da passiva (se curou)
-    if (passiveLog) {
-      finalLog += `\n${passiveLog}`;
-
-      // Se curou, mostra o HP final também
-      if (finalHP !== hpAfterDamage) {
-        finalLog += `\nHP do alvo após cura: ${finalHP}/${target.maxHP}`;
-      }
-    }
-
-    // Roubo de vida
-    if (user.LifeSteal > 0 && finalDamage > 0) {
-      const rawHeal = (finalDamage * user.LifeSteal) / 100;
-      const healAmount = Math.max(5, this.roundToFive(rawHeal));
-      user.heal(healAmount);
-      finalLog += `\n${user.name} roubou ${healAmount} de vida. HP atual: ${user.HP}/${user.maxHP}`;
-    }
-
-    // Passiva DO ATACANTE após fazer dano
-    if (user.passive?.afterDoingDamage && finalDamage > 0) {
-      const passiveResult = user.passive.afterDoingDamage({
-        attacker: user,
-        target,
-        damage: finalDamage,
-        damageType: "raw",
-        crit,
-        context,
-      });
-      if (passiveResult?.log) {
-        finalLog += `\n${passiveResult.log}`;
-      }
-    }
-
-    if (debugMode) {
-      console.log(`\n✅ RESULTADO FINAL:`);
-      console.log(`  Total Damage: ${finalDamage}`);
-      console.log(`  Target HP: ${finalHP}/${target.maxHP}`);
-      console.groupEnd();
-    }
-
-    return {
-      baseDamage,
-      crit: {
-        level: user.Critical || 0,
-        didCrit: didCrit,
-        bonus: crit.bonus,
-        roll: crit.roll,
-      },
-      totalDamage: finalDamage,
-      finalHP,
-      log: finalLog,
-    };
-  },
-
-  // Dano híbrido (parte ignora defesa)
-
-  resolveHybrid({
+  // ------------------------------------------------- 
+  // Calculadora e aplicadora de dano real
+resolveDamage(params) {
+  const {
+    mode = "raw",
     baseDamage,
     directDamage = 0,
     user,
@@ -424,273 +269,77 @@ export const DamageEngine = {
     skill,
     context,
     options = {},
-  }) {
-    if (debugMode)
-      console.group(`⚔️ [RESOLVE HYBRID] ${user?.name} → ${target?.name}`);
+  } = params;
 
-    if (target.hasKeyword?.("imunidade absoluta")) {
-      if (debugMode) {
-        console.log(`🛡️ IMUNIDADE ABSOLUTA DETECTADA`);
-        console.groupEnd();
-      }
-      return {
-        baseDamage,
-        crit: { level: 0, didCrit: false, bonus: 0, roll: null },
-        directDamage: 0,
-        rawDamage: 0,
-        totalDamage: 0,
-        finalHP: target.HP,
-        log: `${target.name} está com Imunidade Absoluta! ${user.name} não consegue causar dano.`,
-      };
-    }
+  if (this._isImmune(target))
+    return this._buildImmuneResult(baseDamage, user, target);
 
-    if (debugMode) {
-      console.log(`📊 Base Damage: ${baseDamage}`);
-      console.log(`💎 Direct Part of Damage: ${directDamage}`);
-    }
+  const crit = this._computeCrit(mode, baseDamage, directDamage, user, target, context, options);
 
-    // 🎲 CRITICAL ROLL
-    const crit = this.processCrit({
-      baseDamage: baseDamage - directDamage,
-      user,
-      target,
-      context,
-      options,
-    });
+  let damage = this._applyDamageModifiers(baseDamage, user, target, skill, context);
 
-    const { didCrit, critBonusFactor, critExtra } = crit;
+  const passiveBefore = this._applyBeforePassive(
+    mode, damage, crit, user, target, context
+  );
 
-    let damage = baseDamage;
+  damage = passiveBefore.damage;
+  crit.didCrit = passiveBefore.didCrit;
+  crit.critExtra = passiveBefore.critExtra;
 
-    // 🧬 APLICA MODIFICADORES
-    if (user?.getDamageModifiers) {
-      user.purgeExpiredModifiers(context.currentTurn);
-      const mods = user.getDamageModifiers();
+  let finalDamage = this._composeFinalDamage(
+    mode,
+    damage,
+    crit,
+    directDamage,
+    target,
+    context
+  );
 
-      if (debugMode && mods.length > 0)
-        console.log(`\n🧬 MODIFIERS (${mods.length}):`);
+  const hpAfter = this._applyDamage(target, finalDamage);
 
-      for (const mod of mods) {
-        if (typeof mod.apply === "function") {
-          const before = damage;
-          const modified = mod.apply({
-            damage,
-            user,
-            target,
-            skill,
-          });
-          if (typeof modified === "number") {
-            damage = modified;
-            if (debugMode)
-              console.log(`  ${mod.name || "Unnamed"}: ${before} → ${damage}`);
-          }
-        }
-      }
-    }
+  const passiveLog = this._applyAfterPassive(
+    mode, finalDamage, user, target, context
+  );
 
-    // 🔄 PASSIVE beforeTakingDamage
-    let passiveLog = null;
-    let adjustedCritExtra = critExtra;
+  const log = this._buildLog(
+    user,
+    target,
+    skill,
+    finalDamage,
+    crit,
+    hpAfter,
+    passiveLog
+  );
 
-    if (target.passive?.beforeTakingDamage) {
-      if (debugMode) console.log(`\n🔄 PASSIVE beforeTakingDamage:`);
+  this._applyLifeSteal(user, finalDamage, log);
+  this._triggerAfterAttack(user, target, finalDamage, mode, crit, context, log);
 
-      const passiveResult = target.passive.beforeTakingDamage({
-        attacker: user,
-        target,
-        damage,
-        critExtra: adjustedCritExtra,
-        damageType: "hybrid",
-        crit,
-        context,
-      });
+  return {
+    baseDamage,
+    totalDamage: finalDamage,
+    finalHP: target.HP,
+    log,
+    crit: {
+      level: user.Critical || 0,
+      didCrit: crit.didCrit,
+      bonus: crit.bonus,
+      roll: crit.roll,
+    },
+  };
+},
+    
+    _isImmune(target){
+  return target.hasKeyword?.("imunidade absoluta");
+},
 
-      if (passiveResult?.damageReduction) {
-        adjustedCritExtra = Math.max(
-          adjustedCritExtra - passiveResult.damageReduction,
-          0,
-        );
-        if (debugMode)
-          console.log(`  Redução: -${passiveResult.damageReduction}`);
-      }
-
-      if (passiveResult?.reducedCritExtra !== undefined) {
-        adjustedCritExtra = Math.max(passiveResult.reducedCritExtra, 0);
-        if (debugMode)
-          console.log(`  CritExtra alterado para: ${adjustedCritExtra}`);
-      }
-
-      if (passiveResult?.cancelCrit === true) {
-        didCrit = false;
-        adjustedCritExtra = 0;
-        if (debugMode) console.log(`  ❌ Crítico cancelado`);
-      }
-
-      if (passiveResult?.takeBonusDamage) {
-        damage += passiveResult.takeBonusDamage;
-        if (debugMode)
-          console.log(`  Dano bônus: +${passiveResult.takeBonusDamage}`);
-      }
-    }
-
-    // 📐 DAMAGE CALCULATION (com crítico)
-    let finalDamage = didCrit ? damage + adjustedCritExtra : damage;
-
-    if (debugMode) {
-      console.log(`\n📐 DAMAGE CALCULATION:`);
-      console.log(`  Base: ${damage.toFixed(2)}`);
-      if (didCrit) {
-        console.log(`  Crit Extra: ${adjustedCritExtra.toFixed(2)}`);
-        console.log(`  Total com crítico: ${finalDamage.toFixed(2)}`);
-      }
-    }
-
-    // --- SEPARA PARTES (direct/raw) ---
-    const directPart = Math.min(directDamage, damage);
-    const rawPart = damage - directPart;
-
-    if (debugMode) {
-      console.log(`\n📐 DAMAGE SEPARATION:`);
-      console.log(`  Total damage: ${damage.toFixed(2)}`);
-      console.log(`  Direct Capacity: ${directDamage}`);
-      console.log(`  Direct Part: ${directPart}`);
-      console.log(`  Raw Part: ${rawPart}`);
-    }
-
-    // 🛡️ APPLY REDUCTIONS
-    const defense = target.Defense || 0;
-    const defReduction = this.defenseToPercent(defense);
-    const extraReduction = target.getTotalDamageReduction?.() || 0;
-
-    if (debugMode) {
-      console.log(`\n🛡️ REDUCTION APPLICATION:`);
-      console.log(
-        `  Defense: ${defense} (reduz ${(defReduction * 100).toFixed(2)}%)`,
-      );
-      console.log(`  Flat Reduction: ${extraReduction}`);
-    }
-
-    let finalDirectDamage = Math.max(directPart - extraReduction, 0);
-    let finalRawDamage = Math.max(
-      rawPart - rawPart * defReduction - extraReduction,
-      0,
-    );
-
-    if (debugMode) {
-      console.log(`\n💰 FINAL PARTS:`);
-      console.log(
-        `  Direct: ${directPart} - ${extraReduction} = ${finalDirectDamage}`,
-      );
-      console.log(
-        `  Raw: ${rawPart} - (${rawPart} * ${(defReduction * 100).toFixed(2)}%) - ${extraReduction} = ${finalRawDamage}`,
-      );
-    }
-
-    if (!editMode) {
-      finalDamage = finalDirectDamage + finalRawDamage;
-
-      if (debugMode)
-        console.log(
-          `  Total: ${finalDirectDamage} + ${finalRawDamage} = ${finalDamage.toFixed(2)}`,
-        );
-
-      finalDamage = Math.max(finalDamage, 10);
-      if (debugMode && finalDamage < 10)
-        console.log(`  ⬆️ Mínimo 10: ${finalDamage}`);
-
-      finalDamage = this.roundToFive(finalDamage);
-      if (debugMode) console.log(`  🔢 Arredondado para 5: ${finalDamage}`);
-    } else {
-      finalDamage = 999;
-      if (debugMode) console.log(`  ⚙️ EDIT MODE: finalDamage = 999`);
-    }
-
-    // Aplica o dano
-    target.takeDamage(finalDamage);
-    const hpAfterDamage = target.HP;
-
-    // Passiva DEPOIS de receber o dano (pode curar)
-    if (target.passive?.afterTakingDamage && target.HP > 0) {
-      const passiveResult = target.passive.afterTakingDamage({
-        attacker: user,
-        target,
-        damage: finalDamage,
-        damageType: "hybrid",
-        context,
-      });
-      if (passiveResult?.log) {
-        passiveLog = passiveResult.log;
-      }
-    }
-
-    const finalHP = target.HP;
-
-    // 📝 LOG CONSTRUCTION
-    let finalLog = `${user.name} usou ${skill} e causou ${finalDamage} de dano a ${target.name}`;
-
-    // Adiciona crítico
-    if (didCrit) {
-      finalLog += ` (CRÍTICO ${(1 + crit.bonus).toFixed(2)}x !!!)`;
-    }
-
-    // ✅ HP após dano (antes da cura)
-    finalLog += `.\nHP do alvo após dano: ${hpAfterDamage}/${target.maxHP}`;
-
-    // ✅ Log da passiva (se curou)
-    if (passiveLog) {
-      finalLog += `\n${passiveLog}`;
-
-      // Se curou, mostra o HP final também
-      if (finalHP !== hpAfterDamage) {
-        finalLog += `\nHP do alvo após cura: ${finalHP}/${target.maxHP}`;
-      }
-    }
-
-    // Roubo de vida
-    if (user.LifeSteal > 0 && finalDamage > 0) {
-      const healAmount = this.roundToFive((finalDamage * user.LifeSteal) / 100);
-      const finalHeal = Math.max(healAmount, 5);
-      user.heal(finalHeal);
-      finalLog += `\n${user.name} roubou ${finalHeal} de vida. HP atual: ${user.HP}/${user.maxHP}`;
-    }
-
-    // Passiva DO ATACANTE após fazer dano
-    if (user.passive?.afterDoingDamage && finalDamage > 0) {
-      const passiveResult = user.passive.afterDoingDamage({
-        attacker: user,
-        target,
-        damage: finalDamage,
-        damageType: "hybrid",
-        crit,
-        context,
-      });
-      if (passiveResult?.log) {
-        finalLog += `\n${passiveResult.log}`;
-      }
-    }
-
-    if (debugMode) {
-      console.log(`\n✅ RESULTADO FINAL:`);
-      console.log(`  Direct Damage: ${finalDirectDamage}`);
-      console.log(`  Raw Damage: ${finalRawDamage}`);
-      console.log(`  Total Damage: ${finalDamage}`);
-      console.log(`  Target HP: ${finalHP}/${target.maxHP}`);
-      console.groupEnd();
-    }
-
-    return {
-      baseDamage,
-      crit: {
-        level: user.Critical || 0,
-        didCrit,
-        bonus: crit.bonus,
-        roll: crit.roll,
-      },
-      directDamage: finalDirectDamage,
-      rawDamage: finalRawDamage,
-      totalDamage: finalDamage,
-      finalHP,
-      log: finalLog,
-    };
-  },
-};
+_buildImmuneResult(baseDamage,user,target){
+  return {
+    baseDamage,
+    totalDamage:0,
+    finalHP:target.HP,
+    log:`${target.name} está com Imunidade Absoluta!`,
+    crit:{ level:0,didCrit:false,bonus:0,roll:null }
+  };
+},
+    
+    
