@@ -605,7 +605,7 @@ export const DamageEngine = {
       context,
     );
 
-    const passiveBefore = this._applyBeforeTakingPassive(
+    const passiveBeforeTaking = this._applyBeforeTakingPassive(
       mode,
       damage,
       crit,
@@ -614,7 +614,7 @@ export const DamageEngine = {
       context,
     );
 
-    damage = passiveBefore.damage;
+    damage = passiveBeforeTaking.damage;
     crit.didCrit = passiveBefore.didCrit;
     crit.critExtra = passiveBefore.critExtra;
 
