@@ -946,6 +946,7 @@ async function resolveTargets(user, skill) {
   const championsInField = Array.from(activeChampions.values());
   const targets = {};
   const enemyCounter = { count: 0 };
+  const chosenTargets = new Set();
   let hasAtLeastOneTarget = false;
 
   for (const spec of normalizedSpec) {

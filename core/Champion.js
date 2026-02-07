@@ -36,11 +36,7 @@ export class Champion {
     this.skills = skills;
     this.passive = passive || null;
 
-    console.log(`[Champion] Passive recebida:`, this.passive);
-    console.log(
-      `[Champion] onCriticalHit existe?`,
-      typeof this.passive?.onCriticalHit,
-    );
+    // console.log(`[Champion] Passive recebida:`, this.passive);
 
     this.damageModifiers = [];
     this.statModifiers = []; // New array to track temporary stat changes

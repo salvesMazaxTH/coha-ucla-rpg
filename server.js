@@ -128,10 +128,10 @@ function getTurnData(turnNumber) {
 
 function getGameState() {
   const championsData = Array.from(activeChampions.values()).map((c) => {
-    console.log(
+    /* console.log(
       `[DEBUG SERVER] keywords de ${c.name}:`,
       Array.from(c.keywords.entries()),
-    );
+    ); */
 
     return {
       id: c.id,
