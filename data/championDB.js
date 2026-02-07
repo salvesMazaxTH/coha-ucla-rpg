@@ -157,13 +157,14 @@ export const championDB = {
         if (self !== attacker) return; // Garantir que estamos no atacante
         let log = "";
 
-        if (damage > 0) { // se causou dano, aplica recuo
-          const roundedDamage = Math.round(damage / 5) * 5;
-          const recoilDamage = Math.ceil((roundedDamage * 25) / 100);
+        if (damage > 0) {
+          // se causou dano, aplica recuo
+          const recoilDamage = Math.round((damage * 0.25) / 5) * 5;
 
-          if (recoilDamage > 0) { // se o recuo for maior que 0, aplica o dano de recuo
+          if (recoilDamage > 0) {
+            // se o recuo for maior que 0, aplica o dano de recuo
             self.takeDamage(recoilDamage);
-            log += `⚡ ${self.name} sofreu ${recoilDamage} de recuo por Sobrecarga Instável!`;
+            log += `⚡ ${self.name} sofreu ${recoilDamage} de dano de recuo por Sobrecarga Instável!`;
           }
         }
 
@@ -175,7 +176,7 @@ export const championDB = {
       },
 
       // PARTE 3: Bonus de dano e chance de aplicar Paralisado ao atacar alvo "Energizado"
-      beforeTakingDamage({ attacker, target, damage, context }) {
+      beforeDealingDamage({ attacker, target, damage, context }) {
         // Verifica se o  o ALVO está Energizado
         if (!target.hasKeyword?.("energizado")) return;
 

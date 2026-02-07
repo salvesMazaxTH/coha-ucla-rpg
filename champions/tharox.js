@@ -11,7 +11,7 @@ const tharoxSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -76,7 +76,7 @@ const tharoxSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = 15 + user.Attack + user.Defense / 5;
-      const result = DamageEngine.resolveRaw({
+      const result = DamageEngine.resolveDamage({
         user,
         baseDamage,
         target: enemy,

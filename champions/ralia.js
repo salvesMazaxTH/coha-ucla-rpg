@@ -11,7 +11,7 @@ const raliaSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -44,7 +44,7 @@ const raliaSkills = [
       }); // -30 Defense for 2 turns
       user.modifyStat({ statName: "Attack", amount: 35, duration: 2, context }); // +35 Attack for 2 turns
       const { enemy } = targets;
-      const result = DamageEngine.resolveRaw({
+      const result = DamageEngine.resolveDamage({
         baseDamage: user.Attack,
         user,
         target: enemy,
@@ -75,7 +75,7 @@ const raliaSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = 50 + user.Attack;
-      const result = DamageEngine.resolveRaw({
+      const result = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -128,9 +128,10 @@ const raliaSkills = [
 
       // Aplicar dano em cada inimigo
       enemies.forEach((enemy) => {
-        const damageResult = DamageEngine.resolveHybrid({
+        const damageResult = DamageEngine.resolveDamage({
           baseDamage,
-          directDamage: baseDamage,
+          mode: "hybrid", // 'hybrid' para Dano Direto puro ou Direto + bruto
+          directDamage: baseDamage, // Dano Direto puro
           user,
           target: enemy,
           skill: this.name,

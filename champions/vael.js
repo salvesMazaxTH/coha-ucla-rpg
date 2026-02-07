@@ -11,7 +11,7 @@ const vaelSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -36,7 +36,7 @@ const vaelSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = 15 + user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -69,7 +69,7 @@ const vaelSkills = [
       const baseDamage = 20 + user.Attack;
       const results = [];
 
-      const primaryResult = DamageEngine.resolveRaw({
+      const primaryResult = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: primary,
@@ -81,7 +81,7 @@ const vaelSkills = [
       results.push(primaryResult);
 
       if (secondary) {
-        const secondaryResult = DamageEngine.resolveRaw({
+        const secondaryResult = DamageEngine.resolveDamage({
           baseDamage: Math.round(baseDamage / 2),
           user,
           target: secondary,
@@ -111,7 +111,7 @@ const vaelSkills = [
       const { enemy } = targets;
       const baseDamage = 40 + 2 * user.Attack;
 
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,

@@ -11,7 +11,7 @@ const voltexzSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -40,7 +40,7 @@ const voltexzSkills = [
       const baseDamage = 10 + user.Attack;
       const results = [];
 
-      const primaryResult = DamageEngine.resolveRaw({
+      const primaryResult = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: primary,
@@ -49,7 +49,7 @@ const voltexzSkills = [
       });
       results.push(primaryResult);
 
-      const secondaryResult = DamageEngine.resolveRaw({
+      const secondaryResult = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: secondary,
@@ -77,9 +77,10 @@ const voltexzSkills = [
       const { enemy } = targets;
       const baseDamage = 40;
       const results = [];
-      const damageResult = DamageEngine.resolveHybrid({
+      const damageResult = DamageEngine.resolveDamage({
         baseDamage,
-        directDamage: baseDamage,
+        mode: "hybrid", // 'hybrid' para Dano Direto puro ou parte Bruto e parte Direto
+        directDamage: baseDamage, // Dano Direto puro 
         user,
         target: enemy,
         skill: this.name,
@@ -114,7 +115,7 @@ const voltexzSkills = [
       const { enemy } = targets;
       const baseDamage = 90 + 2 * user.Attack;
       const results = [];
-      const damageResult = DamageEngine.resolveRaw({
+      const damageResult = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,

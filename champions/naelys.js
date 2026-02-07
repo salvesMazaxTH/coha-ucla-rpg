@@ -11,7 +11,7 @@ const naelysSkills = [
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
-      return DamageEngine.resolveRaw({
+      return DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -42,7 +42,7 @@ Aliado ativo recupera:
       const healAmount = 45;
 
       // 🗡️ Dano no inimigo
-      const damageResult = DamageEngine.resolveRaw({
+      const damageResult = DamageEngine.resolveDamage({
         baseDamage,
         user,
         target: enemy,
