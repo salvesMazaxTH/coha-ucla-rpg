@@ -927,6 +927,10 @@ async function resolveTargets(user, skill) {
     // console.error("Habilidade sem targetSpec:", skill.name);
     return null;
   }
+  
+  const normalizedSpec = skill.targetSpec.map(s =>
+  typeof s === "string" ? { type: s } : s
+);
 
   // Se há alvos globais, nenhuma seleção é necessária
   const hasGlobalTargets = skill.targetSpec.some(
@@ -939,21 +943,25 @@ async function resolveTargets(user, skill) {
     return {};
   }
 
-  const championsInField = getChampionsInField();
+  const championsInField = Array.from(activeChampions.values());
   const targets = {};
   const enemyCounter = { count: 0 };
   let hasAtLeastOneTarget = false;
 
-  for (const role of skill.targetSpec) {
+  for (const spec of normalizedSpec) {
     const target = await resolveTargetRole(
-      role,
+      spec.type,
       user,
       championsInField,
       enemyCounter,
+      chosenTargets
+      spec.unique === true
     );
+    
     // Cancelou a habilidade inteira
     if (target === null) return null;
 
+    // Slot opcional ignorado
     if (target === undefined) continue;
 
     Object.assign(targets, target);
@@ -966,48 +974,58 @@ async function resolveTargets(user, skill) {
   return targets;
 }
 
-function getChampionsInField() {
-  return [...document.querySelectorAll(".champion")]
-    .map((el) => activeChampions.get(el.dataset.championId))
-    .filter(Boolean);
-}
+async function resolveTargetRole(
+  role,
+  user,
+  championsInField,
+  enemyCounter,
+  chosenTargets,
+  enforceUnique
+) {
+  // helper pra aplicar filtro de unicidade
+  const filterUnique = (list) => {
+    if (!enforceUnique) return list;
+    return list.filter((c) => !chosenTargets.has(c.id));
+  };
 
-async function resolveTargetRole(role, user, championsInField, enemyCounter) {
   // 🔹 SELF
   if (role === "self") {
+    chosenTargets.add(user.id);
     return { self: user };
   }
 
-  // 🔹 ALLY (automático)
+  // 🔹 ALLY automático
   if (role === "ally") {
-    // Aliados são do mesmo time, mas não o próprio usuário
-    const allies = championsInField.filter(
-      (c) => c.team === user.team && c.id !== user.id,
+    let allies = championsInField.filter(
+      (c) => c.team === user.team && c.id !== user.id
     );
 
-    if (allies.length === 0) {
-      // Se não há aliados, retorna undefined para que a habilidade possa continuar sem este alvo
-      // console.log("Nenhum aliado disponível para a habilidade.");
-      return undefined;
-    }
+    allies = filterUnique(allies);
 
-    // Se houver mais de um aliado, talvez devesse selecionar?
-    // "ally" geralmente é um alvo único automático se houver apenas 1.
-    // Mas aqui a equipe é no máximo 2. Então há apenas 1 aliado possível.
+    if (allies.length === 0) return undefined;
+
+    chosenTargets.add(allies[0].id);
     return { ally: allies[0] };
   }
 
-  // 🔹 SELECT ALLY (0 = você, 1 = aliado)
+  // 🔹 SELECT ALLY
   if (role === "select:ally") {
-    // Candidatos: Usuário + Aliados (Mesma Equipe)
-    const candidates = championsInField.filter((c) => c.team === user.team);
+    let candidates = championsInField.filter(
+      (c) => c.team === user.team
+    );
+
+    candidates = filterUnique(candidates);
+
+    if (candidates.length === 0) return null;
 
     const target = await createTargetSelectionOverlay(
       candidates,
-      "Escolha um Aliado (ou você)",
+      "Escolha um Aliado (ou você)"
     );
-    if (!target) return undefined; // Retorna undefined se o usuário cancelar
 
+    if (!target) return undefined;
+
+    chosenTargets.add(target.id);
     return { ally: target };
   }
 
@@ -1016,34 +1034,42 @@ async function resolveTargetRole(role, user, championsInField, enemyCounter) {
     enemyCounter.count++;
     const index = enemyCounter.count;
 
-    // Candidatos: Equipe Diferente
-    const candidates = championsInField.filter((c) => c.team !== user.team);
+    let candidates = championsInField.filter(
+      (c) => c.team !== user.team
+    );
 
-    if (candidates.length === 0) {
-      // console.log("Nenhum inimigo disponível para a habilidade.");
-      return null; // Inimigo geralmente é um alvo obrigatório, então cancela a habilidade
-    }
+    candidates = filterUnique(candidates);
+
+    if (candidates.length === 0) return null;
 
     const target = await createTargetSelectionOverlay(
       candidates,
-      index === 1 ? "Selecione o INIMIGO" : `Selecione o INIMIGO ${index}`,
+      index === 1
+        ? "Selecione o INIMIGO"
+        : `Selecione o INIMIGO ${index}`
     );
 
-    if (!target) return null; // ❌ Cancelou a habilidade inteira
+    if (!target) return null;
+
+    chosenTargets.add(target.id);
 
     const key = index === 1 ? "enemy" : `enemy${index}`;
-    return { [key]: target }; // Alvo válido
+    return { [key]: target };
   }
 
-  // 🔹 FALLBACK
-  // Para funções genéricas, mostrar todos?
+  // 🔹 FALLBACK GENÉRICO
+  let candidates = filterUnique(championsInField);
+
+  if (candidates.length === 0) return null;
+
   const target = await createTargetSelectionOverlay(
-    championsInField,
-    `Selecione o alvo (${role})`,
+    candidates,
+    `Selecione o alvo (${role})`
   );
 
-  if (!target) return undefined; // Retorna undefined se o usuário cancelar
+  if (!target) return undefined;
 
+  chosenTargets.add(target.id);
   return { [role]: target };
 }
 

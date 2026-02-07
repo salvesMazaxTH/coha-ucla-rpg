@@ -58,7 +58,10 @@ const vaelSkills = [
       ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
     cooldown: 2,
     priority: 0, // Example priority for testing
-    targetSpec: ["enemy", "enemy"],
+    targetSpec: [
+  { type: "enemy", unique: true },
+  { type: "enemy", unique: true }
+],
 
     execute({ user, targets, context }) {
       const { enemy: primary, enemy2: secondary } = targets;
