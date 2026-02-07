@@ -184,7 +184,7 @@ export const DamageEngine = {
     if (debugMode) console.log(`📊 Base Damage: ${baseDamage}`);
 
     // 🎲 CRITICAL ROLL
-    const { crit, critBonusFactor, critExtra } = this.processCrit({
+    const crit = this.processCrit({
       baseDamage,
       user,
       target,
@@ -192,8 +192,10 @@ export const DamageEngine = {
       options,
     });
 
+    const { didCrit, critBonusFactor, critExtra } = crit;
+
     // Debug
-    if (debugMode && crit.didCrit) {
+    if (debugMode && didCrit) {
       console.log(`\n💥 CRIT CALCULATION:`);
       console.log(
         `  Bonus: ${crit.bonus}%  Mult: ${(1 + critBonusFactor).toFixed(3)}x`,
@@ -229,9 +231,10 @@ export const DamageEngine = {
       }
     }
 
+    // 🔄 PASSIVE beforeTakingDamage
     let passiveLog = null;
+    let adjustedCritExtra = critExtra;
 
-    // Passiva ANTES do dano
     if (target.passive?.beforeTakingDamage) {
       if (debugMode) console.log(`\n🔄 PASSIVE beforeTakingDamage:`);
 
@@ -239,28 +242,32 @@ export const DamageEngine = {
         attacker: user,
         target,
         damage,
-        critExtra,
+        critExtra: adjustedCritExtra,
         damageType: "raw",
         crit,
         context,
       });
 
       if (passiveResult?.damageReduction) {
-        critExtra = Math.max(critExtra - passiveResult.damageReduction, 0);
+        adjustedCritExtra = Math.max(
+          adjustedCritExtra - passiveResult.damageReduction,
+          0,
+        );
         if (debugMode)
           console.log(
-            `  Redução: -${passiveResult.damageReduction} (critExtra agora: ${critExtra})`,
+            `  Redução: -${passiveResult.damageReduction} (critExtra agora: ${adjustedCritExtra})`,
           );
       }
 
       if (passiveResult?.reducedCritExtra !== undefined) {
-        critExtra = Math.max(passiveResult.reducedCritExtra, 0);
-        if (debugMode) console.log(`  CritExtra alterado para: ${critExtra}`);
+        adjustedCritExtra = Math.max(passiveResult.reducedCritExtra, 0);
+        if (debugMode)
+          console.log(`  CritExtra alterado para: ${adjustedCritExtra}`);
       }
 
       if (passiveResult?.cancelCrit === true) {
-        crit.didCrit = false;
-        critExtra = 0;
+        didCrit = false;
+        adjustedCritExtra = 0;
         if (debugMode) console.log(`  ❌ Crítico cancelado`);
       }
 
@@ -273,22 +280,23 @@ export const DamageEngine = {
       }
     }
 
-    // Calcula dano final
+    // 📐 DAMAGE CALCULATION (com crítico incluído)
+    let finalDamage = didCrit ? damage + adjustedCritExtra : damage;
+
     if (debugMode) {
       console.log(`\n📐 DAMAGE CALCULATION:`);
-      console.log(`  Damage antes de crit: ${damage}`);
-      console.log(`  CritExtra: ${critExtra.toFixed(2)}`);
+      console.log(`  Base: ${damage.toFixed(2)}`);
+      if (didCrit) {
+        console.log(`  Crit Extra: ${adjustedCritExtra.toFixed(2)}`);
+        console.log(`  Total com crítico: ${finalDamage.toFixed(2)}`);
+      }
     }
 
-    if (editMode) {
-      finalDamage = 999;
-      if (debugMode) console.log(`  ⚙️ EDIT MODE: finalDamage = 999`);
-    } else {
-      damage = damage + critExtra;
-      if (debugMode) console.log(`  Damage + CritExtra: ${damage.toFixed(2)}`);
-
+    // 🛡️ APPLY DEFENSE
+    if (!editMode) {
       const defense = target.Defense || 0;
       const defReduction = this.defenseToPercent(defense);
+      const extraReduction = target.getTotalDamageReduction?.() || 0;
 
       if (debugMode) console.log(`\n🛡️ DEFENSE APPLICATION:`);
       if (debugMode) console.log(`  Target Defense: ${defense}`);
@@ -296,13 +304,9 @@ export const DamageEngine = {
         console.log(
           `  Defense Reduction %: ${(defReduction * 100).toFixed(2)}%`,
         );
-      if (debugMode)
-        console.log(`  Damage antes redução: ${damage.toFixed(2)}`);
-
-      const extraReduction = target.getTotalDamageReduction?.() || 0;
       if (debugMode) console.log(`  Extra Reduction: ${extraReduction}`);
 
-      let finalDamage = Math.max(
+      finalDamage = Math.max(
         damage - damage * defReduction - extraReduction,
         0,
       );
@@ -310,9 +314,6 @@ export const DamageEngine = {
       if (debugMode) {
         console.log(
           `  Cálculo: ${damage.toFixed(2)} - (${damage.toFixed(2)} * ${(defReduction * 100).toFixed(2)}%) - ${extraReduction}`,
-        );
-        console.log(
-          `  = ${damage.toFixed(2)} - ${(damage * defReduction).toFixed(2)} - ${extraReduction}`,
         );
         console.log(`  = ${finalDamage.toFixed(2)}`);
       }
@@ -323,12 +324,13 @@ export const DamageEngine = {
 
       finalDamage = this.roundToFive(finalDamage);
       if (debugMode) console.log(`  🔢 Arredondado para 5: ${finalDamage}`);
+    } else {
+      finalDamage = 999;
+      if (debugMode) console.log(`  ⚙️ EDIT MODE: finalDamage = 999`);
     }
 
     // Aplica o dano
     target.takeDamage(finalDamage);
-
-    // ✅ HP APÓS DANO (antes da passiva curar)
     const hpAfterDamage = target.HP;
 
     // Passiva DEPOIS do dano (pode curar)
@@ -345,14 +347,13 @@ export const DamageEngine = {
       }
     }
 
-    // ✅ HP FINAL (após passiva)
     const finalHP = target.HP;
 
-    // ✅ Monta o log na ordem correta
+    // 📝 LOG CONSTRUCTION
     let finalLog = `${user.name} usou ${skill} e causou ${finalDamage} de dano a ${target.name}`;
 
     // Adiciona crítico
-    if (crit.didCrit) {
+    if (didCrit) {
       finalLog += ` (CRÍTICO ${(1 + critBonusFactor).toFixed(2)}x !!!)`;
     }
 
@@ -372,14 +373,12 @@ export const DamageEngine = {
     // Roubo de vida
     if (user.LifeSteal > 0 && finalDamage > 0) {
       const rawHeal = (finalDamage * user.LifeSteal) / 100;
-      const healAmount = Math.max(5, this.roundToFive(rawHeal)); // garante mínimo 5 de cura
-
+      const healAmount = Math.max(5, this.roundToFive(rawHeal));
       user.heal(healAmount);
-
       finalLog += `\n${user.name} roubou ${healAmount} de vida. HP atual: ${user.HP}/${user.maxHP}`;
     }
 
-    // Passiva DO ATACANTE DEPOIS de fazer dano
+    // Passiva DO ATACANTE após fazer dano
     if (user.passive?.afterDoingDamage && finalDamage > 0) {
       const passiveResult = user.passive.afterDoingDamage({
         attacker: user,
@@ -405,7 +404,7 @@ export const DamageEngine = {
       baseDamage,
       crit: {
         level: user.Critical || 0,
-        didCrit: crit.didCrit,
+        didCrit: didCrit,
         bonus: crit.bonus,
         roll: crit.roll,
       },
@@ -429,7 +428,6 @@ export const DamageEngine = {
     if (debugMode)
       console.group(`⚔️ [RESOLVE HYBRID] ${user?.name} → ${target?.name}`);
 
-    //  Checar por Imunidade Absoluta
     if (target.hasKeyword?.("imunidade absoluta")) {
       if (debugMode) {
         console.log(`🛡️ IMUNIDADE ABSOLUTA DETECTADA`);
@@ -448,16 +446,19 @@ export const DamageEngine = {
 
     if (debugMode) {
       console.log(`📊 Base Damage: ${baseDamage}`);
-      console.log(`💎 Direct Damage: ${directDamage}`);
+      console.log(`💎 Direct Part of Damage: ${directDamage}`);
     }
 
-    const { crit, critBonusFactor, critExtra } = this.processCrit({
-      baseDamage: baseDamage - directDamage, // Dano Direto geralmente não é afetado por crítico, mas pode ser aumentado por passivas.
+    // 🎲 CRITICAL ROLL
+    const crit = this.processCrit({
+      baseDamage: baseDamage - directDamage,
       user,
       target,
       context,
       options,
     });
+
+    const { didCrit, critBonusFactor, critExtra } = crit;
 
     let damage = baseDamage;
 
@@ -487,37 +488,41 @@ export const DamageEngine = {
       }
     }
 
-    let totalDamage = damage;
+    // 🔄 PASSIVE beforeTakingDamage
     let passiveLog = null;
+    let adjustedCritExtra = critExtra;
 
-    // Passiva ANTES do alvo receber o dano
     if (target.passive?.beforeTakingDamage) {
       if (debugMode) console.log(`\n🔄 PASSIVE beforeTakingDamage:`);
 
       const passiveResult = target.passive.beforeTakingDamage({
         attacker: user,
         target,
-        critExtra,
-        damage: totalDamage,
+        damage,
+        critExtra: adjustedCritExtra,
         damageType: "hybrid",
         crit,
         context,
       });
 
       if (passiveResult?.damageReduction) {
-        totalDamage = Math.max(totalDamage - passiveResult.damageReduction, 0);
+        adjustedCritExtra = Math.max(
+          adjustedCritExtra - passiveResult.damageReduction,
+          0,
+        );
         if (debugMode)
           console.log(`  Redução: -${passiveResult.damageReduction}`);
       }
 
       if (passiveResult?.reducedCritExtra !== undefined) {
-        critExtra = Math.max(passiveResult.reducedCritExtra, 0);
-        if (debugMode) console.log(`  CritExtra alterado para: ${critExtra}`);
+        adjustedCritExtra = Math.max(passiveResult.reducedCritExtra, 0);
+        if (debugMode)
+          console.log(`  CritExtra alterado para: ${adjustedCritExtra}`);
       }
 
       if (passiveResult?.cancelCrit === true) {
-        crit.didCrit = false;
-        critExtra = 0;
+        didCrit = false;
+        adjustedCritExtra = 0;
         if (debugMode) console.log(`  ❌ Crítico cancelado`);
       }
 
@@ -528,69 +533,80 @@ export const DamageEngine = {
       }
     }
 
-    // Dano inicial cru + bônus de crítico
-    totalDamage += critExtra;
+    // 📐 DAMAGE CALCULATION (com crítico)
+    let finalDamage = didCrit ? damage + adjustedCritExtra : damage;
 
-    // --- SEPARA PARTES ---
-    const direct = Math.min(directDamage, damage);
-    const raw = damage - direct;
+    if (debugMode) {
+      console.log(`\n📐 DAMAGE CALCULATION:`);
+      console.log(`  Base: ${damage.toFixed(2)}`);
+      if (didCrit) {
+        console.log(`  Crit Extra: ${adjustedCritExtra.toFixed(2)}`);
+        console.log(`  Total com crítico: ${finalDamage.toFixed(2)}`);
+      }
+    }
+
+    // --- SEPARA PARTES (direct/raw) ---
+    const directPart = Math.min(directDamage, damage);
+    const rawPart = damage - directPart;
 
     if (debugMode) {
       console.log(`\n📐 DAMAGE SEPARATION:`);
-      console.log(`  Total damage antes separação: ${damage.toFixed(2)}`);
-      console.log(`  Damage capaz de ser direto: ${directDamage}`);
-      console.log(`  Direct (min): ${direct}`);
-      console.log(`  Raw (residual): ${raw}`);
+      console.log(`  Total damage: ${damage.toFixed(2)}`);
+      console.log(`  Direct Capacity: ${directDamage}`);
+      console.log(`  Direct Part: ${directPart}`);
+      console.log(`  Raw Part: ${rawPart}`);
     }
 
-    // --- FUNIL FINAL ---
+    // 🛡️ APPLY REDUCTIONS
     const defense = target.Defense || 0;
-
     const defReduction = this.defenseToPercent(defense);
     const extraReduction = target.getTotalDamageReduction?.() || 0;
 
     if (debugMode) {
       console.log(`\n🛡️ REDUCTION APPLICATION:`);
-      console.log(`  Flat Reduction: ${extraReduction}`);
       console.log(
         `  Defense: ${defense} (reduz ${(defReduction * 100).toFixed(2)}%)`,
       );
-      console.log(`  Extra Reduction: ${extraReduction}`);
+      console.log(`  Flat Reduction: ${extraReduction}`);
     }
 
-    const finalDirect = Math.max(direct - extraReduction, 0);
-    const finalRaw = Math.max(raw - raw * defReduction - extraReduction, 0);
+    let finalDirectDamage = Math.max(directPart - extraReduction, 0);
+    let finalRawDamage = Math.max(
+      rawPart - rawPart * defReduction - extraReduction,
+      0,
+    );
 
     if (debugMode) {
       console.log(`\n💰 FINAL PARTS:`);
-      console.log(`  Direct: ${direct} - ${extraReduction} = ${finalDirect}`);
       console.log(
-        `  Raw: ${raw} - (${raw} * ${(defReduction * 100).toFixed(2)}%) - ${extraReduction} = ${finalRaw}`,
+        `  Direct: ${directPart} - ${extraReduction} = ${finalDirectDamage}`,
+      );
+      console.log(
+        `  Raw: ${rawPart} - (${rawPart} * ${(defReduction * 100).toFixed(2)}%) - ${extraReduction} = ${finalRawDamage}`,
       );
     }
 
-    if (editMode) {
-      totalDamage = 999;
-      if (debugMode) console.log(`  ⚙️ EDIT MODE: totalDamage = 999`);
-    } else {
-      totalDamage = finalDirect + finalRaw;
+    if (!editMode) {
+      finalDamage = finalDirectDamage + finalRawDamage;
+
       if (debugMode)
         console.log(
-          `  Total: ${finalDirect} + ${finalRaw} = ${totalDamage.toFixed(2)}`,
+          `  Total: ${finalDirectDamage} + ${finalRawDamage} = ${finalDamage.toFixed(2)}`,
         );
 
-      totalDamage = Math.max(totalDamage, 10);
-      if (debugMode && totalDamage < 10)
-        console.log(`  ⬆️ Mínimo 10: ${totalDamage}`);
+      finalDamage = Math.max(finalDamage, 10);
+      if (debugMode && finalDamage < 10)
+        console.log(`  ⬆️ Mínimo 10: ${finalDamage}`);
 
-      totalDamage = this.roundToFive(totalDamage);
-      if (debugMode) console.log(`  🔢 Arredondado para 5: ${totalDamage}`);
+      finalDamage = this.roundToFive(finalDamage);
+      if (debugMode) console.log(`  🔢 Arredondado para 5: ${finalDamage}`);
+    } else {
+      finalDamage = 999;
+      if (debugMode) console.log(`  ⚙️ EDIT MODE: finalDamage = 999`);
     }
 
     // Aplica o dano
-    target.takeDamage(totalDamage);
-
-    // ✅ HP APÓS DANO (antes da passiva curar)
+    target.takeDamage(finalDamage);
     const hpAfterDamage = target.HP;
 
     // Passiva DEPOIS de receber o dano (pode curar)
@@ -598,7 +614,7 @@ export const DamageEngine = {
       const passiveResult = target.passive.afterTakingDamage({
         attacker: user,
         target,
-        damage: totalDamage,
+        damage: finalDamage,
         damageType: "hybrid",
         context,
       });
@@ -607,15 +623,14 @@ export const DamageEngine = {
       }
     }
 
-    // ✅ HP FINAL (após passiva)
     const finalHP = target.HP;
 
-    // ✅ Monta o log na ordem correta
-    let finalLog = `${user.name} usou ${skill} e causou ${totalDamage} de dano a ${target.name}`;
+    // 📝 LOG CONSTRUCTION
+    let finalLog = `${user.name} usou ${skill} e causou ${finalDamage} de dano a ${target.name}`;
 
     // Adiciona crítico
-    if (crit.didCrit) {
-      finalLog += ` (CRÍTICO ${(1 + critBonusFactor).toFixed(2)}x !!!)`;
+    if (didCrit) {
+      finalLog += ` (CRÍTICO ${(1 + crit.bonus).toFixed(2)}x !!!)`;
     }
 
     // ✅ HP após dano (antes da cura)
@@ -632,19 +647,19 @@ export const DamageEngine = {
     }
 
     // Roubo de vida
-    if (user.LifeSteal > 0 && totalDamage > 0) {
-      const healAmount = this.roundToFive((totalDamage * user.LifeSteal) / 100);
+    if (user.LifeSteal > 0 && finalDamage > 0) {
+      const healAmount = this.roundToFive((finalDamage * user.LifeSteal) / 100);
       const finalHeal = Math.max(healAmount, 5);
       user.heal(finalHeal);
       finalLog += `\n${user.name} roubou ${finalHeal} de vida. HP atual: ${user.HP}/${user.maxHP}`;
     }
 
-    // Passiva DO ATACANTE DEPOIS de fazer dano
-    if (user.passive?.afterDoingDamage && totalDamage > 0) {
+    // Passiva DO ATACANTE após fazer dano
+    if (user.passive?.afterDoingDamage && finalDamage > 0) {
       const passiveResult = user.passive.afterDoingDamage({
         attacker: user,
         target,
-        damage: totalDamage,
+        damage: finalDamage,
         damageType: "hybrid",
         crit,
         context,
@@ -656,9 +671,9 @@ export const DamageEngine = {
 
     if (debugMode) {
       console.log(`\n✅ RESULTADO FINAL:`);
-      console.log(`  Direct Damage: ${finalDirect}`);
-      console.log(`  Raw Damage: ${finalRaw}`);
-      console.log(`  Total Damage: ${totalDamage}`);
+      console.log(`  Direct Damage: ${finalDirectDamage}`);
+      console.log(`  Raw Damage: ${finalRawDamage}`);
+      console.log(`  Total Damage: ${finalDamage}`);
       console.log(`  Target HP: ${finalHP}/${target.maxHP}`);
       console.groupEnd();
     }
@@ -667,13 +682,13 @@ export const DamageEngine = {
       baseDamage,
       crit: {
         level: user.Critical || 0,
-        didCrit: crit.didCrit,
+        didCrit,
         bonus: crit.bonus,
         roll: crit.roll,
       },
-      directDamage: finalDirect,
-      rawDamage: finalRaw,
-      totalDamage,
+      directDamage: finalDirectDamage,
+      rawDamage: finalRawDamage,
+      totalDamage: finalDamage,
       finalHP,
       log: finalLog,
     };
