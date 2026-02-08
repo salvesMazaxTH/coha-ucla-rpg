@@ -58,7 +58,7 @@ Aliado ativo recupera:
       if (ally) {
         ally.heal(healAmount);
         ally.updateUI();
-        allyLog = `${user.name} cura ${ally.name} em ${healAmount} de HP.`;
+        allyLog = `${user.name} cura ${ally.name} em ${healAmount} de HP. HP final de ${user.name}: ${ally.HP}/${ally.maxHP}`;
       } else {
         allyLog = `${user.name} tenta curar um aliado, mas nenhum está disponível.`;
       }

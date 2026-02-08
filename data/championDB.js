@@ -152,7 +152,7 @@ export const championDB = {
       name: "Sobrecarga Instável",
       description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Energizado". Ao atacar um alvo "Energizado", Voltexz causa 15% de dano adicional (consome o status) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
 
-      afterDoingDamage({ attacker, target, damage, damageType, context }) {
+      afterDealingDamage({ attacker, target, damage, damageType, context }) {
         const self = attacker;
         if (self !== attacker) return; // Garantir que estamos no atacante
         let log = "";
