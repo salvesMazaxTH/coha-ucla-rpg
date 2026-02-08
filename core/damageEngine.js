@@ -227,86 +227,91 @@ export const DamageEngine = {
   return effective;
 },
 
-  _composeFinalDamage(mode, damage, crit, direct, target, context) {
-    console.log("CRIT INSIDE COMPOSE:", crit);
+_composeFinalDamage(mode, damage, crit, direct, target, context) {
 
-    if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
+  if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
+
+  const baseDefense = target.baseDefense ?? target.Defense;
+  const currentDefense = target.Defense;
+
+  // ⭐ crítico ignora buffs de defesa
+  const defenseUsed = crit.didCrit
+    ? Math.min(baseDefense, currentDefense)
+    : currentDefense;
+
+  if (debugMode) {
+    console.log(`📍 Damage Base: ${damage}`);
+    console.log(`🎯 Mode: ${mode}`);
+    console.log(`🛡️ Defesa base: ${baseDefense}`);
+    console.log(`🛡️ Defesa atual: ${currentDefense}`);
+    console.log(`➡️ Defesa usada: ${defenseUsed}`);
+
+    if (crit.didCrit) {
+      console.log(`💥 Crítico ativo`);
+      console.log(`➡️ Buffs de defesa ignorados`);
+      console.log(`   Crit Extra: ${crit.critExtra}`);
+      console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
+    }
+
+    console.log(`📦 Direct Damage solicitado: ${direct}`);
+  }
+
+  // --- aplica crítico ---
+  let finalDamage = crit.didCrit
+    ? damage + crit.critExtra
+    : damage;
+
+  if (editMode) {
     if (debugMode) {
-      console.log(`📍 Damage Base: ${damage}`);
-      console.log(`🎯 Mode: ${mode}`);
-      console.log(`🛡️ Target Defense: ${target.Defense || 0}`);
-      console.log(`💥 Crit Ativo: ${crit.didCrit}`);
-      if (crit.didCrit) {
-        console.log(`   └─ Crit Extra: ${crit.critExtra}`);
-        console.log(`   └─ Crit Bonus Factor: ${crit.critBonusFactor}`);
-      }
-      console.log(`📦 Direct Damage: ${direct}`);
-    }
-
-    let final = crit.didCrit ? damage + crit.critExtra : damage;
-    if (debugMode) {
-      if (crit.didCrit) {
-        console.log(
-          `\n🔥 [CRIT APLICADO] ${damage} + ${crit.critExtra} = ${final}`,
-        );
-      } else {
-        console.log(`\n⚪ [SEM CRÍTICO] Damage: ${final}`);
-      }
-    }
-
-    if (editMode) {
-      if (debugMode) {
-        console.log(`🔴 EDIT MODE - Retornando 999`);
-        console.groupEnd();
-      }
-      return 999;
-    }
-
-    const defPct = this.defenseToPercent(target.Defense || 0);
-    const flat = target.getTotalDamageReduction?.() || 0;
-
-    if (debugMode) {
-      console.log(`\n🛡️ [DEFESA]`);
-      console.log(`   Defense %: ${(defPct * 100).toFixed(2)}%`);
-      console.log(`   Redução Flat: ${flat}`);
-    }
-
-    if (mode === "raw") {
-      if (debugMode) {
-        console.log(`\n📊 [RAW MODE] - Defesa reduz tudo`);
-        console.log(`   Damage antes: ${final}`);
-        console.log(`   Redução %: -${(final * defPct).toFixed(2)}`);
-        console.log(`   Redução flat: -${flat}`);
-      }
-      final = Math.max(final - final * defPct - flat, 0);
-      if (debugMode) console.log(`   Damage após: ${final}`);
-    } else {
-      if (debugMode)
-        console.log(`\n📊 [MIXED MODE] - Direct ignora defesa %, resto sofre`);
-      const d = Math.min(direct, final);
-      const r = final - d;
-      if (debugMode) {
-        console.log(`   Direct (sem defesa %): ${d}`);
-        console.log(`   Restante (com defesa): ${r}`);
-        console.log(`   └─ Redução %: -${(r * defPct).toFixed(2)}`);
-        console.log(`   └─ Redução flat: -${flat}`);
-      }
-      final = Math.max(d - flat, 0) + Math.max(r - r * defPct - flat, 0);
-      if (debugMode) console.log(`   Total: ${final}`);
-    }
-
-    final = Math.max(final, 10);
-    if (debugMode)
-      console.log(`\n📈 [FINALIZAÇÃO] Damage com mínimo (10): ${final}`);
-
-    final = this.roundToFive(final);
-    if (debugMode) {
-      console.log(`   Damage arredondado (múltiplo de 5): ${final}`);
+      console.log(`🔴 EDIT MODE → 999`);
       console.groupEnd();
     }
+    return 999;
+  }
 
-    return final;
-  },
+  const defensePercent = this.defenseToPercent(defenseUsed);
+  const flatReduction = target.getTotalDamageReduction?.() || 0;
+
+  // ---------- RAW ----------
+  if (mode === "raw") {
+
+    finalDamage = Math.max(
+      finalDamage - finalDamage * defensePercent - flatReduction,
+      0
+    );
+
+  }
+  // ---------- HYBRID ----------
+  else {
+
+    const directPortion = Math.min(direct, finalDamage);
+    const rawPortion = finalDamage - directPortion;
+
+    const directAfterReduction =
+      Math.max(directPortion - flatReduction, 0);
+
+    const rawAfterReduction =
+      Math.max(
+        rawPortion -
+        rawPortion * defensePercent -
+        flatReduction,
+        0
+      );
+
+    finalDamage = directAfterReduction + rawAfterReduction;
+  }
+
+  // ---------- FINALIZAÇÃO ----------
+  finalDamage = Math.max(finalDamage, 10);
+  finalDamage = this.roundToFive(finalDamage);
+
+  if (debugMode) {
+    console.log(`📈 Final: ${finalDamage}`);
+    console.groupEnd();
+  }
+
+  return finalDamage;
+},
 
   _applyDamage(target, val) {
     if (debugMode) console.group(`❤️ [APLICANDO DANO]`);
