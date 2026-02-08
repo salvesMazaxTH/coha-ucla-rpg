@@ -172,45 +172,60 @@ export const DamageEngine = {
   },
 
   defenseToPercent(defense) {
-    if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
+  if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
-    if (!defense) {
-      if (debugMode) {
-        console.log(`Defense: ${defense} (ou 0)`);
-        console.log(`Redução percentual: 0%`);
-        console.groupEnd();
-      }
-      return 0;
-    }
-
-    const K = 80; // Constante de balanceamento para a fórmula de redução de dano
-
-    let adjusted = defense;
-
-    if (defense < 35) {
-      adjusted *= 0.735;
-    } else if (defense >= 35 && defense < 85) {
-      adjusted *= 1.15;
-    } else if (defense >= 85) {
-      adjusted *= 1.35;
-    }
-
-    const effective = adjusted / (adjusted + K);
-
+  if (!defense) {
     if (debugMode) {
-      console.log(`Defense original: ${defense}`);
-      console.log(`Defense ajustada: ${adjusted}`);
-      console.log(`K constant: ${K}`);
-      console.log(
-        `Cálculo: ${adjusted} / (${adjusted} + ${K}) = ${adjusted} / ${adjusted + K}`,
-      );
-      console.log(`Redução percentual: ${(effective * 100).toFixed(2)}%`);
-      console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
+      console.log(`Defense: ${defense} (ou 0)`);
+      console.log(`Redução percentual: 0%`);
       console.groupEnd();
     }
+    return 0;
+  }
 
-    return effective;
-  },
+  // --- Curva alvo (suave, interpolada) ---
+  const curve = {
+    0:   0.00,
+    35:  0.27,
+    60:  0.40,
+    85:  0.52,
+    110: 0.60,
+    125: 0.65,
+    150: 0.75,
+  };
+
+  const keys = Object.keys(curve)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  let effective;
+
+  if (defense <= keys[0]) {
+    effective = curve[keys[0]];
+  } else if (defense >= keys[keys.length - 1]) {
+    effective = curve[keys[keys.length - 1]];
+  } else {
+    for (let i = 0; i < keys.length - 1; i++) {
+      const a = keys[i];
+      const b = keys[i + 1];
+
+      if (defense >= a && defense <= b) {
+        const t = (defense - a) / (b - a);
+        effective = curve[a] + t * (curve[b] - curve[a]);
+        break;
+      }
+    }
+  }
+
+  if (debugMode) {
+    console.log(`Defense original: ${defense}`);
+    console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
+    console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
+    console.groupEnd();
+  }
+
+  return effective;
+},
 
   _composeFinalDamage(mode, damage, crit, direct, target, context) {
     console.log("CRIT INSIDE COMPOSE:", crit);
