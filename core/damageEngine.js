@@ -186,8 +186,8 @@ export const DamageEngine = {
   // --- Curva alvo (suave, interpolada) ---
   const curve = {
     0:   0.00,
-    35:  0.27,
-    60:  0.40,
+    35:  0.25,
+    60:  0.37,
     85:  0.52,
     110: 0.60,
     125: 0.65,
