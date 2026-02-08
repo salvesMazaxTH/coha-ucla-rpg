@@ -439,7 +439,9 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
 });
 
 socket.on("combatLog", (message) => {
-  logCombat(message);
+  const text = typeof message === "string" ? message : message?.log;
+  if (!text) return;
+  logCombat(text);
 });
 
 /* document.addEventListener("click", (e) => {

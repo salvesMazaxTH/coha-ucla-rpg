@@ -1,34 +1,26 @@
 const editMode = false;
-const debugMode = true; // 🔍 ADICIONAR PARA CONTROLAR LOGS
+const debugMode = true;
+
+const DEFAULT_CRIT_BONUS = 55;
+const MAX_CRIT_CHANCE = 95;
 
 export const DamageEngine = {
-  // arredondamentos globais da engine
   roundToFive(x) {
     return Math.round(x / 5) * 5;
   },
 
   // -------------------------------------------------
   // Crit. related
-  // Tabela de crítico
-  critTable: {
-    1: { bonus: 45, chance: 1 / 6 },
-    2: { bonus: 55, chance: 1 / 4 },
-    3: { bonus: 65, chance: 2 / 3 },
-    4: { bonus: 75, chance: 5 / 6 },
-  },
 
   rollCrit(user, context, options = {}) {
     const { force = false, disable = false } = options;
 
-    const level = user.Critical || 0;
-    const entry = this.critTable[level] || { bonus: 0, chance: 0 };
-
-    let { bonus, chance } = entry;
+    const chance = Math.min(user.Critical || 0, MAX_CRIT_CHANCE);
+    const bonus = user.critBonusOverride || DEFAULT_CRIT_BONUS;
 
     let didCrit = false;
     let roll = null;
 
-    // 🚫 1. Crítico completamente bloqueado
     if (disable) {
       if (debugMode) {
         console.log(`🚫 CRÍTICO BLOQUEADO`);
@@ -43,7 +35,6 @@ export const DamageEngine = {
       };
     }
 
-    // ✅ 2. Crítico forçado
     if (force) {
       if (debugMode) {
         console.log(`✅ CRÍTICO FORÇADO`);
@@ -58,13 +49,13 @@ export const DamageEngine = {
       };
     }
 
-    // 🎲 3. Roll normal
-    roll = Math.random();
+    roll = Math.random() * 100; // Descomente para uso normal
+    /* roll = 10; */ // Descomente para teste fixo
     didCrit = roll < chance;
 
     if (debugMode) {
-      console.log(`🎯 Roll: ${roll.toFixed(4)}`);
-      console.log(`🎲 Chance necessária: ${(chance * 100).toFixed(2)}%`);
+      console.log(`🎯 Roll: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance necessária: ${chance}%`);
       console.log(`${didCrit ? "✅ CRÍTICO!" : "❌ Sem crítico"}`);
     }
 
@@ -82,7 +73,7 @@ export const DamageEngine = {
       console.group(`⚔️ [CRÍTICO PROCESSING] - Damage Base: ${baseDamage}`);
 
     let crit = {
-      level: user?.Critical || 0,
+      chance: Math.min(user?.Critical || 0, MAX_CRIT_CHANCE),
       didCrit: false,
       bonus: 0,
       roll: null,
@@ -90,13 +81,13 @@ export const DamageEngine = {
     };
 
     if (debugMode) {
-      console.log(`👤 Critical Level: ${crit.level}`);
+      console.log(`👤 Critical Chance: ${crit.chance}%`);
       console.log(
         `🎯 Options: Force=${options.force}, Disable=${options.disable}`,
       );
     }
 
-    if (crit.level > 0 || options.force || options.disable) {
+    if (crit.chance > 0 || options.force || options.disable) {
       crit = this.rollCrit(user, context, options);
       if (debugMode) console.log(`🎲 Roll Result:`, crit);
     }
@@ -120,7 +111,6 @@ export const DamageEngine = {
       });
     }
 
-    // Adicionar critBonusFactor ao objeto crítico para logs posteriores
     crit.critBonusFactor = critBonusFactor;
     crit.critExtra = critExtra;
 
@@ -193,15 +183,15 @@ export const DamageEngine = {
       return 0;
     }
 
-    const K = 53;
+    const K = 80; // Constante de balanceamento para a fórmula de redução de dano
 
     let adjusted = defense;
 
-    if (defense < 25) {
-      adjusted *= 0.6;
-    } else if (defense <= 35) {
-      adjusted *= 0.725;
-    } else if (defense >= 75) {
+    if (defense < 35) {
+      adjusted *= 0.735;
+    } else if (defense >= 35 && defense < 85) {
+      adjusted *= 1.15;
+    } else if (defense >= 85) {
       adjusted *= 1.35;
     }
 
@@ -223,6 +213,8 @@ export const DamageEngine = {
   },
 
   _composeFinalDamage(mode, damage, crit, direct, target, context) {
+    console.log("CRIT INSIDE COMPOSE:", crit);
+
     if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
     if (debugMode) {
       console.log(`📍 Damage Base: ${damage}`);
@@ -236,7 +228,6 @@ export const DamageEngine = {
       console.log(`📦 Direct Damage: ${direct}`);
     }
 
-    // Step 1: Aplicar crítico
     let final = crit.didCrit ? damage + crit.critExtra : damage;
     if (debugMode) {
       if (crit.didCrit) {
@@ -256,7 +247,6 @@ export const DamageEngine = {
       return 999;
     }
 
-    // Step 2: Defesa
     const defPct = this.defenseToPercent(target.Defense || 0);
     const flat = target.getTotalDamageReduction?.() || 0;
 
@@ -266,7 +256,6 @@ export const DamageEngine = {
       console.log(`   Redução Flat: ${flat}`);
     }
 
-    // Step 3: Aplicar defesa conforme modo
     if (mode === "raw") {
       if (debugMode) {
         console.log(`\n📊 [RAW MODE] - Defesa reduz tudo`);
@@ -291,12 +280,10 @@ export const DamageEngine = {
       if (debugMode) console.log(`   Total: ${final}`);
     }
 
-    // Step 4: Mínimo
     final = Math.max(final, 10);
     if (debugMode)
       console.log(`\n📈 [FINALIZAÇÃO] Damage com mínimo (10): ${final}`);
 
-    // Step 5: Arredondar
     final = this.roundToFive(final);
     if (debugMode) {
       console.log(`   Damage arredondado (múltiplo de 5): ${final}`);
@@ -365,11 +352,11 @@ export const DamageEngine = {
       crit.critExtra = 0;
     }
 
-    if (r.reducedCritExtra !== undefined) {
-      crit.critExtra = Math.max(r.reducedCritExtra, 0);
+    if (r.critExtra !== undefined) {
+      crit.critExtra = Math.max(r.critExtra, 0);
     }
 
-    if (r.takeBonusDamage) damage += r.takeBonusDamage;
+    if (r.damage) damage += r.damage;
 
     if (debugMode) {
       console.log(`Damage final: ${damage}`);
@@ -377,7 +364,7 @@ export const DamageEngine = {
     }
 
     return { damage, crit };
-  }, // DONE //
+  },
 
   _applyBeforeDealingPassive(mode, damage, crit, user, target, context) {
     const hook = user.passive?.beforeDealingDamage;
@@ -396,7 +383,7 @@ export const DamageEngine = {
     if (r.takeBonusDamage) damage += r.takeBonusDamage;
 
     return damage;
-  }, // DONE //
+  },
 
   _applyAfterTakingPassive(mode, damage, user, target, context) {
     if (debugMode) console.group(`✨ [AFTER TAKING] Target: ${target.name}`);
@@ -428,7 +415,7 @@ export const DamageEngine = {
     }
 
     return r;
-  }, // DONE //
+  },
 
   _applyAfterDealingPassive(user, target, damage, mode, crit, context) {
     if (debugMode) console.group(`🔥 [AFTER DEALING] Attacker: ${user.name}`);
@@ -459,7 +446,7 @@ export const DamageEngine = {
     }
 
     return r;
-  }, // DONE //
+  },
 
   _buildLog(user, target, skill, dmg, crit, hpAfter, passiveLog) {
     let log = `${user.name} usou ${skill} e causou ${dmg} de dano a ${target.name}`;
@@ -524,11 +511,10 @@ export const DamageEngine = {
       totalDamage: 0,
       finalHP: target.HP,
       log: `${target.name} está com Imunidade Absoluta!`,
-      crit: { level: 0, didCrit: false, bonus: 0, roll: null },
+      crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
   },
 
-  // Calculadora e aplicadora real de dano (Engine principal)
   resolveDamage(params) {
     const {
       mode = "raw",
@@ -547,16 +533,10 @@ export const DamageEngine = {
       console.log(`${"=".repeat(80)}`);
     }
 
-    // ─────────────────────────────
-    // 0️⃣ Imunidade
-    // ─────────────────────────────
     if (this._isImmune(target)) {
       return this._buildImmuneResult(baseDamage, user, target);
     }
 
-    // ─────────────────────────────
-    // 1️⃣ Estado inicial
-    // ─────────────────────────────
     let crit = this.processCrit({
       baseDamage,
       user,
@@ -573,10 +553,6 @@ export const DamageEngine = {
       context,
     );
 
-    // ─────────────────────────────
-    // 2️⃣ Hooks ofensivos
-    // beforeDealingDamage
-    // ─────────────────────────────
     damage = this._applyBeforeDealingPassive(
       mode,
       damage,
@@ -586,10 +562,6 @@ export const DamageEngine = {
       context,
     );
 
-    // ─────────────────────────────
-    // 3️⃣ Hooks defensivos
-    // beforeTakingDamage
-    // ─────────────────────────────
     const beforeTake = this._applyBeforeTakingPassive(
       mode,
       damage,
@@ -599,14 +571,24 @@ export const DamageEngine = {
       context,
     );
 
-    damage = beforeTake.damage;
-    crit.didCrit = beforeTake.didCrit;
-    crit.critExtra = beforeTake.critExtra;
+    if (beforeTake?.crit !== undefined) {
+      crit = beforeTake.crit;
+    } else {
+      console.log(
+        `beforeTake?.critExtra não é diferente de undefined: ${beforeTake.crit} não encontrado.`,
+      );
+    }
 
-    // ─────────────────────────────
-    // 4️⃣ Composição final
-    // Defesa / Crit / Direct / Caps
-    // ─────────────────────────────
+    if (beforeTake?.damage !== undefined) {
+      damage = beforeTake.damage;
+    } else {
+      console.log(
+        `beforeTake?.damage não é diferente de undefined: ${beforeTake.damage} não encontrado.`,
+      );
+    }
+
+    console.log("CRIT BEFORE COMPOSE:", crit);
+
     const finalDamage = this._composeFinalDamage(
       mode,
       damage,
@@ -616,15 +598,8 @@ export const DamageEngine = {
       context,
     );
 
-    // ─────────────────────────────
-    // 5️⃣ Aplicação
-    // ─────────────────────────────
     const hpAfter = this._applyDamage(target, finalDamage);
 
-    // ─────────────────────────────
-    // 6️⃣ Hooks pós-defesa
-    // afterTakingDamage
-    // ─────────────────────────────
     const afterTakeLog = this._applyAfterTakingPassive(
       mode,
       finalDamage,
@@ -633,9 +608,6 @@ export const DamageEngine = {
       context,
     );
 
-    // ─────────────────────────────
-    // 7️⃣ Construção do log base
-    // ─────────────────────────────
     let log = this._buildLog(
       user,
       target,
@@ -646,10 +618,6 @@ export const DamageEngine = {
       afterTakeLog,
     );
 
-    // ─────────────────────────────
-    // 8️⃣ Hooks ofensivos finais
-    // afterDealingDamage
-    // ─────────────────────────────
     const afterDeal = this._applyAfterDealingPassive(
       user,
       target,
@@ -661,14 +629,8 @@ export const DamageEngine = {
 
     if (afterDeal?.log) log += `\n${afterDeal.log}`;
 
-    // ─────────────────────────────
-    // 9️⃣ Pós-processamento sistêmico
-    // ─────────────────────────────
     this._applyLifeSteal(user, finalDamage, log);
 
-    // ─────────────────────────────
-    // 🔟 Debug resumo
-    // ─────────────────────────────
     if (debugMode) {
       console.group(`🎯 [RESUMO FINAL]`);
       console.log(`Base:`, baseDamage);
@@ -684,7 +646,7 @@ export const DamageEngine = {
       finalHP: target.HP,
       log,
       crit: {
-        level: user.Critical || 0,
+        chance: user.Critical || 0,
         didCrit: crit.didCrit,
         bonus: crit.bonus,
         roll: crit.roll,

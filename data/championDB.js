@@ -5,11 +5,11 @@ export const championDB = {
     name: "Rália",
     portrait: "assets/portraits/ralia.png",
     HP: 370,
-    Attack: 30,
-    Defense: 60,
+    Attack: 45,
+    Defense: 75,
     Speed: 40,
     Critical: 0,
-    LifeSteal: 15, // Rália tem 15% de LifeSteal
+    LifeSteal: 15,
     skills: skillsByChampion.ralia,
     passive: {
       name: "Desacreditar",
@@ -18,19 +18,21 @@ export const championDB = {
       O bônus de dano do crítico é reduzido em −45 (mínimo 0).
       Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico neste acerto.
 `,
-      beforeTakingDamage({ crit, critExtra, attacker, target }) {
+      beforeTakingDamage({ crit, attacker, target }) {
         console.log(
           `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${attacker.name}`,
         );
-        // Reduz o bônus de crítico em 45 (mínimo 0)
-        if (!crit.didCrit) return; // Só ativa se for crítico
+        let { critExtra } = crit;
+        critExtra = Number(critExtra) || 0;
+
+        if (!crit.didCrit) return;
         const reducedBonus = Math.max(critExtra - 45, 0);
         if (reducedBonus === 0) {
           return {
             cancelCrit: true,
           };
         }
-        return { reducedCritExtra: reducedBonus };
+        return { critExtra: reducedBonus };
       },
     },
   },
@@ -39,8 +41,8 @@ export const championDB = {
     name: "Naelys",
     portrait: "assets/portraits/naelys.png",
     HP: 305,
-    Attack: 30,
-    Defense: 20,
+    Attack: 40,
+    Defense: 40,
     Speed: 35,
     Critical: 0,
     LifeSteal: 0,
@@ -54,15 +56,13 @@ export const championDB = {
       afterTakingDamage({ target, damage }) {
         if (damage <= 0) return;
 
-        // +5 for every 25 damage taken
         let heal = Math.floor(damage / 25) * 5;
 
-        // Cap at 35
         heal = Math.min(heal, 35);
 
         if (heal <= 0) return;
 
-        const self = target; // "self" for clarity: this is the damage target, but also the owner of the passive
+        const self = target;
 
         const before = self.HP;
         self.heal(heal);
@@ -82,19 +82,29 @@ export const championDB = {
     name: "Vael",
     portrait: "assets/portraits/vael.png",
     HP: 290,
-    Attack: 90,
-    Defense: 15,
+    Attack: 100,
+    Defense: 20,
     Speed: 80,
-    Critical: 2,
+    Critical: 25,
     LifeSteal: 0,
     skills: skillsByChampion.vael,
     passive: {
       name: "Sede de Sangue",
-      description: "Cada acerto crítico eleva o stat Critical em +1 (Máx. 3x)",
+      description:
+        "Cada acerto crítico aumenta a chance de crítico em +15% (máx. 95%). Quando a chance de crítico ultrapassa 50%, o bônus de crítico sobe para 1,85x.",
       onCriticalHit({ user, target, context }) {
-        user.Critical = Math.min(user.Critical + 1, 4);
+        user.modifyStat({
+          statName: "Critical",
+          amount: 15,
+          context,
+          isPermanent: true,
+        });
+        if (user.Critical > 50) {
+          user.critBonusOverride = 85;
+        }
         console.log(
-          `${user.name} ganhou +1 Critical por causa de Sede de Sangue! Critical atual: ${user.Critical}`,
+          `${user.name} ganhou +15% Critical por causa de Sede de Sangue! Critical atual: ${user.Critical}%` +
+            (user.critBonusOverride === 85 ? ` | Bônus de crítico: 1.85x` : ``),
         );
       },
     },
@@ -104,8 +114,8 @@ export const championDB = {
     name: "Tharox",
     portrait: "assets/portraits/tharox.png",
     HP: 385,
-    Attack: 30,
-    Defense: 50,
+    Attack: 40,
+    Defense: 65,
     Speed: 20,
     Critical: 0,
     LifeSteal: 0,
@@ -115,24 +125,27 @@ export const championDB = {
       description:
         "Sempre que Tharox sofrer Dano Bruto (não Direto), ele recebe +5 de Defesa e +5 de HP (cura e aumenta a vida máxima).",
       afterTakingDamage({ attacker, target, damage, damageType, context }) {
-        // Renomear para clareza: target (do dano) = self (dono da passiva)
         const self = target;
-        // Só ativa para Dano Bruto e se realmente tiver tomado dano
         if (damageType === "raw" && damage > 0) {
-          self.modifyStat({
+          const statResult = self.modifyStat({
             statName: "Defense",
             amount: 5,
             duration: 1,
             context,
             isPermanent: true,
-          }); // Permanente
-          self.modifyHP(5, { affectMax: true }); // Cura e aumenta a vida máxima
+          });
+          self.modifyHP(5, { affectMax: true });
+
+          let log = `[Passiva - Massa Inamolgável] ${self.name} absorveu o impacto, ganhando +5 Defesa e +5 HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
+
+          if (statResult?.log) {
+            log += `\n${statResult.log}`;
+          }
+
           console.log(
             `${self.name} ganhou +5 Defesa e +5 HP por causa de Massa Inamolgável! Defesa atual: ${self.Defense}, HP atual: ${self.HP}/${self.maxHP}`,
           );
-          return {
-            log: `[Passiva - Massa Inamolgável] ${self.name} absorveu o impacto, ganhando +5 Defesa e +5 HP! (Defense: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`,
-          };
+          return { log };
         }
       },
     },
@@ -142,8 +155,8 @@ export const championDB = {
     name: "Voltexz",
     portrait: "assets/portraits/voltexz.png",
     HP: 285,
-    Attack: 115,
-    Defense: 10,
+    Attack: 110,
+    Defense: 15,
     Speed: 85,
     Critical: 0,
     LifeSteal: 0,
@@ -154,46 +167,36 @@ export const championDB = {
 
       afterDealingDamage({ attacker, target, damage, damageType, context }) {
         const self = attacker;
-        if (self !== attacker) return; // Garantir que estamos no atacante
+        if (self !== attacker) return;
         let log = "";
 
         if (damage > 0) {
-          // se causou dano, aplica recuo
           const recoilDamage = Math.round((damage * 0.25) / 5) * 5;
 
           if (recoilDamage > 0) {
-            // se o recuo for maior que 0, aplica o dano de recuo
             self.takeDamage(recoilDamage);
             log += `⚡ ${self.name} sofreu ${recoilDamage} de dano de recuo por Sobrecarga Instável!`;
           }
         }
 
-        // PARTE 2: Marcar alvo com "Energizado" (1 turno)
         target.applyKeyword("energizado", 2, context);
         log += `\n⚡ ${target.name} foi marcado com "Energizado"!`;
 
         return { log };
       },
 
-      // PARTE 3: Bonus de dano e chance de aplicar Paralisado ao atacar alvo "Energizado"
       beforeDealingDamage({ attacker, target, damage, context }) {
-        // Verifica se o  o ALVO está Energizado
         if (!target.hasKeyword?.("energizado")) return;
 
-        // Aumenta o damage em 15%
         const bonusDamage = Math.ceil((damage * 15) / 100);
 
-        // Remove o keyword "energizado" (consome)
         target.removeKeyword("energizado");
 
         let log = `⚡ ACERTO ! ${attacker.name} explorou "Energizado" de ${target.name} (+15% dano)!`;
 
-        // 50% de chance de aplicar "Paralisado" (1 turno)
         const paralysisChance = Math.random();
         if (paralysisChance < 0.5) {
-          target.applyKeyword("paralisado", 1, context, {
-            // não reduz nada, apenas perde a ação
-          });
+          target.applyKeyword("paralisado", 1, context, {});
           log += `\n⚡ ${target.name} foi PARALISADO e perderá sua próxima ação!`;
         }
 

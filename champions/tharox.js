@@ -96,16 +96,16 @@ const tharoxSkills = [
     Ganha +50 HP
     Ganha +10 DEF
     Cura a si mesmo em:
-    10 HP para cada +5 DEF adicional que ele tiver acima da DEF base (50)
+    5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (65)
     Enquanto estiver ativo:
-    Ataques que causam dano passam a causar um bônus de dano igual a 60% da DEF atual de Tharox.`,
+    Ataques que causam dano passam a causar um bônus de dano igual a 45% da DEF atual de Tharox (com um teto de 50 de dano adicional).`,
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],
     execute({ user, context }) {
       user.modifyHP(50, { maxHPOnly: true }); // Aumenta HP máximo em 50
       user.modifyStat({statName: "Defense", amount: 10, context, isPermanent: true}); // Aumenta DEF permanentemente
-      const proportionalHeal = Math.floor((user.Defense - 50) / 5) * 10;
+      const proportionalHeal = Math.floor((user.Defense - 65) / 5) * 5; // Calcula cura proporcional
       user.heal(proportionalHeal);
 
       // Aplica o modificador de dano permanentemente
@@ -115,7 +115,7 @@ const tharoxSkills = [
         expiresAtTurn: context.currentTurn + 3, // Dura para o turno atual e os próximos 3 turnos, casando com a volta do cooldown
 
         apply: ({ baseDamage, user }) => {
-          const bonus = Math.floor(user.Defense * 0.6);
+          const bonus = Math.min(Math.floor(user.Defense * 0.45), 50); // Bônus de dano é 45% da DEF atual, com um teto de 50 de dano adicional
           return baseDamage + bonus;
         },
       });

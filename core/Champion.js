@@ -171,7 +171,7 @@ export class Champion {
   modifyStat({
     statName,
     amount,
-    duration,
+    duration = 1,
     context,
     isPermanent = false,
   } = {}) {
@@ -185,27 +185,42 @@ export class Champion {
     // Limite de 10-99 para stats que não sejam HP, exceto ATQ
 
     const limits = {
-      Attack: { min: 10, max: 150 },
-      default: { min: 10, max: 99 },
+      Critical: { min: 0, max: 95 },
+      default: { min: 10, max: 150 },
     };
 
     const { min, max } = limits[statName] || limits.default;
 
-    this[statName] = Math.max(min, Math.min(this[statName] + amount, max));
+    const previous = this[statName];
+    const clamped = Math.max(min, Math.min(previous + amount, max));
+    const appliedAmount = clamped - previous;
 
-    // Armazenar o modificador para reverter depois, se não for permanente
-    this.statModifiers.push({
-      statName: statName,
-      amount: amount,
-      expiresAtTurn: context.currentTurn + duration,
-      isPermanent: isPermanent, // Identifica se a mudança é permanente
-    });
+    this[statName] = clamped;
+
+    const isCappedMax = amount > 0 && appliedAmount === 0;
+    const capLog = isCappedMax ? `O stat ${statName} já está no máximo.` : null;
+
+    if (appliedAmount !== 0) {
+      this.statModifiers.push({
+        statName: statName,
+        amount: appliedAmount,
+        expiresAtTurn: context.currentTurn + duration,
+        isPermanent: isPermanent, // Identifica se a mudança é permanente
+      });
+    }
+
     console.log(
-      `[Champion] ${this.name} teve ${statName} alterado em ${amount}. ` +
+      `[Champion] ${this.name} teve ${statName} alterado em ${appliedAmount}. ` +
         (isPermanent
           ? "A alteração é permanente e não será revertida."
           : `A alteração será revertida no turno ${context.currentTurn + duration}.`),
     );
+
+    return {
+      appliedAmount,
+      isCappedMax,
+      log: capLog,
+    };
   }
 
   modifyHP(amount, options = {}) {
@@ -376,7 +391,7 @@ export class Champion {
         ${statRow("Ataque", "Attack", this.Attack)}
         ${statRow("Defesa", "Defense", this.Defense)}
         ${statRow("Velocidade", "Speed", this.Speed)}
-        ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical) : ""}
+        ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical + "%") : ""}
         ${this.LifeSteal > 0 ? statRow("Roubo de Vida", "LifeSteal", this.LifeSteal) : ""}
 
         <div class="skills-bar">
@@ -461,7 +476,10 @@ export class Champion {
       const current = this[name];
       const base = this[`base${name}`];
 
-      el.textContent = current;
+      const formattedValue =
+        name === "Critical" ? `${Number(current)}%` : current;
+
+      el.textContent = formattedValue;
 
       if (current > base) {
         el.style.color = "#00ff66"; // verde
@@ -471,13 +489,11 @@ export class Champion {
         el.style.color = "#ffffff"; // neutro
       }
     };
-
     updateStat("Attack");
     updateStat("Defense");
     updateStat("Speed");
     updateStat("Critical");
     updateStat("LifeSteal");
-
     // 🎨 Atualiza os indicadores de status
     StatusIndicator.updateChampionIndicators(this);
 
