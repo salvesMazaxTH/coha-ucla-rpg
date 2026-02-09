@@ -4,7 +4,12 @@ import { isSkillOnCooldown, startCooldown } from "/core/cooldown.js";
 //Mimport { generateId } from "/core/id.js";
 import { StatusIndicator } from "/core/statusIndicator.js";
 
-const socket = io(); // Inicializa o cliente Socket.IO
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000
+}); // Inicializa o cliente Socket.IO
+
 let playerId = null;
 let playerTeam = null;
 let username = null;

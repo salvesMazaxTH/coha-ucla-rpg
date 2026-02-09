@@ -596,7 +596,7 @@ function handleEndTurn() {
 // ======== END TURN RESOLUTION HELPER FUNCTIONS ========
 
 io.on("connection", (socket) => {
-  // console.log("Um usuário conectado:", socket.id);
+  console.log("Um usuário conectado:", socket.id);
 
   let playerSlot = -1; // Será atribuído no login
 
