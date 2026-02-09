@@ -13,7 +13,7 @@ import {
 } from "./core/cooldown.js";
 import { generateId } from "./core/id.js";
 import { formatChampionName, formatPlayerName } from "./core/formatters.js";
-const editMode = false; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
+const editMode = true; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
 

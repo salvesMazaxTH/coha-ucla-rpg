@@ -7,7 +7,7 @@ import { StatusIndicator } from "/core/statusIndicator.js";
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000
+  reconnectionDelay: 1000,
 }); // Inicializa o cliente Socket.IO
 
 let playerId = null;
@@ -27,7 +27,7 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-const editMode = false; // Definido como true para auto-entrar para testes
+const editMode = true; // Definido como true para auto-entrar para testes
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(

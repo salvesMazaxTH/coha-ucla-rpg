@@ -341,7 +341,7 @@ export class Champion {
     };
 
     // Função auxiliar: construir HTML do campeão
-    const buildChampionHTML = ({ editMode = false } = {}) => {
+    const buildChampionHTML = ({ editMode = true } = {}) => {
       const statRow = (label, className, value) => `
         <div class="stat-row" data-stat="${className}" data-id="${this.id}">
           <span class="stat-label">${label}:</span>
