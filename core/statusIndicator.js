@@ -5,7 +5,7 @@
 export const StatusIndicator = {
   // Mapeamento de keywords -> ícones e cores
   keywordIcons: {
-    paralisado: "⚡",
+    paralisado: "⚡ 🚷 ⚡",
     atordoado: "💫",
     inerte: "🔒",
     energizado: "⚡",
