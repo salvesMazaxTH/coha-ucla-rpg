@@ -1,4 +1,5 @@
 import { DamageEngine } from "../core/damageEngine.js";
+import { formatChampionName } from "../core/formatters.js";
 
 const naelysSkills = [
   {
@@ -58,9 +59,12 @@ Aliado ativo recupera:
       if (ally) {
         ally.heal(healAmount);
         ally.updateUI();
-        allyLog = `${user.name} cura ${ally.name} em ${healAmount} de HP. HP final de ${user.name}: ${ally.HP}/${ally.maxHP}`;
+        const userName = formatChampionName(user);
+        const allyName = formatChampionName(ally);
+        allyLog = `${userName} cura ${allyName} em ${healAmount} de HP. HP final de ${allyName}: ${ally.HP}/${ally.maxHP}`;
       } else {
-        allyLog = `${user.name} tenta curar um aliado, mas nenhum está disponível.`;
+        const userName = formatChampionName(user);
+        allyLog = `${userName} tenta curar um aliado, mas nenhum está disponível.`;
       }
 
       logs.push({
@@ -90,8 +94,9 @@ Aliado ativo recupera:
       });
       user.applyKeyword("imunidade absoluta", 2, context);
 
+      const userName = formatChampionName(user);
       return {
-        log: `${user.name} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + 2}. (Pode ser interrompido por ação do usuário).`,
+        log: `${userName} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + 2}. (Pode ser interrompido por ação do usuário).`,
       };
     },
   },
@@ -114,7 +119,7 @@ Aliado ativo recupera:
     execute({ user, context }) {
       const { currentTurn } = context;
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
-      
+
       const factor = 1.65;
 
       user.modifyHP(user.maxHP * (factor - 1), { affectMax: true }); // Aumenta o HP atual proporcionalmente ao aumento do máximo
@@ -136,8 +141,9 @@ Aliado ativo recupera:
         },
       });
 
+      const userName = formatChampionName(user);
       return {
-        log: `${user.name} invoca o Mar Primordial! HP máximo dobrado; efeito "Mar em Ascensão" ativo neste e nos próximos 2 turnos.`,
+        log: `${userName} invoca o Mar Primordial! HP máximo dobrado; efeito "Mar em Ascensão" ativo neste e nos próximos 2 turnos.`,
       };
     },
   },

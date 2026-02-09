@@ -1,4 +1,5 @@
 import { DamageEngine } from "../core/damageEngine.js";
+import { formatChampionName } from "../core/formatters.js";
 
 const raliaSkills = [
   {
@@ -51,7 +52,8 @@ const raliaSkills = [
         skill: this.name,
         context,
       });
-      const log = `${user.name} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
+      const userName = formatChampionName(user);
+      const log = `${userName} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
       // colocar dentro de result.log
       result.log = log + " " + result.log;
       return result;
@@ -91,7 +93,8 @@ const raliaSkills = [
       user.heal(healingAmount);
 
       // 5️⃣ Estende o log da engine (não substitui)
-      result.log += ` ${user.name} se curou em ${healingAmount} HP.`;
+      const userName = formatChampionName(user);
+      result.log += ` ${userName} se curou em ${healingAmount} HP.`;
 
       // 6️⃣ Retorna o objeto COMPLETO
       return result;

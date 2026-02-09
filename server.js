@@ -12,6 +12,7 @@ import {
   checkAndValidateCooldowns,
 } from "./core/cooldown.js";
 import { generateId } from "./core/id.js";
+import { formatChampionName, formatPlayerName } from "./core/formatters.js";
 const editMode = false; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
@@ -158,7 +159,7 @@ function getGameState() {
       cooldowns: Array.from(c.cooldowns.entries()),
     };
   });
-  
+
   return {
     champions: championsData,
     currentTurn: currentTurn,
@@ -243,7 +244,11 @@ function removeChampionFromGame(championId, playerTeam) {
       player1: playerScores[0],
       player2: playerScores[1],
     });
-    io.emit("combatLog", `${playerNames.get(scoringPlayerSlot)} pontuou!`);
+    const scoringPlayerName = formatPlayerName(
+      playerNames.get(scoringPlayerSlot),
+      scoringTeam,
+    );
+    io.emit("combatLog", `${scoringPlayerName} pontuou!`);
 
     if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
       gameEnded = true;
@@ -251,10 +256,11 @@ function removeChampionFromGame(championId, playerTeam) {
         winnerTeam: scoringTeam,
         winnerName: playerNames.get(scoringPlayerSlot),
       });
-      io.emit(
-        "combatLog",
-        `Fim de jogo! ${playerNames.get(scoringPlayerSlot)} venceu a partida!`,
+      const winnerName = formatPlayerName(
+        playerNames.get(scoringPlayerSlot),
+        scoringTeam,
       );
+      io.emit("combatLog", `Fim de jogo! ${winnerName} venceu a partida!`);
       // Opcionalmente, redefine o estado do jogo ou prepara para uma nova partida aqui
       // Por enquanto, apenas impede mais pontuações/ações
     }
@@ -324,9 +330,10 @@ function validateCanAct(user, socket) {
     // Pode interromper
     if (k?.canBeInterruptedByAction) {
       user.removeKeyword("inerte");
+      const userName = formatChampionName(user);
       io.emit(
         "combatLog",
-        `O efeito "Inerte" de ${user.name} foi interrompido!`,
+        `O efeito "Inerte" de ${userName} foi interrompido!`,
       );
       return true;
     }
@@ -350,19 +357,18 @@ function executeSkillAction(action) {
 
   // Validações iniciais
   if (!user || !user.alive) {
-    io.emit(
-      "combatLog",
-      `Ação de ${user ? user.name : "campeão desconhecido"} ignorada (não ativo).`,
-    );
+    const userName = user ? formatChampionName(user) : "campeão desconhecido";
+    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
     return false;
   }
 
   // ✅ Validação: Verificar bloqueios de keywords ANTES de executar
   if (user.hasKeyword?.("paralisado") || user.hasKeyword?.("atordoado")) {
     const keyword = user.hasKeyword("paralisado") ? "Paralisado" : "Atordoado";
+    const userName = formatChampionName(user);
     io.emit(
       "combatLog",
-      `${user.name} tentou agir mas estava ${keyword}! Ação cancelada.`,
+      `${userName} tentou agir mas estava ${keyword}! Ação cancelada.`,
     );
     console.log(`[Server] Ação cancelada: ${user.name} está ${keyword}.`);
     return false;
@@ -372,33 +378,37 @@ function executeSkillAction(action) {
   if (user.hasKeyword?.("inerte")) {
     const k = user.getKeyword("inerte");
     if (!k?.canBeInterruptedByAction) {
+      const userName = formatChampionName(user);
       io.emit(
         "combatLog",
-        `${user.name} tentou agir mas estava Inerte! Ação cancelada.`,
+        `${userName} tentou agir mas estava Inerte! Ação cancelada.`,
       );
       console.log(`[Server] Ação cancelada: ${user.name} está Inerte.`);
       return false;
     }
     // Se pode ser interrompido, remove o keyword
     user.removeKeyword("inerte");
-    io.emit("combatLog", `O efeito "Inerte" de ${user.name} foi interrompido!`);
+    const userName = formatChampionName(user);
+    io.emit("combatLog", `O efeito "Inerte" de ${userName} foi interrompido!`);
   }
 
   // Obter a habilidade
   const skill = user.skills.find((s) => s.key === action.skillKey);
   if (!skill) {
+    const userName = formatChampionName(user);
     io.emit(
       "combatLog",
-      `Erro: Habilidade ${action.skillKey} não encontrada para ${user.name}.`,
+      `Erro: Habilidade ${action.skillKey} não encontrada para ${userName}.`,
     );
     return false;
   }
 
   // Verificar se o usuário ainda está vivo
   if (!user.alive) {
+    const userName = formatChampionName(user);
     io.emit(
       "combatLog",
-      `${user.name} morreu antes de usar ${skill.name}. Ação cancelada.`,
+      `${userName} morreu antes de usar ${skill.name}. Ação cancelada.`,
     );
     return false;
   }
@@ -424,15 +434,18 @@ function executeSkillAction(action) {
         }
       }
       if (redirected) {
+        const userName = formatChampionName(user);
+        const provokerName = formatChampionName(provoker);
         io.emit(
           "combatLog",
-          `${user.name} foi provocado e redirecionou seu ataque para ${provoker.name}!`,
+          `${userName} foi provocado e redirecionou seu ataque para ${provokerName}!`,
         );
       }
     } else {
+      const userName = formatChampionName(user);
       io.emit(
         "combatLog",
-        `O provocador de ${user.name} não está ativo. A provocação é ignorada.`,
+        `O provocador de ${userName} não está ativo. A provocação é ignorada.`,
       );
     }
   }
@@ -442,9 +455,10 @@ function executeSkillAction(action) {
     for (const role in action.targetIds) {
       const target = activeChampions.get(action.targetIds[role]);
       if (!target || !target.alive) {
+        const userName = formatChampionName(user);
         io.emit(
           "combatLog",
-          `Alvo inválido ou inativo para a ação de ${user.name}. Ação cancelada.`,
+          `Alvo inválido ou inativo para a ação de ${userName}. Ação cancelada.`,
         );
         allTargetsValid = false;
         break;
@@ -575,9 +589,10 @@ function handleEndTurn() {
     const expiredKeywords = champion.purgeExpiredKeywords(currentTurn);
     if (expiredKeywords.length > 0) {
       expiredKeywords.forEach((keyword) => {
+        const championName = formatChampionName(champion);
         io.emit(
           "combatLog",
-          `Efeito "${keyword}" expirou para ${champion.name}.`,
+          `Efeito "${keyword}" expirou para ${championName}.`,
         );
       });
     }
@@ -1156,9 +1171,10 @@ io.on("connection", (socket) => {
     });
 
     // Emite "Ação pendente" apenas para o jogador que iniciou a ação
+    const userName = formatChampionName(user);
     io.to(socket.id).emit(
       "combatLog",
-      `${user.name} usou ${skill.name}. Ação pendente.`,
+      `${userName} usou ${skill.name}. Ação pendente.`,
     );
     io.emit("gameStateUpdate", getGameState()); // Atualiza o cliente com o estado atual (ex: cooldowns)
   });

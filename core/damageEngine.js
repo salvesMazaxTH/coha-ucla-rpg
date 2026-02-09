@@ -1,3 +1,5 @@
+import { formatChampionName } from "./formatters.js";
+
 const editMode = false;
 const debugMode = true;
 
@@ -172,146 +174,136 @@ export const DamageEngine = {
   },
 
   defenseToPercent(defense) {
-  if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
+    if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
-  if (!defense) {
-    if (debugMode) {
-      console.log(`Defense: ${defense} (ou 0)`);
-      console.log(`Redução percentual: 0%`);
-      console.groupEnd();
+    if (!defense) {
+      if (debugMode) {
+        console.log(`Defense: ${defense} (ou 0)`);
+        console.log(`Redução percentual: 0%`);
+        console.groupEnd();
+      }
+      return 0;
     }
-    return 0;
-  }
 
-  // --- Curva alvo (suave, interpolada) ---
-  const curve = {
-    0:   0.00,
-    35:  0.25,
-    60:  0.37,
-    85:  0.52,
-    110: 0.60,
-    125: 0.65,
-    150: 0.75,
-  };
+    // --- Curva alvo (suave, interpolada) ---
+    const curve = {
+      0: 0.0,
+      35: 0.25,
+      60: 0.37,
+      85: 0.52,
+      110: 0.6,
+      125: 0.65,
+      150: 0.75,
+    };
 
-  const keys = Object.keys(curve)
-    .map(Number)
-    .sort((a, b) => a - b);
+    const keys = Object.keys(curve)
+      .map(Number)
+      .sort((a, b) => a - b);
 
-  let effective;
+    let effective;
 
-  if (defense <= keys[0]) {
-    effective = curve[keys[0]];
-  } else if (defense >= keys[keys.length - 1]) {
-    effective = curve[keys[keys.length - 1]];
-  } else {
-    for (let i = 0; i < keys.length - 1; i++) {
-      const a = keys[i];
-      const b = keys[i + 1];
+    if (defense <= keys[0]) {
+      effective = curve[keys[0]];
+    } else if (defense >= keys[keys.length - 1]) {
+      effective = curve[keys[keys.length - 1]];
+    } else {
+      for (let i = 0; i < keys.length - 1; i++) {
+        const a = keys[i];
+        const b = keys[i + 1];
 
-      if (defense >= a && defense <= b) {
-        const t = (defense - a) / (b - a);
-        effective = curve[a] + t * (curve[b] - curve[a]);
-        break;
+        if (defense >= a && defense <= b) {
+          const t = (defense - a) / (b - a);
+          effective = curve[a] + t * (curve[b] - curve[a]);
+          break;
+        }
       }
     }
-  }
 
-  if (debugMode) {
-    console.log(`Defense original: ${defense}`);
-    console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
-    console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
-    console.groupEnd();
-  }
-
-  return effective;
-},
-
-_composeFinalDamage(mode, damage, crit, direct, target, context) {
-
-  if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
-
-  const baseDefense = target.baseDefense ?? target.Defense;
-  const currentDefense = target.Defense;
-
-  // ⭐ crítico ignora buffs de defesa
-  const defenseUsed = crit.didCrit
-    ? Math.min(baseDefense, currentDefense)
-    : currentDefense;
-
-  if (debugMode) {
-    console.log(`📍 Damage Base: ${damage}`);
-    console.log(`🎯 Mode: ${mode}`);
-    console.log(`🛡️ Defesa base: ${baseDefense}`);
-    console.log(`🛡️ Defesa atual: ${currentDefense}`);
-    console.log(`➡️ Defesa usada: ${defenseUsed}`);
-
-    if (crit.didCrit) {
-      console.log(`💥 Crítico ativo`);
-      console.log(`➡️ Buffs de defesa ignorados`);
-      console.log(`   Crit Extra: ${crit.critExtra}`);
-      console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
-    }
-
-    console.log(`📦 Direct Damage solicitado: ${direct}`);
-  }
-
-  // --- aplica crítico ---
-  let finalDamage = crit.didCrit
-    ? damage + crit.critExtra
-    : damage;
-
-  if (editMode) {
     if (debugMode) {
-      console.log(`🔴 EDIT MODE → 999`);
+      console.log(`Defense original: ${defense}`);
+      console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
+      console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
       console.groupEnd();
     }
-    return 999;
-  }
 
-  const defensePercent = this.defenseToPercent(defenseUsed);
-  const flatReduction = target.getTotalDamageReduction?.() || 0;
+    return effective;
+  },
 
-  // ---------- RAW ----------
-  if (mode === "raw") {
+  _composeFinalDamage(mode, damage, crit, direct, target, context) {
+    if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
 
-    finalDamage = Math.max(
-      finalDamage - finalDamage * defensePercent - flatReduction,
-      0
-    );
+    const baseDefense = target.baseDefense ?? target.Defense;
+    const currentDefense = target.Defense;
 
-  }
-  // ---------- HYBRID ----------
-  else {
+    // ⭐ crítico ignora buffs de defesa
+    const defenseUsed = crit.didCrit
+      ? Math.min(baseDefense, currentDefense)
+      : currentDefense;
 
-    const directPortion = Math.min(direct, finalDamage);
-    const rawPortion = finalDamage - directPortion;
+    if (debugMode) {
+      console.log(`📍 Damage Base: ${damage}`);
+      console.log(`🎯 Mode: ${mode}`);
+      console.log(`🛡️ Defesa base: ${baseDefense}`);
+      console.log(`🛡️ Defesa atual: ${currentDefense}`);
+      console.log(`➡️ Defesa usada: ${defenseUsed}`);
 
-    const directAfterReduction =
-      Math.max(directPortion - flatReduction, 0);
+      if (crit.didCrit) {
+        console.log(`💥 Crítico ativo`);
+        console.log(`➡️ Buffs de defesa ignorados`);
+        console.log(`   Crit Extra: ${crit.critExtra}`);
+        console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
+      }
 
-    const rawAfterReduction =
-      Math.max(
-        rawPortion -
-        rawPortion * defensePercent -
-        flatReduction,
-        0
+      console.log(`📦 Direct Damage solicitado: ${direct}`);
+    }
+
+    // --- aplica crítico ---
+    let finalDamage = crit.didCrit ? damage + crit.critExtra : damage;
+
+    if (editMode) {
+      if (debugMode) {
+        console.log(`🔴 EDIT MODE → 999`);
+        console.groupEnd();
+      }
+      return 999;
+    }
+
+    const defensePercent = this.defenseToPercent(defenseUsed);
+    const flatReduction = target.getTotalDamageReduction?.() || 0;
+
+    // ---------- RAW ----------
+    if (mode === "raw") {
+      finalDamage = Math.max(
+        finalDamage - finalDamage * defensePercent - flatReduction,
+        0,
+      );
+    }
+    // ---------- HYBRID ----------
+    else {
+      const directPortion = Math.min(direct, finalDamage);
+      const rawPortion = finalDamage - directPortion;
+
+      const directAfterReduction = Math.max(directPortion - flatReduction, 0);
+
+      const rawAfterReduction = Math.max(
+        rawPortion - rawPortion * defensePercent - flatReduction,
+        0,
       );
 
-    finalDamage = directAfterReduction + rawAfterReduction;
-  }
+      finalDamage = directAfterReduction + rawAfterReduction;
+    }
 
-  // ---------- FINALIZAÇÃO ----------
-  finalDamage = Math.max(finalDamage, 10);
-  finalDamage = this.roundToFive(finalDamage);
+    // ---------- FINALIZAÇÃO ----------
+    finalDamage = Math.max(finalDamage, 10);
+    finalDamage = this.roundToFive(finalDamage);
 
-  if (debugMode) {
-    console.log(`📈 Final: ${finalDamage}`);
-    console.groupEnd();
-  }
+    if (debugMode) {
+      console.log(`📈 Final: ${finalDamage}`);
+      console.groupEnd();
+    }
 
-  return finalDamage;
-},
+    return finalDamage;
+  },
 
   _applyDamage(target, val) {
     if (debugMode) console.group(`❤️ [APLICANDO DANO]`);
@@ -469,12 +461,15 @@ _composeFinalDamage(mode, damage, crit, direct, target, context) {
   },
 
   _buildLog(user, target, skill, dmg, crit, hpAfter, passiveLog) {
-    let log = `${user.name} usou ${skill} e causou ${dmg} de dano a ${target.name}`;
+    const userName = formatChampionName(user);
+    const targetName = formatChampionName(target);
+
+    let log = `${userName} usou ${skill} e causou ${dmg} de dano a ${targetName}`;
 
     if (crit.didCrit)
       log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;
 
-    log += `\nHP final de ${target.name}: ${hpAfter}/${target.maxHP}`;
+    log += `\nHP final de ${targetName}: ${hpAfter}/${target.maxHP}`;
 
     if (passiveLog?.log) {
       if (Array.isArray(passiveLog.log))
@@ -526,11 +521,12 @@ _composeFinalDamage(mode, damage, crit, direct, target, context) {
   },
 
   _buildImmuneResult(baseDamage, user, target) {
+    const targetName = formatChampionName(target);
     return {
       baseDamage,
       totalDamage: 0,
       finalHP: target.HP,
-      log: `${target.name} está com Imunidade Absoluta!`,
+      log: `${targetName} está com Imunidade Absoluta!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
   },

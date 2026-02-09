@@ -848,7 +848,9 @@ i {
 .champion {
   width: 25%;
   height: auto;
-  transition: opacity 0.5s ease-out, transform 0.5s ease-out; /* Add transition for smooth animation */
+  transition:
+    opacity 0.5s ease-out,
+    transform 0.5s ease-out; /* Add transition for smooth animation */
 }
 
 .champion.dying {
@@ -1040,6 +1042,17 @@ i {
 
 #combat-log p {
   white-space: pre-wrap; /* Preserve whitespace and break lines */
+}
+
+/* Team Name Colors in Combat Log */
+#combat-log .team-1 {
+  color: #00bfff; /* Azul para time 1 */
+  font-weight: bold;
+}
+
+#combat-log .team-2 {
+  color: #ff4444; /* Vermelho para time 2 */
+  font-weight: bold;
 }
 
 /* Login Screen Styles */

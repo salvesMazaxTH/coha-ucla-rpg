@@ -1,4 +1,5 @@
 import skillsByChampion from "../champions/index.js";
+import { formatChampionName } from "../core/formatters.js";
 
 export const championDB = {
   ralia: {
@@ -71,8 +72,9 @@ export const championDB = {
           `[PASSIVA NAELYS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${self.HP}`,
         );
 
+        const selfName = formatChampionName(self);
         return {
-          log: `[PASSIVA — Mar que Retorna] ${self.name} recuperou ${heal} HP.`,
+          log: `[PASSIVA — Mar que Retorna] ${selfName} recuperou ${heal} HP.`,
         };
       },
     },

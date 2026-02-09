@@ -1,4 +1,5 @@
 import { DamageEngine } from "../core/damageEngine.js";
+import { formatChampionName } from "../core/formatters.js";
 
 const tharoxSkills = [
   {
@@ -57,8 +58,9 @@ const tharoxSkills = [
         enemy.applyProvoke(user.id, provokeDuration, context);
       });
 
+      const userName = formatChampionName(user);
       return {
-        log: `${user.name} executou Provocação Primeva. Todos os inimigos foram provocados e ${user.name} recebeu -${damageReductionAmount} de Dano Bruto Final.`,
+        log: `${userName} executou Provocação Primeva. Todos os inimigos foram provocados e ${userName} recebeu -${damageReductionAmount} de Dano Bruto Final.`,
       };
     },
   },
@@ -104,7 +106,12 @@ const tharoxSkills = [
     targetSpec: ["self"],
     execute({ user, context }) {
       user.modifyHP(50, { maxHPOnly: true }); // Aumenta HP máximo em 50
-      user.modifyStat({statName: "Defense", amount: 10, context, isPermanent: true}); // Aumenta DEF permanentemente
+      user.modifyStat({
+        statName: "Defense",
+        amount: 10,
+        context,
+        isPermanent: true,
+      }); // Aumenta DEF permanentemente
       const proportionalHeal = Math.floor((user.Defense - 65) / 5) * 5; // Calcula cura proporcional
       user.heal(proportionalHeal);
 
@@ -120,8 +127,9 @@ const tharoxSkills = [
         },
       });
 
+      const userName = formatChampionName(user);
       return {
-        log: `${user.name} executou Apoteose do Monólito, liberando sua forma de guerra. Ganhou +${10} Defesa e +50 HP Máximo. Além disso, curou ${proportionalHeal} HP! (Defense: ${user.Defense}, HP: ${user.HP}/${user.maxHP})`,
+        log: `${userName} executou Apoteose do Monólito, liberando sua forma de guerra. Ganhou +${10} Defesa e +50 HP Máximo. Além disso, curou ${proportionalHeal} HP! (Defense: ${user.Defense}, HP: ${user.HP}/${user.maxHP})`,
       };
     },
   },
