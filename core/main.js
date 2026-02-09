@@ -27,7 +27,7 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-const editMode = true; // Definido como true para auto-entrar para testes
+const editMode = false; // Definido como true para auto-entrar para testes
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(
