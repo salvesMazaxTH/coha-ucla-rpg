@@ -8,7 +8,7 @@ export const StatusIndicator = {
     paralisado: "⚡ 🚷 ⚡",
     atordoado: "💫",
     inerte: "🔒",
-    energizado: "⚡",
+    sobrecarga: "⚡",
     "imunidade absoluta": "🛡️",
   },
 

@@ -181,7 +181,7 @@ export const championDB = {
           }
         }
 
-        target.applyKeyword("energizado", 2, context);
+        target.applyKeyword("sobrecarga", 2, context);
         log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
 
         return { log };
