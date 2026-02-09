@@ -1,6 +1,8 @@
 import skillsByChampion from "../champions/index.js";
 import { formatChampionName } from "../core/formatters.js";
 
+const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999), entre outras coisas. Lembre-se de desativar para o jogo normal!
+
 export const championDB = {
   ralia: {
     name: "Rália",
@@ -173,7 +175,9 @@ export const championDB = {
         let log = "";
 
         if (damage > 0) {
-          const recoilDamage = Math.round((damage * 0.25) / 5) * 5;
+          const recoilDamage = editMode
+            ? 999
+            : Math.round((damage * 0.25) / 5) * 5;
 
           if (recoilDamage > 0) {
             self.takeDamage(recoilDamage);

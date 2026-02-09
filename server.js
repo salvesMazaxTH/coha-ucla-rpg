@@ -13,7 +13,7 @@ import {
 } from "./core/cooldown.js";
 import { generateId } from "./core/id.js";
 import { formatChampionName, formatPlayerName } from "./core/formatters.js";
-const editMode = true; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
+const editMode = false; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
 
@@ -297,7 +297,7 @@ function removeChampionFromGame(championId, playerTeam) {
 }
 
 // Função auxiliar para validar se um campeão pode agir (incluindo keywords bloqueantes)
-function validateCanAct(user, socket) {
+function validateActionIntent(user, socket) {
   // morto
   if (!user.alive) {
     socket.emit("skillDenied", "Campeão morto.");
@@ -345,40 +345,38 @@ function validateCanAct(user, socket) {
   return true;
 }
 
-// ======== TURN RESOLUTION HELPER FUNCTIONS ========
+function canExecuteAction(user) {
+  const userName = formatChampionName(user);
 
-/**
- * Executa uma ação (habilidade) individual
- * @param {object} action - Ação a executar
- * @returns {boolean} - true se a ação foi executada com sucesso
- */
-function executeSkillAction(action) {
-  const user = activeChampions.get(action.championId);
-
-  // Validações iniciais
+  // inexistente ou morto
   if (!user || !user.alive) {
-    const userName = user ? formatChampionName(user) : "campeão desconhecido";
-    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
+    io.emit("combatLog", `Ação ignorada: ${userName} não está ativo.`);
     return false;
   }
 
-  // ✅ Validação: Verificar bloqueios de keywords ANTES de executar
-  if (user.hasKeyword?.("paralisado") || user.hasKeyword?.("atordoado")) {
-    const keyword = user.hasKeyword("paralisado") ? "Paralisado" : "Atordoado";
-    const userName = formatChampionName(user);
-    io.emit(
-      "combatLog",
-      `${userName} tentou agir mas estava ${keyword}! Ação cancelada.`,
-    );
-    console.log(`[Server] Ação cancelada: ${user.name} está ${keyword}.`);
-    return false;
+  // keywords bloqueantes diretas
+  const blockingKeywords = [
+    ["paralisado", "Paralisado"],
+    ["atordoado", "Atordoado"],
+    ["congelado", "Congelado"],
+  ];
+
+  for (const [key, label] of blockingKeywords) {
+    if (user.hasKeyword?.(key)) {
+      io.emit(
+        "combatLog",
+        `${userName} tentou agir mas estava ${label}! Ação cancelada.`,
+      );
+      console.log(`[Server] Ação cancelada: ${user.name} está ${label}.`);
+      return false;
+    }
   }
 
-  // Verificar se está Inerte
+  // tratamento especial: Inerte
   if (user.hasKeyword?.("inerte")) {
     const k = user.getKeyword("inerte");
+
     if (!k?.canBeInterruptedByAction) {
-      const userName = formatChampionName(user);
       io.emit(
         "combatLog",
         `${userName} tentou agir mas estava Inerte! Ação cancelada.`,
@@ -386,114 +384,101 @@ function executeSkillAction(action) {
       console.log(`[Server] Ação cancelada: ${user.name} está Inerte.`);
       return false;
     }
-    // Se pode ser interrompido, remove o keyword
+
+    // interrompido pela ação
     user.removeKeyword("inerte");
-    const userName = formatChampionName(user);
     io.emit("combatLog", `O efeito "Inerte" de ${userName} foi interrompido!`);
   }
 
-  // Obter a habilidade
-  const skill = user.skills.find((s) => s.key === action.skillKey);
-  if (!skill) {
-    const userName = formatChampionName(user);
-    io.emit(
-      "combatLog",
-      `Erro: Habilidade ${action.skillKey} não encontrada para ${userName}.`,
-    );
-    return false;
-  }
+  return true;
+}
 
-  // Verificar se o usuário ainda está vivo
-  if (!user.alive) {
-    const userName = formatChampionName(user);
-    io.emit(
-      "combatLog",
-      `${userName} morreu antes de usar ${skill.name}. Ação cancelada.`,
-    );
-    return false;
-  }
+// ======== TURN RESOLUTION HELPER FUNCTIONS ========
 
-  // Resolver alvos
+/**
+ * Executa uma ação (habilidade) individual
+ * @param {object} action - Ação a executar
+ * @returns {boolean} - true se a ação foi executada com sucesso
+ */
+
+function resolveSkillTargets(user, skill, action) {
   const currentTargets = {};
-  let allTargetsValid = true;
   let redirected = false;
 
-  // Verificar provocação
+  // ----- PROVOKE -----
   if (user.provokeEffects.length > 0 && skill.targetSpec.includes("enemy")) {
     const provokerId = user.provokeEffects[0].provokerId;
     const provoker = activeChampions.get(provokerId);
 
     if (provoker && provoker.alive) {
       for (const role in action.targetIds) {
-        const originalTarget = activeChampions.get(action.targetIds[role]);
-        if (originalTarget && originalTarget.team !== user.team) {
+        const original = activeChampions.get(action.targetIds[role]);
+
+        if (original && original.team !== user.team) {
           currentTargets[role] = provoker;
           redirected = true;
         } else {
-          currentTargets[role] = originalTarget;
+          currentTargets[role] = original;
         }
       }
+
       if (redirected) {
-        const userName = formatChampionName(user);
-        const provokerName = formatChampionName(provoker);
         io.emit(
           "combatLog",
-          `${userName} foi provocado e redirecionou seu ataque para ${provokerName}!`,
+          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(provoker)}!`,
         );
       }
     } else {
-      const userName = formatChampionName(user);
       io.emit(
         "combatLog",
-        `O provocador de ${userName} não está ativo. A provocação é ignorada.`,
+        `O provocador de ${formatChampionName(user)} não está ativo. A provocação é ignorada.`,
       );
     }
   }
 
-  // Resolver alvos normalmente se não foi redirecionado
+  // ----- NORMAL RESOLUTION -----
   if (!redirected) {
     for (const role in action.targetIds) {
       const target = activeChampions.get(action.targetIds[role]);
+
       if (!target || !target.alive) {
-        const userName = formatChampionName(user);
         io.emit(
           "combatLog",
-          `Alvo inválido ou inativo para a ação de ${userName}. Ação cancelada.`,
+          `Alvo inválido ou inativo para a ação de ${formatChampionName(user)}. Ação cancelada.`,
         );
-        allTargetsValid = false;
-        break;
+        return null;
       }
+
       currentTargets[role] = target;
     }
   }
 
-  if (!allTargetsValid) {
-    return false;
-  }
+  return currentTargets;
+}
 
-  // Iniciar cooldown
+function performSkillExecution(user, skill, targets) {
   startCooldown(user, skill, currentTurn);
+
   const context = { currentTurn };
 
-  // Executar habilidade
   const result = skill.execute({
     user,
-    targets: currentTargets,
+    targets,
     allChampions: activeChampions,
     context,
   });
 
-  // Log do histórico de turnos
   logTurnEvent("skillUsed", {
     championId: user.id,
     championName: user.name,
     skillKey: skill.key,
     skillName: skill.name,
-    targetIds: action.targetIds,
-    targetNames: Object.values(currentTargets).map((t) => t.name),
+    targetIds: Object.fromEntries(
+      Object.entries(targets).map(([k, v]) => [k, v.id]),
+    ),
+    targetNames: Object.values(targets).map((t) => t.name),
   });
 
-  // Registrar habilidades usadas neste turno
   if (!turnHistory.has(currentTurn)) {
     turnHistory.set(currentTurn, {
       events: [],
@@ -502,37 +487,48 @@ function executeSkillAction(action) {
       damageDealtThisTurn: {},
     });
   }
+
   const turnData = turnHistory.get(currentTurn);
+
   if (!turnData.skillsUsedThisTurn[user.id]) {
     turnData.skillsUsedThisTurn[user.id] = [];
   }
+
   turnData.skillsUsedThisTurn[user.id].push(skill.key);
 
-  // Emitir resultado do combate
   if (result) {
     if (Array.isArray(result)) {
-      result.forEach((r) => {
-        io.emit("combatLog", r.log);
-      });
+      result.forEach((r) => io.emit("combatLog", r.log));
     } else {
       io.emit("combatLog", result.log);
     }
   }
+}
 
-  // Verificar alvos mortos
-  Object.values(currentTargets).forEach((target) => {
-    if (target.HP <= 0) {
-      console.log(
-        `[Server] ${target.name} morreu devido ao dano da habilidade`,
-      );
-      removeChampionFromGame(target.id, target.team);
-    }
-  });
+function executeSkillAction(action) {
+  const user = activeChampions.get(action.championId);
 
-  // Verificar se o usuário morreu por auto-dano
-  if (user.HP <= 0 && user.alive) {
-    removeChampionFromGame(user.id, user.team);
+  if (!user || !user.alive) {
+    const userName = user ? formatChampionName(user) : "campeão desconhecido";
+    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
+    return false;
   }
+
+  if (!canExecuteAction(user)) return false;
+
+  const skill = user.skills.find((s) => s.key === action.skillKey);
+  if (!skill) {
+    io.emit(
+      "combatLog",
+      `Erro: Habilidade ${action.skillKey} não encontrada para ${formatChampionName(user)}.`,
+    );
+    return false;
+  }
+
+  const targets = resolveSkillTargets(user, skill, action);
+  if (!targets) return false;
+
+  performSkillExecution(user, skill, targets);
 
   return true;
 }
@@ -562,14 +558,24 @@ function resolveSkillActions() {
   console.log("[Server] Todas as ações resolvidas.");
 }
 
-/**
- * Finaliza o turno: resolve ações, incrementa turno, limpa efeitos expirados
- */
+// Processa mortes de campeões
+function processChampionsDeaths() {
+  for (const champ of activeChampions.values()) {
+    if (!champ.alive) {
+      removeChampionFromGame(champ.id, champ.team);
+    }
+  }
+}
+
+// Finaliza o turno: resolve ações, incrementa turno, limpa efeitos expirados
 function handleEndTurn() {
   console.log("[Server] Iniciando finalização do turno...");
 
   // Resolver todas as ações pendentes
   resolveSkillActions();
+
+  // Processar mortes de campeões antes mais nada, para que tudo funcione corretamente
+  processChampionsDeaths();
 
   // Incrementar turno
   currentTurn++;
@@ -1112,7 +1118,7 @@ io.on("connection", (socket) => {
     const skill = user.skills.find((s) => s.key === skillKey);
     if (!skill) return socket.emit("skillDenied", "Skill inválida.");
 
-    if (!validateCanAct(user, socket)) return;
+    if (!validateActionIntent(user, socket)) return;
 
     let cdError;
 

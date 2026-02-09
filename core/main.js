@@ -1,7 +1,5 @@
 import { championDB } from "/data/championDB.js";
 import { Champion } from "/core/Champion.js";
-import { isSkillOnCooldown, startCooldown } from "/core/cooldown.js";
-//Mimport { generateId } from "/core/id.js";
 import { StatusIndicator } from "/core/statusIndicator.js";
 
 const socket = io({
@@ -27,7 +25,7 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-const editMode = true; // Definido como true para auto-entrar para testes
+const editMode = false; // Definido como true para auto-entrar para testes
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(
@@ -58,10 +56,6 @@ socket.on("connect", () => {
     // Entra automaticamente com um nome de usuário fixo no editMode
     username = "EditUser";
     socket.emit("requestPlayerSlot", username);
-    loginScreen.classList.remove("active");
-    loginScreen.classList.add("hidden");
-    mainContent.classList.remove("hidden");
-    mainContent.classList.add("visible");
   }
   // console.log("Conectado ao servidor com ID:", socket.id);
 });
@@ -424,7 +418,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   if (!skill) return;
 
   // Resolve seleção de alvos
-  const targets = await resolveTargets(user, skill);
+  const targets = await collectClientTargets(user, skill);
   if (!targets) return;
 
   const targetIds = {};
@@ -575,7 +569,6 @@ function updateSelectedChampionsUI() {
   confirmTeamBtn.disabled = !allSlotsFilled || playerTeamConfirmed;
 }
 
-let draggedChampionKey = null;
 let draggedFromSlotIndex = -1; // -1 se da grade disponível, caso contrário, índice em selectedChampions
 
 function handleDragStart(e, championKey, fromSlotIndex = -1) {
@@ -721,13 +714,6 @@ socket.on("allTeamsSelected", () => {
   }
 });
 
-async function confirmChampionSelect(championKey) {
-  // Esta função não é mais usada para o novo processo de seleção
-  // O servidor irá lidar com a validação e atribuição da equipe
-  // Precisamos apenas obter a championKey e emitir o evento
-  // socket.emit("selectChampion", { championKey, playerTeam });
-}
-
 function createNewChampion(championData) {
   const baseData = championDB[championData.championKey];
   if (!baseData) {
@@ -751,26 +737,6 @@ function createNewChampion(championData) {
   });
 
   return champion;
-}
-
-async function handleChampionSelect() {
-  // Esta função não é mais usada para o novo processo de seleção
-  /*
-  if (!playerTeam) {
-    alert("Aguardando atribuição de time pelo servidor...");
-    return;
-  }
-
-  const select = document.getElementById("championSelect");
-  const championKey = select.value;
-
-  if (!championKey) {
-    alert("Selecione um campeão primeiro.");
-    return;
-  }
-
-  await confirmChampionSelect(championKey);
-  */
 }
 
 // -----------------------
@@ -929,7 +895,7 @@ function getSkillContext(button) {
   return { user, skill, userId, skillKey };
 }
 
-async function resolveTargets(user, skill) {
+async function collectClientTargets(user, skill) {
   if (!Array.isArray(skill.targetSpec)) {
     // console.error("Habilidade sem targetSpec:", skill.name);
     return null;
@@ -957,7 +923,7 @@ async function resolveTargets(user, skill) {
   let hasAtLeastOneTarget = false;
 
   for (const spec of normalizedSpec) {
-    const target = await resolveTargetRole(
+    const target = await selectTargetForRole(
       spec.type,
       user,
       championsInField,
@@ -982,7 +948,7 @@ async function resolveTargets(user, skill) {
   return targets;
 }
 
-async function resolveTargetRole(
+async function selectTargetForRole(
   role,
   user,
   championsInField,
@@ -1234,22 +1200,6 @@ function deleteChampion(championId) {
 
 // ----------------------------------------//
 // Listeners de eventos //
-/* arena.addEventListener("click", (e) => {
-  const btn = e.target.closest(".skill-btn");
-  if (!btn || !arena.contains(btn)) return;
-  const championId = btn.dataset.championId;
-  const skillKey = btn.dataset.skillKey;
-
-  // Alvo automático: o primeiro que não seja você
-  const targets = [...document.querySelectorAll(".champion")]
-    .map((el) => el.dataset.championId)
-    .filter((id) => id !== championId);
-
-  const targetId = targets[0];
-  if (!targetId) return;
-
-  useSkill(championId, skillKey, targetId);
-}); */
 
 socket.on("playerConfirmedEndTurn", (playerSlot) => {
   const playerName = playerNames.get(playerSlot);
