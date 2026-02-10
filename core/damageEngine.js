@@ -480,7 +480,7 @@ export const DamageEngine = {
     return log;
   },
 
-  _applyLifeSteal(user, dmg, log) {
+  _applyLifeSteal(user, dmg) {
     if (debugMode) console.group(`💉 [LIFESTEAL]`);
 
     if (user.LifeSteal <= 0 || dmg <= 0) {
@@ -508,12 +508,34 @@ export const DamageEngine = {
 
     user.heal(heal);
 
+    // 🔥 Evento global de LifeSteal
+    const passiveLogs = [];
+
+    activeChampions?.forEach((champion) => {
+      const hook = champion.passive?.onLifeSteal;
+      if (!hook) return;
+
+      const result = hook({
+        source: user,
+        amount: heal,
+        self: champion,
+      });
+
+      if (result?.log) {
+        if (Array.isArray(result.log)) passiveLogs.push(...result.log);
+        else passiveLogs.push(result.log);
+      }
+    });
+
     if (debugMode) {
       console.log(`📍 HP Attacker: ${user.HP}/${user.maxHP}`);
       console.groupEnd();
     }
 
-    return `Roubo de vida: ${heal} | HP: ${user.HP}/${user.maxHP}`;
+    return {
+      text: `Roubo de vida: ${heal} | HP: ${user.HP}/${user.maxHP}`,
+      passiveLogs,
+    };
   },
 
   _isImmune(target) {
@@ -645,10 +667,13 @@ export const DamageEngine = {
 
     if (afterDeal?.log) log += `\n${afterDeal.log}`;
 
-    const lsLog =
-    this._applyLifeSteal(user, finalDamage);
-    
-    if (lsLog) log += "\n" + lsLog;
+    const ls = this._applyLifeSteal(user, finalDamage);
+
+    if (ls) {
+      log += "\n" + ls.text;
+
+      if (ls.passiveLogs?.length) log += "\n" + ls.passiveLogs.join("\n");
+    }
 
     if (debugMode) {
       console.group(`🎯 [RESUMO FINAL]`);

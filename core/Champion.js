@@ -47,6 +47,13 @@ export class Champion {
     this.alive = true;
     this.cooldowns = new Map();
     this.hasActedThisTurn = false; // New property to track if the champion has acted this turn
+
+    this.runtime = {
+      shields: [],
+    };
+
+    this.fake = {}; // propriedade artificial para usos específicos (ex.: Tharox)
+
     // 🔥 ULTIMATE LOCK (cooldown inicial)
     this.initUltimateLock();
   }
@@ -247,6 +254,15 @@ export class Champion {
     this.HP = Math.max(0, Math.min(this.HP, this.maxHP));
   }
 
+  addShield(amount, decayPerTurn = 0, context) {
+    this.runtime.shields.push({
+      amount,
+      decayPerTurn,
+    });
+
+    io.emit("combatLog", `${this.name} ganhou ${amount} de escudo!`);
+  }
+
   applyProvoke(provokerId, duration, context) {
     this.provokeEffects.push({
       provokerId: provokerId,
@@ -392,7 +408,7 @@ export class Champion {
         ${statRow("Defesa", "Defense", this.Defense)}
         ${statRow("Velocidade", "Speed", this.Speed)}
         ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical + "%") : ""}
-        ${this.LifeSteal > 0 ? statRow("Roubo de Vida", "LifeSteal", this.LifeSteal) : ""}
+        ${statRow("Roubo&nbsp;de&nbsp;Vida", "LifeSteal", this.LifeSteal)}
 
         <div class="skills-bar">
           ${skillsHTML}
@@ -494,6 +510,13 @@ export class Champion {
     updateStat("Speed");
     updateStat("Critical");
     updateStat("LifeSteal");
+
+    const lifeStealRow = this.el.querySelector(
+      `.stat-row[data-stat="LifeSteal"]`,
+    );
+    if (lifeStealRow) {
+      lifeStealRow.style.display = this.LifeSteal > 0 ? "" : "none";
+    }
     // 🎨 Atualiza os indicadores de status
     StatusIndicator.updateChampionIndicators(this);
 
@@ -502,6 +525,30 @@ export class Champion {
 
   takeDamage(amount) {
     if (!this.alive) return;
+
+    for (const shield of this.runtime.shields) {
+      if (amount <= 0) break;
+
+      const absorbed = Math.min(shield.amount, amount);
+      shield.amount -= absorbed;
+      amount -= absorbed;
+      io.emit(
+        "combatLog",
+        `${this.name} absorveu ${absorbed} de dano com escudo!`,
+      );
+    }
+
+    if (this.hasKeyword?.("epifania_ativa") && this.HP - val <= 0) {
+      const lockedHP = this.HP >= 50 ? 50 : this.HP;
+
+      this.HP = lockedHP;
+
+      this.applyKeyword("imunidade absoluta", {
+        source: "epifania",
+      });
+
+      return;
+    }
 
     this.HP -= amount;
 

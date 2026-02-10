@@ -26,12 +26,11 @@ const naelysSkills = [
     key: "toque_da_mare_serena",
     name: "Toque da Maré Serena",
     description: ` Cooldown: 1 turno
-Contato: ❌
-Inimigo alvo sofre:
-Dano Bruto = Base 15 + ATQ
-Aliado ativo recupera:
-    Cura = 45 de HP
-`,
+    Contato: ❌
+    Inimigo alvo sofre:
+    Dano Bruto = Base 15 + ATQ
+    Aliado ativo recupera:
+    Cura = 45 de HP`,
     cooldown: 1,
     priority: 0, // Default priority
     targetSpec: ["enemy", "ally"],
@@ -121,7 +120,7 @@ Aliado ativo recupera:
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 
       const factor = 0.55;
-      
+
       const amount = user.baseHP * factor;
 
       user.modifyHP(amount, { affectMax: true }); // Aumenta o HP atual proporcionalmente ao aumento do máximo

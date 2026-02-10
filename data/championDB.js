@@ -7,7 +7,7 @@ export const championDB = {
   ralia: {
     name: "Rália",
     portrait: "assets/portraits/ralia.png",
-    HP: 370,
+    HP: 365,
     Attack: 45,
     Defense: 75,
     Speed: 40,
@@ -117,9 +117,9 @@ export const championDB = {
   tharox: {
     name: "Tharox",
     portrait: "assets/portraits/tharox.png",
-    HP: 385,
+    HP: 380,
     Attack: 40,
-    Defense: 65,
+    Defense: 80,
     Speed: 20,
     Critical: 0,
     LifeSteal: 0,
@@ -127,30 +127,38 @@ export const championDB = {
     passive: {
       name: "Massa Inamolgável",
       description:
-        "Sempre que Tharox sofrer Dano Bruto (não Direto), ele recebe +5 de Defesa e +5 de HP (cura e aumenta a vida máxima).",
-      afterTakingDamage({ attacker, target, damage, damageType, context }) {
+        "Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a 2, consome ambos e ganha +10 Defesa e +10 HP (cura e aumenta a vida máxima).",
+      afterTakingDamage({ target, damage, context }) {
         const self = target;
-        if (damageType === "raw" && damage > 0) {
-          const statResult = self.modifyStat({
-            statName: "Defense",
-            amount: 5,
-            duration: 1,
-            context,
-            isPermanent: true,
-          });
-          self.modifyHP(5, { affectMax: true });
+        if (damage <= 0) return;
 
-          let log = `[Passiva - Massa Inamolgável] ${self.name} absorveu o impacto, ganhando +5 Defesa e +5 HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
+        self.fake.tharoxInerciaStacks =
+          (self.fake.tharoxInerciaStacks || 0) + 1;
 
-          if (statResult?.log) {
-            log += `\n${statResult.log}`;
-          }
-
-          console.log(
-            `${self.name} ganhou +5 Defesa e +5 HP por causa de Massa Inamolgável! Defesa atual: ${self.Defense}, HP atual: ${self.HP}/${self.maxHP}`,
-          );
-          return { log };
+        if (self.fake.tharoxInerciaStacks < 2) {
+          return {
+            log: `[Passiva - Massa Inamolgável] ${self.name} acumulou Inércia (${self.fake.tharoxInerciaStacks}/2).`,
+          };
         }
+
+        self.fake.tharoxInerciaStacks = 0;
+
+        const statResult = self.modifyStat({
+          statName: "Defense",
+          amount: 10,
+          duration: 1,
+          context,
+          isPermanent: true,
+        });
+        self.modifyHP(10, { affectMax: true });
+
+        let log = `[Passiva - Massa Inamolgável] ${self.name} consumiu 2 Inércia e ganhou +10 Defesa e +10 HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
+
+        if (statResult?.log) {
+          log += `\n${statResult.log}`;
+        }
+
+        return { log };
       },
     },
   },
@@ -212,5 +220,87 @@ export const championDB = {
         };
       },
     },
+  },
+
+  serene: {
+    name: "Serene",
+    portrait: "assets/portraits/serene.png",
+    HP: 350,
+    Attack: 40,
+    Defense: 30,
+    Speed: 40,
+    Critical: 0,
+    LifeSteal: 0,
+    skills: skillsByChampion.serene,
+    passive: {
+      name: "Calmaria Protetora",
+      description: `Sempre que Serene terminar um turno sem ter seu HP reduzido,
+  ela cura 15% do seu HP máximo no início do próximo turno.`,
+
+      // Marca dano recebido no turno
+      afterTakingDamage({ target, context }) {
+        target.runtime.sereneDamagedTurn = context.currentTurn;
+      },
+
+      // Executa no início do turno
+      onTurnStart({ target, context }) {
+        const lastDamaged = target.runtime.sereneDamagedTurn;
+
+        // Se NÃO tomou dano no turno anterior
+        if (lastDamaged === context.currentTurn - 1) return;
+
+        const heal = Math.round((target.maxHP * 0.15) / 5) * 5;
+        if (heal <= 0) return;
+
+        const before = target.HP;
+        target.heal(heal);
+
+        return {
+          log: `[PASSIVA — Calmaria Protetora] ${formatChampionName(target)} recuperou ${heal} HP (${before} → ${target.HP}).`,
+        };
+      },
+    },
+  },
+
+  reyskarone: {
+    name: "Reyskarone",
+    portrait: "assets/portraits/reyskarone.png",
+    HP: 320,
+    Attack: 50,
+    Defense: 35,
+    Speed: 30,
+    Critical: 0,
+    LifeSteal: 20,
+    skills: skillsByChampion.reyskarone,
+    passive: {
+      name: "Ecos de Vitalidade",
+      description: `
+      Sempre que um aliado curar por LifeSteal,Reyskarone recupera 30% desse valor.`,
+
+      onLifeSteal({ source, amount, self }) {
+        // ✔ Só aliados
+        if (source.team !== self.team) return;
+
+        // ✔ Ignorar o próprio Reyskarone
+        if (source === self) return;
+
+        const heal = Math.round((amount * 0.3) / 5) * 5;
+        if (heal <= 0) return;
+
+        self.heal(heal);
+
+        return {
+          log: `[PASSIVA — Ecos de Vitalidade] ${formatChampionName(self)} absorveu ecos vitais de ${formatChampionName(source)} (+${heal} HP).`,
+        };
+      },
+    },
+  },
+
+  gryskarchu: {
+    name: "Gryskarchu",
+    portrait: "assets/portraits/gryskarchu.png",
+    HP: 365,
+    Attack: 35,
+    Defense: 80,
   },
 };

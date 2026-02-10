@@ -1,8 +1,11 @@
-import raliaSkills from "../champions/ralia.js"
-import naelysSkills from "../champions/naelys.js"
-import tharoxSkills from "../champions/tharox.js"
-import vaelSkills  from "../champions/vael.js"
-import voltexzSkills from "../champions/voltexz.js"
+import raliaSkills from "../champions/ralia.js";
+import naelysSkills from "../champions/naelys.js";
+import tharoxSkills from "../champions/tharox.js";
+import vaelSkills from "../champions/vael.js";
+import voltexzSkills from "../champions/voltexz.js";
+import sereneSkills from "../champions/serene.js";
+import reyskaroneSkills from "../champions/reyskarone.js";
+import gryskarchuSkills from "../champions/gryskarchu.js";  
 
 const skillsByChampion = {
   ralia: raliaSkills,
@@ -10,6 +13,11 @@ const skillsByChampion = {
   tharox: tharoxSkills,
   vael: vaelSkills,
   voltexz: voltexzSkills,
-}
+  serene: sereneSkills,
+  reyskarone: reyskaroneSkills,
+  gryskarchu: gryskarchuSkills,
+};
+
+console.log("Loaded:", reyskaroneSkills);
 
 export default skillsByChampion;

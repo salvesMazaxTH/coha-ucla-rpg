@@ -134,6 +134,8 @@ function getGameState() {
       Array.from(c.keywords.entries()),
     ); */
 
+    console.log("DEBUG skills check:", c.id, c.skills);
+
     return {
       id: c.id,
       championKey: c.id.split("-")[0],
@@ -468,6 +470,19 @@ function performSkillExecution(user, skill, targets) {
     context,
   });
 
+  // 🔥 remover Epifania quando agir
+  if (user.hasKeyword?.("epifania_ativa")) {
+    user.removeKeyword("epifania_ativa");
+
+    user.removeDamageReductionBySource?.("epifania");
+    user.removeKeyword("imunidade absoluta");
+
+    io.emit(
+      "combatLog",
+      `${formatChampionName(user)} deixou o Limiar da Existência.`,
+    );
+  }
+
   logTurnEvent("skillUsed", {
     championId: user.id,
     championName: user.name,
@@ -580,6 +595,21 @@ function handleEndTurn() {
   // Incrementar turno
   currentTurn++;
   playersReadyToEndTurn.clear();
+
+  // 🔥 Disparar passivas de início de turno
+  activeChampions.forEach((champion) => {
+    const hook = champion.passive?.onTurnStart;
+    if (!hook) return;
+
+    const result = hook({
+      target: champion,
+      context: { currentTurn },
+    });
+
+    if (result?.log) {
+      io.emit("combatLog", result.log);
+    }
+  });
 
   // Limpar modificadores de stats expirados
   const revertedStats = [];
