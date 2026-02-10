@@ -834,27 +834,47 @@ function handlePortraitClick(champion) {
     }
 
     function setSkillsContainerHeight() {
-      requestAnimationFrame(() => {
-        const contentStyle = getComputedStyle(content);
-        const contentPaddingTop = parseFloat(contentStyle.paddingTop);
-        const contentPaddingBottom = parseFloat(contentStyle.paddingBottom);
-        const contentVerticalPadding = contentPaddingTop + contentPaddingBottom;
+  requestAnimationFrame(() => {
 
-        const overlayContentHeight = content.clientHeight;
-        const overlayPortraitHeight = overlayPortrait.offsetHeight;
-        const gapBetweenPortraitAndSkills = 30;
+    // ⭐ Detecta proporção da imagem
+    const imgW = overlayPortrait.naturalWidth;
+    const imgH = overlayPortrait.naturalHeight;
 
-        const availableHeightForSkills =
-          overlayContentHeight -
-          overlayPortraitHeight -
-          gapBetweenPortraitAndSkills -
-          contentVerticalPadding;
+    if (imgW && imgH) {
+      const ratio = imgH / imgW;
 
-        // Sempre força rolagem vertical dentro do container
-        overlaySkillsContainer.style.maxHeight = `${Math.max(availableHeightForSkills, 200)}px`;
-        // overlaySkillsContainer.style.overflowY = "auto"; // removido (já definido acima)
-      });
+      // Vertical → reduz levemente
+      if (ratio > 1.1) {
+        overlayPortrait.style.transform = "scale(0.85)";
+        overlayPortrait.style.transformOrigin = "top left";
+      } else {
+        overlayPortrait.style.transform = "scale(1)";
+      }
     }
+
+    // ===============================
+    // Cálculo original (mantido)
+    // ===============================
+
+    const contentStyle = getComputedStyle(content);
+    const contentPaddingTop = parseFloat(contentStyle.paddingTop);
+    const contentPaddingBottom = parseFloat(contentStyle.paddingBottom);
+    const contentVerticalPadding =
+      contentPaddingTop + contentPaddingBottom;
+
+    const overlayContentHeight = content.clientHeight;
+    const overlayPortraitHeight = overlayPortrait.offsetHeight;
+    const gapBetweenPortraitAndSkills = 30;
+
+    const availableHeightForSkills =
+      overlayContentHeight -
+      overlayPortraitHeight -
+      gapBetweenPortraitAndSkills -
+      contentVerticalPadding;
+
+    overlaySkillsContainer.style.maxHeight =
+      `${Math.max(availableHeightForSkills, 200)}px`;
+
   });
 }
 
