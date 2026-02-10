@@ -60,11 +60,11 @@ export class Champion {
 
     if (!ultimate.cooldown || ultimate.cooldown <= 0) return;
 
-    const availableAt = ultimate.cooldown;
+    const availableAt = 4; // 🔥 Regra global fixa
 
     this.cooldowns.set(ultimate.key, {
       availableAt,
-      duration: ultimate.cooldown,
+      duration: 2, // apenas informativo/debug
       isUltimateLock: true, // só pra debug
     });
 

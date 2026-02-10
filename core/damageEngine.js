@@ -513,7 +513,7 @@ export const DamageEngine = {
       console.groupEnd();
     }
 
-    log += `\nRoubo de vida: ${heal}`;
+    return `Roubo de vida: ${heal} | HP: ${user.HP}/${user.maxHP}`;
   },
 
   _isImmune(target) {
@@ -645,7 +645,10 @@ export const DamageEngine = {
 
     if (afterDeal?.log) log += `\n${afterDeal.log}`;
 
-    this._applyLifeSteal(user, finalDamage, log);
+    const lsLog =
+    this._applyLifeSteal(user, finalDamage);
+    
+    if (lsLog) log += "\n" + lsLog;
 
     if (debugMode) {
       console.group(`🎯 [RESUMO FINAL]`);
