@@ -746,6 +746,17 @@ function handlePortraitClick(champion) {
   const overlayData = createOverlay();
   const content = overlayData.content;
 
+  const normalizeDescription = (text) => {
+    if (!text) return "Sem descrição.";
+    return String(text)
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+
   let skillsHTML = "";
 
   for (let i = 0; i < champion.skills.length; i++) {
@@ -763,7 +774,16 @@ function handlePortraitClick(champion) {
     skillsHTML += `
       <div class="overlay-skill">
         <h3>${label === "Ataque Básico" ? label : `${label}: ${skill.name}`}</h3>
-        <p class="skill-description-text">${skill.description || "Sem descrição."}</p>
+        <p class="skill-description-text">${normalizeDescription(skill.description)}</p>
+      </div>
+    `;
+  }
+
+  if (champion.passive?.name || champion.passive?.description) {
+    skillsHTML += `
+      <div class="overlay-skill passive">
+        <h3>Passiva: ${champion.passive?.name || "Sem nome"}</h3>
+        <p class="skill-description-text">${normalizeDescription(champion.passive?.description)}</p>
       </div>
     `;
   }
@@ -796,6 +816,14 @@ function handlePortraitClick(champion) {
       return;
     }
 
+    overlayPortrait.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openPortraitFullscreen(champion.portrait, champion.name);
+    });
+
+    content.style.maxHeight = "85vh";
+    overlaySkillsContainer.style.overflowY = "auto";
+
     // Aguardar a imagem carregar para ter as dimensões corretas
     if (!overlayPortrait.complete) {
       overlayPortrait.addEventListener("load", () =>
@@ -822,18 +850,9 @@ function handlePortraitClick(champion) {
           gapBetweenPortraitAndSkills -
           contentVerticalPadding;
 
-        // Apenas define a altura máxima - deixa o CSS cuidar do resto
-        overlaySkillsContainer.style.maxHeight = `${availableHeightForSkills}px`;
-
-        // console.log(
-        //   `Altura disponível para habilidades: ${availableHeightForSkills}px`,
-        // );
-        // console.log(
-        //   `Altura do conteúdo das habilidades: ${overlaySkillsContainer.scrollHeight}px`,
-        // );
-        // console.log(
-        //   `Tem scroll: ${overlaySkillsContainer.scrollHeight > overlaySkillsContainer.clientHeight ? "Sim" : "Não"}`,
-        // );
+        // Sempre força rolagem vertical dentro do container
+        overlaySkillsContainer.style.maxHeight = `${Math.max(availableHeightForSkills, 200)}px`;
+        // overlaySkillsContainer.style.overflowY = "auto"; // removido (já definido acima)
       });
     }
   });
@@ -874,6 +893,42 @@ function closeOverlay() {
   setTimeout(() => {
     overlay.remove();
   }, 200);
+}
+
+function openPortraitFullscreen(src, name) {
+  const overlay = document.createElement("div");
+  overlay.classList.add("overlay");
+
+  const frame = document.createElement("div");
+  frame.style.maxWidth = "90vw";
+  frame.style.maxHeight = "90vh";
+  frame.style.margin = "5vh auto";
+  frame.style.display = "flex";
+  frame.style.justifyContent = "center";
+  frame.style.alignItems = "center";
+
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = name || "Portrait";
+  img.style.width = "90vw";
+  img.style.height = "90vh";
+  img.style.objectFit = "contain";
+  img.style.display = "block";
+
+  frame.appendChild(img);
+  overlay.appendChild(frame);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove("active");
+      setTimeout(() => overlay.remove(), 200);
+    }
+  });
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => {
+    overlay.classList.add("active");
+  });
 }
 
 // -----------------------
@@ -1226,22 +1281,6 @@ socket.on("playerConfirmedEndTurn", (playerSlot) => {
 
 socket.on("waitingForOpponentEndTurn", (message) => {
   logCombat(message);
-});
-
-socket.on("turnUpdate", (turn) => {
-  currentTurn = turn;
-  const turnDisplay = document.querySelector(".turn-display");
-  const turnText = turnDisplay.querySelector("p");
-  turnText.innerHTML = `Turno ${currentTurn}`;
-  hasConfirmedEndTurn = false; // Redefine a confirmação para um novo turno
-  endTurnBtn.disabled = false; // Reabilita o botão para um novo turno
-  enableChampionActions(); // Reabilita todas as ações do campeão
-  activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
-  activeChampions.forEach((champion) => {
-    champion.updateUI(); // Atualiza a UI para todos os campeões
-    StatusIndicator.updateChampionIndicators(champion); // Atualiza indicadores de status
-  });
-  logCombat(`Início do Turno ${currentTurn}`);
 });
 
 socket.on("scoreUpdate", ({ player1, player2 }) => {
