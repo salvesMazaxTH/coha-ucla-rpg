@@ -794,13 +794,11 @@ function handlePortraitClick(champion) {
       alt="${champion.name}" 
       class="overlay-portrait"
     >
-
     <div class="overlay-skills">
       ${skillsHTML}
     </div>
   `;
 
-  // Ajustar tamanho da fonte após renderização
   requestAnimationFrame(() => {
     const overlayPortrait = content.querySelector(".overlay-portrait");
     const overlaySkillsContainer = content.querySelector(".overlay-skills");
@@ -816,65 +814,51 @@ function handlePortraitClick(champion) {
       return;
     }
 
-    overlayPortrait.addEventListener("click", (e) => {
-      e.stopPropagation();
-      openPortraitFullscreen(champion.portrait, champion.name);
-    });
-
     content.style.maxHeight = "85vh";
     overlaySkillsContainer.style.overflowY = "auto";
 
-    // Aguardar a imagem carregar para ter as dimensões corretas
     if (!overlayPortrait.complete) {
-      overlayPortrait.addEventListener("load", () =>
-        setSkillsContainerHeight(),
-      );
+      overlayPortrait.addEventListener("load", () => {
+        setSkillsContainerHeight();
+      });
     } else {
       setSkillsContainerHeight();
     }
 
     function setSkillsContainerHeight() {
-  requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const imgW = overlayPortrait.naturalWidth;
+        const imgH = overlayPortrait.naturalHeight;
 
-    // ⭐ Detecta proporção da imagem
-    const imgW = overlayPortrait.naturalWidth;
-    const imgH = overlayPortrait.naturalHeight;
+        if (imgW && imgH) {
+          const ratio = imgH / imgW;
 
-    if (imgW && imgH) {
-      const ratio = imgH / imgW;
+          if (ratio > 1.1) {
+            overlayPortrait.style.transform = "scale(0.85)";
+            overlayPortrait.style.transformOrigin = "top left";
+          } else {
+            overlayPortrait.style.transform = "scale(1)";
+          }
+        }
 
-      // Vertical → reduz levemente
-      if (ratio > 1.1) {
-        overlayPortrait.style.transform = "scale(0.85)";
-        overlayPortrait.style.transformOrigin = "top left";
-      } else {
-        overlayPortrait.style.transform = "scale(1)";
-      }
+        const contentStyle = getComputedStyle(content);
+        const contentPaddingTop = parseFloat(contentStyle.paddingTop);
+        const contentPaddingBottom = parseFloat(contentStyle.paddingBottom);
+        const contentVerticalPadding = contentPaddingTop + contentPaddingBottom;
+
+        const overlayContentHeight = content.clientHeight;
+        const overlayPortraitHeight = overlayPortrait.offsetHeight;
+        const gapBetweenPortraitAndSkills = 30;
+
+        const availableHeightForSkills =
+          overlayContentHeight -
+          overlayPortraitHeight -
+          gapBetweenPortraitAndSkills -
+          contentVerticalPadding;
+
+        overlaySkillsContainer.style.maxHeight = `${Math.max(availableHeightForSkills, 200)}px`;
+      });
     }
-
-    // ===============================
-    // Cálculo original (mantido)
-    // ===============================
-
-    const contentStyle = getComputedStyle(content);
-    const contentPaddingTop = parseFloat(contentStyle.paddingTop);
-    const contentPaddingBottom = parseFloat(contentStyle.paddingBottom);
-    const contentVerticalPadding =
-      contentPaddingTop + contentPaddingBottom;
-
-    const overlayContentHeight = content.clientHeight;
-    const overlayPortraitHeight = overlayPortrait.offsetHeight;
-    const gapBetweenPortraitAndSkills = 30;
-
-    const availableHeightForSkills =
-      overlayContentHeight -
-      overlayPortraitHeight -
-      gapBetweenPortraitAndSkills -
-      contentVerticalPadding;
-
-    overlaySkillsContainer.style.maxHeight =
-      `${Math.max(availableHeightForSkills, 200)}px`;
-
   });
 }
 
@@ -913,42 +897,6 @@ function closeOverlay() {
   setTimeout(() => {
     overlay.remove();
   }, 200);
-}
-
-function openPortraitFullscreen(src, name) {
-  const overlay = document.createElement("div");
-  overlay.classList.add("overlay");
-
-  const frame = document.createElement("div");
-  frame.style.maxWidth = "90vw";
-  frame.style.maxHeight = "90vh";
-  frame.style.margin = "5vh auto";
-  frame.style.display = "flex";
-  frame.style.justifyContent = "center";
-  frame.style.alignItems = "center";
-
-  const img = document.createElement("img");
-  img.src = src;
-  img.alt = name || "Portrait";
-  img.style.width = "90vw";
-  img.style.height = "90vh";
-  img.style.objectFit = "contain";
-  img.style.display = "block";
-
-  frame.appendChild(img);
-  overlay.appendChild(frame);
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      overlay.classList.remove("active");
-      setTimeout(() => overlay.remove(), 200);
-    }
-  });
-
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => {
-    overlay.classList.add("active");
-  });
 }
 
 // -----------------------
