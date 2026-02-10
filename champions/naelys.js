@@ -82,7 +82,7 @@ Aliado ativo recupera:
     Efeitos: Inerte + Imunidade Absoluta
     Duração: 2 turnos (pode ser interrompido se executar uma ação)`,
     cooldown: 2,
-    priority: 0,
+    priority: 1,
     targetSpec: ["self"],
 
     execute({ user, context }) {
@@ -112,7 +112,7 @@ Aliado ativo recupera:
     ➡️ +20 de Dano Bruto para cada 20 de HP ATUAL que ele tiver
     (Arredondado para múltiplo de 5)
     Limite de Escala: O bônus de dano não pode exceder +140 de Dano Bruto por ação.`,
-    cooldown: 4,
+    cooldown: 3,
     priority: 0, // Default priority
     targetSpec: ["self"],
 
