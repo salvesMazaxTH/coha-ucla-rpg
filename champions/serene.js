@@ -9,7 +9,7 @@ const sereneSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -18,6 +18,7 @@ const sereneSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -35,7 +36,7 @@ const sereneSkills = [
     cooldown: 1,
     priority: 0,
     targetSpec: ["select:ally"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { ally } = targets;
       const hpSacrifice = Math.floor(user.HP * 0.15);
       user.takeDamage(hpSacrifice);
@@ -60,32 +61,33 @@ const sereneSkills = [
     cooldown: 1,
     priority: 1,
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
-  const { enemy } = targets;
+    execute({ user, targets, context = {} }) {
+      const { enemy } = targets;
 
-  const baseDamage = Math.floor(enemy.maxHP * 0.15);
+      const baseDamage = Math.floor(enemy.maxHP * 0.15);
 
-  // aplica status
-  enemy.applyKeyword("atordoado", 1, context);
+      // aplica status
+      enemy.applyKeyword("atordoado", 1, context);
 
-  // resolve dano
-  const result = DamageEngine.resolveDamage({
-    mode: "hybrid",
-    baseDamage,
-    direct: baseDamage,
-    user,
-    target: enemy,
-    skill: this.name,
-    context,
-  });
+      // resolve dano
+      const result = DamageEngine.resolveDamage({
+        mode: "hybrid",
+        baseDamage,
+        direct: baseDamage,
+        user,
+        target: enemy,
+        skill: this.name,
+        context,
+        allChampions: context?.allChampions,
+      });
 
-  // adiciona log da skill
-  if (result) {
-    result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
-  }
+      // adiciona log da skill
+      if (result) {
+        result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
+      }
 
       return result;
-    }
+    },
   },
 
   {
@@ -105,7 +107,7 @@ const sereneSkills = [
     cooldown: 2,
     priority: 1,
     targetSpec: ["all:ally", "self"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       // 1️⃣ Proteção de Campo
       targets.allies.forEach((ally) => {
         ally.applyDamageReduction({

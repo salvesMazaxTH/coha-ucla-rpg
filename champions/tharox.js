@@ -9,7 +9,7 @@ const tharoxSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -18,6 +18,7 @@ const tharoxSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -37,7 +38,7 @@ const tharoxSkills = [
     cooldown: 1,
     priority: 2,
     targetSpec: ["self"],
-    execute({ user, targets, allChampions, context }) {
+    execute({ user, targets, context = {} }) {
       const provokeDuration = 1; // Provoke lasts for 1 turn (current turn only)
       const damageReductionAmount = 20; // 20 raw damage reduction
       const damageReductionDuration = 2; // Damage reduction lasts for 2 turns (current + next)
@@ -50,9 +51,9 @@ const tharoxSkills = [
       );
 
       // Get all active champions on the opposing team
-      const enemyChampions = Array.from(allChampions.values()).filter(
-        (c) => c.team !== user.team && c.alive,
-      );
+      const enemyChampions = Array.from(
+        context?.allChampions?.values?.() || [],
+      ).filter((c) => c.team !== user.team && c.alive);
 
       enemyChampions.forEach((enemy) => {
         enemy.applyProvoke(user.id, provokeDuration, context);
@@ -75,7 +76,7 @@ const tharoxSkills = [
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 15 + user.Attack + user.Defense / 5;
       const result = DamageEngine.resolveDamage({
@@ -84,6 +85,7 @@ const tharoxSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
       return result;
     },
@@ -104,7 +106,7 @@ const tharoxSkills = [
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],
-    execute({ user, context }) {
+    execute({ user, context = {} }) {
       user.modifyHP(50, { maxHPOnly: true }); // Aumenta HP máximo em 50
       user.modifyStat({
         statName: "Defense",

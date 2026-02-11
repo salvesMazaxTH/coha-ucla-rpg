@@ -21,7 +21,8 @@ export const championDB = {
       O bônus de dano do crítico é reduzido em −45 (mínimo 0).
       Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico neste acerto.
 `,
-      beforeTakingDamage({ crit, attacker, target }) {
+      beforeDamageTaken({ crit, attacker, target, self }) {
+        if (self !== target) return;
         console.log(
           `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${attacker.name}`,
         );
@@ -32,10 +33,19 @@ export const championDB = {
         const reducedBonus = Math.max(critExtra - 45, 0);
         if (reducedBonus === 0) {
           return {
-            cancelCrit: true,
+            crit: {
+              ...crit,
+              didCrit: false,
+              critExtra: 0,
+            },
           };
         }
-        return { critExtra: reducedBonus };
+        return {
+          crit: {
+            ...crit,
+            critExtra: reducedBonus,
+          },
+        };
       },
     },
   },
@@ -177,7 +187,7 @@ export const championDB = {
       name: "Sobrecarga Instável",
       description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa 15% de dano adicional (consome o status) (Dano adicional Mín. 15) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
 
-      afterDealingDamage({ attacker, target, damage, damageType, context }) {
+      /*       afterDealingDamage({ attacker, target, damage, damageType, context }) {
         const self = attacker;
         if (self !== attacker) return;
         let log = "";
@@ -197,9 +207,11 @@ export const championDB = {
         log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
 
         return { log };
-      },
+      }, */
 
-      beforeDealingDamage({ attacker, target, damage, context }) {
+      beforeDamageDealt({ attacker, crit, target, damage, context, self }) {
+        if (self !== attacker) return;
+
         if (!target.hasKeyword?.("sobrecarga")) return;
 
         const bonusDamage = Math.ceil((damage * 15) / 100);
@@ -215,7 +227,7 @@ export const championDB = {
         }
 
         return {
-          takeBonusDamage: bonusDamage,
+          damage: damage + bonusDamage,
           log,
         };
       },
@@ -250,7 +262,7 @@ export const championDB = {
         if (lastDamaged === context.currentTurn - 1) return;
 
         const heal = Math.round((target.maxHP * 0.15) / 5) * 5;
-        if (heal <= 0) return;
+        if (heal <= 0 || target.HP >= target.maxHP) return;
 
         const before = target.HP;
         target.heal(heal);

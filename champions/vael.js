@@ -8,7 +8,7 @@ const vaelSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -17,6 +17,7 @@ const vaelSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -33,7 +34,7 @@ const vaelSkills = [
     cooldown: 1,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 15 + user.Attack;
       return DamageEngine.resolveDamage({
@@ -42,6 +43,7 @@ const vaelSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -63,7 +65,7 @@ const vaelSkills = [
       { type: "enemy", unique: true },
     ],
 
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
 
       const baseDamage = 20 + user.Attack;
@@ -76,6 +78,7 @@ const vaelSkills = [
         skill: this.name,
         context,
         options: { disable: true }, // sem crítico
+        allChampions: context?.allChampions,
       });
 
       results.push(primaryResult);
@@ -88,6 +91,7 @@ const vaelSkills = [
           skill: this.name,
           context,
           options: { force: true }, // crítico garantido
+          allChampions: context?.allChampions,
         });
         results.push(secondaryResult);
       }
@@ -107,7 +111,7 @@ const vaelSkills = [
     cooldown: 3,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 40 + 2 * user.Attack;
 
@@ -117,6 +121,7 @@ const vaelSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },

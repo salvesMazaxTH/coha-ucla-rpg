@@ -8,7 +8,7 @@ const voltexzSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -17,6 +17,7 @@ const voltexzSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -35,7 +36,7 @@ const voltexzSkills = [
     priority: 0, // prioridade padrão
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
       const baseDamage = 10 + user.Attack;
       const results = [];
@@ -46,6 +47,7 @@ const voltexzSkills = [
         target: primary,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
       results.push(primaryResult);
 
@@ -55,6 +57,7 @@ const voltexzSkills = [
         target: secondary,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
       results.push(secondaryResult);
 
@@ -73,18 +76,19 @@ const voltexzSkills = [
     cooldown: 2,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 40;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
         baseDamage,
         mode: "hybrid", // 'hybrid' para Dano Direto puro ou parte Bruto e parte Direto
-        directDamage: baseDamage, // Dano Direto puro 
+        directDamage: baseDamage, // Dano Direto puro
         user,
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
 
       results.push(damageResult);
@@ -111,7 +115,7 @@ const voltexzSkills = [
     cooldown: 3,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 90 + 2 * user.Attack;
       const results = [];
@@ -121,6 +125,7 @@ const voltexzSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
 
       results.push(damageResult);

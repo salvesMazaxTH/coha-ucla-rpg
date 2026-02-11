@@ -134,8 +134,6 @@ function getGameState() {
       Array.from(c.keywords.entries()),
     ); */
 
-    console.log("DEBUG skills check:", c.id, c.skills);
-
     return {
       id: c.id,
       championKey: c.id.split("-")[0],
@@ -461,12 +459,14 @@ function resolveSkillTargets(user, skill, action) {
 function performSkillExecution(user, skill, targets) {
   startCooldown(user, skill, currentTurn);
 
-  const context = { currentTurn };
+  const context = {
+    currentTurn,
+    allChampions: activeChampions,
+  };
 
   const result = skill.execute({
     user,
     targets,
-    allChampions: activeChampions,
     context,
   });
 

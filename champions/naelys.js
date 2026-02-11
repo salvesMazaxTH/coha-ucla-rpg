@@ -9,7 +9,7 @@ const naelysSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -18,6 +18,7 @@ const naelysSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -35,7 +36,7 @@ const naelysSkills = [
     priority: 0, // Default priority
     targetSpec: ["enemy", "ally"],
 
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy, ally } = targets;
 
       const baseDamage = 15 + user.Attack;
@@ -48,6 +49,7 @@ const naelysSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
 
       const logs = [damageResult];
@@ -84,7 +86,7 @@ const naelysSkills = [
     priority: 1,
     targetSpec: ["self"],
 
-    execute({ user, context }) {
+    execute({ user, context = {} }) {
       const { currentTurn } = context;
 
       // Apply keywords
@@ -115,7 +117,7 @@ const naelysSkills = [
     priority: 0, // Default priority
     targetSpec: ["self"],
 
-    execute({ user, context }) {
+    execute({ user, context = {} }) {
       const { currentTurn } = context;
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 

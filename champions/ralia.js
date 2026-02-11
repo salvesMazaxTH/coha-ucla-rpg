@@ -9,7 +9,7 @@ const raliaSkills = [
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = user.Attack;
       return DamageEngine.resolveDamage({
@@ -18,6 +18,7 @@ const raliaSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -34,7 +35,7 @@ const raliaSkills = [
     cooldown: 1,
     priority: 0,
     targetSpec: ["self", "enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       user.takeDamage(10); // dano direto
 
       user.modifyStat({
@@ -51,6 +52,7 @@ const raliaSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
       const userName = formatChampionName(user);
       const log = `${userName} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
@@ -74,7 +76,7 @@ const raliaSkills = [
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = 50 + user.Attack;
       const result = DamageEngine.resolveDamage({
@@ -83,6 +85,7 @@ const raliaSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
       const effectiveDamage = result.totalDamage || 0;
       const healingAmount = Math.max(
@@ -119,11 +122,11 @@ const raliaSkills = [
     cooldown: 2,
     priority: 1,
     targetSpec: ["all-enemies"],
-    execute({ user, context, allChampions }) {
+    execute({ user, context = {} }) {
       // Pegar todos os inimigos (time diferente do usuário)
-      const enemies = Array.from(allChampions.values()).filter(
-        (champion) => champion.team !== user.team && champion.alive,
-      );
+      const enemies = Array.from(
+        context?.allChampions?.values?.() || [],
+      ).filter((champion) => champion.team !== user.team && champion.alive);
 
       const baseDamage = 1.33 * user.Attack;
 
@@ -139,6 +142,7 @@ const raliaSkills = [
           target: enemy,
           skill: this.name,
           context,
+          allChampions: context?.allChampions,
         });
         enemy.modifyStat({
           statName: "Attack",

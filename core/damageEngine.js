@@ -1,7 +1,8 @@
 import { formatChampionName } from "./formatters.js";
+import { emitCombatEvent } from "./combatEvents.js";
 
 const editMode = false;
-const debugMode = true;
+const debugMode = false;
 
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
@@ -51,8 +52,8 @@ export const DamageEngine = {
       };
     }
 
-    roll = Math.random() * 100; // Descomente para uso normal
-    /* roll = 10; */ // Descomente para teste fixo
+    /*   roll = Math.random() * 100; // Descomente para uso normal */
+    roll = 10; // Descomente para teste fixo
     didCrit = roll < chance;
 
     if (debugMode) {
@@ -314,9 +315,9 @@ export const DamageEngine = {
     }
 
     const hpBefore = target.HP;
-    
+
     target.takeDamage(val, context);
-    
+
     const hpAfter = target.HP;
     const actualDmg = hpBefore - hpAfter;
 
@@ -332,74 +333,85 @@ export const DamageEngine = {
     return hpAfter;
   },
 
-  _applyBeforeTakingPassive(mode, damage, crit, user, target, context) {
-    if (debugMode) {
-      console.group(`🛡️ [BEFORE TAKING] Target: ${target.name}`);
-      console.log(`Damage inicial: ${damage}`);
-      console.log(`Crit ativo: ${crit.didCrit}`);
-      if (crit.didCrit) console.log(`CritExtra: ${crit.critExtra}`);
-    }
+  _applyBeforeTakingPassive(
+    mode,
+    damage,
+    crit,
+    attacker,
+    target,
+    context,
+    allChampions,
+  ) {
+    const results = emitCombatEvent(
+      "beforeDamageTaken",
+      {
+        mode,
+        damage,
+        crit,
+        attacker,
+        target,
+        context,
+      },
+      allChampions,
+    );
 
-    const hook = target.passive?.beforeTakingDamage;
-    if (!hook) {
-      if (debugMode) {
-        console.log(`Sem passiva beforeTakingDamage`);
-        console.groupEnd();
+    const logs = [];
+
+    for (const r of results) {
+      if (r.damage !== undefined) damage = r.damage;
+
+      if (r.crit !== undefined) crit = r.crit;
+
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
       }
-      return { damage, crit };
     }
 
-    const r =
-      hook({
-        attacker: user,
-        target,
-        damage,
-        crit,
-        damageType: mode,
-        context,
-      }) ?? {};
-
-    if (debugMode) console.log(`Retorno passiva:`, r);
-
-    if (r.cancelCrit) {
-      crit.didCrit = false;
-      crit.critExtra = 0;
-    }
-
-    if (r.critExtra !== undefined) {
-      crit.critExtra = Math.max(r.critExtra, 0);
-    }
-
-    if (r.damage) damage += r.damage;
-
-    if (debugMode) {
-      console.log(`Damage final: ${damage}`);
-      console.groupEnd();
-    }
-
-    return { damage, crit };
+    return { damage, crit, logs };
   },
 
-  _applyBeforeDealingPassive(mode, damage, crit, user, target, context) {
-    const hook = user.passive?.beforeDealingDamage;
-    if (!hook) return damage;
-
-    const r =
-      hook({
-        attacker: user,
-        target,
+  _applyBeforeDealingPassive(
+    mode,
+    damage,
+    crit,
+    attacker,
+    target,
+    context,
+    allChampions,
+  ) {
+    const results = emitCombatEvent(
+      "beforeDamageDealt",
+      {
+        mode,
         damage,
         crit,
-        damageType: mode,
+        attacker,
+        target,
         context,
-      }) ?? {};
+      },
+      allChampions,
+    );
 
-    if (r.takeBonusDamage) damage += r.takeBonusDamage;
+    const logs = [];
 
-    return damage;
+    for (const r of results) {
+      if (r.damage !== undefined) damage = r.damage;
+
+      if (r.crit !== undefined) crit = r.crit;
+
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
+    }
+
+    return { damage, crit, logs };
   },
 
-  _applyAfterTakingPassive(mode, damage, user, target, context) {
+  // ----------------------------------
+  /*  // DESATUALIZADAS:
+//   _applyAfterTakingPassive(mode, damage, user, target, context) {
     if (debugMode) console.group(`✨ [AFTER TAKING] Target: ${target.name}`);
 
     const hook = target.passive?.afterTakingDamage;
@@ -460,7 +472,8 @@ export const DamageEngine = {
     }
 
     return r;
-  },
+  }, */
+  // -----------------------------------
 
   _buildLog(user, target, skill, dmg, crit, hpAfter, passiveLog) {
     const userName = formatChampionName(user);
@@ -482,7 +495,7 @@ export const DamageEngine = {
     return log;
   },
 
-  _applyLifeSteal(user, dmg) {
+  _applyLifeSteal(user, dmg, allChampions = []) {
     if (debugMode) console.group(`💉 [LIFESTEAL]`);
 
     if (user.LifeSteal <= 0 || dmg <= 0) {
@@ -493,41 +506,39 @@ export const DamageEngine = {
       return;
     }
 
-    if (debugMode) {
-      console.log(`👤 Attacker: ${user.name}`);
-      console.log(`📊 Damage causado: ${dmg}`);
-      console.log(`%.% LifeSteal: ${user.LifeSteal}%`);
-    }
-
     const heal = Math.max(5, this.roundToFive((dmg * user.LifeSteal) / 100));
 
     if (debugMode) {
-      console.log(
-        `💚 Cálculo: ${dmg} × ${user.LifeSteal}% = ${((dmg * user.LifeSteal) / 100).toFixed(2)}`,
-      );
-      console.log(`✅ Heal final (mín. 5, múltiplo de 5): ${heal}`);
+      console.log(`👤 Attacker: ${user.name}`);
+      console.log(`📊 Damage causado: ${dmg}`);
+      console.log(`💚 Heal final: ${heal}`);
     }
 
     user.heal(heal);
 
-    // 🔥 Evento global de LifeSteal
-    const passiveLogs = [];
+    // ================================
+    // 🔥 EVENT PIPELINE (CORRIGIDO)
+    // ================================
 
-    activeChampions?.forEach((champion) => {
-      const hook = champion.passive?.onLifeSteal;
-      if (!hook) return;
-
-      const result = hook({
+    const results = emitCombatEvent(
+      "onLifeSteal",
+      {
         source: user,
         amount: heal,
-        self: champion,
-      });
+      },
+      allChampions,
+    );
 
-      if (result?.log) {
-        if (Array.isArray(result.log)) passiveLogs.push(...result.log);
-        else passiveLogs.push(result.log);
+    const passiveLogs = [];
+
+    for (const r of results) {
+      if (!r) continue;
+
+      if (r.log) {
+        if (Array.isArray(r.log)) passiveLogs.push(...r.log);
+        else passiveLogs.push(r.log);
       }
-    });
+    }
 
     if (debugMode) {
       console.log(`📍 HP Attacker: ${user.HP}/${user.maxHP}`);
@@ -565,6 +576,7 @@ export const DamageEngine = {
       skill,
       context,
       options = {},
+      allChampions = [],
     } = params;
 
     if (debugMode) {
@@ -593,14 +605,18 @@ export const DamageEngine = {
       context,
     );
 
-    damage = this._applyBeforeDealingPassive(
+    const beforeDeal = this._applyBeforeDealingPassive(
       mode,
       damage,
       crit,
       user,
       target,
       context,
+      allChampions,
     );
+
+    damage = beforeDeal.damage;
+    crit = beforeDeal.crit;
 
     const beforeTake = this._applyBeforeTakingPassive(
       mode,
@@ -609,25 +625,13 @@ export const DamageEngine = {
       user,
       target,
       context,
+      allChampions,
     );
 
-    if (beforeTake?.crit !== undefined) {
-      crit = beforeTake.crit;
-    } else {
-      console.log(
-        `beforeTake?.critExtra não é diferente de undefined: ${beforeTake.crit} não encontrado.`,
-      );
-    }
+    damage = beforeTake.damage;
+    crit = beforeTake.crit;
 
-    if (beforeTake?.damage !== undefined) {
-      damage = beforeTake.damage;
-    } else {
-      console.log(
-        `beforeTake?.damage não é diferente de undefined: ${beforeTake.damage} não encontrado.`,
-      );
-    }
-
-    console.log("CRIT BEFORE COMPOSE:", crit);
+    if (debugMode) console.log("CRIT BEFORE COMPOSE:", crit);
 
     const finalDamage = this._composeFinalDamage(
       mode,
@@ -637,18 +641,18 @@ export const DamageEngine = {
       target,
       context,
     );
-    
-    context.extraLogs = []; 
-    
+
+    context.extraLogs = [];
+
     const hpAfter = this._applyDamage(target, finalDamage, context);
 
-    const afterTakeLog = this._applyAfterTakingPassive(
+/*     const afterTakeLog = this._applyAfterTakingPassive(
       mode,
       finalDamage,
       user,
       target,
       context,
-    );
+    ); */
 
     let log = this._buildLog(
       user,
@@ -657,31 +661,32 @@ export const DamageEngine = {
       finalDamage,
       crit,
       hpAfter,
-      afterTakeLog,
+      //afterTakeLog,
     );
 
-    const afterDeal = this._applyAfterDealingPassive(
+/*     const afterDeal = this._applyAfterDealingPassive(
       user,
       target,
       finalDamage,
       mode,
       crit,
       context,
-    );
+    ); */
 
-    if (afterDeal?.log) log += `\n${afterDeal.log}`;
-    
-    const ls = this._applyLifeSteal(user, finalDamage);
+    // adicionar logs das passivas:
+    /* if (afterDeal?.log) log += `\n${afterDeal.log}`; */
+    if (beforeDeal.logs?.length) log += "\n" + beforeDeal.logs.join("\n");
+
+    const ls = this._applyLifeSteal(user, finalDamage, allChampions);
 
     if (ls) {
       log += "\n" + ls.text;
 
       if (ls.passiveLogs?.length) log += "\n" + ls.passiveLogs.join("\n");
     }
-    
+
     if (context.extraLogs.length) {
-      log += "\n" +
-      context.extraLogs.join("\n");
+      log += "\n" + context.extraLogs.join("\n");
     }
 
     if (debugMode) {

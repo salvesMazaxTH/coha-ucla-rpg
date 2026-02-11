@@ -12,7 +12,7 @@ const reyskaroneSkills = [
     cooldown: 0,
     priority: 0,
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       return DamageEngine.resolveDamage({
         baseDamage: user.Attack,
@@ -20,6 +20,7 @@ const reyskaroneSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -38,7 +39,7 @@ const reyskaroneSkills = [
     cooldown: 2,
     priority: 1,
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { enemy } = targets;
 
       enemy.applyKeyword("tributo", 2, context);
@@ -49,6 +50,7 @@ const reyskaroneSkills = [
         target: enemy,
         skill: this.name,
         context,
+        allChampions: context?.allChampions,
       });
     },
   },
@@ -68,7 +70,7 @@ const reyskaroneSkills = [
     cooldown: 2,
     priority: 0,
     targetSpec: ["select:ally"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
@@ -107,7 +109,7 @@ const reyskaroneSkills = [
     cooldown: 3,
     priority: 2,
     targetSpec: ["select:ally"],
-    execute({ user, targets, context }) {
+    execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
