@@ -742,160 +742,116 @@ function createNewChampion(championData) {
 // -----------------------
 // Relacionado à sobreposição do cartão/resumo do campeão
 
+let portraitOverlay = null;
+
 function handlePortraitClick(champion) {
-  const overlayData = createOverlay();
-  const content = overlayData.content;
+  if (!champion) return;
 
-  const normalizeDescription = (text) => {
-    if (!text) return "Sem descrição.";
-    return String(text)
-      .replace(/\r\n/g, "\n")
-      .split("\n")
-      .map((line) => line.trim())
-      .join("\n")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-  };
-
-  let skillsHTML = "";
-
-  for (let i = 0; i < champion.skills.length; i++) {
-    const skill = champion.skills[i];
-
-    let label;
-    if (i === 0) {
-      label = "Ataque Básico";
-    } else if (i === champion.skills.length - 1) {
-      label = "ULT";
-    } else {
-      label = "Habilidade " + i;
-    }
-
-    skillsHTML += `
-      <div class="overlay-skill">
-        <h3>${label === "Ataque Básico" ? label : `${label}: ${skill.name}`}</h3>
-        <p class="skill-description-text">${normalizeDescription(skill.description)}</p>
-      </div>
-    `;
+  if (portraitOverlay) {
+    closeOverlay();
   }
 
-  if (champion.passive?.name || champion.passive?.description) {
-    skillsHTML += `
-      <div class="overlay-skill passive">
-        <h3>Passiva: ${champion.passive?.name || "Sem nome"}</h3>
-        <p class="skill-description-text">${normalizeDescription(champion.passive?.description)}</p>
-      </div>
-    `;
-  }
+  portraitOverlay = createOverlay(champion);
+  document.body.appendChild(portraitOverlay);
 
-  content.innerHTML = `
-    <img 
-      src="${champion.portrait}" 
-      alt="${champion.name}" 
-      class="overlay-portrait"
-    >
-    <div class="overlay-skills">
-      ${skillsHTML}
+  requestAnimationFrame(() => {
+    portraitOverlay.classList.add("active");
+  });
+}
+
+function createOverlay(champion) {
+  const overlay = document.createElement("div");
+  overlay.classList.add("portrait-overlay");
+
+  overlay.innerHTML = `
+    <div class="portrait-overlay-content" role="dialog" aria-modal="true">
+      <button class="portrait-overlay-close" aria-label="Fechar">✕</button>
+      <img class="portrait-overlay-img" src="${champion.portrait}" alt="${champion.name}">
+      <h3 class="portrait-overlay-name">${champion.name}</h3>
     </div>
   `;
 
-  requestAnimationFrame(() => {
-    const overlayPortrait = content.querySelector(".overlay-portrait");
-    const overlaySkillsContainer = content.querySelector(".overlay-skills");
-    const skillDescriptionParagraphs = content.querySelectorAll(
-      ".skill-description-text",
-    );
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
-    if (
-      !overlaySkillsContainer ||
-      skillDescriptionParagraphs.length === 0 ||
-      !overlayPortrait
-    ) {
-      return;
-    }
+  const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
-    content.style.maxHeight = "85vh";
-    overlaySkillsContainer.style.overflowY = "auto";
+  const passive = champion?.passive;
+  const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
+  const passiveDesc =
+    typeof passive?.description === "string" ? passive.description : "";
 
-    if (!overlayPortrait.complete) {
-      overlayPortrait.addEventListener("load", () => {
-        setSkillsContainerHeight();
-      });
-    } else {
-      setSkillsContainerHeight();
-    }
+  const skills = Array.isArray(champion?.skills) ? champion.skills : [];
 
-    function setSkillsContainerHeight() {
-      requestAnimationFrame(() => {
-        const imgW = overlayPortrait.naturalWidth;
-        const imgH = overlayPortrait.naturalHeight;
+  const skillItemsHtml = [
+    {
+      name: passiveName,
+      description: passiveDesc,
+    },
+    ...skills.map((s) => ({
+      name: s?.name || "Habilidade",
+      description: typeof s?.description === "string" ? s.description : "",
+    })),
+  ]
+    .filter((s) => s.description || s.name)
+    .map(
+      (s) => `
+        <div class="skill-detail">
+          <div class="skill-name">${escapeHtml(s.name)}</div>
+          <div class="skill-description">${toParagraphs(s.description)}</div>
+        </div>
+      `,
+    )
+    .join("");
 
-        if (imgW && imgH) {
-          const ratio = imgH / imgW;
+  const details = document.createElement("div");
+  details.classList.add("portrait-overlay-details");
+  details.innerHTML = `
+    <div class="portrait-overlay-details-content">
+      <h3 class="portrait-overlay-details-title">Habilidades</h3>
+      <div class="portrait-overlay-skill-list">
+        ${skillItemsHtml}
+      </div>
+    </div>
+  `;
 
-          if (ratio > 1.1) {
-            overlayPortrait.style.transform = "scale(0.85)";
-            overlayPortrait.style.transformOrigin = "top left";
-          } else {
-            overlayPortrait.style.transform = "scale(1)";
-          }
-        }
+  overlay.appendChild(details);
 
-        const contentStyle = getComputedStyle(content);
-        const contentPaddingTop = parseFloat(contentStyle.paddingTop);
-        const contentPaddingBottom = parseFloat(contentStyle.paddingBottom);
-        const contentVerticalPadding = contentPaddingTop + contentPaddingBottom;
+  const closeBtn = overlay.querySelector(".portrait-overlay-close");
 
-        const overlayContentHeight = content.clientHeight;
-        const overlayPortraitHeight = overlayPortrait.offsetHeight;
-        const gapBetweenPortraitAndSkills = 30;
-
-        const availableHeightForSkills =
-          overlayContentHeight -
-          overlayPortraitHeight -
-          gapBetweenPortraitAndSkills -
-          contentVerticalPadding;
-
-        overlaySkillsContainer.style.maxHeight = `${Math.max(availableHeightForSkills, 200)}px`;
-      });
-    }
-  });
-}
-
-function createOverlay() {
-  const overlay = document.createElement("div");
-  overlay.classList.add("overlay");
-
-  const content = document.createElement("div");
-  content.classList.add("overlay-content");
-
-  overlay.appendChild(content);
-
-  // Fecha ao clicar fora
+  closeBtn.addEventListener("click", closeOverlay);
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      closeOverlay();
-    }
+    if (e.target === overlay) closeOverlay();
   });
 
-  document.body.appendChild(overlay);
+  const handleEsc = (e) => {
+    if (e.key === "Escape") closeOverlay();
+  };
+  overlay._escHandler = handleEsc;
+  document.addEventListener("keydown", handleEsc);
 
-  // Força o reflow para a animação funcionar
-  requestAnimationFrame(() => {
-    overlay.classList.add("active");
-  });
-
-  return { overlay, content };
+  return overlay;
 }
 
 function closeOverlay() {
-  const overlay = document.querySelector(".overlay");
-  if (!overlay) return;
+  if (!portraitOverlay) return;
 
-  overlay.classList.remove("active");
+  portraitOverlay.classList.remove("active");
+
+  if (portraitOverlay._escHandler) {
+    document.removeEventListener("keydown", portraitOverlay._escHandler);
+  }
+
+  const toRemove = portraitOverlay;
+  portraitOverlay = null;
 
   setTimeout(() => {
-    overlay.remove();
+    toRemove.remove();
   }, 200);
 }
 
