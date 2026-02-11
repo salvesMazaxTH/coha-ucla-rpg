@@ -523,7 +523,7 @@ export class Champion {
     this.el.classList.toggle("dead", !this.alive);
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, context) {
     if (!this.alive) return;
 
     for (const shield of this.runtime.shields) {
@@ -538,7 +538,7 @@ export class Champion {
       );
     }
 
-    if (this.hasKeyword?.("epifania_ativa") && this.HP - val <= 0) {
+    if (this.hasKeyword?.("epifania_ativa") && this.HP - amount <= 0) {
       const lockedHP = this.HP >= 50 ? 50 : this.HP;
 
       this.HP = lockedHP;
@@ -546,6 +546,10 @@ export class Champion {
       this.applyKeyword("imunidade absoluta", {
         source: "epifania",
       });
+      
+      context?.extraLogs?.push(
+        `${this.name} recusou a morte e tornou-se Imune!`
+      );
 
       return;
     }

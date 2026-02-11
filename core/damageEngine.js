@@ -305,7 +305,7 @@ export const DamageEngine = {
     return finalDamage;
   },
 
-  _applyDamage(target, val) {
+  _applyDamage(target, val, context) {
     if (debugMode) console.group(`❤️ [APLICANDO DANO]`);
     if (debugMode) {
       console.log(`👤 Target: ${target.name}`);
@@ -314,7 +314,9 @@ export const DamageEngine = {
     }
 
     const hpBefore = target.HP;
-    target.takeDamage(val);
+    
+    target.takeDamage(val, context);
+    
     const hpAfter = target.HP;
     const actualDmg = hpBefore - hpAfter;
 
@@ -635,8 +637,10 @@ export const DamageEngine = {
       target,
       context,
     );
-
-    const hpAfter = this._applyDamage(target, finalDamage);
+    
+    context.extraLogs = []; 
+    
+    const hpAfter = this._applyDamage(target, finalDamage, context);
 
     const afterTakeLog = this._applyAfterTakingPassive(
       mode,
@@ -666,13 +670,18 @@ export const DamageEngine = {
     );
 
     if (afterDeal?.log) log += `\n${afterDeal.log}`;
-
+    
     const ls = this._applyLifeSteal(user, finalDamage);
 
     if (ls) {
       log += "\n" + ls.text;
 
       if (ls.passiveLogs?.length) log += "\n" + ls.passiveLogs.join("\n");
+    }
+    
+    if (context.extraLogs.length) {
+      log += "\n" +
+      context.extraLogs.join("\n");
     }
 
     if (debugMode) {
