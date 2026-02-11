@@ -765,7 +765,6 @@ function createOverlay(champion) {
 
   overlay.innerHTML = `
     <div class="portrait-overlay-content" role="dialog" aria-modal="true">
-      <button class="portrait-overlay-close" aria-label="Fechar">✕</button>
       <img class="portrait-overlay-img" src="${champion.portrait}" alt="${champion.name}">
       <h3 class="portrait-overlay-name">${champion.name}</h3>
     </div>
@@ -822,9 +821,6 @@ function createOverlay(champion) {
 
   overlay.appendChild(details);
 
-  const closeBtn = overlay.querySelector(".portrait-overlay-close");
-
-  closeBtn.addEventListener("click", closeOverlay);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeOverlay();
   });

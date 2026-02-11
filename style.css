@@ -1311,9 +1311,7 @@ i {
   padding: 18px;
   text-align: center;
   box-shadow: 0 0 30px rgba(0, 255, 150, 0.35);
-  max-width: min(48vw, 520px);
-  max-height: 80vh;
-  overflow-y: auto;
+  max-width: min(40vw, 420px);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1325,8 +1323,8 @@ i {
   border-radius: 16px;
   padding: 18px;
   box-shadow: 0 0 30px rgba(0, 255, 150, 0.35);
-  max-width: min(48vw, 520px);
-  max-height: 80vh;
+  max-width: min(40vw, 420px);
+  max-height: 60vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
