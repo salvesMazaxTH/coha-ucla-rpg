@@ -92,44 +92,6 @@ const reyskaroneSkills = [
   },
 
   // =========================
-  // H3 — Colheita Menor
-  // =========================
-  {
-    key: "colheita_menor",
-    name: "Colheita Menor",
-    description: `
-Cooldown: 2 turnos
-Dano:
-Base 10 + ATQ
-Cura Reyskarone em 20% do dano causado.
-`,
-    cooldown: 2,
-    priority: 0,
-    targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
-      const { enemy } = targets;
-
-      const result = DamageEngine.resolveDamage({
-        baseDamage: 10 + user.Attack,
-        user,
-        target: enemy,
-        skill: this.name,
-        context,
-      });
-
-      const damage = result?.damage || 0;
-      const heal = Math.round((damage * 0.2) / 5) * 5;
-
-      if (heal > 0) user.heal(heal);
-
-      return {
-        ...result,
-        log: result.log + `\n${formatChampionName(user)} drenou ${heal} HP.`,
-      };
-    },
-  },
-
-  // =========================
   // ULT — Pacto Carmesim
   // =========================
   {

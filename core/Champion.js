@@ -21,6 +21,7 @@ export class Champion {
     this.portrait = portrait;
 
     this.maxHP = HP;
+    this.baseHP = HP;
     this.HP = HP;
     this.baseAttack = Attack;
     this.Attack = Attack;
