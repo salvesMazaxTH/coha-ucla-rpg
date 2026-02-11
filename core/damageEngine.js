@@ -549,7 +549,7 @@ export const DamageEngine = {
 
     return {
       text: `Roubo de vida: ${heal} | HP: ${user.HP}/${user.maxHP}`,
-      passiveLogs: [],
+      passiveLogs,
     };
   },
 
@@ -685,7 +685,7 @@ export const DamageEngine = {
 
     const ls = this._applyLifeSteal(user, finalDamage, allChampions);
 
-    if (ls) {
+    if (ls.text) {
       log += "\n" + ls.text;
 
       if (ls.passiveLogs.length) log += "\n" + ls.passiveLogs.join("\n");
