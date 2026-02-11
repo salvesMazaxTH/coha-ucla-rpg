@@ -61,18 +61,31 @@ const sereneSkills = [
     priority: 1,
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
-      const { enemy } = targets;
-      const baseDamage = Math.floor(enemy.maxHP * 0.15);
-      return DamageEngine.resolveDamage({
-        mode: "hybrid",
-        baseDamage: baseDamage,
-        direct: baseDamage,
-        user,
-        target: enemy,
-        skill: this.name,
-        context,
-      });
-    },
+  const { enemy } = targets;
+
+  const baseDamage = Math.floor(enemy.maxHP * 0.15);
+
+  // aplica status
+  enemy.applyKeyword("atordoado", 1, context);
+
+  // resolve dano
+  const result = DamageEngine.resolveDamage({
+    mode: "hybrid",
+    baseDamage,
+    direct: baseDamage,
+    user,
+    target: enemy,
+    skill: this.name,
+    context,
+  });
+
+  // adiciona log da skill
+  if (result) {
+    result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
+  }
+
+      return result;
+    }
   },
 
   {
