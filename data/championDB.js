@@ -66,16 +66,16 @@ export const championDB = {
         Sempre que Naelys receber dano,
         ele se cura em +5 para cada 25 de HP perdido neste acerto.
         (Máx. +35 por acerto)`,
-      afterTakingDamage({ target, damage }) {
+      afterDamageTaken({ target, attacker, damage, self }) {
         if (damage <= 0) return;
+        
+        if (self !== target) return;
 
         let heal = Math.floor(damage / 25) * 5;
 
         heal = Math.min(heal, 35);
 
         if (heal <= 0) return;
-
-        const self = target;
 
         const before = self.HP;
         self.heal(heal);
@@ -138,8 +138,8 @@ export const championDB = {
       name: "Massa Inamolgável",
       description:
         "Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a 2, consome ambos e ganha +10 Defesa e +10 HP (cura e aumenta a vida máxima).",
-      afterTakingDamage({ target, damage, context }) {
-        const self = target;
+      afterDamageTaken({ target, damage, context, attacker, self }) {
+        if (self !== target) return;
         if (damage <= 0) return;
 
         self.fake.tharoxInerciaStacks =
@@ -187,9 +187,7 @@ export const championDB = {
       name: "Sobrecarga Instável",
       description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa 15% de dano adicional (consome o status) (Dano adicional Mín. 15) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
 
-      /*       afterDealingDamage({ attacker, target, damage, damageType, context }) {
-        const self = attacker;
-        if (self !== attacker) return;
+      afterDamageTaken({ attacker, target, damage, damageType, context, self }) {
         let log = "";
 
         if (damage > 0) {
@@ -207,7 +205,7 @@ export const championDB = {
         log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
 
         return { log };
-      }, */
+      },
 
       beforeDamageDealt({ attacker, crit, target, damage, context, self }) {
         if (self !== attacker) return;
@@ -250,13 +248,15 @@ export const championDB = {
   ela cura 15% do seu HP máximo no início do próximo turno.`,
 
       // Marca dano recebido no turno
-      afterTakingDamage({ target, context }) {
-        target.runtime.sereneDamagedTurn = context.currentTurn;
+      afterDamageTaken({ target, attacker, context, self }) {
+        if (self !== target) return;
+        self.runtime.sereneDamagedTurn = context.currentTurn;
       },
 
       // Executa no início do turno
       onTurnStart({ target, context }) {
-        const lastDamaged = target.runtime.sereneDamagedTurn;
+        const self = target;
+        const lastDamaged = self.runtime.sereneDamagedTurn;
 
         // Se NÃO tomou dano no turno anterior
         if (lastDamaged === context.currentTurn - 1) return;
@@ -287,7 +287,7 @@ export const championDB = {
     passive: {
       name: "Ecos de Vitalidade",
       description: `
-      Sempre que um aliado curar por LifeSteal,Reyskarone recupera 30% desse valor.`,
+      Sempre que um aliado curar por Roubo de Vida,Reyskarone recupera 30% desse valor.`,
 
       onLifeSteal({ source, amount, self }) {
         // ✔ Só aliados
