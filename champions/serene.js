@@ -117,9 +117,7 @@ const sereneSkills = [
     priority: 1,
     targetSpec: ["all:ally"],
     execute({ user, context = {} }) {
-      const allies = context.aliveChampions.filter(
-  c => c.team === user.team
-);
+      const allies = context.aliveChampions.filter((c) => c.team === user.team);
       // 1️⃣ Proteção de Campo
       allies.forEach((ally) => {
         ally.applyDamageReduction({
@@ -128,10 +126,10 @@ const sereneSkills = [
           source: "epifania",
         });
         ally.applyKeyword("epifania_ativa", {
-        persistent: true,
+          persistent: true,
         });
-      }
-      
+      });
+
       return {
         log: `${formatChampionName(user)} alcança o Limiar da Existência.`,
       };
