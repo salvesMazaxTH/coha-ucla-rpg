@@ -68,7 +68,7 @@ export const championDB = {
         (Máx. +35 por acerto)`,
       afterDamageTaken({ target, attacker, damage, self }) {
         if (damage <= 0) return;
-        
+
         if (self !== target) return;
 
         let heal = Math.floor(damage / 25) * 5;
@@ -187,7 +187,16 @@ export const championDB = {
       name: "Sobrecarga Instável",
       description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa 15% de dano adicional (consome o status) (Dano adicional Mín. 15) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
 
-      afterDamageTaken({ attacker, target, damage, damageType, context, self }) {
+      afterDamageTaken({
+        attacker,
+        target,
+        damage,
+        damageType,
+        context,
+        self,
+      }) {
+        if (self !== attacker) return;
+
         let log = "";
 
         if (damage > 0) {
@@ -258,6 +267,8 @@ export const championDB = {
         const self = target;
         const lastDamaged = self.runtime.sereneDamagedTurn;
 
+        if (self !== target) return;
+
         // Se NÃO tomou dano no turno anterior
         if (lastDamaged === context.currentTurn - 1) return;
 
@@ -290,19 +301,49 @@ export const championDB = {
       Sempre que um aliado curar por Roubo de Vida,Reyskarone recupera 30% desse valor.`,
 
       onLifeSteal({ source, amount, self }) {
-        // ✔ Só aliados
-        if (source.team !== self.team) return;
-
-        // ✔ Ignorar o próprio Reyskarone
-        if (source === self) return;
+        // ✔ Só aliados, ignorar o próprio Reyskarone
+        if (source.team !== self.team && source !== self) return;
 
         const heal = Math.round((amount * 0.3) / 5) * 5;
-        if (heal <= 0) return;
+        if (heal <= 0 || self.HP >= self.maxHP) return;
 
         self.heal(heal);
 
         return {
           log: `[PASSIVA — Ecos de Vitalidade] ${formatChampionName(self)} absorveu ecos vitais de ${formatChampionName(source)} (+${heal} HP).`,
+        };
+      },
+
+      beforeDamageDealt({ attacker, target, damage, self }) {
+        // alvo não tem tributo
+        if (!target.hasKeyword?.("tributo")) return;
+
+        // só aliados do Reyskarone
+        if (attacker.team !== self.team) return;
+
+        // não buffa inimigos nem neutros
+        if (damage <= 0) return;
+
+        const bonus = 10;
+
+        return {
+          damage: damage + bonus,
+          log: `🩸 Tributo amplificou o golpe de ${attacker.name} (+${bonus} dano)`,
+        };
+      },
+
+      afterDamageDealt({ attacker, target, context, self }) {
+        if (!target.hasKeyword?.("tributo")) return;
+
+        // só aliados do Reyskarone
+        if (attacker.team !== self.team) return;
+
+        const heal = 15;
+        if (heal <= 0 || attacker.HP >= attacker.maxHP) return;
+        attacker.heal(heal);
+
+        return {
+          log: `🩸 Tributo: ${attacker.name} recuperou ${heal} HP.`,
         };
       },
     },

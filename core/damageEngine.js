@@ -505,7 +505,7 @@ export const DamageEngine = {
         console.log(`⚠️ Sem lifesteal: LS=${user.LifeSteal}%, DMG=${dmg}`);
         console.groupEnd();
       }
-      return;
+      return { text: null, passiveLogs: [] };
     }
 
     const heal = Math.max(5, this.roundToFive((dmg * user.LifeSteal) / 100));
