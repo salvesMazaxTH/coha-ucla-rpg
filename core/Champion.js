@@ -14,12 +14,16 @@ export class Champion {
     skills,
     team,
     passive,
+    entityType,
   }) {
     this.id = id;
     this.team = team;
     this.name = name;
     this.portrait = portrait;
 
+    this.entityType =
+    entityType ?? "champion";
+    
     this.maxHP = HP;
     this.baseHP = HP;
     this.HP = HP;
