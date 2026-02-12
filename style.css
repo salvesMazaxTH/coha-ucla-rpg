@@ -356,12 +356,16 @@ body.team-selection-active .team-container:hover {
 
 .status-indicator {
   position: absolute;
-  top: 0;
-  left: 65%;
+  top: 5px;
+  left: 59%;
 
   z-index: 30;
 
-  width: 80px;
+  width: 48px;
+
+  border-radius: 100%;
+  aspect-ratio: 1/1;
+  border: 3px solid white;
 
   display: flex;
   align-items: center;

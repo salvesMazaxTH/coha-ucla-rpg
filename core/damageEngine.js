@@ -52,8 +52,8 @@ export const DamageEngine = {
       };
     }
 
-    /*   roll = Math.random() * 100; // Descomente para uso normal */
-    roll = 10; // Descomente para teste fixo
+    roll = Math.random() * 100; // Descomente para uso normal
+    /* roll = 10; // Descomente para teste fixo */
     didCrit = roll < chance;
 
     if (debugMode) {
@@ -516,7 +516,15 @@ export const DamageEngine = {
       console.log(`💚 Heal final: ${heal}`);
     }
 
-    user.heal(heal);
+    const hpBefore = user.HP;
+
+    const effectiveHeal = Math.min(heal, user.maxHP - hpBefore);
+
+    if (effectiveHeal <= 0) {
+      return { text: null, passiveLogs: [] };
+    }
+
+    user.heal(effectiveHeal);
 
     // ================================
     // 🔥 EVENT PIPELINE (CORRIGIDO)
@@ -548,7 +556,7 @@ export const DamageEngine = {
     }
 
     return {
-      text: `Roubo de vida: ${heal} | HP: ${user.HP}/${user.maxHP}`,
+      text: `Roubo de vida: ${effectiveHeal} | HP: ${user.HP}/${user.maxHP}`,
       passiveLogs,
     };
   },

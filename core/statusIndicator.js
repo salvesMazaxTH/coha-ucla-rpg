@@ -5,13 +5,14 @@
 export const StatusIndicator = {
   // Mapeamento de keywords -> ícones e cores
   keywordIcons: {
-    paralisado: { type: "emoji", value: "⚡ 🚷 ⚡" },
-    atordoado: { type: "emoji", value: "💫" },
-    inerte: { type: "emoji", value: "🔒" },
-    sobrecarga: { type: "emoji", value: "⚡" },
+    paralisado: { type: "emoji", value: "⚡ 🚷 ⚡", background: "rgba(226, 109, 31, 0.8)" },
+    atordoado: { type: "emoji", value: "💫", background: "rgba(241, 241, 241, 0.8)" },
+    inerte: { type: "emoji", value: "🔒", background: "rgba(128, 128, 128, 0.8)" },
+    sobrecarga: { type: "emoji", value: "⚡", background: "rgba(255, 255, 0, 0.8)" },
     "imunidade absoluta": {
       type: "image",
       value: "assets/imunidade_absoluta_indicator.png",
+      background: "rgba(0, 255, 255, 0.8)",
     },
     tributo: {
       type: "text",
@@ -66,7 +67,6 @@ export const StatusIndicator = {
       if (icon.type === "emoji") {
         indicator.textContent = icon.value;
         indicator.style.fontSize = "1.75em";
-        indicator.style.left = "45%";
       } else if (icon.type === "text") {
         indicator.textContent = icon.value;
         indicator.style.color = icon.color || "#ffffff";
@@ -81,6 +81,7 @@ export const StatusIndicator = {
         img.className = "indicator-image";
         indicator.appendChild(img);
       }
+      indicator.style.backgroundColor = icon.background || "rgba(0, 0, 0, 0.6)";
 
       portrait.appendChild(indicator);
     }
