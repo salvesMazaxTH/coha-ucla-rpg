@@ -5,13 +5,14 @@ const sereneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, Dano = 100% ATQ).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).`,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = user.Attack;
+      const bf = 100;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -55,7 +56,7 @@ const sereneSkills = [
       const allyName = formatChampionName(ally);
 
       return {
-        log: `${formatChampionName(user)} sacrificou ${hpSacrifice} HP para proteger ${formatChampionName(ally)} com um escudo.`,
+        log: `${userName} sacrificou ${hpSacrifice} HP para proteger ${allyName} com um escudo.`,
       };
     },
   },
@@ -65,6 +66,7 @@ const sereneSkills = [
     name: "Selo da Quietude",
     description: `
     Cooldown: 1 turno
+    BF 0.
     Dano:
     15% do HP máximo do alvo como Dano Direto (NÃO sofre redução pela Defesa).`,
     cooldown: 1,

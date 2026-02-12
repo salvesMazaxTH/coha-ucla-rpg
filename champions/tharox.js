@@ -5,13 +5,14 @@ const tharoxSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, Dano = 100% ATQ).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).`,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = user.Attack;
+      const bf = 100;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -72,13 +73,14 @@ const tharoxSkills = [
     description: `Cooldown: 1 turno,
     Contato: Sim
     Dano:
-    Base => 15 + ATQ + 20% DEF`,
+    BF 115 + 20% DEF`,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = 15 + user.Attack + user.Defense / 5;
+      const bf = 115;
+      const baseDamage = (user.Attack * bf) / 100 + user.Defense / 5;
       const result = DamageEngine.resolveDamage({
         user,
         baseDamage,

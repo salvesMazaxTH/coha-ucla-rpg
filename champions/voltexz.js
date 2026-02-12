@@ -4,13 +4,14 @@ const voltexzSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, Dano = 100% ATQ).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).`,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = user.Attack;
+      const bf = 100;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -27,9 +28,7 @@ const voltexzSkills = [
     description: `
     Cooldown: 2 turnos,
     Contato: ❌
-    Dano:
-    Alvo primário → Base 10 + ATQ;
-    Alvo secundário → Base 10 + ATQ;
+    BF 110 (primario) / BF 110 (secundario).
     (Pode escolher o mesmo alvo para ambos)
     `,
     cooldown: 2,
@@ -38,7 +37,8 @@ const voltexzSkills = [
 
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
-      const baseDamage = 10 + user.Attack;
+      const bf = 110;
+      const baseDamage = (user.Attack * bf) / 100;
       const results = [];
 
       const primaryResult = DamageEngine.resolveDamage({
@@ -70,15 +70,15 @@ const voltexzSkills = [
     description: `
     Cooldown: 2 turnos,
     Contato: ❌
-    Dano:
-    Fixo 40 (Direto);
+    BF 35 (Direto);
     Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
     cooldown: 2,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = 40;
+      const bf = 35;
+      const baseDamage = (user.Attack * bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
         baseDamage,
@@ -110,14 +110,14 @@ const voltexzSkills = [
     description: `
     Cooldown: 3 turnos,
     Contato: ❌
-    Dano:
-    Base 90 + 2×ATQ (230);`,
+    BF 265.`,
     cooldown: 3,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = 90 + 2 * user.Attack;
+      const bf = 265;
+      const baseDamage = (user.Attack * bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
         baseDamage,

@@ -459,12 +459,15 @@ function resolveSkillTargets(user, skill, action) {
 function performSkillExecution(user, skill, targets) {
   startCooldown(user, skill, currentTurn);
 
+  const aliveChampionsArray = [...activeChampions.values()].filter(
+    (c) => c.alive,
+  );
+
   const context = {
     currentTurn,
     allChampions: activeChampions,
-    aliveChampions:
-    activeChampions.filter(c => c.alive),
-     };
+    aliveChampions: aliveChampionsArray,  
+  };
 
   const result = skill.execute({
     user,

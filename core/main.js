@@ -302,7 +302,6 @@ socket.on("gameStateUpdate", (gameState) => {
       const activeChampionsArray = Array.from(activeChampions.values());
 
       StatusIndicator.startRotationLoop(activeChampionsArray);
-
     } else {
       // Cria novo campeão
       createNewChampion(championData);
@@ -480,8 +479,11 @@ const RETURN_TO_LOGIN_TIME = 120; // 120 segundos para a contagem regressiva fin
 
 function renderAvailableChampions() {
   availableChampionsGrid.innerHTML = "";
-  
-  allAvailableChampionKeys = Object.keys(championDB).filter(key => championDB[key].entityType === "champion");
+
+  allAvailableChampionKeys = Object.keys(championDB).filter(
+    (key) => (championDB[key].entityType ?? "champion") === "champion",
+  );
+
   allAvailableChampionKeys.forEach((key) => {
     const champion = championDB[key];
     const card = document.createElement("div");

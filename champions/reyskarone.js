@@ -8,14 +8,15 @@ const reyskaroneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (100% ATQ).`,
+    description: `Ataque padrão (BF 100).`,
     cooldown: 0,
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
+      const bf = 100;
       return DamageEngine.resolveDamage({
-        baseDamage: user.Attack,
+        baseDamage: (user.Attack * bf) / 100,
         user,
         target: enemy,
         skill: this.name,
@@ -33,9 +34,9 @@ const reyskaroneSkills = [
     name: "Corte Tributário",
     description: `
     Cooldown: 1 turno
-    Dano: 70% ATQ
+    BF 65.
     Aplica "Tributo" por 2 turnos.
-    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (Dano = 70% ATQ).`,
+    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 65).`,
     cooldown: 2,
     priority: 1,
     targetSpec: ["enemy"],
@@ -44,8 +45,9 @@ const reyskaroneSkills = [
 
       enemy.applyKeyword("tributo", 2, context);
 
+      const bf = 65;
       return DamageEngine.resolveDamage({
-        baseDamage: Math.round(user.Attack * 0.7),
+        baseDamage: (user.Attack * bf) / 100,
         user,
         target: enemy,
         skill: this.name,
@@ -63,12 +65,13 @@ const reyskaroneSkills = [
     name: "Transfusão Marcial",
     description: `
     Cooldown: 2 turnos
+    Prioridade: 2
     Concede a um aliado:
     +20 ATQ
     +15% LifeSteal
     Duração: 2 turnos`,
     cooldown: 2,
-    priority: 0,
+    priority: 2,
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;

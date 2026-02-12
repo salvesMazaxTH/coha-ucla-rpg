@@ -18,6 +18,4 @@ const skillsByChampion = {
   gryskarchu: gryskarchuSkills,
 };
 
-console.log("Loaded:", reyskaroneSkills);
-
 export default skillsByChampion;

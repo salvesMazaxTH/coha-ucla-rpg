@@ -5,13 +5,14 @@ const naelysSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, Dano = 100% ATQ).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).`,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = user.Attack;
+      const bf = 100;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -29,7 +30,7 @@ const naelysSkills = [
     description: ` Cooldown: 1 turno
     Contato: ❌
     Inimigo alvo sofre:
-    Dano Bruto = Base 15 + ATQ
+    Dano Bruto = BF 115
     Aliado ativo recupera:
     Cura = 45 de HP`,
     cooldown: 1,
@@ -39,7 +40,8 @@ const naelysSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy, ally } = targets;
 
-      const baseDamage = 15 + user.Attack;
+      const bf = 115;
+      const baseDamage = (user.Attack * bf) / 100;
       const healAmount = 45;
 
       // 🗡️ Dano no inimigo

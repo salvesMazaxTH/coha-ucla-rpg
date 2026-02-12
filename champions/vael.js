@@ -4,13 +4,14 @@ const vaelSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, Dano = 100% ATQ).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).`,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = user.Attack;
+      const bf = 100;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -27,16 +28,16 @@ const vaelSkills = [
     description: `
     Cooldown: 1 turno,
     Contato: ✅
-    Dano:
-    Base 15 + ATQ;
+    BF 115.
     📌 Pode critar normalmente
-`,
+  `,
     cooldown: 1,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = 15 + user.Attack;
+      const bf = 115;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -52,9 +53,7 @@ const vaelSkills = [
     name: "Investida Transpassante",
     description: `Cooldown: 2 turnos
        Contato: ✅
-       Dano: 
-       Alvo primário → Base 20 + ATQ;
-       Alvo secundário → Base 10 + metade do ATQ;
+       BF 80 (primario) / BF 110 (secundario).
        ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
       (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
       ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
@@ -68,7 +67,8 @@ const vaelSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
 
-      const baseDamage = 20 + user.Attack;
+      const bfPrimary = 80;
+      const baseDamage = (user.Attack * bfPrimary) / 100;
       const results = [];
 
       const primaryResult = DamageEngine.resolveDamage({
@@ -85,7 +85,7 @@ const vaelSkills = [
 
       if (secondary) {
         const secondaryResult = DamageEngine.resolveDamage({
-          baseDamage: Math.round(baseDamage / 2),
+          baseDamage: (user.Attack * 110) / 100,
           user,
           target: secondary,
           skill: this.name,
@@ -105,15 +105,15 @@ const vaelSkills = [
     name: "Veredito do Fio Silencioso",
     description: `Cooldown: 3 turnos
        Contato: ✅
-       Dano: 
-       Base 40 + 2×ATQ (180) = 220
+       BF 235.
        `,
     cooldown: 3,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const baseDamage = 40 + 2 * user.Attack;
+      const bf = 235;
+      const baseDamage = (user.Attack * bf) / 100;
 
       return DamageEngine.resolveDamage({
         baseDamage,
