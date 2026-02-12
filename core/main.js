@@ -296,6 +296,16 @@ socket.on("gameStateUpdate", (gameState) => {
 
       champion.keywords = new Map(championData.keywords);
 
+      // Atualiza runtime (shields, etc)
+      if (championData.runtime) {
+        champion.runtime = {
+          ...champion.runtime,
+          shields: Array.isArray(championData.runtime.shields)
+            ? championData.runtime.shields
+            : [],
+        };
+      }
+
       console.log(
         "[CLIENT] RUNTIME BEFORE UI:",
         champion.name,

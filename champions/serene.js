@@ -28,15 +28,19 @@ const sereneSkills = [
     key: "voto_harmonico",
     name: "Voto Harmônico",
     description: `
-    Cooldown: 1 turno
-    Serene sacrifica 15% do seu HP atual (Dano Direto) e concede um escudo a si mesma ou a um aliado ativo.
-    Escudo = 45
-    Regras:
-    Falha de Execução: Se Serene tiver 30 de HP ou menos, este modo não pode ser declarado.
-    `,
+      Cooldown: 1 turno
+      Serene sacrifica 15% do seu HP atual (Dano Direto) e concede um escudo a si mesma ou a um aliado ativo.
+
+      Escudo:
+      - Mínimo: 45
+      - Se o sacrifício exceder 35 HP, o escudo ganha um bônus, tornando-se maior que a vida sacrificada.
+
+      Regras:
+      Falha de Execução: Se Serene tiver 30 de HP ou menos, esta habilidade não pode ser utilizada.`,
     cooldown: 1,
     priority: 0,
     targetSpec: ["select:ally"],
+
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
@@ -46,17 +50,33 @@ const sereneSkills = [
         };
       }
 
+      // ===== Sacrifício =====
       let hpSacrifice = Math.floor(user.HP * 0.15);
       hpSacrifice = Math.round(hpSacrifice / 5) * 5;
 
       user.takeDamage(hpSacrifice);
-      ally.addShield(45, 0, context);
+
+      // ===== Escudo =====
+      const BONUS_OVERFLOW = 10;
+
+      let shieldAmount = 45;
+
+      if (hpSacrifice > 35) {
+        shieldAmount = hpSacrifice + BONUS_OVERFLOW;
+      }
+
+      // Garantia absoluta da regra de design
+      shieldAmount = Math.max(shieldAmount, hpSacrifice);
+
+      ally.addShield(shieldAmount, 0, context);
 
       const userName = formatChampionName(user);
       const allyName = formatChampionName(ally);
 
       return {
-        log: `${userName} sacrificou ${hpSacrifice} HP para proteger ${allyName} com um escudo.`,
+        log: `${userName} sacrificou ${hpSacrifice} do próprio HP e concedeu ${shieldAmount} de escudo a ${
+          userName === allyName ? "si mesmo" : allyName
+        }.`,
       };
     },
   },
@@ -115,8 +135,8 @@ const sereneSkills = [
     Ela permanece com 50 de HP travados (se não estivesse com menos de 50 de HP)
     A partir desse momento, Serene ganha:
     'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`,
-    cooldown: 2,
-    priority: 1,
+    cooldown: 3,
+    priority: 2,
     targetSpec: ["all:ally"],
     execute({ user, context = {} }) {
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
@@ -124,7 +144,7 @@ const sereneSkills = [
       allies.forEach((ally) => {
         ally.applyDamageReduction({
           amount: 30,
-          duration: 2,
+          duration: 2, // acaba um turno antes da ult voltar do cooldown 
           source: "epifania",
         });
         ally.applyKeyword("epifania_ativa", {
