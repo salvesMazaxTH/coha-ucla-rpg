@@ -5,65 +5,106 @@
 export const StatusIndicator = {
   // Mapeamento de keywords -> ícones e cores
   keywordIcons: {
-    paralisado: "⚡ 🚷 ⚡",
-    atordoado: "💫",
-    inerte: "🔒",
-    sobrecarga: "⚡",
-    "imunidade absoluta": "🛡️",
+    paralisado: { type: "emoji", value: "⚡ 🚷 ⚡" },
+    atordoado: { type: "emoji", value: "💫" },
+    inerte: { type: "emoji", value: "🔒" },
+    sobrecarga: { type: "emoji", value: "⚡" },
+    "imunidade absoluta": {
+      type: "image",
+      value: "assets/imunidade_absoluta_indicator.png",
+    },
+    tributo: {
+      type: "text",
+      value: "TRIB.",
+      color: "#ff2a2a",
+    },
   },
 
   // Duração mínima visual para indicadores (em ms)
   VISUAL_DELAY: 1500, // 1.5 segundos para garantir que o jogador veja a animação
+
+  // Controle de rotação por champion
+  //_rotationTimers: new Map(),
+  ROTATION_INTERVAL: 1750,
+  _rotationTimer: null,
+  _rotationIndex: 0,
 
   /**
    * Atualiza os indicadores visuais de um campeão com base em seus keywords
    * @param {Champion} champion - Instância do campeão
    */
   updateChampionIndicators(champion) {
-    console.log("Updating indicators for:", champion.name);
     if (!champion.el) return;
 
-    console.log("EL:", champion.el);
-    console.log("HTML:", champion.el?.innerHTML);
+    const portrait = champion.el.querySelector(".portrait");
+    if (!portrait) return;
 
-    const nameElement = champion.el.querySelector(".champion-name");
-    console.log("[updateChampionIndicators]nameElement:", nameElement);
+    // Remove antigos
+    portrait
+      .querySelectorAll(".status-indicator:not(.visual-delay)")
+      .forEach((el) => el.remove());
 
-    if (!nameElement) return;
-
-    // Remove indicadores anteriores que não estão em visual delay
-    const existingIndicators = nameElement.querySelectorAll(
-      ".status-indicator:not(.visual-delay)",
-    );
-    existingIndicators.forEach((el) => el.remove());
-
-    console.log("Keywords:", champion.keywords);
-
-    // Adiciona novos indicadores baseado em keywords ativos
-    for (const [keywordName, keywordData] of champion.keywords.entries()) {
+    for (const [keywordName] of champion.keywords.entries()) {
       const icon = this.keywordIcons[keywordName.toLowerCase()];
-      console.log("Keyword:", keywordName);
-      console.log("Icon found:", icon);
+      if (!icon) continue;
 
-      if (icon) {
-        // Verifica se o indicador já existe para evitar duplicatas
-        const existingIndicator = nameElement.querySelector(
-          `[data-keyword="${keywordName}"]`,
-        );
-        if (existingIndicator) continue; // Pula se já existe
+      const indicator = document.createElement("span");
+      indicator.className = "status-indicator";
+      indicator.dataset.keyword = keywordName;
+      indicator.title = keywordName;
 
-        const indicator = document.createElement("span");
-        indicator.classList.add("status-indicator");
-        indicator.textContent = ` ${icon}`;
-        indicator.title = keywordName;
-        indicator.dataset.keyword = keywordName;
+      // Safe class
+      const safe = keywordName
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
-        // Adiciona classe específica para styling
-        indicator.classList.add(`status-${keywordName.toLowerCase()}`);
+      indicator.classList.add(`status-${safe}`);
 
-        nameElement.appendChild(indicator);
+      // Conteúdo visual
+      if (icon.type === "emoji") {
+        indicator.textContent = icon.value;
+        indicator.style.fontSize = "1.75em";
+        indicator.style.left = "45%";
+      } else if (icon.type === "text") {
+        indicator.textContent = icon.value;
+        indicator.style.color = icon.color || "#ffffff";
+        indicator.style.left = "45%";
+        indicator.style.top = "12%";
+        indicator.style.fontSize = "1.55em";
+        indicator.style.fontWeight = "bold";
+      } else {
+        const img = document.createElement("img");
+        img.src = icon.value;
+        img.alt = keywordName;
+        img.className = "indicator-image";
+        indicator.appendChild(img);
       }
+
+      portrait.appendChild(indicator);
     }
+  },
+
+  startRotationLoop(champions) {
+    if (this._rotationTimer) return; // evita duplicação
+
+    this._rotationTimer = setInterval(() => {
+      this._rotationIndex++;
+
+      champions.forEach((champion) => {
+        const portrait = champion.el?.querySelector(".portrait");
+        if (!portrait) return;
+
+        const indicators = portrait.querySelectorAll(".status-indicator");
+        if (indicators.length <= 1) return;
+
+        indicators.forEach((el, i) => {
+          el.style.opacity =
+            i === this._rotationIndex % indicators.length ? "1" : "0";
+        });
+      });
+    }, this.ROTATION_INTERVAL);
   },
 
   /**
@@ -74,11 +115,11 @@ export const StatusIndicator = {
   removeIndicator(champion, keywordName) {
     if (!champion.el) return;
 
-    const nameElement = champion.el.querySelector(".champion-name");
-    console.log("[removeIndicator] nameElement:", nameElement);
-    if (!nameElement) return;
+    const portraitElement = champion.el.querySelector(".portrait");
+    console.log("[removeIndicator] portraitElement:", portraitElement);
+    if (!portraitElement) return;
 
-    const indicator = nameElement.querySelector(
+    const indicator = portraitElement.querySelector(
       `[data-keyword="${keywordName}"]`,
     );
     if (indicator) {
@@ -93,12 +134,12 @@ export const StatusIndicator = {
   clearIndicators(champion) {
     if (!champion.el) return;
 
-    const nameElement = champion.el.querySelector(".champion-name");
-    console.log("[clearIndicators] nameElement:", nameElement);
+    const portraitElement = champion.el.querySelector(".portrait");
+    console.log("[clearIndicators] portraitElement:", portraitElement);
 
-    if (!nameElement) return;
+    if (!portraitElement) return;
 
-    const indicators = nameElement.querySelectorAll(".status-indicator");
+    const indicators = portraitElement.querySelectorAll(".status-indicator");
     indicators.forEach((el) => el.remove());
   },
 
@@ -110,12 +151,12 @@ export const StatusIndicator = {
   animateIndicatorAdd(champion, keywordName) {
     this.updateChampionIndicators(champion);
 
-    const nameElement = champion.el?.querySelector(".champion-name");
-    console.log("[animateIndicatorAdd] nameElement:", nameElement);
+    const portraitElement = champion.el?.querySelector(".portrait");
+    console.log("[animateIndicatorAdd] portraitElement:", portraitElement);
 
-    if (!nameElement) return;
+    if (!portraitElement) return;
 
-    const indicator = nameElement.querySelector(
+    const indicator = portraitElement.querySelector(
       `[data-keyword="${keywordName}"]`,
     );
 
@@ -133,12 +174,12 @@ export const StatusIndicator = {
    * @param {string} keywordName - Nome do keyword
    */
   animateIndicatorRemove(champion, keywordName) {
-    const nameElement = champion.el?.querySelector(".champion-name");
-    console.log("[animateIndicatorRemove] nameElement:", nameElement);
+    const portraitElement = champion.el?.querySelector(".portrait");
+    console.log("[animateIndicatorRemove] portraitElement:", portraitElement);
 
-    if (!nameElement) return;
+    if (!portraitElement) return;
 
-    const indicator = nameElement.querySelector(
+    const indicator = portraitElement.querySelector(
       `[data-keyword="${keywordName}"]`,
     );
 

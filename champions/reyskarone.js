@@ -35,7 +35,7 @@ const reyskaroneSkills = [
     Cooldown: 1 turno
     Dano: 70% ATQ
     Aplica "Tributo" por 2 turnos.
-    Aliados que atacarem o alvo curam 5 HP. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (Dano = 70% ATQ).`,
+    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (Dano = 70% ATQ).`,
     cooldown: 2,
     priority: 1,
     targetSpec: ["enemy"],

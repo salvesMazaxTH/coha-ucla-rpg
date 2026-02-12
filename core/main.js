@@ -7,7 +7,6 @@ const socket = io({
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
 }); // Inicializa o cliente Socket.IO
-
 let playerId = null;
 let playerTeam = null;
 let username = null;
@@ -299,6 +298,11 @@ socket.on("gameStateUpdate", (gameState) => {
 
       champion.updateUI();
       existingChampionElements.delete(championData.id); // Marca como processado
+
+      const activeChampionsArray = Array.from(activeChampions.values());
+
+      StatusIndicator.startRotationLoop(activeChampionsArray);
+
     } else {
       // Cria novo campeão
       createNewChampion(championData);

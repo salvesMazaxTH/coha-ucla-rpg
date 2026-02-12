@@ -260,8 +260,9 @@ export class Champion {
       amount,
       decayPerTurn,
     });
-
-    io.emit("combatLog", `${this.name} ganhou ${amount} de escudo!`);
+    console.log(
+      `[Champion] ${this.name} ganhou um escudo de ${amount} HP com decaimento de ${decayPerTurn} por turno.`,
+    );
   }
 
   applyProvoke(provokerId, duration, context) {
@@ -391,11 +392,13 @@ export class Champion {
       const skillsHTML = buildSkillsHTML();
 
       return `
-        <img 
-          class="portrait"
-          data-id="${this.id}"
-          src="${this.portrait}"
-        >
+        <div class="portrait" data-id="${this.id}">
+          <img 
+            data-id="${this.id}"
+            src="${this.portrait}"
+          >
+        </div>
+
         <h3 class="champion-name">${this.name}</h3>
 
         <p>HP: <span class="hp">${this.HP}/${this.maxHP}</span></p>
@@ -403,7 +406,6 @@ export class Champion {
         <div class="hp-bar">
           <div class="hp-fill"></div>
         </div>
-
 
         ${statRow("Ataque", "Attack", this.Attack)}
         ${statRow("Defesa", "Defense", this.Defense)}
@@ -414,8 +416,9 @@ export class Champion {
         <div class="skills-bar">
           ${skillsHTML}
         </div>
+
         ${
-          editMode // no modo de edição, mostra o botão de deletar
+          editMode
             ? `
           <div class="delete">
             <button class="delete-btn" data-id="${this.id}">
@@ -425,7 +428,6 @@ export class Champion {
         `
             : ""
         }
-
       `;
     };
 
@@ -533,10 +535,6 @@ export class Champion {
       const absorbed = Math.min(shield.amount, amount);
       shield.amount -= absorbed;
       amount -= absorbed;
-      io.emit(
-        "combatLog",
-        `${this.name} absorveu ${absorbed} de dano com escudo!`,
-      );
     }
 
     if (this.hasKeyword?.("epifania_ativa") && this.HP - amount <= 0) {
@@ -547,9 +545,9 @@ export class Champion {
       this.applyKeyword("imunidade absoluta", {
         source: "epifania",
       });
-      
+
       context?.extraLogs?.push(
-        `${this.name} recusou a morte e tornou-se Imune!`
+        `${this.name} recusou a morte e tornou-se Imune!`,
       );
 
       return;

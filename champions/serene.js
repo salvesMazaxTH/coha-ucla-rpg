@@ -38,7 +38,16 @@ const sereneSkills = [
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
-      const hpSacrifice = Math.floor(user.HP * 0.15);
+
+      if (user.HP <= 30) {
+        return {
+          log: `${formatChampionName(user)} tentou usar Voto Harmônico, mas não possuía vitalidade suficiente.`,
+        };
+      }
+
+      let hpSacrifice = Math.floor(user.HP * 0.15);
+      hpSacrifice = Math.round(hpSacrifice / 5) * 5;
+
       user.takeDamage(hpSacrifice);
       ally.addShield(45, 0, context);
 
@@ -46,7 +55,7 @@ const sereneSkills = [
       const allyName = formatChampionName(ally);
 
       return {
-        log: `${userName} sacrificou ${hpSacrifice} HP para proteger ${allyName} com um escudo.`,
+        log: `${formatChampionName(user)} sacrificou ${hpSacrifice} HP para proteger ${formatChampionName(ally)} com um escudo.`,
       };
     },
   },
