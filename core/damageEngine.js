@@ -696,7 +696,7 @@ export const DamageEngine = {
     if (ls.text) {
       log += "\n" + ls.text;
 
-      if (ls.passiveLogs.length) log += "\n" + ls.passiveLogs.join("\n");
+      if (ls.passiveLogs.length) log += "\n   " + ls.passiveLogs.join("\n");
     }
 
     if (context.extraLogs.length) {
@@ -711,6 +711,8 @@ export const DamageEngine = {
       console.log(`HP: ${hpAfter}/${target.maxHP}`);
       console.groupEnd();
     }
+
+    console.log("HP FINAL REAL DO ATACANTE:", user.HP);
 
     return {
       baseDamage,

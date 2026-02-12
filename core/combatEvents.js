@@ -1,4 +1,4 @@
-const debugMode = true;
+const debugMode = false;
 
 export function emitCombatEvent(eventName, payload, champions) {
   const results = [];

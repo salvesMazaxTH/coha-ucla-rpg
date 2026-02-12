@@ -1,63 +1,42 @@
 import { StatusIndicator } from "./statusIndicator.js";
 
 export class Champion {
-  constructor({
-    id,
-    name,
-    portrait,
-    HP,
-    Attack,
-    Defense,
-    Speed,
-    Critical,
-    LifeSteal,
-    skills,
-    team,
-    passive,
-    entityType,
-  }) {
-    this.id = id;
-    this.team = team;
-    this.name = name;
-    this.portrait = portrait;
+  constructor(data = {}) {
+    const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
 
-    this.entityType =
-    entityType ?? "champion";
-    
-    this.maxHP = HP;
-    this.baseHP = HP;
-    this.HP = HP;
-    this.baseAttack = Attack;
-    this.Attack = Attack;
-    this.Defense = Defense;
-    this.baseDefense = Defense;
-    this.Speed = Speed;
-    this.baseSpeed = Speed;
-    this.Critical = Critical;
-    this.baseCritical = Critical;
-    this.LifeSteal = LifeSteal;
-    this.baseLifeSteal = LifeSteal;
+    // IDENTIDADE
+    this.id = identity.id;
+    this.name = identity.name;
+    this.portrait = identity.portrait;
+    this.team = identity.team;
+    this.entityType = identity.entityType ?? "champion";
 
-    this.skills = skills;
-    this.passive = passive || null;
+    // STATS
+    this.HP = stats.HP;
+    this.maxHP = stats.maxHP ?? stats.HP;
+    this.Attack = stats.Attack;
+    this.Defense = stats.Defense;
+    this.Speed = stats.Speed;
+    this.Critical = stats.Critical;
+    this.LifeSteal = stats.LifeSteal;
 
-    // console.log(`[Champion] Passive recebida:`, this.passive);
-
+    // COMBATE
+    this.skills = combat.skills;
+    this.passive = combat.passive || null;
     this.damageModifiers = [];
-    this.statModifiers = []; // New array to track temporary stat changes
-    this.provokeEffects = []; // New array to track provoke effects applied to this champion
-    this.damageReductionModifiers = []; // New array to track temporary damage reduction
-    this.keywords = new Map(); // Map to track active keywords with durations and metadata
-
+    this.statModifiers = [];
+    this.provokeEffects = [];
+    this.damageReductionModifiers = [];
+    this.keywords = new Map();
     this.alive = true;
     this.cooldowns = new Map();
-    this.hasActedThisTurn = false; // New property to track if the champion has acted this turn
+    this.hasActedThisTurn = false;
 
+    // RUNTIME
     this.runtime = {
-      shields: [],
+      ...runtime,
+      shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
     };
-
-    this.fake = {}; // propriedade artificial para usos específicos (ex.: Tharox)
 
     // 🔥 ULTIMATE LOCK (cooldown inicial)
     this.initUltimateLock();
@@ -83,6 +62,72 @@ export class Champion {
     console.log(
       `[ULT LOCK] ${this.name} → ${ultimate.name} bloqueada até o turno ${availableAt}`,
     );
+  }
+
+  static fromBaseData(baseData, id, team) {
+    return new Champion({
+      identity: {
+        id,
+        name: baseData.name,
+        portrait: baseData.portrait,
+        team,
+        entityType: baseData.entityType,
+      },
+
+      stats: {
+        HP: baseData.HP,
+        Attack: baseData.Attack,
+        Defense: baseData.Defense,
+        Speed: baseData.Speed,
+        Critical: baseData.Critical,
+        LifeSteal: baseData.LifeSteal,
+      },
+
+      combat: {
+        skills: baseData.skills,
+        passive: baseData.passive,
+      },
+    });
+  }
+
+  // Método para serializar o estado do campeão
+  serialize() {
+    return {
+      id: this.id,
+      championKey:
+        typeof this.id === "string" && this.id.includes("-")
+          ? this.id.split("-")[0]
+          : this.name,
+
+      team: this.team,
+
+      name: this.name,
+      portrait: this.portrait,
+
+      HP: this.HP,
+      maxHP: this.maxHP,
+      Attack: this.Attack,
+      Defense: this.Defense,
+      Speed: this.Speed,
+      Critical: this.Critical,
+
+      runtime: {
+        ...this.runtime,
+        shields: Array.isArray(this.runtime?.shields)
+          ? this.runtime.shields
+          : [],
+      },
+
+      keywords: Array.from(this.keywords.entries()),
+      skills: this.skills.map((s) => ({
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        priority: s.priority || 0,
+      })),
+
+      cooldowns: Array.from(this.cooldowns.entries()),
+    };
   }
 
   // ======== Keyword System ========
@@ -260,10 +305,13 @@ export class Champion {
   }
 
   addShield(amount, decayPerTurn = 0, context) {
+    console.log("SERVER ADD SHIELD:", this.name, amount);
+
     this.runtime.shields.push({
       amount,
       decayPerTurn,
     });
+
     console.log(
       `[Champion] ${this.name} ganhou um escudo de ${amount} HP com decaimento de ${decayPerTurn} por turno.`,
     );
@@ -465,7 +513,8 @@ export class Champion {
 
   // 🔄 Atualiza UI sem buscar no DOM toda vez
   updateUI() {
-    /*  console.log(`[Client] updateUI called for ${this.name} (ID: ${this.id})`); */
+    console.log("CLIENT SHIELDS:", this.name, this.runtime?.shields);
+
     if (!this.el) {
       /*       console.error(
         `[Client] No DOM element (this.el) found for ${this.name} (ID: ${this.id}).`,
@@ -475,10 +524,10 @@ export class Champion {
     console.log(
       `[Client] Updating HP for ${this.name}: ${this.HP}/${this.maxHP}`,
     );
-    
+
     // HP
     const HpDiv = this.el.querySelector(".hp");
-    
+
     HpDiv.textContent = `${this.HP}/${this.maxHP}`;
 
     const fill = this.el.querySelector(".hp-fill");
@@ -494,16 +543,16 @@ export class Champion {
     } else {
       fill.style.background = "#00ff66"; // verde
     }
-    
+
     if (this.runtime?.shields?.length) {
-  const totalShield = this.runtime.shields
-    .reduce((sum, s) => sum + s.amount, 0) ?? 0;
-      
+      const totalShield =
+        this.runtime.shields.reduce((sum, s) => sum + s.amount, 0) ?? 0;
+
       const extraInfo = ` 🛡️ (${totalShield})`;
-      
-      HpDiv.textContent += extraInfo
+
+      HpDiv.textContent += extraInfo;
     }
-    
+
     // 🔥 Função genérica pra stats
     const updateStat = (name) => {
       const el = this.el.querySelector(`.${name}`);
@@ -525,7 +574,7 @@ export class Champion {
         el.style.color = "#ffffff"; // neutro
       }
     };
-    
+
     updateStat("Attack");
     updateStat("Defense");
     updateStat("Speed");
@@ -538,11 +587,10 @@ export class Champion {
     if (lifeStealRow) {
       lifeStealRow.style.display = this.LifeSteal > 0 ? "" : "none";
     }
-  
+
     // 🎨 Atualiza os indicadores de status
-  StatusIndicator.updateChampionIndicators(this);
-}
-  
+    StatusIndicator.updateChampionIndicators(this);
+  }
 
   takeDamage(amount, context) {
     if (!this.alive) return;

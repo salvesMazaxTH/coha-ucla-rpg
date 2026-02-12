@@ -73,13 +73,13 @@ const tharoxSkills = [
     description: `Cooldown: 1 turno,
     Contato: Sim
     Dano:
-    BF 115 + 20% DEF`,
+    BF 95 + 20% DEF`,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 115;
+      const bf = 95;
       const baseDamage = (user.Attack * bf) / 100 + user.Defense / 5;
       const result = DamageEngine.resolveDamage({
         user,

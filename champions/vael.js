@@ -53,7 +53,7 @@ const vaelSkills = [
     name: "Investida Transpassante",
     description: `Cooldown: 2 turnos
        Contato: ✅
-       BF 80 (primario) / BF 110 (secundario).
+       BF 80 (primario) / BF 85 (secundario).
        ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
       (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
       ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
@@ -85,7 +85,7 @@ const vaelSkills = [
 
       if (secondary) {
         const secondaryResult = DamageEngine.resolveDamage({
-          baseDamage: (user.Attack * 110) / 100,
+          baseDamage: (user.Attack * 85) / 100,
           user,
           target: secondary,
           skill: this.name,

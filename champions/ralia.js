@@ -111,7 +111,7 @@ const raliaSkills = [
 
       // 5️⃣ Estende o log da engine (não substitui)
       const userName = formatChampionName(user);
-      result.log += ` ${userName} se curou em ${healingAmount} HP.`;
+      result.log += `\n${userName} se curou em ${healingAmount} HP.`;
 
       // 6️⃣ Retorna o objeto COMPLETO
       return result;

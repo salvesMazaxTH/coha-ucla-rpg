@@ -296,6 +296,12 @@ socket.on("gameStateUpdate", (gameState) => {
 
       champion.keywords = new Map(championData.keywords);
 
+      console.log(
+        "[CLIENT] RUNTIME BEFORE UI:",
+        champion.name,
+        champion.runtime,
+      );
+
       champion.updateUI();
       existingChampionElements.delete(championData.id); // Marca como processado
 
@@ -336,11 +342,16 @@ socket.on("championAdded", (championData) => {
       // );
       return;
     }
-    const champion = new Champion({
-      id: championData.id,
-      team: championData.team,
-      ...baseData,
-    });
+    const champion = Champion.fromBaseData(
+      baseData,
+      championData.id,
+      championData.team,
+    );
+    champion.baseAttack = baseData.Attack;
+    champion.baseDefense = baseData.Defense;
+    champion.baseSpeed = baseData.Speed;
+    champion.baseCritical = baseData.Critical;
+    champion.baseLifeSteal = baseData.LifeSteal;
     activeChampions.set(champion.id, champion);
   }
 });
@@ -726,11 +737,16 @@ function createNewChampion(championData) {
     throw new Error("Campeão inválido");
   }
 
-  const champion = new Champion({
-    id: championData.id,
-    team: championData.team,
-    ...baseData,
-  });
+  const champion = Champion.fromBaseData(
+    baseData,
+    championData.id,
+    championData.team,
+  );
+  champion.baseAttack = baseData.Attack;
+  champion.baseDefense = baseData.Defense;
+  champion.baseSpeed = baseData.Speed;
+  champion.baseCritical = baseData.Critical;
+  champion.baseLifeSteal = baseData.LifeSteal;
 
   activeChampions.set(champion.id, champion);
 
@@ -798,10 +814,21 @@ function createOverlay(champion) {
       name: passiveName,
       description: passiveDesc,
     },
-    ...skills.map((s) => ({
-      name: s?.name || "Habilidade",
-      description: typeof s?.description === "string" ? s.description : "",
-    })),
+    ...skills.map((s, index) => {
+      const baseName = s?.name || "Hab.1";
+      let label = "";
+
+      if (index === 3) {
+        label = "ULT";
+      } else if (index > 0) {
+        label = `Hab.${index}`;
+      }
+
+      return {
+        name: label ? `${label} — ${baseName}` : baseName,
+        description: typeof s?.description === "string" ? s.description : "",
+      };
+    }),
   ]
     .filter((s) => s.description || s.name)
     .map(

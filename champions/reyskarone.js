@@ -38,7 +38,7 @@ const reyskaroneSkills = [
     Aplica "Tributo" por 2 turnos.
     Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 65).`,
     cooldown: 2,
-    priority: 1,
+    priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;

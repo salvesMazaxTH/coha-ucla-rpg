@@ -143,21 +143,20 @@ export const championDB = {
         if (self !== target) return;
         if (damage <= 0) return;
 
-        self.fake.tharoxInerciaStacks =
-          (self.fake.tharoxInerciaStacks || 0) + 1;
+        self.runtime.tharoxInerciaStacks =
+          (self.runtime.tharoxInerciaStacks || 0) + 1;
 
-        if (self.fake.tharoxInerciaStacks < 2) {
+        if (self.runtime.tharoxInerciaStacks < 2) {
           return {
-            log: `[Passiva - Massa Inamolgável] ${self.name} acumulou Inércia (${self.fake.tharoxInerciaStacks}/2).`,
+            log: `[Passiva - Massa Inamolgável] ${self.name} acumulou Inércia (${self.runtime.tharoxInerciaStacks}/2).`,
           };
         }
 
-        self.fake.tharoxInerciaStacks = 0;
+        self.runtime.tharoxInerciaStacks = 0;
 
         const statResult = self.modifyStat({
           statName: "Defense",
           amount: 10,
-          duration: 1,
           context,
           isPermanent: true,
         });
@@ -299,19 +298,19 @@ export const championDB = {
     passive: {
       name: "Ecos de Vitalidade",
       description: `
-      Sempre que um aliado curar por Roubo de Vida,Reyskarone recupera 30% desse valor.`,
+      Sempre que um aliado curar por Roubo de Vida,Reyskarone recupera 35% desse valor.`,
 
       onLifeSteal({ source, amount, self }) {
         // ✔ Só aliados, ignorar o próprio Reyskarone
         if (source.team !== self.team && source !== self) return;
 
-        const heal = Math.round((amount * 0.3) / 5) * 5;
+        const heal = Math.round((amount * 0.35) / 5) * 5;
         if (heal <= 0 || self.HP >= self.maxHP) return;
 
         self.heal(heal);
 
         return {
-          log: `[PASSIVA — Ecos de Vitalidade] ${formatChampionName(self)} absorveu ecos vitais de ${formatChampionName(source)} (+${heal} HP).`,
+          log: `↳ [PASSIVA — Ecos de Vitalidade] ${formatChampionName(self)} absorveu ecos vitais de ${formatChampionName(source)} (+${heal} HP).`,
         };
       },
 

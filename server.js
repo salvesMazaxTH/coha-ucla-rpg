@@ -13,7 +13,13 @@ import {
 } from "./core/cooldown.js";
 import { generateId } from "./core/id.js";
 import { formatChampionName, formatPlayerName } from "./core/formatters.js";
-const editMode = false; // Define como true para ignorar o login, a seleção de campeões e cooldowns, para facilitar os testes
+
+const editMode = {
+  enabled: true,
+  autoSelection: false, // Seleção automática de campeões para ambos os jogadores
+  ignoreCooldowns: true, // Ignora cooldowns para facilitar os testes
+  actMultipleTimesPerTurn: true, // Permite que os campeões ajam múltiplas vezes por turno
+};
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
 
@@ -128,37 +134,9 @@ function getTurnData(turnNumber) {
 // ======== End Turn History Tracking System ========
 
 function getGameState() {
-  const championsData = Array.from(activeChampions.values()).map((c) => {
-    /* console.log(
-      `[DEBUG SERVER] keywords de ${c.name}:`,
-      Array.from(c.keywords.entries()),
-    ); */
-
-    return {
-      id: c.id,
-      championKey: c.id.split("-")[0],
-      team: c.team,
-      name: c.name,
-      portrait: c.portrait,
-      HP: c.HP,
-      maxHP: c.maxHP,
-      Attack: c.Attack,
-      Defense: c.Defense,
-      Speed: c.Speed,
-      Critical: c.Critical,
-
-      keywords: Array.from(c.keywords.entries()),
-
-      skills: c.skills.map((s) => ({
-        key: s.key,
-        name: s.name,
-        description: s.description,
-        priority: s.priority || 0,
-      })),
-
-      cooldowns: Array.from(c.cooldowns.entries()),
-    };
-  });
+  const championsData = Array.from(activeChampions.values()).map((c) =>
+    c.serialize(),
+  );
 
   return {
     champions: championsData,
@@ -183,11 +161,9 @@ function assignChampionsToTeam(team, championKeys) {
       const baseData = championDB[championKey];
       if (baseData) {
         const id = generateId(championKey);
-        const newChampion = new Champion({
-          id,
-          team: team,
-          ...baseData,
-        });
+        
+        const newChampion = Champion.fromBaseData(baseData, id, team);
+
         activeChampions.set(id, newChampion);
       } else {
         /*  console.error(`[Server] Chave de campeão inválida fornecida: ${championKey}`); */
@@ -305,7 +281,7 @@ function validateActionIntent(user, socket) {
   }
 
   // já agiu
-  if (!editMode && user.hasActedThisTurn) {
+  if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
     socket.emit("skillDenied", "Já agiu neste turno.");
     return false;
   }
@@ -466,7 +442,7 @@ function performSkillExecution(user, skill, targets) {
   const context = {
     currentTurn,
     allChampions: activeChampions,
-    aliveChampions: aliveChampionsArray,  
+    aliveChampions: aliveChampionsArray,
   };
 
   const result = skill.execute({
@@ -656,186 +632,167 @@ io.on("connection", (socket) => {
 
   let playerSlot = -1; // Será atribuído no login
 
-  socket.on("requestPlayerSlot", (username) => {
-    if (editMode) {
-      // No editMode, atribui nome de usuário fixo e equipe aleatória
-      if (players[0] === null) {
-        playerSlot = 0; // Atribui ao slot 0 (Time 1)
-      } else if (players[1] === null) {
-        playerSlot = 1; // Atribui ao slot 1 (Time 2)
-      }
+  // =============================
+  // HELPER FUNCTIONS
+  // =============================
 
-      if (playerSlot === -1) {
-        socket.emit(
-          "serverFull",
-          "O servidor está cheio. Tente novamente mais tarde.",
-        );
-        socket.disconnect();
-        return;
-      }
+  function assignPlayerSlot(username) {
+    let playerSlot = -1;
 
-      const fixedUsername = `Player${playerSlot + 1}`;
-      const playerId = `player${playerSlot + 1}`;
-      const team = playerSlot + 1; // Time 1 para slot 0, Time 2 para slot 1
+    if (players[0] === null) {
+      playerSlot = 0;
+    } else if (players[1] === null) {
+      playerSlot = 1;
+    }
 
-      players[playerSlot] = {
-        id: playerId,
-        team: team,
-        socketId: socket.id,
-        username: fixedUsername,
-        selectedTeam: [],
-      };
-      connectedSockets.set(socket.id, playerSlot);
-      playerNames.set(playerSlot, fixedUsername);
+    if (playerSlot === -1) {
+      socket.emit(
+        "serverFull",
+        "O servidor está cheio. Tente novamente mais tarde.",
+      );
+      socket.disconnect();
+      return null;
+    }
 
-      socket.emit("playerAssigned", {
-        playerId,
-        team,
-        username: fixedUsername,
-      });
-      io.emit("playerCountUpdate", players.filter((p) => p !== null).length);
-      io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
+    const playerId = `player${playerSlot + 1}`;
+    const team = playerSlot + 1;
+    const finalUsername = editMode.enabled
+      ? `Player${playerSlot + 1}`
+      : username;
 
-      socket.emit("gameStateUpdate", getGameState());
+    players[playerSlot] = {
+      id: playerId,
+      team,
+      socketId: socket.id,
+      username: finalUsername,
+      selectedTeam: [],
+    };
 
-      if (players[0] && players[1]) {
-        io.emit("allPlayersConnected");
-        // No editMode, seleciona automaticamente campeões aleatórios para ambos os jogadores
-        for (let i = 0; i < players.length; i++) {
-          if (players[i] && !playerTeamsSelected[i]) {
-            let currentSelection = [];
+    connectedSockets.set(socket.id, playerSlot);
+    playerNames.set(playerSlot, finalUsername);
+
+    socket.emit("playerAssigned", {
+      playerId,
+      team,
+      username: finalUsername,
+    });
+
+    io.emit("playerCountUpdate", players.filter((p) => p !== null).length);
+    io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
+    socket.emit("gameStateUpdate", getGameState());
+
+    return { playerSlot, finalUsername };
+  }
+
+  function handleChampionSelection() {
+    for (let i = 0; i < players.length; i++) {
+      if (players[i] && !playerTeamsSelected[i]) {
+        io.to(players[i].socketId).emit("startChampionSelection", {
+          timeLeft: CHAMPION_SELECTION_TIME,
+        });
+
+        championSelectionTimers[i] = setTimeout(() => {
+          if (!playerTeamsSelected[i]) {
+            let currentSelection = players[i].selectedTeam.filter(
+              (c) => c !== null,
+            );
+
             while (currentSelection.length < TEAM_SIZE) {
-              let randomChamp = getRandomChampionKey(currentSelection);
-              if (randomChamp) {
-                currentSelection.push(randomChamp);
-              } else {
-                currentSelection.push(Object.keys(championDB)[0]); // Fallback
-              }
+              const champ = getRandomChampionKey(currentSelection);
+              if (!champ) break;
+              currentSelection.push(champ);
             }
+
             players[i].selectedTeam = currentSelection;
             playerTeamsSelected[i] = true;
+            checkAllTeamsSelected();
           }
-        }
-        // Após a seleção automática, verifica se todas as equipes foram selecionadas para iniciar o jogo
-        if (checkAllTeamsSelected()) {
-          activeChampions.clear();
+        }, CHAMPION_SELECTION_TIME * 1000);
+      }
+    }
+  }
 
-          assignChampionsToTeam(
-            players[0].team,
-            players[0].selectedTeam.slice(0, 2),
-          );
-          assignChampionsToTeam(
-            players[1].team,
-            players[1].selectedTeam.slice(0, 2),
-          );
+  function handleEditModeSelection() {
+    if (editMode.autoSelection) {
+      for (let i = 0; i < players.length; i++) {
+        if (players[i] && !playerTeamsSelected[i]) {
+          let currentSelection = [];
 
-          // descomentar quando o rol total de campeões for maior que 6 para maior variedade
-          /*           players[0].backChampion = players[0].selectedTeam[2];
-          players[1].backChampion = players[1].selectedTeam[2];
- */
-          io.emit("gameStateUpdate", getGameState());
-          // descomentar quando o rol total de campeões for maior que 6 para maior variedade
-          /*           io.emit("backChampionUpdate", {
-            team: players[0].team,
-            championKey: players[0].backChampion,
-          });
-          io.emit("backChampionUpdate", {
-            team: players[1].team,
-            championKey: players[1].backChampion,
-          }); */
+          while (currentSelection.length < TEAM_SIZE) {
+            const champ =
+              getRandomChampionKey(currentSelection) ||
+              Object.keys(championDB)[0];
+
+            currentSelection.push(champ);
+          }
+
+          players[i].selectedTeam = currentSelection;
+          playerTeamsSelected[i] = true;
         }
-      } else {
-        socket.emit(
-          "waitingForOpponent",
-          `Olá, ${fixedUsername}, aguarde enquanto outro jogador se conecta...`,
-        );
       }
 
-      if (disconnectionTimers.has(playerSlot)) {
-        clearTimeout(disconnectionTimers.get(playerSlot));
-        disconnectionTimers.delete(playerSlot);
-        const otherPlayerSlot = playerSlot === 0 ? 1 : 0;
-        if (players[otherPlayerSlot]) {
-          io.to(players[otherPlayerSlot].socketId).emit("opponentReconnected");
-        }
+      if (checkAllTeamsSelected()) {
+        activeChampions.clear();
+
+        assignChampionsToTeam(
+          players[0].team,
+          players[0].selectedTeam.slice(0, 2),
+        );
+
+        assignChampionsToTeam(
+          players[1].team,
+          players[1].selectedTeam.slice(0, 2),
+        );
+
+        io.emit("gameStateUpdate", getGameState());
       }
     } else {
-      // Lógica original para non-editMode
-      if (players[0] === null) {
-        playerSlot = 0; // Atribui ao slot 0 (Time 1)
-      } else if (players[1] === null) {
-        playerSlot = 1; // Atribui ao slot 1 (Time 2)
-      }
+      handleChampionSelection();
+    }
+  }
 
-      if (playerSlot === -1) {
-        socket.emit(
-          "serverFull",
-          "O servidor está cheio. Tente novamente mais tarde.",
-        );
-        socket.disconnect();
-        return;
-      }
+  socket.on("requestPlayerSlot", (username) => {
+    // =============================
+    // SLOT ASSIGNMENT
+    // =============================
+    const assignResult = assignPlayerSlot(username);
+    if (!assignResult) return;
 
-      const playerId = `player${playerSlot + 1}`;
-      const team = playerSlot + 1; // Time 1 para slot 0, Time 2 para slot 1
+    const { playerSlot, finalUsername } = assignResult;
 
-      players[playerSlot] = {
-        id: playerId,
-        team: team,
-        socketId: socket.id,
-        username: username,
-        selectedTeam: [],
-      };
-      connectedSockets.set(socket.id, playerSlot);
-      playerNames.set(playerSlot, username);
+    // =============================
+    // WAIT FOR SECOND PLAYER
+    // =============================
+    if (!(players[0] && players[1])) {
+      socket.emit(
+        "waitingForOpponent",
+        `Olá, ${finalUsername}, aguardando outro jogador...`,
+      );
+      return;
+    }
 
-      socket.emit("playerAssigned", { playerId, team, username });
-      io.emit("playerCountUpdate", players.filter((p) => p !== null).length);
-      io.emit("playerNamesUpdate", Array.from(playerNames.entries())); // Envia todos os nomes dos jogadores
+    io.emit("allPlayersConnected");
 
-      socket.emit("gameStateUpdate", getGameState());
+    // =============================
+    // CHAMPION SELECTION
+    // =============================
+    if (editMode.enabled) {
+      handleEditModeSelection();
+    } else {
+      handleChampionSelection();
+    }
 
-      if (players[0] && players[1]) {
-        io.emit("allPlayersConnected"); // Sinaliza aos clientes para preparar a seleção
-        for (let i = 0; i < players.length; i++) {
-          if (players[i] && !playerTeamsSelected[i]) {
-            io.to(players[i].socketId).emit("startChampionSelection", {
-              timeLeft: CHAMPION_SELECTION_TIME,
-            });
-            championSelectionTimers[i] = setTimeout(() => {
-              if (!playerTeamsSelected[i]) {
-                let currentSelection = players[i].selectedTeam.filter(
-                  (c) => c !== null,
-                );
-                while (currentSelection.length < TEAM_SIZE) {
-                  let randomChamp = getRandomChampionKey(currentSelection);
-                  if (randomChamp) {
-                    currentSelection.push(randomChamp);
-                  } else {
-                    break;
-                  }
-                }
-                players[i].selectedTeam = currentSelection;
-                playerTeamsSelected[i] = true;
-                checkAllTeamsSelected();
-              }
-            }, CHAMPION_SELECTION_TIME * 1000);
-          }
-        }
-      } else {
-        socket.emit(
-          "waitingForOpponent",
-          `Olá, ${username}, aguarde enquanto outro jogador se conecta...`,
-        );
-      }
+    // =============================
+    // RECONNECT HANDLING
+    // =============================
+    if (disconnectionTimers.has(playerSlot)) {
+      clearTimeout(disconnectionTimers.get(playerSlot));
+      disconnectionTimers.delete(playerSlot);
 
-      if (disconnectionTimers.has(playerSlot)) {
-        clearTimeout(disconnectionTimers.get(playerSlot));
-        disconnectionTimers.delete(playerSlot);
-        const otherPlayerSlot = playerSlot === 0 ? 1 : 0;
-        if (players[otherPlayerSlot]) {
-          io.to(players[otherPlayerSlot].socketId).emit("opponentReconnected");
-        }
+      const other = playerSlot === 0 ? 1 : 0;
+
+      if (players[other]) {
+        io.to(players[other].socketId).emit("opponentReconnected");
       }
     }
   });
@@ -1157,7 +1114,7 @@ io.on("connection", (socket) => {
 
     let cdError;
 
-    if (!editMode) {
+    if (!editMode.ignoreCooldowns) {
       cdError = checkAndValidateCooldowns({
         user,
         skill,
