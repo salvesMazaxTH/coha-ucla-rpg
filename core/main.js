@@ -982,15 +982,7 @@ async function selectTargetForRole(
 
   // 🔹 ALL ALLIES (inclui self)
   if (role === "all:ally") {
-    let allies = championsInField.filter((c) => c.team === user.team);
-
-    allies = filterUnique(allies);
-
-    if (allies.length === 0) return undefined;
-
-    allies.forEach((c) => chosenTargets.add(c.id));
-
-    return { allies };
+    return {};
   }
 
   // 🔹 ENEMY
