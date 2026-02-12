@@ -243,7 +243,7 @@ export class Champion {
 
     const limits = {
       Critical: { min: 0, max: 95 },
-      default: { min: 10, max: 150 },
+      default: { min: 10, max: 999 },
     };
 
     const { min, max } = limits[statName] || limits.default;
