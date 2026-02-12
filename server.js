@@ -462,7 +462,9 @@ function performSkillExecution(user, skill, targets) {
   const context = {
     currentTurn,
     allChampions: activeChampions,
-  };
+    aliveChampions:
+    activeChampions.filter(c => c.alive),
+     };
 
   const result = skill.execute({
     user,

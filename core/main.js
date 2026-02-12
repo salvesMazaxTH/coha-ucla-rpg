@@ -480,8 +480,8 @@ const RETURN_TO_LOGIN_TIME = 120; // 120 segundos para a contagem regressiva fin
 
 function renderAvailableChampions() {
   availableChampionsGrid.innerHTML = "";
-  allAvailableChampionKeys = Object.keys(championDB);
-
+  
+  allAvailableChampionKeys = Object.keys(championDB).filter(key => championDB[key].entityType === "champion");
   allAvailableChampionKeys.forEach((key) => {
     const champion = championDB[key];
     const card = document.createElement("div");
@@ -982,15 +982,7 @@ async function selectTargetForRole(
 
   // 🔹 ALL ALLIES (inclui self)
   if (role === "all:ally") {
-    let allies = championsInField.filter((c) => c.team === user.team);
-
-    allies = filterUnique(allies);
-
-    if (allies.length === 0) return undefined;
-
-    allies.forEach((c) => chosenTargets.add(c.id));
-
-    return { allies };
+    return {};
   }
 
   // 🔹 ENEMY

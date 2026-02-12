@@ -13,6 +13,7 @@ export const championDB = {
     Speed: 40,
     Critical: 0,
     LifeSteal: 15,
+    // entityType: "champion" // ex: pra teste, mas campeoes regulares nao vao declarar explicitamente essa propriedade, porque eh a excecao da excecao algum char daqui ser token
     skills: skillsByChampion.ralia,
     passive: {
       name: "Desacreditar",

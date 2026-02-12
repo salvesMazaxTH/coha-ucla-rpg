@@ -14,12 +14,16 @@ export class Champion {
     skills,
     team,
     passive,
+    entityType,
   }) {
     this.id = id;
     this.team = team;
     this.name = name;
     this.portrait = portrait;
 
+    this.entityType =
+    entityType ?? "champion";
+    
     this.maxHP = HP;
     this.baseHP = HP;
     this.HP = HP;
@@ -471,8 +475,11 @@ export class Champion {
     console.log(
       `[Client] Updating HP for ${this.name}: ${this.HP}/${this.maxHP}`,
     );
+    
     // HP
-    this.el.querySelector(".hp").textContent = `${this.HP}/${this.maxHP}`;
+    const HpDiv = this.el.querySelector(".hp");
+    
+    HpDiv.textContent = `${this.HP}/${this.maxHP}`;
 
     const fill = this.el.querySelector(".hp-fill");
 
@@ -487,6 +494,16 @@ export class Champion {
     } else {
       fill.style.background = "#00ff66"; // verde
     }
+    
+    if (this.runtime?.shields?.length) {
+  const totalShield = this.runtime.shields
+    .reduce((sum, s) => sum + s.amount, 0) ?? 0;
+      
+      const extraInfo = ` 🛡️ (${totalShield})`;
+      
+      HpDiv.textContent += extraInfo
+    }
+    
     // 🔥 Função genérica pra stats
     const updateStat = (name) => {
       const el = this.el.querySelector(`.${name}`);
@@ -508,6 +525,7 @@ export class Champion {
         el.style.color = "#ffffff"; // neutro
       }
     };
+    
     updateStat("Attack");
     updateStat("Defense");
     updateStat("Speed");
@@ -520,11 +538,11 @@ export class Champion {
     if (lifeStealRow) {
       lifeStealRow.style.display = this.LifeSteal > 0 ? "" : "none";
     }
+  
     // 🎨 Atualiza os indicadores de status
-    StatusIndicator.updateChampionIndicators(this);
-
-    this.el.classList.toggle("dead", !this.alive);
-  }
+  StatusIndicator.updateChampionIndicators(this);
+}
+  
 
   takeDamage(amount, context) {
     if (!this.alive) return;

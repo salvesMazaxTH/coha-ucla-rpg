@@ -115,22 +115,23 @@ const sereneSkills = [
     'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`,
     cooldown: 2,
     priority: 1,
-    targetSpec: ["all:ally", "self"],
-    execute({ user, targets, context = {} }) {
+    targetSpec: ["all:ally"],
+    execute({ user, context = {} }) {
+      const allies = context.aliveChampions.filter(
+  c => c.team === user.team
+);
       // 1️⃣ Proteção de Campo
-      targets.allies.forEach((ally) => {
+      allies.forEach((ally) => {
         ally.applyDamageReduction({
           amount: 30,
-          duration: 999, // placeholder infinito
+          duration: 2,
           source: "epifania",
         });
-      });
-
-      // 2️⃣ Flag de estado
-      user.addKeyword("epifania_ativa", {
+        ally.applyKeyword("epifania_ativa", {
         persistent: true,
-      });
-
+        });
+      }
+      
       return {
         log: `${formatChampionName(user)} alcança o Limiar da Existência.`,
       };
