@@ -93,7 +93,7 @@ export class Champion {
       },
 
       combat: {
-        skills: baseData.skills,
+        skills: baseData.skills.map(s => ({ ...s })),
         passive: baseData.passive,
       },
     });
