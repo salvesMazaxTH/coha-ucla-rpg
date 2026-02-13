@@ -6,18 +6,16 @@ import { fileURLToPath } from "url";
 
 import { championDB } from "./data/championDB.js";
 import { Champion } from "./core/Champion.js";
-import {
-  isSkillOnCooldown,
-  startCooldown,
-  checkAndValidateCooldowns,
-} from "./core/cooldown.js";
+
+import { startCooldown, checkAndValidateCooldowns } from "./core/cooldown.js";
+
 import { generateId } from "./core/id.js";
 import { formatChampionName, formatPlayerName } from "./core/formatters.js";
 
 const editMode = {
-  enabled: false,
+  enabled: true,
   autoSelection: false, // Seleção automática de campeões para ambos os jogadores
-  ignoreCooldowns: false, // Ignora cooldowns para facilitar os testes
+  ignoreCooldowns: true, // Ignora cooldowns para facilitar os testes
   actMultipleTimesPerTurn: true, // Permite que os campeões ajam múltiplas vezes por turno
 };
 
@@ -163,6 +161,10 @@ function assignChampionsToTeam(team, championKeys) {
         const id = generateId(championKey);
 
         const newChampion = Champion.fromBaseData(baseData, id, team);
+
+        if (editMode.enabled && editMode.ignoreCooldowns) {
+          newChampion.cooldowns.clear();
+        }
 
         activeChampions.set(id, newChampion);
       } else {

@@ -89,7 +89,7 @@ const nodeSparckina07Skills = [
     name: "Radiant Burst",
     description: `Cooldown: 3 turnos
      Efeitos:
-     Dano Bruto = BF 185
+     Dano Bruto = BF 225
      100% de chance de aplicar "Paralisado" no alvo inimigo.
      `,
     cooldown: 3,
@@ -97,7 +97,7 @@ const nodeSparckina07Skills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 185;
+      const bf = 225;
       const baseDamage = (user.Attack * bf) / 100;
 
       enemy.applyKeyword("paralisado", 2, context);

@@ -293,6 +293,7 @@ socket.on("gameStateUpdate", (gameState) => {
       champion.Defense = championData.Defense;
       champion.Speed = championData.Speed;
       champion.Critical = championData.Critical;
+      champion.LifeSteal = championData.LifeSteal;
       champion.cooldowns = new Map(championData.cooldowns); // Garante que os cooldowns sejam atualizados
       champion.alive = championData.HP > 0; // Atualiza o status de vivo com base no HP
 
@@ -753,6 +754,7 @@ function createNewChampion(championData) {
   champion.baseSpeed = baseData.Speed;
   champion.baseCritical = baseData.Critical;
   champion.baseLifeSteal = baseData.LifeSteal;
+  champion.cooldowns = new Map(championData.cooldowns || []);
 
   activeChampions.set(champion.id, champion);
 

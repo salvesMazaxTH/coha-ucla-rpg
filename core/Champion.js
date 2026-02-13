@@ -18,6 +18,7 @@ export class Champion {
     this.Attack = stats.Attack;
     this.Defense = stats.Defense;
     this.Speed = stats.Speed;
+    this.Evasion = stats.Evasion;
     this.Critical = stats.Critical;
     this.LifeSteal = stats.LifeSteal;
     // Base Stats (ESSENCIAL)
@@ -25,6 +26,7 @@ export class Champion {
     this.baseAttack = stats.Attack;
     this.baseDefense = stats.Defense;
     this.baseSpeed = stats.Speed;
+    this.baseEvasion = stats.Evasion;
     this.baseCritical = stats.Critical;
     this.baseLifeSteal = stats.LifeSteal;
 
@@ -87,6 +89,7 @@ export class Champion {
         Attack: baseData.Attack,
         Defense: baseData.Defense,
         Speed: baseData.Speed,
+        Evasion: baseData.Evasion,
         Critical: baseData.Critical,
         LifeSteal: baseData.LifeSteal,
       },
@@ -117,7 +120,9 @@ export class Champion {
       Attack: this.Attack,
       Defense: this.Defense,
       Speed: this.Speed,
+      Evasion: this.Evasion,
       Critical: this.Critical,
+      LifeSteal: this.LifeSteal,
 
       runtime: {
         ...this.runtime,
@@ -139,6 +144,10 @@ export class Champion {
   }
 
   // ======== Keyword System ========
+  normalizeKeywordName(keywordName) {
+    if (typeof keywordName !== "string") return "";
+    return keywordName.trim().toLowerCase();
+  }
   /**
    * Apply a keyword effect to this champion
    * @param {string} keywordName - Name of the keyword (e.g., 'inerte', 'imunidade absoluta')
@@ -147,11 +156,12 @@ export class Champion {
    * @param {object} metadata - Additional data to store with the keyword
    */
   applyKeyword(keywordName, duration, context, metadata = {}) {
-    const { currentTurn } = context;
+    const normalizedName = this.normalizeKeywordName(keywordName);
+    const { currentTurn } = context || {};
 
     if (
-      this.keywords.has("Imunidade Absoluta") &&
-      keywordName !== "imunidade absoluta"
+      this.hasKeyword("imunidade absoluta") &&
+      normalizedName !== "imunidade absoluta"
     ) {
       console.log(
         `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`,
@@ -159,18 +169,20 @@ export class Champion {
       return;
     }
 
-    this.keywords.set(keywordName, {
-      expiresAtTurn: currentTurn + duration,
+    this.keywords.set(normalizedName, {
+      expiresAtTurn: Number.isFinite(currentTurn)
+        ? currentTurn + Number(duration || 0)
+        : NaN,
       duration,
       appliedAtTurn: currentTurn,
       ...metadata,
     });
     console.log(
-      `[Champion] ${this.name} aplicou keyword "${keywordName}" até o turno ${currentTurn + duration}.`,
+      `[Champion] ${this.name} aplicou keyword "${normalizedName}" até o turno ${currentTurn + duration}.`,
     );
 
     // 🎨 Atualiza os indicadores visuais
-    StatusIndicator.animateIndicatorAdd(this, keywordName);
+    StatusIndicator.animateIndicatorAdd(this, normalizedName);
   }
 
   /**
@@ -179,7 +191,7 @@ export class Champion {
    * @returns {boolean}
    */
   hasKeyword(keywordName) {
-    return this.keywords.has(keywordName);
+    return this.keywords.has(this.normalizeKeywordName(keywordName));
   }
 
   /**
@@ -188,7 +200,7 @@ export class Champion {
    * @returns {object|null}
    */
   getKeyword(keywordName) {
-    return this.keywords.get(keywordName) || null;
+    return this.keywords.get(this.normalizeKeywordName(keywordName)) || null;
   }
 
   /**
@@ -196,14 +208,15 @@ export class Champion {
    * @param {string} keywordName - Name of the keyword to remove
    */
   removeKeyword(keywordName) {
-    if (this.keywords.has(keywordName)) {
-      this.keywords.delete(keywordName);
+    const normalizedName = this.normalizeKeywordName(keywordName);
+    if (this.keywords.has(normalizedName)) {
+      this.keywords.delete(normalizedName);
       console.log(
-        `[Champion] Keyword "${keywordName}" removido de ${this.name}.`,
+        `[Champion] Keyword "${normalizedName}" removido de ${this.name}.`,
       );
 
       // 🎨 Anima a remoção do indicador
-      StatusIndicator.animateIndicatorRemove(this, keywordName);
+      StatusIndicator.animateIndicatorRemove(this, normalizedName);
     }
   }
 
@@ -262,6 +275,7 @@ export class Champion {
 
     const limits = {
       Critical: { min: 0, max: 95 },
+      Evasion: { min: 0, max: 95 },
       default: { min: 10, max: 999 },
     };
 
@@ -482,8 +496,9 @@ export class Champion {
         ${statRow("Ataque", "Attack", this.Attack)}
         ${statRow("Defesa", "Defense", this.Defense)}
         ${statRow("Velocidade", "Speed", this.Speed)}
+        ${this.Evasion > 0 ? statRow("Evasão", "Evasion", this.Evasion + "%") : ""}
         ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical + "%") : ""}
-        ${statRow("Roubo&nbsp;de&nbsp;Vida", "LifeSteal", this.LifeSteal)}
+        ${statRow("Roubo&nbsp;de&nbsp;Vida", "LifeSteal", this.LifeSteal + "%")}
 
         <div class="skills-bar">
           ${skillsHTML}
@@ -582,7 +597,9 @@ export class Champion {
       const base = this[`base${name}`];
 
       const formattedValue =
-        name === "Critical" ? `${Number(current)}%` : current;
+        name === "Critical" || name === "Evasion" || name === "LifeSteal"
+          ? `${Number(current)}%`
+          : current;
 
       el.textContent = formattedValue;
 
@@ -598,6 +615,7 @@ export class Champion {
     updateStat("Attack");
     updateStat("Defense");
     updateStat("Speed");
+    updateStat("Evasion");
     updateStat("Critical");
     updateStat("LifeSteal");
 

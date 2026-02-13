@@ -70,10 +70,11 @@ const voltexzSkills = [
     description: `
     Cooldown: 2 turnos,
     Contato: ❌
+    Prioridade: 1
     BF 35 (Direto);
     Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
     cooldown: 2,
-    priority: 0, // prioridade padrão
+    priority: 1, // prioridade padrão
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;

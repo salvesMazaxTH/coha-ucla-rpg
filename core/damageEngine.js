@@ -615,13 +615,14 @@ export const DamageEngine = {
     return target.hasKeyword?.("imunidade absoluta");
   },
 
-  _buildImmuneResult(baseDamage, user, target) {
+  _buildImmuneResult(baseDamage, user, target, skill) {
     const targetName = formatChampionName(target);
+    const username = formatChampionName(user);
     return {
       baseDamage,
       totalDamage: 0,
       finalHP: target.HP,
-      log: `${targetName} está com Imunidade Absoluta!`,
+      log: `${username} tentou usar ${skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
   },
@@ -646,7 +647,7 @@ export const DamageEngine = {
     }
 
     if (this._isImmune(target)) {
-      return this._buildImmuneResult(baseDamage, user, target);
+      return this._buildImmuneResult(baseDamage, user, target, skill);
     }
 
     // ------ ESQUIVA -------
