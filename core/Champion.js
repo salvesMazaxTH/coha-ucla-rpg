@@ -12,14 +12,23 @@ export class Champion {
     this.entityType = identity.entityType ?? "champion";
 
     // STATS
-    this.HP = stats.HP;
-    this.maxHP = stats.maxHP ?? stats.HP;
-    this.Attack = stats.Attack;
-    this.Defense = stats.Defense;
-    this.Speed = stats.Speed;
-    this.Critical = stats.Critical;
-    this.LifeSteal = stats.LifeSteal;
+    // Stats atuais
+          this.HP = stats.HP;
+          this.maxHP = stats.HP;
+          this.Attack = stats.Attack;
+          this.Defense = stats.Defense;
+          this.Speed = stats.Speed;
+          this.Critical = stats.Critical;
+          this.LifeSteal = stats.LifeSteal;
 
+  // ⭐⭐⭐ Base Stats (ESSENCIAL)
+  this.baseHP = stats.HP;
+  this.baseAttack = stats.Attack;
+  this.baseDefense = stats.Defense;
+  this.baseSpeed = stats.Speed;
+  this.baseCritical = stats.Critical;
+  this.baseLifeSteal = stats.LifeSteal;
+    
     // COMBATE
     this.skills = combat.skills;
     this.passive = combat.passive || null;
