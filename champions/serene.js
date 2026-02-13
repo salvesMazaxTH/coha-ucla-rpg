@@ -113,8 +113,10 @@ const sereneSkills = [
       });
 
       // adiciona log da skill
-      if (result) {
+      if (result?.log) {
         result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
+      } else {
+        result.log = `${enemy.name} foi atordoado pela Quietude!`;
       }
 
       return result;
@@ -144,7 +146,7 @@ const sereneSkills = [
       allies.forEach((ally) => {
         ally.applyDamageReduction({
           amount: 30,
-          duration: 2, // acaba um turno antes da ult voltar do cooldown 
+          duration: 2, // acaba um turno antes da ult voltar do cooldown
           source: "epifania",
         });
         ally.applyKeyword("epifania_ativa", {
@@ -153,7 +155,8 @@ const sereneSkills = [
       });
 
       return {
-        log: `${formatChampionName(user)} alcança o Limiar da Existência.`,
+        log: `${formatChampionName(user)} alcança o Limiar da Existência.
+        Aliados recebem proteção de campo!`,
       };
     },
   },

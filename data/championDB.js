@@ -177,7 +177,7 @@ export const championDB = {
     name: "Voltexz",
     portrait: "assets/portraits/voltexz.png",
     HP: 285,
-    Attack: 110,
+    Attack: 115,
     Defense: 15,
     Speed: 85,
     Critical: 0,
@@ -185,7 +185,7 @@ export const championDB = {
     skills: skillsByChampion.voltexz,
     passive: {
       name: "Sobrecarga Instável",
-      description: `Sempre que Voltexz causar dano, ela sofre 25% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa 15% de dano adicional (consome o status) (Dano adicional Mín. 15) e tem 50% de chance de aplicar "Paralisado" (o alvo perde a próxima ação neste turno).`,
+      description: `Sempre que Voltexz causar dano, ela sofre 20% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa 15% de dano adicional (consome o status) (Dano adicional Mín. 15).`,
 
       afterDamageTaken({
         attacker,
@@ -202,7 +202,7 @@ export const championDB = {
         if (damage > 0) {
           const recoilDamage = editMode
             ? 999
-            : Math.round((damage * 0.25) / 5) * 5;
+            : Math.round((damage * 0.2) / 5) * 5;
 
           if (recoilDamage > 0) {
             self.takeDamage(recoilDamage);
@@ -226,12 +226,6 @@ export const championDB = {
         target.removeKeyword("sobrecarga");
 
         let log = `⚡ ACERTO ! ${attacker.name} explorou "Sobrecarga" de ${target.name} (+15% dano)!`;
-
-        const paralysisChance = Math.random();
-        if (paralysisChance < 0.5) {
-          target.applyKeyword("paralisado", 1, context, {});
-          log += `\n⚡ ${target.name} foi PARALISADO e perderá sua próxima ação!`;
-        }
 
         return {
           damage: damage + bonusDamage,
@@ -352,8 +346,91 @@ export const championDB = {
   gryskarchu: {
     name: "Gryskarchu",
     portrait: "assets/portraits/gryskarchu.png",
-    HP: 365,
-    Attack: 35,
-    Defense: 80,
+    HP: 415,
+    Attack: 25,
+    Defense: 75,
+    Speed: 25,
+    Critical: 0,
+    LifeSteal: 0,
+    skills: skillsByChampion.gryskarchu,
+    passive: {
+      name: "Fonte  ",
+      description: `Sempre que Gryskarchu curar um aliado, ele próprio recupera 15 HP (o excesso de cura é convertido em aumento do HP máximo para Gryskarchu). Se o aliado estava abaixo de 50% do HP, Gryskarchu recebe +10 DEF.`,
+      onHeal({ target, amount, self }) {
+        if (target.team !== self.team) return;
+
+        const heal = Math.round(amount / 5) * 5;
+        if (heal <= 0) return;
+        self.heal(heal);
+        // excesso ?
+        const excess = Math.max(0, self.HP - self.maxHP);
+        if (excess > 0) {
+          self.modifyHP(excess, { affectMax: true });
+        }
+
+        let log = `[PASSIVA — naosei] ${formatChampionName(self)} recuperou ${heal} HP.`;
+
+        if (target.HP < target.maxHP * 0.5) {
+          self.modifyStat({
+            statName: "Defense",
+            amount: 10,
+            context: { source: "passiva-gryskarchu" },
+            isPermanent: true,
+          });
+          log += ` ${formatChampionName(target)} estava abaixo de 50% HP, então ${formatChampionName(self)} ganhou +10 DEF!`;
+        }
+
+        return { log };
+      },
+    },
+  },
+
+  node_sparckina_07: {
+    name: "Node-SPARCKINA-07",
+    portrait: "assets/portraits/node_sparckina_07.png",
+    HP: 310,
+    Attack: 50,
+    Defense: 50,
+    Speed: 75,
+    Critical: 0,
+    LifeSteal: 0,
+    skills: skillsByChampion.node_sparckina_07,
+    passive: {
+      name: "Energia Pulsante",
+      description: `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em 10%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem 50% de chance de aplicar "Paralisado" por 2 turnos (duração aumentada por sua passiva).`,
+      onTurnStart({ target, context }) {
+        const self = target;
+        if (!self) return;
+
+        const base = Number(self.Speed) || 0;
+        const amount = Math.round((base * 0.1) / 5) * 5;
+        if (amount <= 0) return;
+
+        const result = self.modifyStat({
+          statName: "Speed",
+          amount,
+          context,
+          isPermanent: true,
+        });
+
+        return {
+          log: `[PASSIVA — Energia Pulsante] ${formatChampionName(self)} ganhou +${result?.appliedAmount ?? amount} VEL.`,
+        };
+      },
+
+      afterDamageDealt({ attacker, target, damage, context, self }) {
+        if (self !== attacker) return;
+        if (damage <= 0) return;
+        if (Math.random() > 0.5) return;
+
+        target.applyKeyword("paralisado", 2, context, {
+          sourceId: self.id,
+          sourceName: self.name,
+        });
+        return {
+          log: `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por 2 turnos!`,
+        };
+      },
+    },
   },
 };

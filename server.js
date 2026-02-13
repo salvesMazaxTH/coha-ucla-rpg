@@ -161,7 +161,7 @@ function assignChampionsToTeam(team, championKeys) {
       const baseData = championDB[championKey];
       if (baseData) {
         const id = generateId(championKey);
-        
+
         const newChampion = Champion.fromBaseData(baseData, id, team);
 
         activeChampions.set(id, newChampion);
@@ -494,8 +494,12 @@ function performSkillExecution(user, skill, targets) {
 
   if (result) {
     if (Array.isArray(result)) {
-      result.forEach((r) => io.emit("combatLog", r.log));
-    } else {
+      for (const r of result) {
+        if (r?.log) {
+          io.emit("combatLog", r.log);
+        }
+      }
+    } else if (result?.log) {
       io.emit("combatLog", result.log);
     }
   }

@@ -6,6 +6,7 @@ import voltexzSkills from "../champions/voltexz.js";
 import sereneSkills from "../champions/serene.js";
 import reyskaroneSkills from "../champions/reyskarone.js";
 import gryskarchuSkills from "../champions/gryskarchu.js";  
+import nodeSparckina07Skills from "../champions/nodeSparckina07.js";
 
 const skillsByChampion = {
   ralia: raliaSkills,
@@ -16,6 +17,7 @@ const skillsByChampion = {
   serene: sereneSkills,
   reyskarone: reyskaroneSkills,
   gryskarchu: gryskarchuSkills,
+  node_sparckina_07: nodeSparckina07Skills,
 };
 
 export default skillsByChampion;

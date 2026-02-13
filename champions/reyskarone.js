@@ -46,7 +46,7 @@ const reyskaroneSkills = [
       enemy.applyKeyword("tributo", 2, context);
 
       const bf = 65;
-      return DamageEngine.resolveDamage({
+      const result = DamageEngine.resolveDamage({
         baseDamage: (user.Attack * bf) / 100,
         user,
         target: enemy,
@@ -54,6 +54,12 @@ const reyskaroneSkills = [
         context,
         allChampions: context?.allChampions,
       });
+      
+      if (result?.log) {
+        result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
+      }
+
+      return result;
     },
   },
 
