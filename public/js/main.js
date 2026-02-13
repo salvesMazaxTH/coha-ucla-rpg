@@ -1,12 +1,14 @@
 import { championDB } from "/shared/data/championDB.js";
 import { Champion } from "/shared/core/Champion.js";
 import { StatusIndicator } from "/shared/core/statusIndicator.js";
+import { createCombatAnimationManager } from "./animation/combatAnimationManager.js";
 
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
 }); // Inicializa o cliente Socket.IO
+
 let playerId = null;
 let playerTeam = null;
 let username = null;
@@ -138,9 +140,7 @@ socket.on("forceLogout", (message) => {
   disconnectionMessage.classList.add("hidden");
   disconnectionMessage.textContent = "";
 
-  resetCombatDialogQueue();
-  removedChampionIds.clear();
-  deathPendingIds.clear();
+  combatAnimations.reset();
 
   // Opcionalmente, força um recarregamento completo da página ou reinicializa a conexão do socket, se necessário
   // socket.disconnect();
@@ -201,9 +201,7 @@ socket.on("allPlayersConnected", () => {
   }
   returnToLoginBtn.onclick = null; // Limpa o listener de evento
 
-  resetCombatDialogQueue();
-  removedChampionIds.clear();
-  deathPendingIds.clear();
+  combatAnimations.reset();
 });
 
 socket.on("playerNamesUpdate", (namesArray) => {
@@ -270,106 +268,17 @@ socket.on("playerCountUpdate", (count) => {
   // Atualiza a UI para mostrar a contagem de jogadores se necessário em outro lugar
 });
 
-function applyGameStateUpdate(gameState) {
-  if (!gameState) return;
-
-  console.log("GAME STATE RECEBIDO:", gameState.champions);
-
-  currentTurn = gameState.currentTurn;
-
-  const existingChampionElements = new Map();
-  document.querySelectorAll(".champion").forEach((el) => {
-    existingChampionElements.set(el.dataset.championId, el);
-  });
-
-  // Atualiza ou cria campeões
-  gameState.champions.forEach((championData) => {
-    if (dyingChampionIds.has(championData.id)) {
-      return;
-    }
-
-    const isRemoved = removedChampionIds.has(championData.id);
-    const isDeathPending = deathPendingIds.has(championData.id);
-
-    if (isRemoved && !isDeathPending) {
-      return;
-    }
-
-    let champion = activeChampions.get(championData.id);
-    if (champion) {
-      // Se o campeão existe, mas seu elemento DOM está faltando, renderiza-o novamente
-      if (!champion.el) {
-        if (isRemoved) {
-          return;
-        }
-        // console.warn(
-        //   `[Client] Campeão ${champion.name} (ID: ${champion.id}) encontrado em activeChampions, mas faltando elemento DOM. Renderizando novamente.`,
-        // );
-        // Remove a instância antiga de activeChampions antes de criar uma nova
-        activeChampions.delete(championData.id);
-        champion = createNewChampion(championData); // Isso irá recriar e renderizar o elemento DOM e atualizar activeChampions
-      }
-
-      // Atualiza as propriedades do campeão existente
-      champion.HP = championData.HP;
-      champion.maxHP = championData.maxHP;
-      champion.Attack = championData.Attack;
-      champion.Defense = championData.Defense;
-      champion.Speed = championData.Speed;
-      champion.Critical = championData.Critical;
-      champion.LifeSteal = championData.LifeSteal;
-      champion.cooldowns = new Map(championData.cooldowns); // Garante que os cooldowns sejam atualizados
-      champion.alive = championData.HP > 0; // Atualiza o status de vivo com base no HP
-
-      champion.keywords = new Map(championData.keywords);
-
-      // Atualiza runtime (shields, etc)
-      if (championData.runtime) {
-        champion.runtime = {
-          ...champion.runtime,
-          shields: Array.isArray(championData.runtime.shields)
-            ? championData.runtime.shields
-            : [],
-        };
-      }
-
-      champion.updateUI(currentTurn);
-      existingChampionElements.delete(championData.id); // Marca como processado
-
-      const activeChampionsArray = Array.from(activeChampions.values());
-
-      StatusIndicator.startRotationLoop(activeChampionsArray);
-    } else {
-      // Cria novo campeão
-      if (isRemoved) {
-        return;
-      }
-      const newChampion = createNewChampion(championData);
-      newChampion.updateUI(currentTurn);
-    }
-  });
-
-  // Remove campeões que não existem mais no estado do jogo, a menos que estejam morrendo atualmente
-  existingChampionElements.forEach((el, id) => {
-    if (!dyingChampionIds.has(id) && !deathPendingIds.has(id)) {
-      // Só remove se não estiver morrendo atualmente
-      el.remove();
-      activeChampions.delete(id);
-    }
-  });
-
+function updateTurnDisplay(turn) {
   const turnDisplay = document.querySelector(".turn-display");
-  const turnText = turnDisplay.querySelector("p");
-  turnText.innerHTML = `Turno ${currentTurn}`;
+  const turnText = turnDisplay?.querySelector("p");
+
+  if (turnText) {
+    turnText.innerHTML = `Turno ${turn}`;
+  }
 }
 
 socket.on("gameStateUpdate", (gameState) => {
-  if (combatQueueRunning || combatQueue.length > 0) {
-    pendingGameState = gameState;
-    return;
-  }
-
-  applyGameStateUpdate(gameState);
+  combatAnimations.handleGameStateUpdate(gameState);
 });
 
 socket.on("championAdded", (championData) => {
@@ -401,9 +310,7 @@ socket.on("championAdded", (championData) => {
 
 function applyTurnUpdate(turn) {
   currentTurn = turn;
-  const turnDisplay = document.querySelector(".turn-display");
-  const turnText = turnDisplay.querySelector("p");
-  turnText.innerHTML = `Turno ${currentTurn}`;
+  updateTurnDisplay(currentTurn);
   hasConfirmedEndTurn = false; // Redefine a confirmação para um novo turno
   endTurnBtn.disabled = false; // Reabilita o botão para um novo turno
   enableChampionActions(); // Reabilita todas as ações do campeão
@@ -419,27 +326,7 @@ function applyTurnUpdate(turn) {
 }
 
 socket.on("turnUpdate", (turn) => {
-  if (combatQueueRunning || combatQueue.length > 0) {
-    pendingTurnUpdate = turn;
-    return;
-  }
-
-  applyTurnUpdate(turn);
-});
-
-const CHAMPION_DEATH_ANIMATION_DURATION = 2000; // 2 segundos
-const DAMAGE_ANIMATION_DURATION = 958; // Duração da animação de dano para sincronizar com a morte
-const dyingChampionIds = new Set(); // Rastreia campeões atualmente em animação de morte
-const removedChampionIds = new Set();
-const deathPendingIds = new Set();
-
-socket.on("championRemoved", (championId) => {
-  console.log("Campeão removido:", championId);
-  removedChampionIds.add(championId);
-  deathPendingIds.add(championId);
-  enqueueCombatItem({
-    event: { type: "death", targetId: championId },
-  });
+  combatAnimations.handleTurnUpdate(turn);
 });
 
 socket.on("skillDenied", (message) => {
@@ -489,261 +376,28 @@ socket.on("combatLog", (message) => {
 }, { passive: true }); */
 
 const activeChampions = new Map();
-
-const championVisualTimers = new Map();
-
 const combatDialog = document.getElementById("combat-dialog");
 const combatDialogText = document.getElementById("combat-dialog-text");
-const combatQueue = [];
-let combatQueueTimer = null;
-let combatQueueRunning = false;
-let pendingGameState = null;
-let pendingTurnUpdate = null;
 
-function enqueueCombatItem(item) {
-  combatQueue.push(item);
+const combatAnimations = createCombatAnimationManager({
+  activeChampions,
+  createNewChampion,
+  getCurrentTurn: () => currentTurn,
+  setCurrentTurn: (turn) => {
+    currentTurn = turn;
+  },
+  updateTurnDisplay,
+  applyTurnUpdate,
+  startStatusIndicatorRotation: (champions) =>
+    StatusIndicator.startRotationLoop(champions),
+  combatDialog,
+  combatDialogText,
+});
 
-  if (item?.event?.type === "damage" && item.event.targetId) {
-    moveDeathItemToEnd(item.event.targetId);
-  }
-
-  if (!combatQueueRunning) {
-    processCombatQueue();
-  }
-}
-
-function moveDeathItemToEnd(targetId) {
-  const index = combatQueue.findIndex(
-    (entry) =>
-      entry?.event?.type === "death" && entry.event.targetId === targetId,
-  );
-
-  if (index === -1) return;
-
-  const [deathItem] = combatQueue.splice(index, 1);
-  combatQueue.push(deathItem);
-}
-
-function applyCombatStateSnapshots(stateList) {
-  if (!Array.isArray(stateList) || stateList.length === 0) return;
-
-  stateList.forEach((championData) => {
-    if (dyingChampionIds.has(championData.id)) {
-      return;
-    }
-
-    const isRemoved = removedChampionIds.has(championData.id);
-    const isDeathPending = deathPendingIds.has(championData.id);
-
-    if (isRemoved && !isDeathPending) {
-      return;
-    }
-
-    let champion = activeChampions.get(championData.id);
-
-    if (!champion) {
-      if (isRemoved) {
-        return;
-      }
-      champion = createNewChampion(championData);
-    } else if (!champion.el) {
-      if (isRemoved) {
-        return;
-      }
-      activeChampions.delete(championData.id);
-      champion = createNewChampion(championData);
-    }
-
-    champion.HP = championData.HP;
-    champion.maxHP = championData.maxHP;
-    champion.Attack = championData.Attack;
-    champion.Defense = championData.Defense;
-    champion.Speed = championData.Speed;
-    champion.Critical = championData.Critical;
-    champion.LifeSteal = championData.LifeSteal;
-    champion.cooldowns = new Map(championData.cooldowns);
-    champion.alive = championData.HP > 0;
-    champion.keywords = new Map(championData.keywords);
-
-    if (championData.runtime) {
-      champion.runtime = {
-        ...champion.runtime,
-        shields: Array.isArray(championData.runtime.shields)
-          ? championData.runtime.shields
-          : [],
-      };
-    }
-
-    champion.updateUI(currentTurn);
-  });
-
-  const activeChampionsArray = Array.from(activeChampions.values());
-  StatusIndicator.startRotationLoop(activeChampionsArray);
-}
-
-function processCombatQueue() {
-  if (combatQueueTimer) {
-    clearTimeout(combatQueueTimer);
-    combatQueueTimer = null;
-  }
-
-  if (combatQueue.length === 0) {
-    combatQueueRunning = false;
-    hideCombatDialog();
-    if (pendingGameState) {
-      applyGameStateUpdate(pendingGameState);
-      pendingGameState = null;
-    }
-    if (pendingTurnUpdate !== null) {
-      applyTurnUpdate(pendingTurnUpdate);
-      pendingTurnUpdate = null;
-    }
-    return;
-  }
-
-  combatQueueRunning = true;
-
-  const item = combatQueue.shift();
-
-  applyCombatStateSnapshots(item?.state);
-
-  if (item?.event?.type === "evasion") {
-    triggerChampionVisual(item.event.targetId, "evasion", 550);
-  }
-
-  if (item?.event?.type === "damage") {
-    triggerChampionVisual(
-      item.event.targetId,
-      "damage",
-      DAMAGE_ANIMATION_DURATION,
-    );
-  }
-
-  if (item?.event?.type === "death") {
-    triggerChampionDeath(item.event.targetId);
-  }
-
-  if (item?.text) {
-    showCombatDialog(item.text);
-  } else {
-    hideCombatDialog();
-  }
-
-  let duration = getCombatDialogDuration(item?.text);
-
-  if (item?.event?.type === "damage") {
-    duration = Math.max(duration, DAMAGE_ANIMATION_DURATION);
-  }
-
-  combatQueueTimer = setTimeout(() => {
-    processCombatQueue();
-  }, duration);
-}
-
-function stripHtml(value) {
-  return String(value || "").replace(/<[^>]*>/g, "");
-}
-
-function getCombatDialogDuration(text) {
-  if (!text) return 320;
-
-  const length = stripHtml(text).trim().length;
-  const base = 900;
-  const perChar = 22;
-  const max = 3400;
-
-  return Math.min(max, base + length * perChar);
-}
-
-function showCombatDialog(text) {
-  if (!combatDialog || !combatDialogText) return;
-
-  combatDialogText.innerHTML = String(text).replace(/\n/g, "<br>");
-  combatDialog.classList.remove("hidden", "leaving");
-  combatDialog.classList.add("active");
-}
-
-function hideCombatDialog() {
-  if (!combatDialog) return;
-
-  if (!combatDialog.classList.contains("active")) {
-    combatDialog.classList.add("hidden");
-    combatDialog.classList.remove("leaving");
-    return;
-  }
-
-  combatDialog.classList.remove("active");
-  combatDialog.classList.add("leaving");
-
-  setTimeout(() => {
-    combatDialog.classList.add("hidden");
-    combatDialog.classList.remove("leaving");
-  }, 200);
-}
-
-function resetCombatDialogQueue() {
-  combatQueue.length = 0;
-  combatQueueRunning = false;
-  pendingGameState = null;
-  pendingTurnUpdate = null;
-
-  if (combatQueueTimer) {
-    clearTimeout(combatQueueTimer);
-    combatQueueTimer = null;
-  }
-
-  hideCombatDialog();
-}
-
-function triggerChampionVisual(championId, className, durationMs) {
-  const champion = activeChampions.get(championId);
-  const element =
-    champion?.el ||
-    document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  const timerKey = `${championId}:${className}`;
-  const existingTimer = championVisualTimers.get(timerKey);
-
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-
-  element.classList.remove(className);
-  void element.offsetWidth;
-  element.classList.add(className);
-
-  if (Number.isFinite(durationMs) && durationMs > 0) {
-    const timer = setTimeout(() => {
-      element.classList.remove(className);
-      championVisualTimers.delete(timerKey);
-    }, durationMs);
-
-    championVisualTimers.set(timerKey, timer);
-  }
-}
-
-function triggerChampionDeath(championId) {
-  const champion = activeChampions.get(championId);
-  const element =
-    champion?.el ||
-    document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  if (dyingChampionIds.has(championId)) return;
-
-  deathPendingIds.delete(championId);
-  element.classList.add("dying");
-  dyingChampionIds.add(championId);
-
-  setTimeout(() => {
-    element.remove();
-    dyingChampionIds.delete(championId);
-    activeChampions.delete(championId);
-  }, CHAMPION_DEATH_ANIMATION_DURATION);
-}
+socket.on("championRemoved", (championId) => {
+  console.log("Campeão removido:", championId);
+  combatAnimations.handleChampionRemoved(championId);
+});
 
 let currentTurn = 1;
 
@@ -1457,7 +1111,7 @@ function logCombat(text) {
 
   const dialogText = logText ? logText.replace(/\n/g, "<br>") : null;
 
-  enqueueCombatItem({
+  combatAnimations.enqueueCombatItem({
     text: dialogText,
     event: payload.event || null,
     state: payload.state || null,

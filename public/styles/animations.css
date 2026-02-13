@@ -1,5 +1,85 @@
 /* Animation-heavy styles */
 
+/* Heal animation */
+.heal {
+  animation: heal 900ms ease-out;
+  will-change: transform, filter;
+}
+
+.heal .portrait::after,
+.portrait.heal::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 75%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(80, 255, 120, 0.4),
+    rgba(0, 255, 100, 0.25) 50%,
+    transparent 75%
+  );
+  opacity: 0.9;
+  filter: blur(5px);
+  pointer-events: none;
+}
+
+@keyframes heal {
+  0% {
+    filter: brightness(1);
+  }
+
+  15% {
+    filter: brightness(1.3) drop-shadow(0 0 8px rgba(0, 255, 100, 0.8));
+  }
+
+  40% {
+    filter: brightness(1.15) drop-shadow(0 0 6px rgba(0, 255, 100, 0.6));
+  }
+
+  100% {
+    filter: brightness(1);
+  }
+}
+
+.heal-float {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #00ff66;
+  text-shadow:
+    0 0 8px rgba(0, 255, 100, 0.9),
+    0 0 12px rgba(0, 255, 100, 0.6),
+    1px 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 100;
+  animation: healFloat 950ms ease-out forwards;
+}
+
+@keyframes healFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -110%) scale(0.9);
+  }
+}
+
 /* Trigger automatico pra teste */
 .evasion {
   animation: evade 550ms ease-out;

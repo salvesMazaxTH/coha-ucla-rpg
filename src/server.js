@@ -506,6 +506,18 @@ function buildCombatSnapshot(result) {
   return snapshots.length ? snapshots : null;
 }
 
+function emitCombatLogPayload({ log, event, state }) {
+  if (!log && !event && !state) return;
+
+  const payload = {
+    ...(log ? { log } : null),
+    ...(event ? { event } : null),
+    ...(state ? { state } : null),
+  };
+
+  io.emit("combatLog", payload);
+}
+
 function performSkillExecution(user, skill, targets) {
   console.log("[DEBUG] BEFORE startCooldown", {
     user: user.name,
@@ -572,21 +584,13 @@ function performSkillExecution(user, skill, targets) {
         const event = buildCombatEventFromResult(r);
         const state = buildCombatSnapshot(r);
 
-        if (r?.log) {
-          io.emit("combatLog", { log: r.log, event, state });
-        } else if (event || state) {
-          io.emit("combatLog", { event, state });
-        }
+        emitCombatLogPayload({ log: r?.log, event, state });
       }
     } else {
       const event = buildCombatEventFromResult(result);
       const state = buildCombatSnapshot(result);
 
-      if (result?.log) {
-        io.emit("combatLog", { log: result.log, event, state });
-      } else if (event || state) {
-        io.emit("combatLog", { event, state });
-      }
+      emitCombatLogPayload({ log: result?.log, event, state });
     }
   }
 
@@ -1298,7 +1302,6 @@ io.on("connection", (socket) => {
       "combatLog",
       `${userName} usou ${skill.name}. Ação pendente.`,
     );
-    io.emit("gameStateUpdate", getGameState()); // Atualiza o cliente com o estado atual (ex: cooldowns)
   });
 
   // Lida com o fim do turno
