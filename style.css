@@ -644,6 +644,28 @@ i {
   pointer-events: none;
 }
 
+.skill-btn.cooldown {
+  position: relative;
+}
+
+.skill-btn.cooldown .bx-hourglass {
+  font-size: 1.15rem;
+  color: #ffcc00;
+  opacity: 0.9;
+}
+
+.skill-cooldown-number {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: #ffcc00;
+  text-shadow: 0 0 6px rgba(255, 204, 0, 0.5);
+  pointer-events: none;
+}
+
 /* 👑 Ultimate */
 .skill-btn.ultimate {
   border-color: rgba(255, 215, 0, 0.7);

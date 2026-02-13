@@ -13,22 +13,21 @@ export class Champion {
 
     // STATS
     // Stats atuais
-          this.HP = stats.HP;
-          this.maxHP = stats.HP;
-          this.Attack = stats.Attack;
-          this.Defense = stats.Defense;
-          this.Speed = stats.Speed;
-          this.Critical = stats.Critical;
-          this.LifeSteal = stats.LifeSteal;
+    this.HP = stats.HP;
+    this.maxHP = stats.HP;
+    this.Attack = stats.Attack;
+    this.Defense = stats.Defense;
+    this.Speed = stats.Speed;
+    this.Critical = stats.Critical;
+    this.LifeSteal = stats.LifeSteal;
+    // Base Stats (ESSENCIAL)
+    this.baseHP = stats.HP;
+    this.baseAttack = stats.Attack;
+    this.baseDefense = stats.Defense;
+    this.baseSpeed = stats.Speed;
+    this.baseCritical = stats.Critical;
+    this.baseLifeSteal = stats.LifeSteal;
 
-  // ⭐⭐⭐ Base Stats (ESSENCIAL)
-  this.baseHP = stats.HP;
-  this.baseAttack = stats.Attack;
-  this.baseDefense = stats.Defense;
-  this.baseSpeed = stats.Speed;
-  this.baseCritical = stats.Critical;
-  this.baseLifeSteal = stats.LifeSteal;
-    
     // COMBATE
     this.skills = combat.skills;
     this.passive = combat.passive || null;
@@ -93,7 +92,7 @@ export class Champion {
       },
 
       combat: {
-        skills: baseData.skills.map(s => ({ ...s })),
+        skills: baseData.skills.map((s) => ({ ...s })),
         passive: baseData.passive,
       },
     });
@@ -149,6 +148,17 @@ export class Champion {
    */
   applyKeyword(keywordName, duration, context, metadata = {}) {
     const { currentTurn } = context;
+
+    if (
+      this.keywords.has("Imunidade Absoluta") &&
+      keywordName !== "imunidade absoluta"
+    ) {
+      console.log(
+        `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`,
+      );
+      return;
+    }
+
     this.keywords.set(keywordName, {
       expiresAtTurn: currentTurn + duration,
       duration,
@@ -314,7 +324,7 @@ export class Champion {
   }
 
   addShield(amount, decayPerTurn = 0, context) {
-    console.log("SERVER ADD SHIELD:", this.name, amount);
+    /*     console.log("SERVER ADD SHIELD:", this.name, amount); */
 
     this.runtime.shields.push({
       amount,
@@ -441,6 +451,7 @@ export class Champion {
                 data-champion-id="${this.id}"
                 data-skill-key="${skill.key}"
                 data-skill-index="${index}"
+                data-default-label="${label}"
                 title="${skill.name}\n${skill.description || ""}"
               >
                 <span class="skill-label">${label}</span>
@@ -521,9 +532,7 @@ export class Champion {
   }
 
   // 🔄 Atualiza UI sem buscar no DOM toda vez
-  updateUI() {
-    console.log("CLIENT SHIELDS:", this.name, this.runtime?.shields);
-
+  updateUI(currentTurn) {
     if (!this.el) {
       /*       console.error(
         `[Client] No DOM element (this.el) found for ${this.name} (ID: ${this.id}).`,
@@ -533,6 +542,8 @@ export class Champion {
     console.log(
       `[Client] Updating HP for ${this.name}: ${this.HP}/${this.maxHP}`,
     );
+
+    const normalizedTurn = Number.isFinite(currentTurn) ? currentTurn : null;
 
     // HP
     const HpDiv = this.el.querySelector(".hp");
@@ -589,6 +600,45 @@ export class Champion {
     updateStat("Speed");
     updateStat("Critical");
     updateStat("LifeSteal");
+
+    const cooldowns =
+      this.cooldowns instanceof Map
+        ? this.cooldowns
+        : new Map(this.cooldowns || []);
+
+    this.el.querySelectorAll(".skill-btn").forEach((button) => {
+      const skillKey = button.dataset.skillKey;
+      const entry = cooldowns.get(skillKey);
+      const remaining =
+        entry && normalizedTurn !== null
+          ? entry.availableAt - normalizedTurn
+          : null;
+      const isOnCooldown = Boolean(entry && remaining > 0);
+
+      if (isOnCooldown) {
+        if (!button.disabled) {
+          button.dataset.disabledByCooldown = "true";
+        }
+        button.disabled = true;
+        button.dataset.cooldownActive = "true";
+        button.classList.add("cooldown");
+        button.innerHTML = `
+          <i class="bx bx-hourglass"></i>
+          <span class="skill-cooldown-number">${remaining}</span>
+        `;
+      } else {
+        button.classList.remove("cooldown");
+        button.dataset.cooldownActive = "false";
+
+        if (button.dataset.disabledByCooldown === "true") {
+          button.disabled = false;
+          button.dataset.disabledByCooldown = "false";
+        }
+
+        const defaultLabel = button.dataset.defaultLabel || "";
+        button.innerHTML = `<span class="skill-label">${defaultLabel}</span>`;
+      }
+    });
 
     const lifeStealRow = this.el.querySelector(
       `.stat-row[data-stat="LifeSteal"]`,

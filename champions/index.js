@@ -1,23 +1,23 @@
-import raliaSkills from "../champions/ralia.js";
-import naelysSkills from "../champions/naelys.js";
-import tharoxSkills from "../champions/tharox.js";
-import vaelSkills from "../champions/vael.js";
-import voltexzSkills from "../champions/voltexz.js";
-import sereneSkills from "../champions/serene.js";
-import reyskaroneSkills from "../champions/reyskarone.js";
-import gryskarchuSkills from "../champions/gryskarchu.js";  
-import nodeSparckina07Skills from "../champions/nodeSparckina07.js";
+import ralia from "./ralia/index.js";
+import naelys from "./naelys/index.js";
+import tharox from "./tharox/index.js";
+import vael from "./vael/index.js";
+import voltexz from "./voltexz/index.js";
+import serene from "./serene/index.js";
+import reyskarone from "./reyskarone/index.js";
+import gryskarchu from "./gryskarchu/index.js";
+import node_sparckina_07 from "./node_sparckina_07/index.js";
 
-const skillsByChampion = {
-  ralia: raliaSkills,
-  naelys: naelysSkills,
-  tharox: tharoxSkills,
-  vael: vaelSkills,
-  voltexz: voltexzSkills,
-  serene: sereneSkills,
-  reyskarone: reyskaroneSkills,
-  gryskarchu: gryskarchuSkills,
-  node_sparckina_07: nodeSparckina07Skills,
+const championDB = {
+  ralia,
+  naelys,
+  tharox,
+  vael,
+  voltexz,
+  serene,
+  reyskarone,
+  gryskarchu,
+  node_sparckina_07,
 };
 
-export default skillsByChampion;
+export default championDB;

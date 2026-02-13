@@ -578,6 +578,18 @@ function processChampionsDeaths() {
   }
 }
 
+function purgeExpiredCooldowns(turnNumber) {
+  activeChampions.forEach((champion) => {
+    if (!champion.cooldowns || champion.cooldowns.size === 0) return;
+
+    for (const [skillKey, entry] of champion.cooldowns.entries()) {
+      if (turnNumber >= entry.availableAt) {
+        champion.cooldowns.delete(skillKey);
+      }
+    }
+  });
+}
+
 // Finaliza o turno: resolve ações, incrementa turno, limpa efeitos expirados
 function handleEndTurn() {
   console.log("[Server] Iniciando finalização do turno...");
@@ -591,6 +603,8 @@ function handleEndTurn() {
   // Incrementar turno
   currentTurn++;
   playersReadyToEndTurn.clear();
+
+  purgeExpiredCooldowns(currentTurn);
 
   // 🔥 Disparar passivas de início de turno
   activeChampions.forEach((champion) => {
@@ -1118,6 +1132,8 @@ io.on("connection", (socket) => {
     const playerSlot = connectedSockets.get(socket.id);
     const player = players[playerSlot];
     const user = activeChampions.get(userId);
+
+    console.log("SERVER CD MAP:", user.name, [...user.cooldowns.entries()]);
 
     if (!player || !user || user.team !== player.team)
       return socket.emit("skillDenied", "Sem permissão.");

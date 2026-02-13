@@ -1,5 +1,5 @@
-import { DamageEngine } from "../core/damageEngine.js";
-import { formatChampionName } from "../core/formatters.js";
+import { DamageEngine } from "../../core/damageEngine.js";
+import { formatChampionName } from "../../core/formatters.js";
 
 const gryskarchuSkills = [
   // =========================
@@ -60,7 +60,7 @@ const gryskarchuSkills = [
     key: "florescimento_vital",
     name: "Florescimento Vital",
     description: `Cooldown: 1 turno
-     Efeitos: 
+     Efeitos:
      Gryskarchu cura a si e a todos os aliados ativos.
      Cura = 50 HP`,
     cooldown: 1,

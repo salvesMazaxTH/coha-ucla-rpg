@@ -12,7 +12,32 @@ export const DamageEngine = {
     return Math.round(x / 5) * 5;
   },
 
-  // -------------------------------------------------
+  // ------------------------
+
+  _rollEvasion({ attacker, target, context }) {
+    if (target.Evasion <= 0) return false;
+    const chance = target.Evasion || 0;
+
+    if (!chance) return false;
+
+    const roll = Math.random() * 100;
+
+    const evaded = roll < chance;
+
+    if (debugMode) {
+      console.log(`🎯 Roll de Evasão: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance de Evasão: ${chance}%`);
+      console.log(evaded ? "✅ Ataque EVADIDO!" : "❌ Ataque ACERTADO");
+    }
+
+    const finalLog = evaded
+      ? `${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
+      : `${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
+
+    return evaded ? finalLog : false;
+  },
+
+  // -------------------------
   // Crit. related
 
   rollCrit(user, context, options = {}) {
@@ -174,92 +199,87 @@ export const DamageEngine = {
     return damage;
   },
 
-  
-// ================================
+  // ================================
 
   defenseToPercent(defense) {
-  if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
+    if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
-  if (!defense) {
-    if (debugMode) {
-      console.log(`Defense: ${defense} (ou 0)`);
-      console.log(`Redução percentual: 0%`);
-      console.groupEnd();
+    if (!defense) {
+      if (debugMode) {
+        console.log(`Defense: ${defense} (ou 0)`);
+        console.log(`Redução percentual: 0%`);
+        console.groupEnd();
+      }
+      return 0;
     }
-    return 0;
-  }
 
-  // --- Constantes globais do modelo ---
-  const BASE_DEF = 150;
-  const BASE_REDUCTION = 0.75;
-  const MAX_REDUCTION = 0.95;
-  const K = 0.0045;
+    // --- Constantes globais do modelo ---
+    const BASE_DEF = 150;
+    const BASE_REDUCTION = 0.75;
+    const MAX_REDUCTION = 0.95;
+    const K = 0.0045;
 
-  // --- Curva base (até 150) ---
-  const curve = {
-    0: 0.0,
-    35: 0.25,
-    60: 0.37,
-    85: 0.52,
-    110: 0.6,
-    125: 0.65,
-    150: 0.75,
-  };
+    // --- Curva base (até 150) ---
+    const curve = {
+      0: 0.0,
+      35: 0.25,
+      60: 0.37,
+      85: 0.52,
+      110: 0.6,
+      125: 0.65,
+      150: 0.75,
+    };
 
-  const keys = Object.keys(curve)
-    .map(Number)
-    .sort((a, b) => a - b);
+    const keys = Object.keys(curve)
+      .map(Number)
+      .sort((a, b) => a - b);
 
-  let effective = 0;
+    let effective = 0;
 
-  // ================================
-  // Segmento 1 — interpolado
-  // ================================
-  if (defense <= BASE_DEF) {
+    // ================================
+    // Segmento 1 — interpolado
+    // ================================
+    if (defense <= BASE_DEF) {
+      if (defense <= keys[0]) {
+        effective = curve[keys[0]];
+      } else {
+        for (let i = 0; i < keys.length - 1; i++) {
+          const a = keys[i];
+          const b = keys[i + 1];
 
-    if (defense <= keys[0]) {
-      effective = curve[keys[0]];
-    } else {
-      for (let i = 0; i < keys.length - 1; i++) {
-        const a = keys[i];
-        const b = keys[i + 1];
-
-        if (defense >= a && defense <= b) {
-          const t = (defense - a) / (b - a);
-          effective = curve[a] + t * (curve[b] - curve[a]);
-          break;
+          if (defense >= a && defense <= b) {
+            const t = (defense - a) / (b - a);
+            effective = curve[a] + t * (curve[b] - curve[a]);
+            break;
+          }
         }
       }
     }
+    // ================================
+    // Segmento 2 — cauda assintótica
+    // ================================
+    else {
+      effective =
+        BASE_REDUCTION +
+        (MAX_REDUCTION - BASE_REDUCTION) *
+          (1 - Math.exp(-K * (defense - BASE_DEF)));
+    }
 
-  }
-  // ================================
-  // Segmento 2 — cauda assintótica
-  // ================================
-  else {
+    // Segurança numérica
+    effective = Math.min(effective, MAX_REDUCTION);
 
-    effective =
-      BASE_REDUCTION +
-      (MAX_REDUCTION - BASE_REDUCTION) *
-        (1 - Math.exp(-K * (defense - BASE_DEF)));
-
-  }
-
-  // Segurança numérica
-  effective = Math.min(effective, MAX_REDUCTION);
-
-  if (debugMode) {
-    console.log(`Defense original: ${defense}`);
-    console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
-    console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
-    console.groupEnd();
-  }
+    if (debugMode) {
+      console.log(`Defense original: ${defense}`);
+      console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
+      console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
+      console.groupEnd();
+    }
 
     return effective;
   },
 
   // ------------------
-  
+
   _composeFinalDamage(mode, damage, crit, direct, target, context) {
     if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
 
@@ -629,6 +649,12 @@ export const DamageEngine = {
       return this._buildImmuneResult(baseDamage, user, target);
     }
 
+    // ------ ESQUIVA -------
+    const evasion = this._rollEvasion({ attacker: user, target, context });
+    if (evasion) {
+      return evasion.finalLog;
+    }
+    // ---------------------
     let crit = this.processCrit({
       baseDamage,
       user,

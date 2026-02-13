@@ -265,6 +265,8 @@ socket.on("playerCountUpdate", (count) => {
 socket.on("gameStateUpdate", (gameState) => {
   console.log("GAME STATE RECEBIDO:", gameState.champions);
 
+  currentTurn = gameState.currentTurn;
+
   const existingChampionElements = new Map();
   document.querySelectorAll(".champion").forEach((el) => {
     existingChampionElements.set(el.dataset.championId, el);
@@ -306,13 +308,7 @@ socket.on("gameStateUpdate", (gameState) => {
         };
       }
 
-      console.log(
-        "[CLIENT] RUNTIME BEFORE UI:",
-        champion.name,
-        champion.runtime,
-      );
-
-      champion.updateUI();
+      champion.updateUI(currentTurn);
       existingChampionElements.delete(championData.id); // Marca como processado
 
       const activeChampionsArray = Array.from(activeChampions.values());
@@ -320,7 +316,8 @@ socket.on("gameStateUpdate", (gameState) => {
       StatusIndicator.startRotationLoop(activeChampionsArray);
     } else {
       // Cria novo campeão
-      createNewChampion(championData);
+      const newChampion = createNewChampion(championData);
+      newChampion.updateUI(currentTurn);
     }
   });
 
@@ -333,7 +330,6 @@ socket.on("gameStateUpdate", (gameState) => {
     }
   });
 
-  currentTurn = gameState.currentTurn;
   const turnDisplay = document.querySelector(".turn-display");
   const turnText = turnDisplay.querySelector("p");
   turnText.innerHTML = `Turno ${currentTurn}`;
@@ -376,7 +372,7 @@ socket.on("turnUpdate", (turn) => {
   enableChampionActions(); // Reabilita todas as ações do campeão
   activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
   activeChampions.forEach((champion) => {
-    champion.updateUI(); // Atualiza a UI para todos os campeões
+    champion.updateUI(currentTurn); // Atualiza a UI para todos os campeões
     // Espera DOM estabilizar
     requestAnimationFrame(() => {
       StatusIndicator.updateChampionIndicators(champion);
@@ -452,7 +448,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
 
   // 🔥 Marca ação somente AGORA
   user.markActionTaken();
-  user.updateUI();
+  user.updateUI(currentTurn);
 
   socket.emit("useSkill", {
     userId,
@@ -1361,6 +1357,9 @@ function disableChampionActions() {
 
 function enableChampionActions() {
   document.querySelectorAll(".skill-btn").forEach((button) => {
+    if (button.dataset.cooldownActive === "true") {
+      return;
+    }
     button.disabled = false;
   });
   // Referências a championSelectBar comentadas foram removidas, pois não estão definidas.

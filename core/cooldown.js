@@ -29,7 +29,7 @@ export function startCooldown(user, skill, currentTurn) {
     availableAt,
     duration: skill.cooldown,
   });
-  
+
   console.log(
     `[COOLDOWN] ${skill.name} usado no turno ${currentTurn}, disponível no ${availableAt}`,
   );
@@ -41,7 +41,7 @@ export function checkAndValidateCooldowns({
   currentTurn,
   editMode,
 }) {
-  if (editMode) return null;
+  if (editMode === true || editMode?.ignoreCooldowns) return null;
 
   const cooldownInfo = isSkillOnCooldown(user, skill, currentTurn);
   if (!cooldownInfo) return null;

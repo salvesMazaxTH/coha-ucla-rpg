@@ -1,4 +1,4 @@
-import { DamageEngine } from "../core/damageEngine.js";
+import { DamageEngine } from "../../core/damageEngine.js";
 
 const voltexzSkills = [
   {
