@@ -109,13 +109,13 @@ const reyskaroneSkills = [
     key: "pacto_carmesim",
     name: "Pacto Carmesim",
     description: `
-    Cooldown: 3 turnos
+    Cooldown: 2 turnos
     Seleciona um aliado:
     Ele recebe:
-    +35 ATQ
-    +30% LifeSteal
-    Duração: 3 turnos`,
-    cooldown: 3,
+    +60% ATQ
+    +35% LifeSteal
+    Duração: 2 turnos`,
+    cooldown: 2,
     priority: 2,
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
@@ -123,15 +123,15 @@ const reyskaroneSkills = [
 
       ally.modifyStat({
         statName: "Attack",
-        amount: 35,
-        duration: 3,
+        amount: ally.Attack * 0.6,
+        duration: 2,
         context,
       });
 
       ally.modifyStat({
         statName: "LifeSteal",
-        amount: 25,
-        duration: 3,
+        amount: 35,
+        duration: 2
         context,
       });
 
