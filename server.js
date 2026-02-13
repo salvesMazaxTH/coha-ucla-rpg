@@ -15,9 +15,9 @@ import { generateId } from "./core/id.js";
 import { formatChampionName, formatPlayerName } from "./core/formatters.js";
 
 const editMode = {
-  enabled: true,
+  enabled: false,
   autoSelection: false, // Seleção automática de campeões para ambos os jogadores
-  ignoreCooldowns: true, // Ignora cooldowns para facilitar os testes
+  ignoreCooldowns: false, // Ignora cooldowns para facilitar os testes
   actMultipleTimesPerTurn: true, // Permite que os campeões ajam múltiplas vezes por turno
 };
 
