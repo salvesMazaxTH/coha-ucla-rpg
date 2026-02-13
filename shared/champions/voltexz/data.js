@@ -1,6 +1,6 @@
 export default {
   name: "Voltexz",
-  portrait: "assets/portraits/voltexz.png",
+  portrait: "/assets/portraits/voltexz.png",
   HP: 285,
   Attack: 115,
   Defense: 15,

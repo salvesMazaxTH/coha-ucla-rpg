@@ -1,0 +1,218 @@
+/* Animation-heavy styles */
+
+/* Trigger automatico pra teste */
+.evasion {
+  animation: evade 550ms ease-out;
+  will-change: transform, filter;
+}
+
+/* Efeito fantasma (miragem) - aplicado na estrutura existente */
+.evasion .portrait::after,
+.portrait.evasion::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 75%;
+  background: radial-gradient(
+    circle at 40% 35%,
+    rgba(255, 255, 255, 0.25),
+    rgba(0, 255, 150, 0.08) 60%,
+    transparent 70%
+  );
+  opacity: 0.7;
+  filter: blur(4px);
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+@keyframes evade {
+  0% {
+    transform: translateX(0) skewX(0);
+    filter: blur(0px);
+  }
+
+  10% {
+    transform: translateX(-22px) skewX(-8deg);
+    filter: blur(2px);
+  }
+
+  20% {
+    transform: translateX(18px) skewX(6deg);
+  }
+
+  30% {
+    transform: translateX(-14px);
+  }
+
+  40% {
+    transform: translateX(10px);
+    filter: blur(1px);
+  }
+
+  55% {
+    transform: translateX(-6px);
+  }
+
+  70% {
+    transform: translateX(4px);
+  }
+
+  100% {
+    transform: translateX(0);
+    filter: blur(0px);
+  }
+}
+
+/* Keyframes */
+@keyframes collapse {
+  0% {
+    opacity: 1;
+    filter: saturate(1) brightness(1);
+    transform: scale(1) translateY(0);
+  }
+
+  60% {
+    opacity: 0.6;
+    filter: saturate(0.4) brightness(0.7);
+    transform: scale(0.95) translateY(10px);
+  }
+
+  100% {
+    opacity: 0.15;
+    filter: saturate(0) brightness(0.4);
+    transform: scale(0.85) translateY(20px);
+  }
+}
+
+@keyframes deathOverlay {
+  0% {
+    opacity: 0;
+    transform: scale(1.4) rotate(-10deg);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+}
+
+@keyframes indicatorFloat {
+  0% {
+    transform: translate(-50%, 0px);
+  }
+  50% {
+    transform: translate(-50%, -2px);
+  }
+  100% {
+    transform: translate(-50%, 0px);
+  }
+}
+
+@keyframes indicatorPulse {
+  0% {
+    transform: translateX(-50%) scale(0.65);
+    filter: brightness(2.2) drop-shadow(0 0 14px rgba(255, 255, 180, 0.9));
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.18);
+    filter: brightness(1.8) drop-shadow(0 0 18px rgba(255, 255, 150, 1));
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50%) scale(1);
+    filter: brightness(1.05) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Champion death animation */
+.champion.dying {
+  opacity: 0.8;
+  animation: collapse 950ms ease-out forwards;
+  pointer-events: none;
+}
+
+.champion.dying::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/death_display.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: clamp(100px, 65vw, 70%);
+  opacity: 0;
+  pointer-events: none;
+  animation: deathOverlay 600ms ease-out forwards;
+}
+
+/* Status Indicator */
+.status-indicator {
+  position: absolute;
+  top: 5px;
+  left: 59%;
+  z-index: 30;
+  width: 48px;
+  border-radius: 100%;
+  aspect-ratio: 1/1;
+  border: 3px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  pointer-events: none;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)) brightness(1.05)
+    contrast(1.1);
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease;
+  animation: indicatorFloat 2.8s ease-in-out infinite;
+}
+
+.status-indicator.pulse {
+  animation:
+    indicatorFloat 2.8s ease-in-out infinite,
+    indicatorPulse 0.6s ease-out;
+}
+
+.status-indicator img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  display: block;
+  transform: translateZ(0);
+}
+
+.status-indicator::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 210, 80, 0.35),
+    transparent 70%
+  );
+  z-index: -1;
+}

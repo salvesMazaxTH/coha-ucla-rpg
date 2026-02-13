@@ -5,13 +5,29 @@
 export const StatusIndicator = {
   // Mapeamento de keywords -> ícones e cores
   keywordIcons: {
-    paralisado: { type: "emoji", value: "⚡ 🚷 ⚡", background: "rgba(226, 109, 31, 0.8)" },
-    atordoado: { type: "emoji", value: "💫", background: "rgba(241, 241, 241, 0.8)" },
-    inerte: { type: "emoji", value: "🔒", background: "rgba(128, 128, 128, 0.8)" },
-    sobrecarga: { type: "emoji", value: "⚡", background: "rgba(255, 255, 0, 0.8)" },
+    paralisado: {
+      type: "emoji",
+      value: "⚡ 🚷 ⚡",
+      background: "rgba(226, 109, 31, 0.8)",
+    },
+    atordoado: {
+      type: "emoji",
+      value: "💫",
+      background: "rgba(241, 241, 241, 0.8)",
+    },
+    inerte: {
+      type: "emoji",
+      value: "🔒",
+      background: "rgba(128, 128, 128, 0.8)",
+    },
+    sobrecarga: {
+      type: "emoji",
+      value: "⚡",
+      background: "rgba(255, 255, 0, 0.8)",
+    },
     "imunidade absoluta": {
       type: "image",
-      value: "assets/imunidade_absoluta_indicator.png",
+      value: "/assets/imunidade_absoluta_indicator.png",
       background: "rgba(0, 255, 255, 0.8)",
     },
     tributo: {

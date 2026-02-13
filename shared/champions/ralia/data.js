@@ -1,6 +1,6 @@
 export default {
   name: "Rália",
-  portrait: "assets/portraits/ralia.png",
+  portrait: "/assets/portraits/ralia.png",
   HP: 365,
   Attack: 45,
   Defense: 70,

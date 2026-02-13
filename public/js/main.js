@@ -1,6 +1,6 @@
-import { championDB } from "/data/championDB.js";
-import { Champion } from "/core/Champion.js";
-import { StatusIndicator } from "/core/statusIndicator.js";
+import { championDB } from "/shared/data/championDB.js";
+import { Champion } from "/shared/core/Champion.js";
+import { StatusIndicator } from "/shared/core/statusIndicator.js";
 
 const socket = io({
   reconnection: true,

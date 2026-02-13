@@ -1,6 +1,6 @@
 export default {
   name: "Serene",
-  portrait: "assets/portraits/serene.png",
+  portrait: "/assets/portraits/serene.png",
   HP: 350,
   Attack: 40,
   Defense: 30,

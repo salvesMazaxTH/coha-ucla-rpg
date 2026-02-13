@@ -4,13 +4,19 @@ import { Server } from "socket.io";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { championDB } from "./data/championDB.js";
-import { Champion } from "./core/Champion.js";
+import { championDB } from "../shared/data/championDB.js";
+import { Champion } from "../shared/core/Champion.js";
 
-import { startCooldown, checkAndValidateCooldowns } from "./core/cooldown.js";
+import {
+  startCooldown,
+  checkAndValidateCooldowns,
+} from "../shared/core/cooldown.js";
 
-import { generateId } from "./core/id.js";
-import { formatChampionName, formatPlayerName } from "./core/formatters.js";
+import { generateId } from "../shared/core/id.js";
+import {
+  formatChampionName,
+  formatPlayerName,
+} from "../shared/core/formatters.js";
 
 const editMode = {
   enabled: true,
@@ -30,10 +36,11 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 // Servir arquivos estáticos
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, "..", "public")));
+app.use("/shared", express.static(path.join(__dirname, "..", "shared")));
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
 
 let players = [null, null]; // Array para armazenar dados do jogador para o slot 0 (Time 1) e slot 1 (Time 2)

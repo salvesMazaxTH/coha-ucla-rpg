@@ -1,6 +1,6 @@
 export default {
   name: "Vael",
-  portrait: "assets/portraits/vael.png",
+  portrait: "/assets/portraits/vael.png",
   HP: 290,
   Attack: 100,
   Defense: 20,

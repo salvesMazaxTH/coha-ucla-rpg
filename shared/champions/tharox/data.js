@@ -1,6 +1,6 @@
 export default {
   name: "Tharox",
-  portrait: "assets/portraits/tharox.png",
+  portrait: "/assets/portraits/tharox.png",
   HP: 380,
   Attack: 40,
   Defense: 80,
