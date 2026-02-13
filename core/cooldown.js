@@ -18,10 +18,18 @@ export function startCooldown(user, skill, currentTurn) {
 
   const availableAt = currentTurn + skill.cooldown + 1;
 
+  console.log("[DEBUG START CD]", {
+    skill: skill.key,
+    cd: skill.cooldown,
+    turn: currentTurn,
+    availableAt,
+  });
+
   user.cooldowns.set(skill.key, {
     availableAt,
     duration: skill.cooldown,
   });
+  
   console.log(
     `[COOLDOWN] ${skill.name} usado no turno ${currentTurn}, disponível no ${availableAt}`,
   );

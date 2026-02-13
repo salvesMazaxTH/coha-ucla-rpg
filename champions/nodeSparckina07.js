@@ -27,7 +27,7 @@ const nodeSparckina07Skills = [
   {
     key: "sparkling_slash",
     name: "Sparkling Slash",
-    description: `Cooldown: 1 turnos
+    description: `Cooldown: 2 turnos
      Efeitos:
      Dano Bruto = BF 125
      `,

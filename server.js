@@ -433,7 +433,18 @@ function resolveSkillTargets(user, skill, action) {
 }
 
 function performSkillExecution(user, skill, targets) {
+  console.log("[DEBUG] BEFORE startCooldown", {
+    user: user.name,
+    skill: skill.key,
+    turn: currentTurn,
+    cooldown: skill.cooldown,
+  });
+
   startCooldown(user, skill, currentTurn);
+
+  console.log("[DEBUG] AFTER startCooldown", {
+    cooldownMap: [...user.cooldowns.entries()],
+  });
 
   const aliveChampionsArray = [...activeChampions.values()].filter(
     (c) => c.alive,
