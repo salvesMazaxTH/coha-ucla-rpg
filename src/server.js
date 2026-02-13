@@ -441,6 +441,53 @@ function resolveSkillTargets(user, skill, action) {
   return currentTargets;
 }
 
+function buildCombatEventFromResult(result) {
+  if (!result || typeof result !== "object") return null;
+
+  const { targetId, userId, totalDamage, evaded } = result;
+
+  if (evaded && targetId) {
+    return {
+      type: "evasion",
+      targetId,
+      sourceId: userId,
+    };
+  }
+
+  if (totalDamage > 0 && targetId) {
+    return {
+      type: "damage",
+      targetId,
+      sourceId: userId,
+      amount: totalDamage,
+    };
+  }
+
+  return null;
+}
+
+function buildCombatSnapshot(result) {
+  if (!result || typeof result !== "object") return null;
+
+  const ids = new Set();
+
+  if (result.userId) ids.add(result.userId);
+  if (result.targetId) ids.add(result.targetId);
+
+  if (ids.size === 0) return null;
+
+  const snapshots = [];
+
+  ids.forEach((id) => {
+    const champion = activeChampions.get(id);
+    if (champion?.serialize) {
+      snapshots.push(champion.serialize());
+    }
+  });
+
+  return snapshots.length ? snapshots : null;
+}
+
 function performSkillExecution(user, skill, targets) {
   console.log("[DEBUG] BEFORE startCooldown", {
     user: user.name,
@@ -515,12 +562,24 @@ function performSkillExecution(user, skill, targets) {
   if (result) {
     if (Array.isArray(result)) {
       for (const r of result) {
+        const event = buildCombatEventFromResult(r);
+        const state = buildCombatSnapshot(r);
+
         if (r?.log) {
-          io.emit("combatLog", r.log);
+          io.emit("combatLog", { log: r.log, event, state });
+        } else if (event || state) {
+          io.emit("combatLog", { event, state });
         }
       }
-    } else if (result?.log) {
-      io.emit("combatLog", result.log);
+    } else {
+      const event = buildCombatEventFromResult(result);
+      const state = buildCombatSnapshot(result);
+
+      if (result?.log) {
+        io.emit("combatLog", { log: result.log, event, state });
+      } else if (event || state) {
+        io.emit("combatLog", { event, state });
+      }
     }
   }
 }

@@ -31,10 +31,10 @@ export const DamageEngine = {
     }
 
     const finalLog = evaded
-      ? `${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
-      : `${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
+      ? `\n${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
+      : `\n${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
 
-    return evaded ? finalLog : false;
+    return evaded ? { evaded: true, log: finalLog } : false;
   },
 
   // -------------------------
@@ -622,6 +622,9 @@ export const DamageEngine = {
       baseDamage,
       totalDamage: 0,
       finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
       log: `${username} tentou usar ${skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
@@ -652,8 +655,17 @@ export const DamageEngine = {
 
     // ------ ESQUIVA -------
     const evasion = this._rollEvasion({ attacker: user, target, context });
-    if (evasion) {
-      return evasion.finalLog;
+    if (evasion?.evaded) {
+      return {
+        baseDamage,
+        totalDamage: 0,
+        finalHP: target.HP,
+        targetId: target.id,
+        userId: user.id,
+        evaded: true,
+        log: evasion.log,
+        crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+      };
     }
     // ---------------------
     let crit = this.processCrit({
@@ -775,6 +787,9 @@ export const DamageEngine = {
       baseDamage,
       totalDamage: finalDamage,
       finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
       log,
       crit: {
         chance: user.Critical || 0,

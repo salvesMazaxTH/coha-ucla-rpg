@@ -25,6 +25,25 @@
   pointer-events: none;
 }
 
+/* Dano: brilho curto para feedback simetrico */
+.damage .portrait::after,
+.portrait.damage::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 75%;
+  background: radial-gradient(
+    circle at 55% 45%,
+    rgba(255, 120, 120, 0.35),
+    rgba(255, 40, 40, 0.2) 55%,
+    transparent 75%
+  );
+  opacity: 0.8;
+  filter: blur(4px);
+  transform: translateX(4px);
+  pointer-events: none;
+}
+
 @keyframes evade {
   0% {
     transform: translateX(0) skewX(0);
@@ -141,6 +160,75 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes dialogIn {
+  from {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dialogOut {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-6px) scale(0.985);
+    opacity: 0;
+  }
+}
+
+/* Damage animation */
+.damage {
+  animation: damage 950ms ease-out;
+  will-change: transform, opacity;
+}
+
+@keyframes damage {
+  0% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
+
+  /* impacto vermelho */
+  12% {
+    transform: translateX(-12px) scale(0.97);
+    filter: brightness(0.6) sepia(1) saturate(6) hue-rotate(-50deg);
+  }
+
+  /* tremor */
+  25% {
+    transform: translateX(10px);
+  }
+
+  35% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  65% {
+    transform: translateX(-3px);
+  }
+
+  /* recuperação */
+  80% {
+    transform: translateX(1px);
+    filter: brightness(1.1);
+  }
+
+  100% {
+    transform: translateX(0) scale(1);
+    filter: none;
   }
 }
 
