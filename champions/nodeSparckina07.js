@@ -31,7 +31,7 @@ const nodeSparckina07Skills = [
      Efeitos:
      Dano Bruto = BF 125
      `,
-    cooldown: 1,
+    cooldown: 2,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
