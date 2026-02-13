@@ -61,7 +61,7 @@ export class Champion {
 
     if (!ultimate.cooldown || ultimate.cooldown <= 0) return;
 
-    const availableAt = 3; // 🔥 Regra global fixa
+    const availableAt = 1; // 🔥 Regra global fixa
 
     this.cooldowns.set(ultimate.key, {
       availableAt,
@@ -168,6 +168,11 @@ export class Champion {
       );
       return;
     }
+
+    duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
+
+    const persistent = metadata?.persistent || false;
+    persistent ? (duration = Infinity) : null; // Se for persistente, ignora a duração
 
     this.keywords.set(normalizedName, {
       expiresAtTurn: Number.isFinite(currentTurn)
@@ -366,7 +371,7 @@ export class Champion {
     );
   }
 
-  applyDamageReduction(amount, duration, context) {
+  applyDamageReduction({amount, duration, context}) {
     this.damageReductionModifiers.push({
       amount: amount,
       expiresAtTurn: context.currentTurn + duration,

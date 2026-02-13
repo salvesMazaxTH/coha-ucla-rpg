@@ -138,7 +138,7 @@ const sereneSkills = [
     A partir desse momento, Serene ganha:
     'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`,
     cooldown: 3,
-    priority: 2,
+    priority: 3,
     targetSpec: ["all:ally"],
     execute({ user, context = {} }) {
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
@@ -148,9 +148,12 @@ const sereneSkills = [
           amount: 30,
           duration: 2, // acaba um turno antes da ult voltar do cooldown
           source: "epifania",
+          context,
         });
         ally.applyKeyword("epifania_ativa", {
-          persistent: true,
+          metadata: {
+            persistent: true,
+          },
         });
       });
 

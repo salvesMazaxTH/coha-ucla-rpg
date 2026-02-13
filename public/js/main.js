@@ -139,6 +139,8 @@ socket.on("forceLogout", (message) => {
   disconnectionMessage.textContent = "";
 
   resetCombatDialogQueue();
+  removedChampionIds.clear();
+  deathPendingIds.clear();
 
   // Opcionalmente, força um recarregamento completo da página ou reinicializa a conexão do socket, se necessário
   // socket.disconnect();
@@ -200,6 +202,8 @@ socket.on("allPlayersConnected", () => {
   returnToLoginBtn.onclick = null; // Limpa o listener de evento
 
   resetCombatDialogQueue();
+  removedChampionIds.clear();
+  deathPendingIds.clear();
 });
 
 socket.on("playerNamesUpdate", (namesArray) => {
@@ -280,10 +284,24 @@ function applyGameStateUpdate(gameState) {
 
   // Atualiza ou cria campeões
   gameState.champions.forEach((championData) => {
+    if (dyingChampionIds.has(championData.id)) {
+      return;
+    }
+
+    const isRemoved = removedChampionIds.has(championData.id);
+    const isDeathPending = deathPendingIds.has(championData.id);
+
+    if (isRemoved && !isDeathPending) {
+      return;
+    }
+
     let champion = activeChampions.get(championData.id);
     if (champion) {
       // Se o campeão existe, mas seu elemento DOM está faltando, renderiza-o novamente
       if (!champion.el) {
+        if (isRemoved) {
+          return;
+        }
         // console.warn(
         //   `[Client] Campeão ${champion.name} (ID: ${champion.id}) encontrado em activeChampions, mas faltando elemento DOM. Renderizando novamente.`,
         // );
@@ -323,6 +341,9 @@ function applyGameStateUpdate(gameState) {
       StatusIndicator.startRotationLoop(activeChampionsArray);
     } else {
       // Cria novo campeão
+      if (isRemoved) {
+        return;
+      }
       const newChampion = createNewChampion(championData);
       newChampion.updateUI(currentTurn);
     }
@@ -330,7 +351,7 @@ function applyGameStateUpdate(gameState) {
 
   // Remove campeões que não existem mais no estado do jogo, a menos que estejam morrendo atualmente
   existingChampionElements.forEach((el, id) => {
-    if (!dyingChampionIds.has(id)) {
+    if (!dyingChampionIds.has(id) && !deathPendingIds.has(id)) {
       // Só remove se não estiver morrendo atualmente
       el.remove();
       activeChampions.delete(id);
@@ -407,41 +428,18 @@ socket.on("turnUpdate", (turn) => {
 });
 
 const CHAMPION_DEATH_ANIMATION_DURATION = 2000; // 2 segundos
+const DAMAGE_ANIMATION_DURATION = 958; // Duração da animação de dano para sincronizar com a morte
 const dyingChampionIds = new Set(); // Rastreia campeões atualmente em animação de morte
+const removedChampionIds = new Set();
+const deathPendingIds = new Set();
 
 socket.on("championRemoved", (championId) => {
   console.log("Campeão removido:", championId);
-  const championElement = document.querySelector(
-    `[data-champion-id="${championId}"]`,
-  );
-  if (championElement) {
-    console.log(
-      `[Client] Iniciando animação de morte para o campeão ${championId}`,
-    );
-    championElement.classList.add("dying"); // Adiciona classe para acionar a animação
-    dyingChampionIds.add(championId); // Marca o campeão como morrendo
-
-    // Remove o elemento do DOM após a duração da animação
-    setTimeout(() => {
-      console.log(
-        `[Client] Removendo elemento DOM para o campeão ${championId} após a animação`,
-      );
-      championElement.remove();
-      dyingChampionIds.delete(championId); // Remove do conjunto de morrendo
-    }, CHAMPION_DEATH_ANIMATION_DURATION);
-  } else {
-    console.log(
-      `[Client] Nenhum elemento DOM encontrado para o campeão ${championId}`,
-    );
-  }
-  const championInstance = activeChampions.get(championId);
-  if (championInstance) {
-    activeChampions.delete(championId);
-  } else {
-    console.warn(
-      `[Client] Nenhuma instância de Campeão encontrada para o ID ${championId}`,
-    );
-  }
+  removedChampionIds.add(championId);
+  deathPendingIds.add(championId);
+  enqueueCombatItem({
+    event: { type: "death", targetId: championId },
+  });
 });
 
 socket.on("skillDenied", (message) => {
@@ -505,20 +503,53 @@ let pendingTurnUpdate = null;
 function enqueueCombatItem(item) {
   combatQueue.push(item);
 
+  if (item?.event?.type === "damage" && item.event.targetId) {
+    moveDeathItemToEnd(item.event.targetId);
+  }
+
   if (!combatQueueRunning) {
     processCombatQueue();
   }
+}
+
+function moveDeathItemToEnd(targetId) {
+  const index = combatQueue.findIndex(
+    (entry) =>
+      entry?.event?.type === "death" && entry.event.targetId === targetId,
+  );
+
+  if (index === -1) return;
+
+  const [deathItem] = combatQueue.splice(index, 1);
+  combatQueue.push(deathItem);
 }
 
 function applyCombatStateSnapshots(stateList) {
   if (!Array.isArray(stateList) || stateList.length === 0) return;
 
   stateList.forEach((championData) => {
+    if (dyingChampionIds.has(championData.id)) {
+      return;
+    }
+
+    const isRemoved = removedChampionIds.has(championData.id);
+    const isDeathPending = deathPendingIds.has(championData.id);
+
+    if (isRemoved && !isDeathPending) {
+      return;
+    }
+
     let champion = activeChampions.get(championData.id);
 
     if (!champion) {
+      if (isRemoved) {
+        return;
+      }
       champion = createNewChampion(championData);
     } else if (!champion.el) {
+      if (isRemoved) {
+        return;
+      }
       activeChampions.delete(championData.id);
       champion = createNewChampion(championData);
     }
@@ -581,7 +612,15 @@ function processCombatQueue() {
   }
 
   if (item?.event?.type === "damage") {
-    triggerChampionVisual(item.event.targetId, "damage", 950);
+    triggerChampionVisual(
+      item.event.targetId,
+      "damage",
+      DAMAGE_ANIMATION_DURATION,
+    );
+  }
+
+  if (item?.event?.type === "death") {
+    triggerChampionDeath(item.event.targetId);
   }
 
   if (item?.text) {
@@ -590,7 +629,12 @@ function processCombatQueue() {
     hideCombatDialog();
   }
 
-  const duration = getCombatDialogDuration(item?.text);
+  let duration = getCombatDialogDuration(item?.text);
+
+  if (item?.event?.type === "damage") {
+    duration = Math.max(duration, DAMAGE_ANIMATION_DURATION);
+  }
+
   combatQueueTimer = setTimeout(() => {
     processCombatQueue();
   }, duration);
@@ -678,6 +722,27 @@ function triggerChampionVisual(championId, className, durationMs) {
 
     championVisualTimers.set(timerKey, timer);
   }
+}
+
+function triggerChampionDeath(championId) {
+  const champion = activeChampions.get(championId);
+  const element =
+    champion?.el ||
+    document.querySelector(`[data-champion-id="${championId}"]`);
+
+  if (!element) return;
+
+  if (dyingChampionIds.has(championId)) return;
+
+  deathPendingIds.delete(championId);
+  element.classList.add("dying");
+  dyingChampionIds.add(championId);
+
+  setTimeout(() => {
+    element.remove();
+    dyingChampionIds.delete(championId);
+    activeChampions.delete(championId);
+  }, CHAMPION_DEATH_ANIMATION_DURATION);
 }
 
 let currentTurn = 1;

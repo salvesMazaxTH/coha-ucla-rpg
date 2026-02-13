@@ -45,11 +45,11 @@ const tharoxSkills = [
       const damageReductionDuration = 2; // Damage reduction lasts for 2 turns (current + next)
 
       // Apply damage reduction to Tharox
-      user.applyDamageReduction(
+      user.applyDamageReduction({
         damageReductionAmount,
         damageReductionDuration,
         context,
-      );
+      });
 
       // Get all active champions on the opposing team
       const enemyChampions = Array.from(

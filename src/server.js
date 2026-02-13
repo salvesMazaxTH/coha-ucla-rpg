@@ -22,7 +22,7 @@ const editMode = {
   enabled: false,
   autoSelection: false, // Seleção automática de campeões para ambos os jogadores
   ignoreCooldowns: false, // Ignora cooldowns para facilitar os testes
-  actMultipleTimesPerTurn: true, // Permite que os campeões ajam múltiplas vezes por turno
+  actMultipleTimesPerTurn: false, // Permite que os campeões ajam múltiplas vezes por turno
 };
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
@@ -538,19 +538,6 @@ function performSkillExecution(user, skill, targets) {
     context,
   });
 
-  // 🔥 remover Epifania quando agir
-  if (user.hasKeyword?.("epifania_ativa")) {
-    user.removeKeyword("epifania_ativa");
-
-    user.removeDamageReductionBySource?.("epifania");
-    user.removeKeyword("imunidade absoluta");
-
-    io.emit(
-      "combatLog",
-      `${formatChampionName(user)} deixou o Limiar da Existência.`,
-    );
-  }
-
   logTurnEvent("skillUsed", {
     championId: user.id,
     championName: user.name,
@@ -601,6 +588,19 @@ function performSkillExecution(user, skill, targets) {
         io.emit("combatLog", { event, state });
       }
     }
+  }
+
+  // 🔥 remover Epifania quando agir
+  if (user.hasKeyword?.("epifania_ativa")) {
+    user.removeKeyword("epifania_ativa");
+
+    user.removeDamageReductionBySource?.("epifania");
+    user.removeKeyword("imunidade absoluta");
+
+    io.emit(
+      "combatLog",
+      `${formatChampionName(user)} deixou o Limiar da Existência.`,
+    );
   }
 }
 
