@@ -19,9 +19,9 @@ import {
 } from "../shared/core/formatters.js";
 
 const editMode = {
-  enabled: true,
+  enabled: false,
   autoSelection: false, // Seleção automática de campeões para ambos os jogadores
-  ignoreCooldowns: true, // Ignora cooldowns para facilitar os testes
+  ignoreCooldowns: false, // Ignora cooldowns para facilitar os testes
   actMultipleTimesPerTurn: true, // Permite que os campeões ajam múltiplas vezes por turno
 };
 
@@ -330,12 +330,28 @@ function validateActionIntent(user, socket) {
   return true;
 }
 
-function canExecuteAction(user) {
+function revertSkillCooldown(user, skillKey) {
+  if (!user || !skillKey || !user.cooldowns) return;
+
+  const entry = user.cooldowns.get(skillKey);
+  if (!entry || entry.isUltimateLock) return;
+
+  if (entry.availableAt > currentTurn) {
+    user.cooldowns.delete(skillKey);
+    console.log(
+      `[Server] Cooldown revertido para ${user.name} (${skillKey}) no turno ${currentTurn}.`,
+    );
+  }
+}
+
+function canExecuteAction(user, action) {
   const userName = formatChampionName(user);
+  const skillKey = action?.skillKey;
 
   // inexistente ou morto
   if (!user || !user.alive) {
-    io.emit("combatLog", `Ação ignorada: ${userName} não está ativo.`);
+    console.log(`[Server] Ação ignorada: ${userName} não está ativo.`);
+    revertSkillCooldown(user, skillKey);
     return false;
   }
 
@@ -352,6 +368,7 @@ function canExecuteAction(user) {
         "combatLog",
         `${userName} tentou agir mas estava ${label}! Ação cancelada.`,
       );
+      revertSkillCooldown(user, skillKey);
       console.log(`[Server] Ação cancelada: ${user.name} está ${label}.`);
       return false;
     }
@@ -366,6 +383,7 @@ function canExecuteAction(user) {
         "combatLog",
         `${userName} tentou agir mas estava Inerte! Ação cancelada.`,
       );
+      revertSkillCooldown(user, skillKey);
       console.log(`[Server] Ação cancelada: ${user.name} está Inerte.`);
       return false;
     }
@@ -496,7 +514,9 @@ function performSkillExecution(user, skill, targets) {
     cooldown: skill.cooldown,
   });
 
-  startCooldown(user, skill, currentTurn);
+  if (!editMode.ignoreCooldowns) {
+    startCooldown(user, skill, currentTurn);
+  }
 
   console.log("[DEBUG] AFTER startCooldown", {
     cooldownMap: [...user.cooldowns.entries()],
@@ -589,11 +609,11 @@ function executeSkillAction(action) {
 
   if (!user || !user.alive) {
     const userName = user ? formatChampionName(user) : "campeão desconhecido";
-    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
+    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`); // modificar pra ser um log específico que não apareça na UI
     return false;
   }
 
-  if (!canExecuteAction(user)) return false;
+  if (!canExecuteAction(user, action)) return false;
 
   const skill = user.skills.find((s) => s.key === action.skillKey);
   if (!skill) {
