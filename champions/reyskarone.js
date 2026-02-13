@@ -54,7 +54,7 @@ const reyskaroneSkills = [
         context,
         allChampions: context?.allChampions,
       });
-      
+
       if (result?.log) {
         result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
       }
@@ -131,7 +131,7 @@ const reyskaroneSkills = [
       ally.modifyStat({
         statName: "LifeSteal",
         amount: 35,
-        duration: 2
+        duration: 2,
         context,
       });
 
