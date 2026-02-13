@@ -616,12 +616,17 @@ function executeSkillAction(action) {
  * Resolve todas as ações pendentes na ordem correta
  */
 function resolveSkillActions() {
-  // Ordenar por prioridade e velocidade
+  // adiciona desempate aleatório fixo
+  pendingActions.forEach((a) => {
+    a._tieBreaker = Math.random();
+  });
+  // ordenar por prioridade, depois velocidade, depois desempate aleatório
   pendingActions.sort((a, b) => {
-    if (b.priority !== a.priority) {
-      return b.priority - a.priority; // Maior prioridade primeiro
-    }
-    return b.speed - a.speed; // Maior velocidade primeiro
+    if (b.priority !== a.priority) return b.priority - a.priority;
+
+    if (b.speed !== a.speed) return b.speed - a.speed;
+
+    return b._tieBreaker - a._tieBreaker;
   });
 
   console.log(
