@@ -8,7 +8,9 @@ const gryskarchuSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (100% ATQ).`,
+    description: `Ataque padrão (100% ATQ).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0,
     targetSpec: ["enemy"],
@@ -28,15 +30,17 @@ const gryskarchuSkills = [
     key: "raizes_da_terra",
     name: "Raízes da Terra",
     description: `Cooldown: 1 turno
+     Contato: ❌
      Efeitos:
-     Dano Bruto = BF 115
+     Dano Bruto = BF 90
      Aplica "Enraizado" por 2 turnos.`,
+    contact: false,
     cooldown: 1,
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
       const { enemy } = targets;
-      const bf = 115;
+      const bf = 90;
       const baseDamage = (user.Attack * bf) / 100;
 
       enemy.applyKeyword("enraizado", 2, context);
@@ -63,6 +67,7 @@ const gryskarchuSkills = [
      Efeitos:
      Gryskarchu cura a si e a todos os aliados ativos.
      Cura = 50 HP`,
+    contact: false,
     cooldown: 1,
     priority: 0,
     targetSpec: ["all:ally"],
@@ -99,8 +104,9 @@ const gryskarchuSkills = [
     key: "proteção_da_mãe_terra",
     name: "Proteção da Mãe Terra",
     description: `Cooldown: 2 turnos
-        Efeitos:
-        Gryskarchu concede a um aliado ativo 40% do HP máximo de cura e +35% de DEF por 2 turnos.`,
+      Efeitos:
+      Gryskarchu concede +35% de DEF a um aliado ativo por 2 turnos e o cura em 40% do HP máximo.`,
+    contact: false,
     cooldown: 2,
     priority: 0,
     targetSpec: ["ally"],

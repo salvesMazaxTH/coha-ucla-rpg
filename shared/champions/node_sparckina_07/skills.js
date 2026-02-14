@@ -5,7 +5,9 @@ const nodeSparckina07Skills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -28,9 +30,11 @@ const nodeSparckina07Skills = [
     key: "sparkling_slash",
     name: "Sparkling Slash",
     description: `Cooldown: 2 turnos
+     Contato: ✅
      Efeitos:
      Dano Bruto = BF 125
      `,
+    contact: true,
     cooldown: 2,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -56,6 +60,7 @@ const nodeSparckina07Skills = [
      Efeitos:
      Ganha +15 VEL e 10% da VEL como ESQ.
      `,
+    contact: false,
     cooldown: 2,
     priority: 0, // Default priority
     targetSpec: ["self"],
@@ -88,10 +93,12 @@ const nodeSparckina07Skills = [
     key: "radiant_burst",
     name: "Radiant Burst",
     description: `Cooldown: 3 turnos
+     Contato: ✅
      Efeitos:
      Dano Bruto = BF 225
      100% de chance de aplicar "Paralisado" no alvo inimigo.
      `,
+    contact: true,
     cooldown: 3,
     priority: 0, // Default priority
     targetSpec: ["enemy"],

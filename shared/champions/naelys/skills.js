@@ -5,7 +5,9 @@ const naelysSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -33,6 +35,7 @@ const naelysSkills = [
     Dano Bruto = BF 115
     Aliado ativo recupera:
     Cura = 45 de HP`,
+    contact: false,
     cooldown: 1,
     priority: 0, // Default priority
     targetSpec: ["enemy", "ally"],
@@ -84,6 +87,7 @@ const naelysSkills = [
     description: `Transforma-se em uma massa de água pura.
     Efeitos: Inerte + Imunidade Absoluta
     Duração: 2 turnos (pode ser interrompido se executar uma ação)`,
+    contact: false,
     cooldown: 2,
     priority: 1,
     targetSpec: ["self"],
@@ -115,6 +119,7 @@ const naelysSkills = [
     ➡️ +20 de Dano Bruto para cada 20 de HP ATUAL que ele tiver
     (Arredondado para múltiplo de 5)
     Limite de Escala: O bônus de dano não pode exceder +140 de Dano Bruto por ação.`,
+    contact: false,
     cooldown: 3,
     priority: 0, // Default priority
     targetSpec: ["self"],

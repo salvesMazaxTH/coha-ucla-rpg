@@ -5,7 +5,9 @@ const tharoxSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -36,6 +38,7 @@ const tharoxSkills = [
         −20 de Dano Bruto Final recebido
         (respeita o Piso de 10)
         `,
+    contact: false,
     cooldown: 1,
     priority: 2,
     targetSpec: ["self"],
@@ -74,6 +77,7 @@ const tharoxSkills = [
     Contato: Sim
     Dano:
     BF 95 + 20% DEF`,
+    contact: true,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
@@ -105,6 +109,7 @@ const tharoxSkills = [
     5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (65)
     Enquanto estiver ativo:
     Ataques que causam dano passam a causar um bônus de dano igual a 45% da DEF atual de Tharox (com um teto de 50 de dano adicional).`,
+    contact: false,
     cooldown: 3,
     priority: 0,
     targetSpec: ["self"],

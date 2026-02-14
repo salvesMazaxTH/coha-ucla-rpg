@@ -5,7 +5,9 @@ const raliaSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -34,6 +36,7 @@ const raliaSkills = [
     Ralia perde 30 de Defesa e 10 de HP (Dano Direto), para ganhar +35 de Ataque por 2 turnos.
     Em seguida, executa um Ataque Básico em um inimigo.
   `,
+    contact: false,
     cooldown: 1,
     priority: 0,
     targetSpec: ["self", "enemy"],
@@ -86,6 +89,7 @@ const raliaSkills = [
     Arredondado para o múltiplo de 5 mais próximo
     Cura mínima: 25
   `,
+    contact: true,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
@@ -134,6 +138,7 @@ const raliaSkills = [
       2️⃣ Golpe de Retaliação:
       Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF 133 como Dano Direto).
 `,
+    contact: false,
     cooldown: 2,
     priority: 1,
     targetSpec: ["all-enemies"],

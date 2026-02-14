@@ -4,7 +4,9 @@ const vaelSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -31,6 +33,7 @@ const vaelSkills = [
     BF 115.
     📌 Pode critar normalmente
   `,
+    contact: true,
     cooldown: 1,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],
@@ -57,6 +60,7 @@ const vaelSkills = [
        ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
       (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
       ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
+    contact: true,
     cooldown: 2,
     priority: 0, // Example priority for testing
     targetSpec: [
@@ -107,6 +111,7 @@ const vaelSkills = [
        Contato: ✅
        BF 235.
        `,
+    contact: true,
     cooldown: 3,
     priority: 0, // Example priority for testing
     targetSpec: ["enemy"],

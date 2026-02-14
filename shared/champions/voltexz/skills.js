@@ -4,7 +4,9 @@ const voltexzSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -31,6 +33,7 @@ const voltexzSkills = [
     BF 110 (primario) / BF 110 (secundario).
     (Pode escolher o mesmo alvo para ambos)
     `,
+    contact: false,
     cooldown: 2,
     priority: 0, // prioridade padrão
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
@@ -73,6 +76,7 @@ const voltexzSkills = [
     Prioridade: 1
     BF 35 (Direto);
     Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
+    contact: false,
     cooldown: 2,
     priority: 1, // prioridade padrão
     targetSpec: ["enemy"],
@@ -112,6 +116,7 @@ const voltexzSkills = [
     Cooldown: 3 turnos,
     Contato: ❌
     BF 265.`,
+    contact: false,
     cooldown: 3,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],

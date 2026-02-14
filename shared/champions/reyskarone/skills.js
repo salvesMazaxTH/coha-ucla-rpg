@@ -8,7 +8,9 @@ const reyskaroneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (BF 100).`,
+    description: `Ataque padrão (BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0,
     targetSpec: ["enemy"],
@@ -34,9 +36,11 @@ const reyskaroneSkills = [
     name: "Corte Tributário",
     description: `
     Cooldown: 1 turno
+    Contato: ✅
     BF 65.
     Aplica "Tributo" por 2 turnos.
     Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 65).`,
+    contact: true,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
@@ -76,6 +80,7 @@ const reyskaroneSkills = [
     +20 ATQ
     +15% LifeSteal
     Duração: 2 turnos`,
+    contact: false,
     cooldown: 2,
     priority: 2,
     targetSpec: ["select:ally"],
@@ -115,6 +120,7 @@ const reyskaroneSkills = [
     +60% ATQ
     +35% LifeSteal
     Duração: 2 turnos`,
+    contact: false,
     cooldown: 2,
     priority: 2,
     targetSpec: ["select:ally"],

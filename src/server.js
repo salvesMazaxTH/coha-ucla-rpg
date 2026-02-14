@@ -282,7 +282,7 @@ function removeChampionFromGame(championId, playerTeam) {
 }
 
 // Função auxiliar para validar se um campeão pode agir (incluindo keywords bloqueantes)
-function validateActionIntent(user, socket) {
+function validateActionIntent(user, skill, socket) {
   // morto
   if (!user.alive) {
     socket.emit("skillDenied", "Campeão morto.");
@@ -327,6 +327,15 @@ function validateActionIntent(user, socket) {
     return false;
   }
 
+  //if (user.hasKeyword?.("congelado")) {
+
+  if (user.hasKeyword?.("enraizado") && skill.contact) {
+    socket.emit(
+      "skillDenied",
+      `${user.name} está Enraizado e não pode usar habilidades de contato!`,
+    );
+    return false;
+  }
   return true;
 }
 
@@ -1238,7 +1247,7 @@ io.on("connection", (socket) => {
     const skill = user.skills.find((s) => s.key === skillKey);
     if (!skill) return socket.emit("skillDenied", "Skill inválida.");
 
-    if (!validateActionIntent(user, socket)) return;
+    if (!validateActionIntent(user, skill, socket)) return;
 
     let cdError;
 

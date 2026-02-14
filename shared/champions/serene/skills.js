@@ -5,7 +5,9 @@ const sereneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).`,
+    description: `O ataque básico genérico (0 cooldown, BF 100).
+    Contato: ✅`,
+    contact: true,
     cooldown: 0,
     priority: 0, // Default priority
     targetSpec: ["enemy"],
@@ -37,6 +39,7 @@ const sereneSkills = [
 
       Regras:
       Falha de Execução: Se Serene tiver 30 de HP ou menos, esta habilidade não pode ser utilizada.`,
+    contact: false,
     cooldown: 1,
     priority: 0,
     targetSpec: ["select:ally"],
@@ -86,9 +89,11 @@ const sereneSkills = [
     name: "Selo da Quietude",
     description: `
     Cooldown: 1 turno
+    Contato: ❌
     BF 0.
     Dano:
     15% do HP máximo do alvo como Dano Direto (NÃO sofre redução pela Defesa).`,
+    contact: false,
     cooldown: 1,
     priority: 1,
     targetSpec: ["enemy"],
@@ -137,6 +142,7 @@ const sereneSkills = [
     Ela permanece com 50 de HP travados (se não estivesse com menos de 50 de HP)
     A partir desse momento, Serene ganha:
     'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`,
+    contact: false,
     cooldown: 3,
     priority: 3,
     targetSpec: ["all:ally"],
