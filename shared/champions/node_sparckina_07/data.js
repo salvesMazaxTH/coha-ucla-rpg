@@ -7,5 +7,5 @@ export default {
   Speed: 75,
   Critical: 0,
   LifeSteal: 0,
-  Evasion: 100,
+  Evasion: 5,
 };
