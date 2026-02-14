@@ -120,7 +120,11 @@ const gryskarchuSkills = [
       defenseBuff = Math.round(defenseBuff / 5) * 5;
 
       ally.heal(healAmount, context);
-      ally.modifyStat("Defense", defenseBuff, 2, context);
+      ally.modifyStat({"Defense",
+        amount: defenseBuff, 
+        duration: 2,
+        context
+       });,
 
       return {
         log: `${formatChampionName(user)} concede a ${formatChampionName(ally)} ${healAmount} de cura e +${defenseBuff} DEF por 2 turnos!`,
