@@ -108,7 +108,7 @@ const tharoxSkills = [
     Cura a si mesmo em:
     5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (65)
     Enquanto estiver ativo:
-    Ataques que causam dano passam a causar um bônus de dano igual a 45% da DEF atual de Tharox (com um teto de 50 de dano adicional).`,
+    Ataques que causam dano passam a causar um bônus de dano igual a 45% da DEF atual de Tharox (com um teto de 80 de dano adicional).`,
     contact: false,
     cooldown: 3,
     priority: 0,
@@ -131,7 +131,7 @@ const tharoxSkills = [
         expiresAtTurn: context.currentTurn + 3, // Dura para o turno atual e os próximos 3 turnos, casando com a volta do cooldown
 
         apply: ({ baseDamage, user }) => {
-          const bonus = Math.min(Math.floor(user.Defense * 0.45), 50); // Bônus de dano é 45% da DEF atual, com um teto de 50 de dano adicional
+          const bonus = Math.min(Math.floor(user.Defense * 0.45), 80); // Bônus de dano é 45% da DEF atual, com um teto de 80 de dano adicional
           return baseDamage + bonus;
         },
       });

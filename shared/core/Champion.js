@@ -702,6 +702,7 @@ export class Champion {
     }
 
     this.HP -= amount;
+    this.HP = this.roundToFive(this.HP);
 
     if (this.HP <= 0) {
       this.HP = 0;
