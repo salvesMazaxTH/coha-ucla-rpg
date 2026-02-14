@@ -49,7 +49,7 @@ const reyskaroneSkills = [
       const { enemy } = targets;
 
       const hpSacrifice = Math.round((user.maxHP * 0.15) / 5) * 5;
-      
+
       user.takeDamage(hpSacrifice);
 
       enemy.applyKeyword("tributo", 2, context);
@@ -108,10 +108,11 @@ const reyskaroneSkills = [
 
       return {
         log:
-         user=== ally
-         ? `${formatChampionName(user)} fortaleceu-se com Transfusão Marcial.`
-         : `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
-        };
+          user === ally
+            ? `${formatChampionName(user)} fortaleceu-se com Transfusão Marcial.`
+            : `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
+      };
+    },
   },
 
   // =========================
