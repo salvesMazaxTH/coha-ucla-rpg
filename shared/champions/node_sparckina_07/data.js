@@ -3,10 +3,10 @@ export default {
   portrait: "/assets/portraits/node_sparckina_07.png",
   unreleased: true,
   HP: 310,
-  Attack: 50,
+  Attack: 80,
   Defense: 50,
   Speed: 75,
   Critical: 0,
   LifeSteal: 0,
-  Evasion: 100,
+  Evasion: 5,
 };

@@ -32,20 +32,25 @@ const reyskaroneSkills = [
   // H1 — Corte Tributário
   // =========================
   {
-    key: "corte_tributario",
-    name: "Corte Tributário",
+    key: "tributo_de_sangue",
+    name: "Tributo de Sangue",
     description: `
     Cooldown: 1 turno
-    Contato: ✅
+    Contato: ❌
+    Prioridade: +1
     BF 65.
-    Aplica "Tributo" por 2 turnos.
+    Reyskarone sacrifica 15% de seu HP máximo para aplicar "Tributo" por 2 turnos.
     Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 65).`,
-    contact: true,
+    contact: false,
     cooldown: 2,
-    priority: 0,
+    priority: 1,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
+
+      const hpSacrifice = Math.round((user.maxHP * 0.15) / 5) * 5;
+      
+      user.takeDamage(hpSacrifice);
 
       enemy.applyKeyword("tributo", 2, context);
 
@@ -102,9 +107,11 @@ const reyskaroneSkills = [
       });
 
       return {
-        log: `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
-      };
-    },
+        log:
+         user=== ally
+         ? `${formatChampionName(user)} fortaleceu-se com Transfusão Marcial.`
+         : `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
+        };
   },
 
   // =========================
@@ -115,6 +122,7 @@ const reyskaroneSkills = [
     name: "Pacto Carmesim",
     description: `
     Cooldown: 2 turnos
+    Prioridade: +5
     Seleciona um aliado:
     Ele recebe:
     +60% ATQ
@@ -122,7 +130,7 @@ const reyskaroneSkills = [
     Duração: 2 turnos`,
     contact: false,
     cooldown: 2,
-    priority: 2,
+    priority: 5,
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;

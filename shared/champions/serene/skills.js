@@ -31,14 +31,10 @@ const sereneSkills = [
     name: "Voto Harmônico",
     description: `
       Cooldown: 1 turno
-      Serene sacrifica 15% do seu HP atual (Dano Direto) e concede um escudo a si mesma ou a um aliado ativo.
+      Serene concede 60 de escudo a si mesma ou a um aliado ativo. Caso, ela esteja abaixo de 65% do HP máximo, o valor do escudo concedido cai para 35.
 
       Escudo:
-      - Mínimo: 45
-      - Se o sacrifício exceder 35 HP, o escudo ganha um bônus, tornando-se maior que a vida sacrificada.
-
-      Regras:
-      Falha de Execução: Se Serene tiver 30 de HP ou menos, esta habilidade não pode ser utilizada.`,
+      - Mínimo: 35`,
     contact: false,
     cooldown: 1,
     priority: 0,
@@ -47,29 +43,11 @@ const sereneSkills = [
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
-      if (user.HP <= 30) {
-        return {
-          log: `${formatChampionName(user)} tentou usar Voto Harmônico, mas não possuía vitalidade suficiente.`,
-        };
+      let shieldAmount = 60;
+
+      if (user.HP < user.maxHP * 0.65) {
+        shieldAmount = 35
       }
-
-      // ===== Sacrifício =====
-      let hpSacrifice = Math.floor(user.HP * 0.15);
-      hpSacrifice = Math.round(hpSacrifice / 5) * 5;
-
-      user.takeDamage(hpSacrifice);
-
-      // ===== Escudo =====
-      const BONUS_OVERFLOW = 10;
-
-      let shieldAmount = 45;
-
-      if (hpSacrifice > 35) {
-        shieldAmount = hpSacrifice + BONUS_OVERFLOW;
-      }
-
-      // Garantia absoluta da regra de design
-      shieldAmount = Math.max(shieldAmount, hpSacrifice);
 
       ally.addShield(shieldAmount, 0, context);
 
@@ -89,6 +67,7 @@ const sereneSkills = [
     name: "Selo da Quietude",
     description: `
     Cooldown: 1 turno
+    Prioridade: +1
     Contato: ❌
     BF 0.
     Dano:
@@ -133,6 +112,7 @@ const sereneSkills = [
     name: "Epifania do Limiar",
     description: `
     Cooldown: 2 turnos
+    Prioridade: +4
     Ao ativar, até que a próxima ação de Serene seja resolvida:
     1️⃣ Proteção de Campo
     Aliados ativos recebem:
@@ -144,7 +124,7 @@ const sereneSkills = [
     'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`,
     contact: false,
     cooldown: 3,
-    priority: 3,
+    priority: 4,
     targetSpec: ["all:ally"],
     execute({ user, context = {} }) {
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
