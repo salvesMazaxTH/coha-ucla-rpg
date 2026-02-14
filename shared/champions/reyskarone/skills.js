@@ -107,9 +107,11 @@ const reyskaroneSkills = [
       });
 
       return {
-        log: `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
-      };
-    },
+        log:
+         user=== ally
+         ? `${formatChampionName(user)} fortaleceu-se com Transfusão Marcial.`
+         : `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)} com Transfusão Marcial.`,
+        };
   },
 
   // =========================
