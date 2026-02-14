@@ -555,7 +555,7 @@ export const DamageEngine = {
         console.log(`⚠️ Sem lifesteal: LS=${user.LifeSteal}%, DMG=${dmg}`);
         console.groupEnd();
       }
-      return { text: null, passiveLogs: [] };
+      return { amount: 0, text: null, passiveLogs: [] };
     }
 
     const heal = Math.max(5, this.roundToFive((dmg * user.LifeSteal) / 100));
@@ -571,10 +571,10 @@ export const DamageEngine = {
     const effectiveHeal = Math.min(heal, user.maxHP - hpBefore);
 
     if (effectiveHeal <= 0) {
-      return { text: null, passiveLogs: [] };
+      return { amount: 0, text: null, passiveLogs: [] };
     }
 
-    user.heal(effectiveHeal);
+    user.heal(effectiveHeal, { suppressHealEvents: true });
 
     // ================================
     // 🔥 EVENT PIPELINE (CORRIGIDO)
@@ -606,6 +606,7 @@ export const DamageEngine = {
     }
 
     return {
+      amount: effectiveHeal,
       text: `Roubo de vida: ${effectiveHeal} | HP: ${user.HP}/${user.maxHP}`,
       passiveLogs,
     };
@@ -761,6 +762,7 @@ export const DamageEngine = {
     if (afterDealLogs.length) log += "\n" + afterDealLogs.join("\n");
 
     const ls = this._applyLifeSteal(user, finalDamage, allChampions);
+    const lsAmount = Number(ls?.amount) || 0;
 
     if (ls.text) {
       log += "\n" + ls.text;
@@ -783,10 +785,22 @@ export const DamageEngine = {
 
     console.log("HP FINAL REAL DO ATACANTE:", user.HP);
 
+    const totalHeal = lsAmount;
+
     return {
       baseDamage,
       totalDamage: finalDamage,
       finalHP: target.HP,
+      totalHeal,
+      heal:
+        totalHeal > 0
+          ? {
+              amount: totalHeal,
+              lifesteal: lsAmount,
+              targetId: user.id,
+              sourceId: user.id,
+            }
+          : null,
       targetId: target.id,
       userId: user.id,
       evaded: false,

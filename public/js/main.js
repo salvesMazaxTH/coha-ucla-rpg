@@ -26,7 +26,15 @@ let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
 
-const editMode = false; // Definido como true para auto-entrar para testes
+// não precisa ser mexido, pois o server manda essa informação para dar assign na variável
+const editMode = {
+  enabled: true, // Definido como true para auto-entrar para testes
+  autoLogin: false,
+  autoSelection: false,
+  ignoreCooldowns: false,
+  actMultipleTimesPerTurn: false,
+  unreleasedChampions: true,
+};
 
 // Elementos da tela de seleção de campeões
 const championSelectionScreen = document.getElementById(
@@ -53,12 +61,16 @@ let allAvailableChampionKeys = []; // Para armazenar todas as chaves de campeõe
 window.StatusIndicator = StatusIndicator;
 
 socket.on("connect", () => {
-  if (editMode) {
+  if (editMode.enabled && editMode.autoLogin) {
     // Entra automaticamente com um nome de usuário fixo no editMode
     username = "EditUser";
     socket.emit("requestPlayerSlot", username);
   }
   // console.log("Conectado ao servidor com ID:", socket.id);
+});
+
+socket.on("editModeUpdate", (serverEditMode = {}) => {
+  Object.assign(editMode, serverEditMode);
 });
 
 socket.on("playerAssigned", (data) => {
@@ -427,9 +439,16 @@ const RETURN_TO_LOGIN_TIME = 120; // 120 segundos para a contagem regressiva fin
 function renderAvailableChampions() {
   availableChampionsGrid.innerHTML = "";
 
-  allAvailableChampionKeys = Object.keys(championDB).filter(
-    (key) => (championDB[key].entityType ?? "champion") === "champion",
-  );
+  allAvailableChampionKeys = Object.keys(championDB).filter((key) => {
+    const champion = championDB[key];
+    const isChampion = (champion.entityType ?? "champion") === "champion";
+    const isUnreleased = champion.unreleased === true;
+
+    if (!isChampion) return false;
+    if (isUnreleased && !editMode.unreleasedChampions) return false;
+
+    return true;
+  });
 
   allAvailableChampionKeys.forEach((key) => {
     const champion = championDB[key];
@@ -692,7 +711,7 @@ function createNewChampion(championData) {
     onSkillClick: handleSkillUsage,
     onDelete: deleteChampion,
     onPortraitClick: handlePortraitClick,
-    editMode,
+    editMode: editMode.enabled,
   });
 
   return champion;
@@ -1063,7 +1082,7 @@ async function handleSkillUsage(button) {
     return;
   }
 
-  if (!editMode && user.hasActedThisTurn) {
+  if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
     alert(`${user.name} já agiu neste turno.`);
     return;
   }
@@ -1113,6 +1132,7 @@ function logCombat(text) {
 
   combatAnimations.enqueueCombatItem({
     text: dialogText,
+    events: Array.isArray(payload.events) ? payload.events : null,
     event: payload.event || null,
     state: payload.state || null,
   });

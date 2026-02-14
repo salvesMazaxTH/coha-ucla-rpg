@@ -122,7 +122,7 @@ const tharoxSkills = [
         isPermanent: true,
       }); // Aumenta DEF permanentemente
       const proportionalHeal = Math.floor((user.Defense - 65) / 5) * 5; // Calcula cura proporcional
-      user.heal(proportionalHeal);
+      user.heal(proportionalHeal, context); // Cura o usuário com base na DEF atual
 
       // Aplica o modificador de dano permanentemente
       user.addDamageModifier({

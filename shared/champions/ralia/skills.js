@@ -111,7 +111,7 @@ const raliaSkills = [
         Math.round((effectiveDamage * 0.6) / 5) * 5,
       ); // 60% do dano efetivo arredondado para múltiplo de 5, mínimo 25
 
-      user.heal(healingAmount);
+      user.heal(healingAmount, context); // Cura o usuário
 
       // 5️⃣ Estende o log da engine (não substitui)
       const userName = formatChampionName(user);

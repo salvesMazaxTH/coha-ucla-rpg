@@ -19,10 +19,12 @@ import {
 } from "../shared/core/formatters.js";
 
 const editMode = {
-  enabled: false,
+  enabled: true,
+  autoLogin: false,
   autoSelection: false, // Seleção automática de campeões para ambos os jogadores
   ignoreCooldowns: false, // Ignora cooldowns para facilitar os testes
   actMultipleTimesPerTurn: false, // Permite que os campeões ajam múltiplas vezes por turno
+  unreleasedChampions: true,
 };
 
 const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
@@ -150,9 +152,13 @@ function getGameState() {
 }
 
 function getRandomChampionKey(excludeKeys = []) {
-  const availableKeys = Object.keys(championDB).filter(
-    (key) => !excludeKeys.includes(key),
-  );
+  const availableKeys = Object.keys(championDB).filter((key) => {
+    if (excludeKeys.includes(key)) return false;
+    if (championDB[key]?.unreleased === true && !editMode.unreleasedChampions) {
+      return false;
+    }
+    return true;
+  });
   if (availableKeys.length === 0) {
     return null; // Nenhum campeão disponível
   }
@@ -468,29 +474,44 @@ function resolveSkillTargets(user, skill, action) {
   return currentTargets;
 }
 
-function buildCombatEventFromResult(result) {
-  if (!result || typeof result !== "object") return null;
+function buildCombatEventsFromResult(result) {
+  if (!result || typeof result !== "object") return [];
 
   const { targetId, userId, totalDamage, evaded } = result;
+  const events = [];
 
   if (evaded && targetId) {
-    return {
+    events.push({
       type: "evasion",
       targetId,
       sourceId: userId,
-    };
+    });
+    return events;
   }
 
   if (totalDamage > 0 && targetId) {
-    return {
+    events.push({
       type: "damage",
       targetId,
       sourceId: userId,
       amount: totalDamage,
-    };
+    });
   }
 
-  return null;
+  const healData = result.heal || null;
+  const healAmount = Number(healData?.amount) || 0;
+  const healTargetId = healData?.targetId || null;
+
+  if (healAmount > 0 && healTargetId) {
+    events.push({
+      type: "heal",
+      targetId: healTargetId,
+      sourceId: healData?.sourceId || userId,
+      amount: healAmount,
+    });
+  }
+
+  return events;
 }
 
 function buildCombatSnapshot(result) {
@@ -515,11 +536,40 @@ function buildCombatSnapshot(result) {
   return snapshots.length ? snapshots : null;
 }
 
-function emitCombatLogPayload({ log, event, state }) {
-  if (!log && !event && !state) return;
+function buildCombatSnapshotByIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return null;
+
+  const snapshots = [];
+
+  ids.forEach((id) => {
+    const champion = activeChampions.get(id);
+    if (champion?.serialize) {
+      snapshots.push(champion.serialize());
+    }
+  });
+
+  return snapshots.length ? snapshots : null;
+}
+
+function mergeCombatSnapshots(base, extra) {
+  if (!extra || extra.length === 0) return base || null;
+  if (!base || base.length === 0) return extra;
+
+  const merged = new Map(base.map((snap) => [snap.id, snap]));
+
+  extra.forEach((snap) => {
+    merged.set(snap.id, snap);
+  });
+
+  return Array.from(merged.values());
+}
+
+function emitCombatLogPayload({ log, event, events, state }) {
+  if (!log && !event && !events && !state) return;
 
   const payload = {
     ...(log ? { log } : null),
+    ...(events ? { events } : null),
     ...(event ? { event } : null),
     ...(state ? { state } : null),
   };
@@ -551,12 +601,36 @@ function performSkillExecution(user, skill, targets) {
     currentTurn,
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
+    healEvents: [],
+    healSourceId: user.id,
+    registerHeal({ target, amount, sourceId } = {}) {
+      const healAmount = Number(amount) || 0;
+      if (!target?.id || healAmount <= 0) return;
+
+      this.healEvents.push({
+        type: "heal",
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: healAmount,
+      });
+    },
   };
+
+  activeChampions.forEach((champion) => {
+    champion.runtime = champion.runtime || {};
+    champion.runtime.currentContext = context;
+  });
 
   const result = skill.execute({
     user,
     targets,
     context,
+  });
+
+  activeChampions.forEach((champion) => {
+    if (champion.runtime) {
+      delete champion.runtime.currentContext;
+    }
   });
 
   logTurnEvent("skillUsed", {
@@ -587,21 +661,53 @@ function performSkillExecution(user, skill, targets) {
 
   turnData.skillsUsedThisTurn[user.id].push(skill.key);
 
+  const payloads = [];
+
+  const pushPayloadFromResult = (entry) => {
+    if (!entry || typeof entry !== "object") return;
+
+    const events = buildCombatEventsFromResult(entry);
+    payloads.push({
+      log: entry?.log,
+      events: events.length ? events : null,
+      state: buildCombatSnapshot(entry),
+    });
+  };
+
   if (result) {
     if (Array.isArray(result)) {
-      for (const r of result) {
-        const event = buildCombatEventFromResult(r);
-        const state = buildCombatSnapshot(r);
-
-        emitCombatLogPayload({ log: r?.log, event, state });
-      }
+      result.forEach((entry) => pushPayloadFromResult(entry));
     } else {
-      const event = buildCombatEventFromResult(result);
-      const state = buildCombatSnapshot(result);
-
-      emitCombatLogPayload({ log: result?.log, event, state });
+      pushPayloadFromResult(result);
     }
   }
+
+  if (context.healEvents.length > 0) {
+    const targetPayload =
+      payloads.find((payload) => payload.log) || payloads[0];
+    const healSnapshot = buildCombatSnapshotByIds(
+      context.healEvents.map((event) => event.targetId),
+    );
+
+    if (targetPayload) {
+      targetPayload.events = [
+        ...(targetPayload.events || []),
+        ...context.healEvents,
+      ];
+      targetPayload.state = mergeCombatSnapshots(
+        targetPayload.state,
+        healSnapshot,
+      );
+    } else {
+      payloads.push({
+        log: null,
+        events: context.healEvents,
+        state: healSnapshot,
+      });
+    }
+  }
+
+  payloads.forEach((payload) => emitCombatLogPayload(payload));
 
   // 🔥 remover Epifania quando agir
   if (user.hasKeyword?.("epifania_ativa")) {
@@ -894,6 +1000,8 @@ io.on("connection", (socket) => {
     if (!assignResult) return;
 
     const { playerSlot, finalUsername } = assignResult;
+
+    socket.emit("editModeUpdate", editMode);
 
     // =============================
     // WAIT FOR SECOND PLAYER

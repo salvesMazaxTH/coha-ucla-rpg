@@ -371,7 +371,7 @@ export class Champion {
     );
   }
 
-  applyDamageReduction({amount, duration, context}) {
+  applyDamageReduction({ amount, duration, context }) {
     this.damageReductionModifiers.push({
       amount: amount,
       expiresAtTurn: context.currentTurn + duration,
@@ -593,6 +593,12 @@ export class Champion {
       HpDiv.textContent += extraInfo;
     }
 
+    // remover escudos vazios
+    this.runtime.shields = this.runtime.shields.filter((s) => s.amount > 0);
+    if (this.runtime.shields.length === 0) {
+      HpDiv.textContent = `${this.HP}/${this.maxHP}`;
+    }
+
     // 🔥 Função genérica pra stats
     const updateStat = (name) => {
       const el = this.el.querySelector(`.${name}`);
@@ -709,10 +715,19 @@ export class Champion {
     }
   }
 
-  heal(amount) {
-    if (!this.alive) return;
+  heal(amount, context) {
+    if (!this.alive) return 0;
 
+    const before = this.HP;
     this.HP = Math.min(this.HP + amount, this.maxHP);
+    const healed = Math.max(0, this.HP - before);
+
+    const ctx = context || this.runtime?.currentContext;
+    if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
+      ctx.registerHeal({ target: this, amount: healed });
+    }
+
+    return healed;
   }
 
   // inútil, pois remove do DOM é feito diretamente pelo Client ao receber o evento do Server

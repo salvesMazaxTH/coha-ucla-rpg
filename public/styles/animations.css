@@ -58,6 +58,41 @@
   animation: healFloat 950ms ease-out forwards;
 }
 
+.damage-float {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  color: #ff2a2a;
+  text-shadow:
+    0 0 8px rgba(255, 40, 40, 0.9),
+    0 0 12px rgba(255, 20, 20, 0.6),
+    1px 1px 2px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  z-index: 100;
+  animation: damageFloat 950ms ease-out forwards;
+}
+
+.damage-tier-1 {
+  font-size: 22px;
+}
+.damage-tier-2 {
+  font-size: 26px;
+}
+.damage-tier-3 {
+  font-size: 30px;
+}
+.damage-tier-4 {
+  font-size: 34px;
+}
+.damage-tier-5 {
+  font-size: 38px;
+}
+.damage-tier-6 {
+  font-size: 44px;
+}
+
 @keyframes healFloat {
   0% {
     opacity: 0;
@@ -77,6 +112,28 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -110%) scale(0.9);
+  }
+}
+
+@keyframes damageFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -45%) scale(0.7);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -65%) scale(1.05);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -95%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -125%) scale(0.95);
   }
 }
 

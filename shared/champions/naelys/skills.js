@@ -63,7 +63,7 @@ const naelysSkills = [
 
       // 💧 Cura no aliado (se existir)
       if (ally) {
-        ally.heal(healAmount);
+        ally.heal(healAmount, context);
         ally.updateUI();
         const userName = formatChampionName(user);
         const allyName = formatChampionName(ally);
@@ -135,7 +135,7 @@ const naelysSkills = [
       user.modifyHP(amount, { affectMax: true }); // Aumenta o HP atual proporcionalmente ao aumento do máximo
 
       // Cura +50 sem passar do novo máximo
-      user.heal(50);
+      user.heal(50, context);
 
       // 🔮 Aplica o modificador de dano por 3 turnos (inclui o atual)
       user.addDamageModifier({
