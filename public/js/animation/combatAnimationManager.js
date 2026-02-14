@@ -166,6 +166,7 @@ export function createCombatAnimationManager({
     champion.cooldowns = new Map(championData.cooldowns || []);
     champion.alive = championData.HP > 0;
     champion.keywords = new Map(championData.keywords || []);
+    champion.skills = championData.skills.map(s => ({ ...s }));
 
     if (championData.runtime) {
       champion.runtime = {
