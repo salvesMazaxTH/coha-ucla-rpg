@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/damageEngine.js";
+import { DamageEngine } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const gryskarchuSkills = [
@@ -43,7 +43,7 @@ const gryskarchuSkills = [
       const bf = 90;
       const baseDamage = (user.Attack * bf) / 100;
 
-      enemy.applyKeyword("enraizado", 2, context);
+      const rooted = enemy.applyKeyword("enraizado", 2, context);
 
       const result = DamageEngine.resolveDamage({
         baseDamage,
@@ -53,7 +53,7 @@ const gryskarchuSkills = [
         context,
         allChampions: context?.allChampions,
       });
-      if (result?.log) {
+      if (rooted && result?.log) {
         result.log += `\n${enemy.name} foi Enraizado!`;
       }
       return result;
@@ -111,7 +111,7 @@ const gryskarchuSkills = [
     cooldown: 2,
     priority: 5,
     targetSpec: ["select:ally"],
-    execute({ user, targets}) {
+    execute({ user, targets }) {
       const { ally } = targets;
       let healAmount = Math.floor(ally.maxHP * 0.4);
       let defenseBuff = Math.floor(ally.Defense * 0.35);
@@ -120,11 +120,12 @@ const gryskarchuSkills = [
       defenseBuff = Math.round(defenseBuff / 5) * 5;
 
       ally.heal(healAmount, context);
-      ally.modifyStat({statName: "Defense",
-        amount: defenseBuff, 
+      ally.modifyStat({
+        statName: "Defense",
+        amount: defenseBuff,
         duration: 2,
-        context
-       });
+        context,
+      });
 
       return {
         log: `${formatChampionName(user)} concede a ${formatChampionName(ally)} ${healAmount} de cura e +${defenseBuff} DEF por 2 turnos!`,

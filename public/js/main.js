@@ -1,7 +1,7 @@
 import { championDB } from "/shared/data/championDB.js";
 import { Champion } from "/shared/core/Champion.js";
 import { StatusIndicator } from "/shared/core/statusIndicator.js";
-import { createCombatAnimationManager } from "./animation/combatAnimationManager.js";
+import { createCombatAnimationManager } from "./animation/animsAndLogManager.js";
 
 const socket = io({
   reconnection: true,
@@ -25,6 +25,7 @@ let disconnectionCountdownInterval = null;
 let hasConfirmedEndTurn = false;
 
 let gameEnded = false; // Nova flag para rastrear se o jogo terminou
+window.gameEnded = gameEnded; // Expose globally for animsAndLogManager
 
 // não precisa ser mexido, pois o server manda essa informação para dar assign na variável
 const editMode = {
@@ -77,6 +78,10 @@ socket.on("playerAssigned", (data) => {
   playerId = data.playerId;
   playerTeam = data.team;
   username = data.username;
+
+  // Expose playerTeam globally for animsAndLogManager
+  window.playerTeam = playerTeam;
+
   /*
   console.log(
     `Você é ${username} (${playerId}), controlando o Time ${playerTeam}`,
@@ -197,6 +202,7 @@ socket.on("allPlayersConnected", () => {
     championSelectionTimer = null;
   }
   gameEnded = false; // Redefine a flag de jogo terminado para um novo jogo
+  window.gameEnded = false; // Also reset global reference
 
   // Oculta a sobreposição de fim de jogo se estiver ativa
   gameOverOverlay.classList.remove("active");
@@ -1067,7 +1073,7 @@ function closeTargetOverlay(overlay) {
 }
 
 async function handleSkillUsage(button) {
-  if (gameEnded) {
+  if (window.gameEnded) {
     alert("O jogo já terminou. Nenhuma ação pode ser realizada.");
     return;
   }
@@ -1098,7 +1104,7 @@ let lastLoggedTurn = null;
 
 function logCombat(text) {
   const payload = typeof text === "string" ? { log: text } : text || {};
-  const logText = payload.log;
+  const logText = combatAnimations.processCombatLogPayload?.(payload) || null;
   const log = document.getElementById("combat-log");
   if (!log) return;
 
@@ -1128,14 +1134,9 @@ function logCombat(text) {
     log.appendChild(line);
   }
 
-  const dialogText = logText ? logText.replace(/\n/g, "<br>") : null;
-
-  combatAnimations.enqueueCombatItem({
-    text: dialogText,
-    events: Array.isArray(payload.events) ? payload.events : null,
-    event: payload.event || null,
-    state: payload.state || null,
-  });
+  if (!logText) {
+    return;
+  }
 }
 
 // --------------------------------
@@ -1207,76 +1208,6 @@ socket.on("scoreUpdate", ({ player1, player2 }) => {
   if (scoreTeam2El) {
     scoreTeam2El.textContent = player2;
   }
-});
-
-socket.on("gameOver", ({ winnerTeam, winnerName }) => {
-  gameEnded = true; // Garante que a flag gameEnded esteja definida
-  endTurnBtn.disabled = true;
-  disableChampionActions();
-
-  const isWinner = playerTeam === winnerTeam;
-
-  const gameOverOverlay = document.getElementById("gameOverOverlay");
-  const gameOverContent = document.getElementById("gameOverContent");
-  const gameOverMessage = document.getElementById("gameOverMessage");
-
-  // Exibe a sobreposição de fim de jogo
-  gameOverOverlay.classList.remove("hidden");
-  gameOverOverlay.classList.add("active");
-
-  // Aplica a classe de fundo à própria sobreposição
-  gameOverOverlay.classList.add(
-    isWinner ? "win-background" : "lose-background",
-  );
-  gameOverOverlay.classList.remove(
-    isWinner ? "lose-background" : "win-background",
-  );
-
-  gameOverContent.classList.add(isWinner ? "win" : "lose");
-  gameOverContent.classList.remove(isWinner ? "lose" : "win");
-  gameOverContent.classList.remove("hidden"); // Garante que o conteúdo esteja visível inicialmente
-
-  gameOverMessage.textContent = isWinner ? "VITÓRIA!" : "DERROTA!";
-
-  setTimeout(() => {
-    // Esconde a sobreposição de vitória/derrota
-    gameOverOverlay.classList.remove("active");
-    gameOverOverlay.classList.add("hidden");
-
-    // Mostra a pequena sobreposição do timer
-    const timerOverlay = document.getElementById("timerOverlay");
-    const returnToLoginCountdown = document.getElementById(
-      "returnToLoginCountdown",
-    );
-    const returnToLoginBtn = document.getElementById("returnToLoginBtn");
-
-    timerOverlay.classList.remove("hidden");
-    timerOverlay.classList.add("active");
-
-    // Inicia a contagem regressiva de 120s
-    let finalCountdownTime = RETURN_TO_LOGIN_TIME;
-    returnToLoginCountdown.textContent = `Voltando à página inicial em ${finalCountdownTime} segundos...`;
-
-    countdownInterval = setInterval(() => {
-      finalCountdownTime--;
-      if (finalCountdownTime <= 0) {
-        clearInterval(countdownInterval);
-        window.location.reload();
-      } else {
-        returnToLoginCountdown.textContent = `Voltando à página inicial em ${finalCountdownTime} segundos...`;
-      }
-    }, 1000);
-
-    // Botão para voltar manualmente
-    returnToLoginBtn.onclick = () => {
-      clearInterval(countdownInterval);
-      window.location.reload();
-    };
-  }, GAME_OVER_MESSAGE_DISPLAY_TIME * 1000);
-
-  logCombat(
-    `Fim de jogo! ${winnerName} (Time ${winnerTeam}) venceu a partida!`,
-  );
 });
 
 socket.on("backChampionUpdate", ({ team, championKey }) => {

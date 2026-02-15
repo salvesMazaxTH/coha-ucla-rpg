@@ -2,7 +2,7 @@
 
 /* Heal animation */
 .heal {
-  animation: heal 900ms ease-out;
+  animation: heal 975ms ease-out;
   will-change: transform, filter;
 }
 
@@ -55,7 +55,7 @@
     1px 1px 2px rgba(0, 0, 0, 0.8);
   pointer-events: none;
   z-index: 100;
-  animation: healFloat 950ms ease-out forwards;
+  animation: healFloat 1350ms ease-out forwards;
 }
 
 .damage-float {
@@ -71,7 +71,7 @@
     1px 1px 2px rgba(0, 0, 0, 0.85);
   pointer-events: none;
   z-index: 100;
-  animation: damageFloat 950ms ease-out forwards;
+  animation: damageFloat 1350ms ease-out forwards;
 }
 
 .damage-tier-1 {

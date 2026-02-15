@@ -241,19 +241,10 @@ function removeChampionFromGame(championId, playerTeam) {
     );
     io.emit("combatLog", `${scoringPlayerName} pontuou!`);
 
+    // Check for game over condition but don't emit directly
     if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
       gameEnded = true;
-      io.emit("gameOver", {
-        winnerTeam: scoringTeam,
-        winnerName: playerNames.get(scoringPlayerSlot),
-      });
-      const winnerName = formatPlayerName(
-        playerNames.get(scoringPlayerSlot),
-        scoringTeam,
-      );
-      io.emit("combatLog", `Fim de jogo! ${winnerName} venceu a partida!`);
-      // Opcionalmente, redefine o estado do jogo ou prepara para uma nova partida aqui
-      // Por enquanto, apenas impede mais pontuações/ações
+      // Game over will be emitted as a combat event in the queue
     }
   }
 
@@ -788,6 +779,28 @@ function processChampionsDeaths() {
       removeChampionFromGame(champ.id, champ.team);
     }
   }
+
+  // After processing all deaths, check if game ended and emit as combat event
+  if (gameEnded) {
+    const winnerSlot = playerScores[0] >= MAX_SCORE ? 0 : 1;
+    const winnerTeam = winnerSlot + 1;
+    const winnerName = playerNames.get(winnerSlot);
+
+    const winnerNameFormatted = formatPlayerName(winnerName, winnerTeam);
+
+    // Emit gameOver as a combat log with event
+    emitCombatLogPayload({
+      log: `Fim de jogo! ${winnerNameFormatted} venceu a partida!`,
+      events: [
+        {
+          type: "gameOver",
+          winnerTeam,
+          winnerName,
+        },
+      ],
+      state: null,
+    });
+  }
 }
 
 function purgeExpiredCooldowns(turnNumber) {
@@ -819,17 +832,56 @@ function handleEndTurn() {
   purgeExpiredCooldowns(currentTurn);
 
   // 🔥 Disparar passivas de início de turno
+  const aliveChampionsArray = [...activeChampions.values()].filter(
+    (c) => c.alive,
+  );
+
   activeChampions.forEach((champion) => {
     const hook = champion.passive?.onTurnStart;
     if (!hook) return;
 
-    const result = hook({
-      target: champion,
-      context: { currentTurn },
+    const context = {
+      currentTurn,
+      allChampions: activeChampions,
+      aliveChampions: aliveChampionsArray,
+      healEvents: [],
+      healSourceId: champion.id,
+      registerHeal({ target, amount, sourceId } = {}) {
+        const healAmount = Number(amount) || 0;
+        if (!target?.id || healAmount <= 0) return;
+
+        context.healEvents.push({
+          type: "heal",
+          targetId: target.id,
+          sourceId: sourceId || context.healSourceId || target.id,
+          amount: healAmount,
+        });
+      },
+    };
+
+    activeChampions.forEach((c) => {
+      c.runtime = c.runtime || {};
+      c.runtime.currentContext = context;
     });
 
-    if (result?.log) {
-      io.emit("combatLog", result.log);
+    const result = hook({ target: champion, context });
+
+    activeChampions.forEach((c) => {
+      if (c.runtime) {
+        delete c.runtime.currentContext;
+      }
+    });
+
+    const state = context.healEvents.length
+      ? buildCombatSnapshotByIds(context.healEvents.map((e) => e.targetId))
+      : null;
+
+    if (result?.log || context.healEvents.length > 0) {
+      emitCombatLogPayload({
+        log: result?.log,
+        events: context.healEvents.length ? context.healEvents : null,
+        state,
+      });
     }
   });
 

@@ -23,7 +23,8 @@ export default {
       context,
       isPermanent: true,
     });
-    self.modifyHP(10, { affectMax: true });
+    self.modifyHP(10, { maxHPOnly: true, affectMax: true });
+    self.heal(10, context);
 
     let log = `[Passiva - Massa Inamolgável] ${self.name} consumiu 2 Inércia e ganhou +10 Defesa e +10 HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
 

@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/damageEngine.js";
+import { DamageEngine } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const sereneSkills = [
@@ -46,7 +46,7 @@ const sereneSkills = [
       let shieldAmount = 60;
 
       if (user.HP < user.maxHP * 0.65) {
-        shieldAmount = 35
+        shieldAmount = 35;
       }
 
       ally.addShield(shieldAmount, 0, context);

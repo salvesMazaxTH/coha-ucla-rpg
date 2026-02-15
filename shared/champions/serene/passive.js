@@ -25,7 +25,7 @@ export default {
     if (heal <= 0 || target.HP >= target.maxHP) return;
 
     const before = target.HP;
-    target.heal(heal);
+    target.heal(heal, context);
 
     return {
       log: `[PASSIVA — Calmaria Protetora] ${formatChampionName(target)} recuperou ${heal} HP (${before} → ${target.HP}).`,

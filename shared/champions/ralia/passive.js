@@ -5,7 +5,7 @@ export default {
       O bônus de dano do crítico é reduzido em −45 (mínimo 0).
       Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico neste acerto.
 `,
-  beforeDamageTaken({ crit, attacker, target, self }) {
+  beforeDamageTaken({ crit, attacker, target, self, context }) {
     if (self !== target) return;
     console.log(
       `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${attacker.name}`,

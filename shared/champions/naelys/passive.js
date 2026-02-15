@@ -6,7 +6,7 @@ export default {
         Sempre que Naelys receber dano,
         ele se cura em +5 para cada 25 de HP perdido neste acerto.
         (Máx. +35 por acerto)`,
-  afterDamageTaken({ target, attacker, damage, self }) {
+  afterDamageTaken({ target, attacker, damage, self, context }) {
     if (damage <= 0) return;
 
     if (self !== target) return;
@@ -18,7 +18,7 @@ export default {
     if (heal <= 0) return;
 
     const before = self.HP;
-    self.heal(heal);
+    self.heal(heal, context);
 
     console.log(
       `[PASSIVA NAELYS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${self.HP}`,

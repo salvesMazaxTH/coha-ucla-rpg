@@ -159,6 +159,10 @@ export class Champion {
     const normalizedName = this.normalizeKeywordName(keywordName);
     const { currentTurn } = context || {};
 
+    if (!normalizedName) {
+      return false;
+    }
+
     if (
       this.hasKeyword("imunidade absoluta") &&
       normalizedName !== "imunidade absoluta"
@@ -166,7 +170,7 @@ export class Champion {
       console.log(
         `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`,
       );
-      return;
+      return false;
     }
 
     duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
@@ -188,6 +192,8 @@ export class Champion {
 
     // 🎨 Atualiza os indicadores visuais
     StatusIndicator.animateIndicatorAdd(this, normalizedName);
+
+    return true;
   }
 
   /**
