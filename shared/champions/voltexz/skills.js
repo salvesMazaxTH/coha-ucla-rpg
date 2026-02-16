@@ -106,12 +106,23 @@ Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima 
 
       results.push(damageResult);
       // Aplica o efeito de paralisia
-      enemy.applyKeyword("paralisado", this.paralyzeDuration, context, {
-        // nao reduz nada, apenas perde a ação
-      });
-      console.log(
-        `${enemy.name} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
+      const paralyzed = enemy.applyKeyword(
+        "paralisado",
+        this.paralyzeDuration,
+        context,
+        {
+          // nao reduz nada, apenas perde a ação
+        },
       );
+
+      if (paralyzed) {
+        console.log(
+          `${enemy.name} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
+        );
+        if (damageResult?.log) {
+          damageResult.log += `\n${enemy.name} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
+        }
+      }
 
       return results;
     },

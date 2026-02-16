@@ -25,8 +25,15 @@ export default {
       }
     }
 
-    target.applyKeyword("sobrecarga", this.sobrecargaDuration, context);
-    log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
+    const overloaded = target.applyKeyword(
+      "sobrecarga",
+      this.sobrecargaDuration,
+      context,
+    );
+
+    if (overloaded) {
+      log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
+    }
 
     return { log };
   },

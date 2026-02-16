@@ -805,7 +805,7 @@ function triggerChampionDamage(championId, amount) {
   setTimeout(() => {
     float.remove();
     element.classList.remove("damage");
-  }, 1800);
+  }, 1850);
 }
 
 function triggerGameOver(ctx, event) {

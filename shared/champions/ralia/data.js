@@ -6,5 +6,5 @@ export default {
   Defense: 170,
   Speed: 40,
   Critical: 0,
-  LifeSteal: 15,
+  LifeSteal: 10,
 };

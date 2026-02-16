@@ -40,11 +40,18 @@ export default {
       return;
     }
 
-    target.applyKeyword("paralisado", this.paralyzeDuration, context, {
+    const paralyzed = target.applyKeyword("paralisado", this.paralyzeDuration, context, {
       sourceId: self.id,
       sourceName: self.name,
     });
 
+    if (!paralyzed) {
+      console.log(
+        `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} tentou aplicar "Paralisado" em ${formatChampionName(target)}, mas falhou.`,
+      );
+      return;
+    }
+    
     console.log(
       `— [PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
     );

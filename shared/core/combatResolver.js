@@ -1,7 +1,6 @@
 import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
-const editMode = false;
 const debugMode = false;
 
 const DEFAULT_CRIT_BONUS = 55;
@@ -313,12 +312,14 @@ export const CombatResolver = {
     // --- aplica crítico ---
     let finalDamage = crit.didCrit ? damage + crit.critExtra : damage;
 
-    if (editMode) {
+    // damageOutput: override de dano para testes, injetado via context pelo server
+    const damageOverride = context?.editMode?.damageOutput;
+    if (damageOverride != null) {
       if (debugMode) {
-        console.log(`🔴 EDIT MODE → 999`);
+        console.log(`🔴 EDIT MODE → damageOutput: ${damageOverride}`);
         console.groupEnd();
       }
-      return 999;
+      return damageOverride;
     }
 
     const defensePercent = this.defenseToPercent(defenseUsed);

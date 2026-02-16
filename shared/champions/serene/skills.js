@@ -90,7 +90,7 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
       const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
 
       // aplica status
-      enemy.applyKeyword("atordoado", this.stunDuration, context);
+      const stunned = enemy.applyKeyword("atordoado", this.stunDuration, context);
 
       // resolve dano
       const result = CombatResolver.resolveDamage({
@@ -105,9 +105,9 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
       });
 
       // adiciona log da skill
-      if (result?.log) {
+      if (result?.log && stunned) {
         result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
-      } else {
+      } else if (stunned) {
         result.log = `${enemy.name} foi atordoado pela Quietude!`;
       }
 

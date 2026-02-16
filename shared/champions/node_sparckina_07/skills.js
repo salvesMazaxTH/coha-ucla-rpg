@@ -116,7 +116,13 @@ Dano Bruto = BF ${this.bf}
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      enemy.applyKeyword("paralisado", this.paralyzeDuration, context);
+      const paralyzed = enemy.applyKeyword("paralisado", this.paralyzeDuration, context);
+
+      if (!paralyzed) {
+        console.log(
+          `[HABILIDADE — Radiant Burst] ${formatChampionName(user)} tentou aplicar "Paralisado" em ${formatChampionName(enemy)}, mas falhou.`,
+        );
+      }
 
       return CombatResolver.resolveDamage({
         baseDamage,

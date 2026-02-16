@@ -19,15 +19,17 @@ const socket = io({
 
 // ============================================================
 //  CONFIGURAÇÃO (sobrescrita pelo servidor via "editModeUpdate")
+//  Apenas propriedades de UI/UX — o server filtra campos sensíveis
+//  como damageOutput antes de enviar.
 // ============================================================
 
 const editMode = {
-  enabled: true,
+  enabled: false,
   autoLogin: false,
   autoSelection: false,
   ignoreCooldowns: false,
   actMultipleTimesPerTurn: false,
-  unreleasedChampions: true,
+  unreleasedChampions: false,
 };
 
 // ============================================================

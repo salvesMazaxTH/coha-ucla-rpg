@@ -31,7 +31,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
   {
     key: "juramento_de_ferro",
     name: "Juramento de Ferro",
-    bf: 70,
+    bf: 60,
     selfDamage: 10,
     defLoss: 30,
     atkBuff: 35,
@@ -41,10 +41,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     priority: 0,
     description() {
       return `Cooldown: ${this.cooldown} turno
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.
-Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (Dano Direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.
-Em seguida, ataca um inimigo.`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf}.
+        Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (Dano Direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.
+        Em seguida, ataca um inimigo.`;
     },
     targetSpec: ["self", "enemy"],
     execute({ user, targets, context = {} }) {
@@ -105,11 +105,11 @@ Em seguida, ataca um inimigo.`;
     priority: 0,
     description() {
       return `Cooldown: ${this.cooldown} turnos
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.
-Rália se cura em ${this.healPercent}% do dano efetivo causado
-Arredondado para o múltiplo de 5 mais próximo
-Cura mínima: ${this.minHeal}`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf}.
+        Rália se cura em ${this.healPercent}% do dano efetivo causado
+        Arredondado para o múltiplo de 5 mais próximo
+        Cura mínima: ${this.minHeal}`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

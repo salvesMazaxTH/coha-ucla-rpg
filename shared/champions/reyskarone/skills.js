@@ -61,7 +61,7 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
 
       user.takeDamage(hpSacrifice);
 
-      enemy.applyKeyword("tributo", this.tributeDuration, context);
+      const tributeApplied = enemy.applyKeyword("tributo", this.tributeDuration, context);
 
       const result = CombatResolver.resolveDamage({
         baseDamage: (user.Attack * this.bf) / 100,
@@ -72,7 +72,7 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
         allChampions: context?.allChampions,
       });
 
-      if (result?.log) {
+      if (result?.log && tributeApplied) {
         result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
       }
 
@@ -134,7 +134,7 @@ Duração: ${this.buffDuration} turnos`;
     key: "pacto_carmesim",
     name: "Pacto Carmesim",
     atkBuffPercent: 18,
-    lifeStealBuff: 35,
+    lifeStealBuff: 30,
     buffDuration: 2,
     pactDuration: 3,
     contact: false,

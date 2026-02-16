@@ -31,7 +31,8 @@ const editMode = {
   autoSelection: false,
   ignoreCooldowns: false,
   actMultipleTimesPerTurn: false,
-  unreleasedChampions: true,
+  unreleasedChampions: false,
+  damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 2;
@@ -543,6 +544,7 @@ function performSkillExecution(user, skill, targets) {
   // Contexto compartilhado para a execução da skill
   const context = {
     currentTurn,
+    editMode, // Injetado pelo server — única fonte de verdade para damageOutput
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
     healEvents: [],
@@ -772,6 +774,7 @@ function handleEndTurn() {
 
   const turnStartContext = {
     currentTurn,
+    editMode, // Injetado pelo server — única fonte de verdade para damageOutput
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
     healEvents: [],
@@ -979,7 +982,9 @@ io.on("connection", (socket) => {
     if (!assignResult) return;
 
     const { playerSlot, finalUsername } = assignResult;
-    socket.emit("editModeUpdate", editMode);
+    // Envia editMode ao client SEM propriedades server-only (damageOutput, etc.)
+    const { damageOutput, ...clientEditMode } = editMode;
+    socket.emit("editModeUpdate", clientEditMode);
 
     // Aguarda segundo jogador
     if (!(players[0] && players[1])) {
