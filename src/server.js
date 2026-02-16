@@ -1154,10 +1154,14 @@ io.on("connection", (socket) => {
           players[1].team,
           players[1].selectedTeam.slice(0, 2),
         );
-
-        // Reservas
-        players[0].backChampion = players[0].selectedTeam[2];
-        players[1].backChampion = players[1].selectedTeam[2];
+        assignChampionsToTeam(
+          players[0].team,
+          players[0].selectedTeam.slice(2, 3),
+        );
+        assignChampionsToTeam(
+          players[1].team,
+          players[1].selectedTeam.slice(2, 3),
+        );
 
         io.emit("gameStateUpdate", getGameState());
         io.emit("backChampionUpdate", {

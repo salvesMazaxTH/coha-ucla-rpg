@@ -255,7 +255,7 @@ function buildDialogFromEvents(ctx, events = []) {
 }
 
 function enqueueCombatItem(ctx, item) {
-  const events = normalizeEvents(item);
+  const events = item.events;
   const hasGameOver = hasGameOverEvent(events);
 
   if ((ctx.shouldStopQueue || ctx.gameOverPayloadReceived) && !hasGameOver) {
@@ -266,10 +266,16 @@ function enqueueCombatItem(ctx, item) {
     return;
   }
 
-  ctx.combatQueue.push(item);
-  events
-    .filter((event) => event?.type === "damage" && event?.targetId)
-    .forEach((event) => moveDeathItemToEnd(ctx, event.targetId));
+  if (events.length > 1) {
+    events.forEach((event) => {
+      ctx.combatQueue.push({
+        events: [event],
+        state: item.state,
+      });
+    });
+  } else {
+    ctx.combatQueue.push(item);
+  }
 
   if (!ctx.combatQueueRunning) {
     processCombatQueue(ctx);
@@ -281,7 +287,7 @@ function handleChampionRemoved(ctx, championId) {
   ctx.removedChampionIds.add(championId);
   ctx.deathPendingIds.add(championId);
   enqueueCombatItem(ctx, {
-    event: { type: "death", targetId: championId },
+    events: [{ type: "death", targetId: championId }],
   });
 }
 
@@ -430,8 +436,13 @@ function processCombatLogPayload(ctx, payload) {
   const normalized = typeof payload === "string" ? { log: payload } : payload;
   if (!normalized || typeof normalized !== "object") return null;
 
-  const payloadEvents = normalizeEvents(normalized);
-  const hasGameOver = hasGameOverEvent(payloadEvents);
+  if (!Array.isArray(normalized.events)) {
+    normalized.events = normalized.event
+      ? [normalized.event]
+      : [];
+  }
+
+  const hasGameOver = hasGameOverEvent(normalized.events);
 
   if (ctx.gameOverPayloadReceived) {
     if (!hasGameOver || ctx.gameOverTriggered) return null;
@@ -452,8 +463,7 @@ function processCombatLogPayload(ctx, payload) {
   }
 
   enqueueCombatItem(ctx, {
-    events: Array.isArray(normalized.events) ? normalized.events : null,
-    event: normalized.event || null,
+    events: normalized.events,
     state: normalized.state || null,
   });
 
@@ -622,7 +632,7 @@ function processCombatQueue(ctx) {
 
   applyCombatStateSnapshots(ctx, item?.state);
 
-  const events = normalizeEvents(item);
+  const events = item.events;
   events.forEach((event) => {
     const handler = ctx.eventHandlers[event?.type];
     if (handler) {
@@ -901,13 +911,11 @@ function showFinalGameOver(ctx) {
 
       // Start countdown
       let finalCountdownTime = RETURN_TO_LOGIN_TIME;
-      returnToLoginCountdown.textContent =
-        `Retornando ao login em ${finalCountdownTime} segundos.`;
+      returnToLoginCountdown.textContent = `Retornando ao login em ${finalCountdownTime} segundos.`;
 
       const countdownInterval = setInterval(() => {
         finalCountdownTime--;
-        returnToLoginCountdown.textContent =
-          `Retornando ao login em ${finalCountdownTime} segundos.`;
+        returnToLoginCountdown.textContent = `Retornando ao login em ${finalCountdownTime} segundos.`;
 
         if (finalCountdownTime <= 0) {
           clearInterval(countdownInterval);
