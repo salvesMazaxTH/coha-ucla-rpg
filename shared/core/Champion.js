@@ -173,6 +173,14 @@ export class Champion {
       return false;
     }
 
+    // 🛡️ Ação já foi bloqueada por Escudo Supremo/Feitiço nesta execução
+    if (context?.shieldBlockedTargets?.has(this.id)) {
+      console.log(
+        `[Champion] ${this.name}: keyword "${keywordName}" bloqueada (ação já negada por escudo).`,
+      );
+      return false;
+    }
+
     duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
 
     const persistent = metadata?.persistent || false;
@@ -444,16 +452,55 @@ export class Champion {
     this.HP = Math.max(0, Math.min(this.HP, this.maxHP));
   }
 
-  addShield(amount, decayPerTurn = 0, context) {
+  /**
+   * Checks if this champion has a spell/supreme shield that blocks the current action.
+   * If blocked, consumes the shield and returns true.
+   * @param {object} context - Combat context (must have currentSkill for spell shield check)
+   * @returns {boolean}
+   */
+  _checkAndConsumeShieldBlock(context) {
+    if (!Array.isArray(this.runtime?.shields)) return false;
+
+    // 🛡️ Escudo Supremo: bloqueia QUALQUER ação
+    const supremeIdx = this.runtime.shields.findIndex(
+      (s) => s.type === "supreme" && s.amount > 0,
+    );
+    if (supremeIdx !== -1) {
+      this.runtime.shields.splice(supremeIdx, 1);
+      console.log(
+        `[Champion] 🛡️ ${this.name}: Escudo Supremo bloqueou a ação completamente e se dissipou!`,
+      );
+      return true;
+    }
+
+    // 🛡️ Escudo de Feitiço: bloqueia apenas ações sem contato
+    if (context?.currentSkill?.contact === false) {
+      const spellIdx = this.runtime.shields.findIndex(
+        (s) => s.type === "spell" && s.amount > 0,
+      );
+      if (spellIdx !== -1) {
+        this.runtime.shields.splice(spellIdx, 1);
+        console.log(
+          `[Champion] 🛡️ ${this.name}: Escudo de Feitiço bloqueou a ação sem contato e se dissipou!`,
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  addShield(amount, decayPerTurn = 0, context, type = "regular") {
     /*     console.log("SERVER ADD SHIELD:", this.name, amount); */
 
     this.runtime.shields.push({
       amount,
       decayPerTurn,
+      type, // "regular" | "spell" | "supreme"
     });
 
     console.log(
-      `[Champion] ${this.name} ganhou um escudo de ${amount} HP com decaimento de ${decayPerTurn} por turno.`,
+      `[Champion] ${this.name} ganhou um escudo de ${amount} HP (tipo: ${type}) com decaimento de ${decayPerTurn} por turno.`,
     );
   }
 
@@ -809,6 +856,8 @@ export class Champion {
     if (!this.alive) return;
 
     for (const shield of this.runtime.shields) {
+      // Escudos de Feitiço e Supremo não absorvem HP — só bloqueiam ações
+      if (shield.type && shield.type !== "regular") continue;
       if (amount <= 0) break;
 
       const absorbed = Math.min(shield.amount, amount);

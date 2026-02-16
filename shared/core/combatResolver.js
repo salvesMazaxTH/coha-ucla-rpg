@@ -633,6 +633,21 @@ export const CombatResolver = {
     };
   },
 
+  _buildShieldBlockResult(baseDamage, user, target, skill) {
+    const targetName = formatChampionName(target);
+    const username = formatChampionName(user);
+    return {
+      baseDamage,
+      totalDamage: 0,
+      finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
+      log: `${username} usou ${skill} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
+      crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+    };
+  },
+
   resolveDamage(params) {
     const {
       mode = "raw",
@@ -654,6 +669,14 @@ export const CombatResolver = {
 
     if (this._isImmune(target)) {
       return this._buildImmuneResult(baseDamage, user, target, skill);
+    }
+
+    // 🛡️ Escudo Supremo / Escudo de Feitiço — bloqueia a ação inteira
+    if (target._checkAndConsumeShieldBlock?.(context)) {
+      if (!context.shieldBlockedTargets)
+        context.shieldBlockedTargets = new Set();
+      context.shieldBlockedTargets.add(target.id);
+      return this._buildShieldBlockResult(baseDamage, user, target, skill);
     }
 
     // ------ ESQUIVA -------

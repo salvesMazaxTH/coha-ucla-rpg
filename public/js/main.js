@@ -51,7 +51,7 @@ let gameEnded = false;
 const activeChampions = new Map();
 
 // --- Seleção de campeões ---
-const TEAM_SIZE = 2;
+const TEAM_SIZE = 3;
 let selectedChampions = Array(TEAM_SIZE).fill(null);
 let championSelectionTimer = null;
 let championSelectionTimeLeft = 0;

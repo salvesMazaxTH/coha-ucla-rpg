@@ -36,7 +36,7 @@ const editMode = {
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
 };
 
-const TEAM_SIZE = 2;
+const TEAM_SIZE = 3;
 const MAX_SCORE = 2; // Melhor de 3 — primeiro a 2 vence
 const CHAMPION_SELECTION_TIME = 120; // Segundos para seleção de campeões
 const DISCONNECT_TIMEOUT = 30 * 1000; // 30 s para reconexão
@@ -568,6 +568,7 @@ function performSkillExecution(user, skill, targets) {
     champion.runtime.currentContext = context;
   });
 
+  context.currentSkill = skill; // Injeta skill atual no contexto (para checks de Escudo de Feitiço)
   const result = skill.execute({ user, targets, context });
 
   // Limpa contexto
