@@ -5,7 +5,7 @@ const tharoxSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).
+    description: `O ataque básico genérico (0 cooldown, BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -13,7 +13,7 @@ const tharoxSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -76,14 +76,14 @@ const tharoxSkills = [
     description: `Cooldown: 1 turno,
     Contato: Sim
     Dano:
-    BF 95 + 20% DEF`,
+    BF 80 + 20% DEF`,
     contact: true,
     cooldown: 2,
     priority: 0,
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 95;
+      const bf = 80;
       const baseDamage = (user.Attack * bf) / 100 + user.Defense / 5;
       const result = DamageEngine.resolveDamage({
         user,
@@ -106,7 +106,7 @@ const tharoxSkills = [
     Ganha +50 HP
     Ganha +10 DEF
     Cura a si mesmo em:
-    5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (65)
+    5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (205)
     Enquanto estiver ativo:
     Ataques que causam dano passam a causar um bônus de dano igual a 45% da DEF atual de Tharox (com um teto de 80 de dano adicional).`,
     contact: false,
@@ -121,7 +121,7 @@ const tharoxSkills = [
         context,
         isPermanent: true,
       }); // Aumenta DEF permanentemente
-      const proportionalHeal = Math.floor((user.Defense - 65) / 5) * 5; // Calcula cura proporcional
+      const proportionalHeal = Math.floor((user.Defense - 205) / 5) * 5; // Calcula cura proporcional
       user.heal(proportionalHeal, context); // Cura o usuário com base na DEF atual
 
       // Aplica o modificador de dano permanentemente

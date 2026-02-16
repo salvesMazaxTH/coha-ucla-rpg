@@ -8,7 +8,7 @@ const reyskaroneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (BF 100).
+    description: `Ataque padrão (BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -16,7 +16,7 @@ const reyskaroneSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       return DamageEngine.resolveDamage({
         baseDamage: (user.Attack * bf) / 100,
         user,
@@ -38,9 +38,9 @@ const reyskaroneSkills = [
     Cooldown: 1 turno
     Contato: ❌
     Prioridade: +1
-    BF 65.
+    BF 50.
     Reyskarone sacrifica 15% de seu HP máximo para aplicar "Tributo" por 2 turnos.
-    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 65).`,
+    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 50).`,
     contact: false,
     cooldown: 2,
     priority: 1,
@@ -54,7 +54,7 @@ const reyskaroneSkills = [
 
       enemy.applyKeyword("tributo", 2, context);
 
-      const bf = 65;
+      const bf = 45;
       const result = DamageEngine.resolveDamage({
         baseDamage: (user.Attack * bf) / 100,
         user,
@@ -126,7 +126,7 @@ const reyskaroneSkills = [
     Prioridade: +5
     Seleciona um aliado:
     Ele recebe:
-    +60% ATQ
+    +18% ATQ
     +35% LifeSteal
     Duração: 2 turnos`,
     contact: false,
@@ -138,9 +138,10 @@ const reyskaroneSkills = [
 
       ally.modifyStat({
         statName: "Attack",
-        amount: ally.Attack * 0.6,
+        amount: 18,
         duration: 2,
         context,
+        isPercent: true,
       });
 
       ally.modifyStat({

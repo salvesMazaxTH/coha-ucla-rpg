@@ -7,16 +7,15 @@ export default {
     const self = target;
     if (!self) return;
 
-    const base = Number(self.Speed) || 0;
-    const amount = Math.round((base * 0.1) / 5) * 5;
-    if (amount <= 0) return;
-
     const result = self.modifyStat({
       statName: "Speed",
-      amount,
+      amount: 10,
       context,
       isPermanent: true,
+      isPercent: true,
     });
+
+    if (result?.appliedAmount === 0) return;
 
     return {
       log: `[PASSIVA — Energia Pulsante] ${formatChampionName(self)} ganhou +${result?.appliedAmount ?? amount} VEL.`,

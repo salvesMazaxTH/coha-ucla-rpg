@@ -214,7 +214,7 @@ export const DamageEngine = {
     }
 
     // --- Constantes globais do modelo ---
-    const BASE_DEF = 150;
+    const BASE_DEF = 220;
     const BASE_REDUCTION = 0.75;
     const MAX_REDUCTION = 0.95;
     const K = 0.0045;
@@ -223,11 +223,12 @@ export const DamageEngine = {
     const curve = {
       0: 0.0,
       35: 0.25,
-      60: 0.37,
-      85: 0.52,
+      60: 0.4,
+      85: 0.53,
       110: 0.6,
-      125: 0.65,
-      150: 0.75,
+      150: 0.65,
+      200: 0.72,
+      220: 0.78,
     };
 
     const keys = Object.keys(curve)
@@ -316,7 +317,7 @@ export const DamageEngine = {
         console.log(`🔴 EDIT MODE → 999`);
         console.groupEnd();
       }
-      return 250;
+      return 999;
     }
 
     const defensePercent = this.defenseToPercent(defenseUsed);

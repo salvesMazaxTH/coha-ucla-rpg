@@ -4,7 +4,7 @@ const vaelSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).
+    description: `O ataque básico genérico (0 cooldown, BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -12,7 +12,7 @@ const vaelSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -30,7 +30,7 @@ const vaelSkills = [
     description: `
     Cooldown: 1 turno,
     Contato: ✅
-    BF 115.
+    BF 75.
     📌 Pode critar normalmente
   `,
     contact: true,
@@ -39,7 +39,7 @@ const vaelSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 115;
+      const bf = 75;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -56,7 +56,7 @@ const vaelSkills = [
     name: "Investida Transpassante",
     description: `Cooldown: 2 turnos
        Contato: ✅
-       BF 80 (primario) / BF 85 (secundario).
+       BF 55 (primario) / BF 65 (secundario).
        ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
       (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
       ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
@@ -71,7 +71,7 @@ const vaelSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
 
-      const bfPrimary = 80;
+      const bfPrimary = 55;
       const baseDamage = (user.Attack * bfPrimary) / 100;
       const results = [];
 
@@ -89,7 +89,7 @@ const vaelSkills = [
 
       if (secondary) {
         const secondaryResult = DamageEngine.resolveDamage({
-          baseDamage: (user.Attack * 85) / 100,
+          baseDamage: (user.Attack * 60) / 100,
           user,
           target: secondary,
           skill: this.name,
@@ -109,7 +109,7 @@ const vaelSkills = [
     name: "Veredito do Fio Silencioso",
     description: `Cooldown: 3 turnos
        Contato: ✅
-       BF 235.
+       BF 130.
        `,
     contact: true,
     cooldown: 3,
@@ -117,7 +117,7 @@ const vaelSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 235;
+      const bf = 145;
       const baseDamage = (user.Attack * bf) / 100;
 
       return DamageEngine.resolveDamage({

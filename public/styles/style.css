@@ -1282,7 +1282,11 @@ i {
 
 .combat-dialog-bubble {
   max-width: min(70vw, 720px);
-  background: linear-gradient(180deg, rgba(18, 18, 18, 0.96), rgba(6, 6, 6, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 18, 0.96),
+    rgba(6, 6, 6, 0.96)
+  );
   border: 2px solid rgba(0, 255, 150, 0.55);
   border-radius: 18px;
   padding: 18px 24px;
@@ -1558,6 +1562,173 @@ i {
   font-weight: 600;
   margin-top: 8px;
   text-shadow: 0 0 5px rgba(255, 204, 0, 0.3);
+}
+
+/* ============================================================
+   SURRENDER BUTTON & OVERLAY
+   ============================================================ */
+
+.surrender-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition:
+    color 0.3s ease,
+    background 0.3s ease,
+    opacity 0.3s ease;
+  opacity: 0.35;
+  position: relative;
+}
+
+.surrender-btn:hover {
+  color: #ff4444;
+  opacity: 1;
+  background: rgba(255, 68, 68, 0.08);
+}
+
+.surrender-btn:active {
+  color: #cc0000;
+  opacity: 1;
+}
+
+.surrender-btn:disabled {
+  color: #333;
+  cursor: not-allowed;
+  opacity: 0.15;
+  background: none;
+}
+
+/* --- Surrender Overlay --- */
+
+.surrender-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 15000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.surrender-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.surrender-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.surrender-dialog {
+  background: linear-gradient(180deg, #1a1a1a, #0d0d0d);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 32px 40px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  box-shadow:
+    0 0 40px rgba(0, 0, 0, 0.6),
+    0 0 16px rgba(255, 68, 68, 0.08);
+  animation: surrenderDialogIn 0.3s ease forwards;
+}
+
+@keyframes surrenderDialogIn {
+  from {
+    transform: scale(0.92) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.surrender-dialog-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.surrender-dialog-subtitle {
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.surrender-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.surrender-cancel {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #aaa;
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 10px 28px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.surrender-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ddd;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.surrender-confirm {
+  background: linear-gradient(180deg, #cc2222, #881111);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  border-radius: 10px;
+  color: #fff;
+  font-family: "Montserrat", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px 28px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.15);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.surrender-confirm:hover {
+  background: linear-gradient(180deg, #dd3333, #992222);
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+  transform: scale(1.03);
+}
+
+.surrender-confirm:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.2);
 }
 
 /* Responsividade */

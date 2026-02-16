@@ -82,19 +82,35 @@ const mainContent = document.getElementById("main-content");
 const endTurnBtn = document.querySelector("#end-turn-btn");
 const combatDialog = document.getElementById("combat-dialog");
 const combatDialogText = document.getElementById("combat-dialog-text");
-const backChampionDisplayTeam1 = document.getElementById("backChampionDisplayTeam1");
-const backChampionDisplayTeam2 = document.getElementById("backChampionDisplayTeam2");
+const backChampionDisplayTeam1 = document.getElementById(
+  "backChampionDisplayTeam1",
+);
+const backChampionDisplayTeam2 = document.getElementById(
+  "backChampionDisplayTeam2",
+);
 
 // --- Seleção de campeões ---
-const championSelectionScreen = document.getElementById("champion-selection-screen");
-const availableChampionsGrid = document.getElementById("availableChampionsGrid");
-const selectedChampionsSlots = document.getElementById("selectedChampionsSlots");
+const championSelectionScreen = document.getElementById(
+  "champion-selection-screen",
+);
+const availableChampionsGrid = document.getElementById(
+  "availableChampionsGrid",
+);
+const selectedChampionsSlots = document.getElementById(
+  "selectedChampionsSlots",
+);
 const confirmTeamBtn = document.getElementById("confirmTeamBtn");
 const teamSelectionMessage = document.getElementById("team-selection-message");
 
 // --- Fim de jogo ---
 const gameOverOverlay = document.getElementById("gameOverOverlay");
 const returnToLoginBtn = document.getElementById("returnToLoginBtn");
+
+// --- Surrender ---
+const surrenderBtn = document.getElementById("surrender-btn");
+const surrenderOverlay = document.getElementById("surrender-overlay");
+const surrenderCancel = document.getElementById("surrender-cancel");
+const surrenderConfirm = document.getElementById("surrender-confirm");
 
 // ============================================================
 //  EXPORTS GLOBAIS (usados por animsAndLogManager e outros)
@@ -111,7 +127,9 @@ const combatAnimations = createCombatAnimationManager({
   activeChampions,
   createNewChampion,
   getCurrentTurn: () => currentTurn,
-  setCurrentTurn: (turn) => { currentTurn = turn; },
+  setCurrentTurn: (turn) => {
+    currentTurn = turn;
+  },
   updateTurnDisplay,
   applyTurnUpdate,
   startStatusIndicatorRotation: (champions) =>
@@ -191,8 +209,16 @@ socket.on("allPlayersConnected", () => {
   gameEnded = false;
   window.gameEnded = false;
 
+  // Reseta botão de surrender
+  if (surrenderBtn) surrenderBtn.disabled = false;
+  closeSurrenderDialog();
+
   // Oculta sobreposição de fim de jogo
-  gameOverOverlay.classList.remove("active", "win-background", "lose-background");
+  gameOverOverlay.classList.remove(
+    "active",
+    "win-background",
+    "lose-background",
+  );
   gameOverOverlay.classList.add("hidden");
 
   const gameOverContent = gameOverOverlay.querySelector(".game-over-content");
@@ -249,8 +275,7 @@ socket.on("forceLogout", (message) => {
 
 socket.on("opponentDisconnected", ({ timeout }) => {
   let timeLeft = timeout / 1000;
-  disconnectionMessage.textContent =
-    `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
+  disconnectionMessage.textContent = `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
   disconnectionMessage.classList.remove("hidden");
   disconnectionMessage.classList.add("visible");
 
@@ -266,8 +291,7 @@ socket.on("opponentDisconnected", ({ timeout }) => {
       disconnectionMessage.classList.remove("visible");
       disconnectionMessage.classList.add("hidden");
     } else {
-      disconnectionMessage.textContent =
-        `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
+      disconnectionMessage.textContent = `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
     }
   }, 1000);
 });
@@ -348,7 +372,10 @@ socket.on("startChampionSelection", ({ timeLeft }) => {
       clearInterval(championSelectionTimer);
       if (!playerTeamConfirmed) {
         // Tempo esgotado — envia a seleção atual; servidor preenche ausentes
-        socket.emit("selectTeam", { team: playerTeam, champions: selectedChampions });
+        socket.emit("selectTeam", {
+          team: playerTeam,
+          champions: selectedChampions,
+        });
         teamSelectionMessage.textContent =
           "Tempo esgotado! Equipe enviada. Aguardando o outro jogador...";
         playerTeamConfirmed = true;
@@ -436,7 +463,9 @@ function handleChampionCardClick(championKey) {
     if (emptySlotIndex > -1) {
       selectedChampions[emptySlotIndex] = championKey;
     } else {
-      alert("Todos os slots estão preenchidos. Remova um para adicionar outro.");
+      alert(
+        "Todos os slots estão preenchidos. Remova um para adicionar outro.",
+      );
     }
   }
   updateSelectedChampionsUI();
@@ -467,8 +496,12 @@ function updateSelectedChampionsUI() {
         <img src="${champion.portrait}" alt="${champion.name}">
         <h3>${champion.name}</h3>
       `;
-      card.addEventListener("click", () => handleChampionCardClick(championKey));
-      card.addEventListener("dragstart", (e) => handleDragStart(e, championKey, index));
+      card.addEventListener("click", () =>
+        handleChampionCardClick(championKey),
+      );
+      card.addEventListener("dragstart", (e) =>
+        handleDragStart(e, championKey, index),
+      );
       slot.appendChild(card);
     } else {
       allSlotsFilled = false;
@@ -543,7 +576,9 @@ function handleDrop(e) {
     }
   }
 
-  document.querySelector(".champion-card.dragging")?.classList.remove("dragging");
+  document
+    .querySelector(".champion-card.dragging")
+    ?.classList.remove("dragging");
   draggedChampionKey = null;
   draggedFromSlotIndex = -1;
   updateSelectedChampionsUI();
@@ -554,8 +589,7 @@ function handleDrop(e) {
 function updateChampionSelectionTimerUI() {
   const minutes = Math.floor(championSelectionTimeLeft / 60);
   const seconds = championSelectionTimeLeft % 60;
-  teamSelectionMessage.textContent =
-    `Tempo restante para seleção: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  teamSelectionMessage.textContent = `Tempo restante para seleção: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   if (playerTeamConfirmed) {
     teamSelectionMessage.textContent += " (Equipe confirmada!)";
   }
@@ -572,7 +606,11 @@ socket.on("championAdded", (championData) => {
   const baseData = championDB[championData.championKey];
   if (!baseData) return;
 
-  const champion = Champion.fromBaseData(baseData, championData.id, championData.team);
+  const champion = Champion.fromBaseData(
+    baseData,
+    championData.id,
+    championData.team,
+  );
   champion.baseAttack = baseData.Attack;
   champion.baseDefense = baseData.Defense;
   champion.baseSpeed = baseData.Speed;
@@ -590,7 +628,11 @@ function createNewChampion(championData) {
   const baseData = championDB[championData.championKey];
   if (!baseData) throw new Error("Campeão inválido");
 
-  const champion = Champion.fromBaseData(baseData, championData.id, championData.team);
+  const champion = Champion.fromBaseData(
+    baseData,
+    championData.id,
+    championData.team,
+  );
   champion.baseAttack = baseData.Attack;
   champion.baseDefense = baseData.Defense;
   champion.baseSpeed = baseData.Speed;
@@ -833,12 +875,16 @@ async function collectClientTargets(user, skill) {
 
   for (const spec of normalizedSpec) {
     const target = await selectTargetForRole(
-      spec.type, user, championsInField,
-      enemyCounter, chosenTargets, spec.unique === true,
+      spec.type,
+      user,
+      championsInField,
+      enemyCounter,
+      chosenTargets,
+      spec.unique === true,
     );
 
-    if (target === null) return null;      // Cancelou a habilidade
-    if (target === undefined) continue;    // Slot opcional ignorado
+    if (target === null) return null; // Cancelou a habilidade
+    if (target === undefined) continue; // Slot opcional ignorado
 
     Object.assign(targets, target);
     hasAtLeastOneTarget = true;
@@ -848,7 +894,12 @@ async function collectClientTargets(user, skill) {
 }
 
 async function selectTargetForRole(
-  role, user, championsInField, enemyCounter, chosenTargets, enforceUnique,
+  role,
+  user,
+  championsInField,
+  enemyCounter,
+  chosenTargets,
+  enforceUnique,
 ) {
   // Helper: filtra alvos já escolhidos quando unicidade é exigida
   const filterUnique = (list) =>
@@ -877,7 +928,8 @@ async function selectTargetForRole(
     candidates = filterUnique(candidates);
     if (candidates.length === 0) return null;
     const target = await createTargetSelectionOverlay(
-      candidates, "Escolha um Aliado (ou você)",
+      candidates,
+      "Escolha um Aliado (ou você)",
     );
     if (!target) return undefined;
     chosenTargets.add(target.id);
@@ -909,7 +961,8 @@ async function selectTargetForRole(
   if (candidates.length === 0) return null;
 
   const target = await createTargetSelectionOverlay(
-    candidates, `Selecione o alvo (${role})`,
+    candidates,
+    `Selecione o alvo (${role})`,
   );
   if (!target) return undefined;
   chosenTargets.add(target.id);
@@ -989,7 +1042,9 @@ function applyTurnUpdate(turn) {
   activeChampions.forEach((champion) => champion.resetActionStatus());
   activeChampions.forEach((champion) => {
     champion.updateUI(currentTurn);
-    requestAnimationFrame(() => StatusIndicator.updateChampionIndicators(champion));
+    requestAnimationFrame(() =>
+      StatusIndicator.updateChampionIndicators(champion),
+    );
   });
 
   logCombat(`Início do Turno ${currentTurn}`);
@@ -1020,7 +1075,9 @@ function endTurn() {
 socket.on("playerConfirmedEndTurn", (playerSlot) => {
   const playerName = playerNames.get(playerSlot);
   if (playerSlot !== playerTeam - 1) {
-    logCombat(`${playerName} confirmou o fim do turno. Aguardando sua confirmação.`);
+    logCombat(
+      `${playerName} confirmou o fim do turno. Aguardando sua confirmação.`,
+    );
   }
 });
 
@@ -1064,10 +1121,10 @@ function logCombat(text) {
 }
 
 // ============================================================
-//  EXIBIÇÃO DO CAMPEÃO DE RETAGUARDA
+//  EXIBIÇÃO DO CAMPEÃO DE RETAGUARDA (não utilizado atualmente, mas pode ser reativado futuramente)
 // ============================================================
 
-socket.on("backChampionUpdate", ({ team, championKey }) => {
+/* socket.on("backChampionUpdate", ({ team, championKey }) => {
   const displayElement =
     team === 1 ? backChampionDisplayTeam1 : backChampionDisplayTeam2;
   if (!displayElement) return;
@@ -1090,7 +1147,7 @@ socket.on("backChampionUpdate", ({ team, championKey }) => {
     displayElement.classList.add("hidden");
     displayElement.classList.remove("visible");
   }
-});
+}); */
 
 // ============================================================
 //  HELPERS DE UI (habilitar / desabilitar habilidades)
@@ -1108,3 +1165,48 @@ function enableChampionActions() {
     button.disabled = false;
   });
 }
+
+// ============================================================
+//  SURRENDER (Render-se)
+// ============================================================
+
+function openSurrenderDialog() {
+  if (gameEnded || !playerTeam) return;
+  surrenderOverlay.classList.remove("hidden");
+  surrenderOverlay.classList.add("active");
+}
+
+function closeSurrenderDialog() {
+  surrenderOverlay.classList.remove("active");
+  surrenderOverlay.classList.add("hidden");
+}
+
+function confirmSurrender() {
+  closeSurrenderDialog();
+  surrenderBtn.disabled = true;
+  socket.emit("surrender");
+}
+
+if (surrenderBtn) surrenderBtn.addEventListener("click", openSurrenderDialog);
+if (surrenderCancel)
+  surrenderCancel.addEventListener("click", closeSurrenderDialog);
+if (surrenderConfirm)
+  surrenderConfirm.addEventListener("click", confirmSurrender);
+
+// Close on overlay backdrop click
+if (surrenderOverlay) {
+  surrenderOverlay.addEventListener("click", (e) => {
+    if (e.target === surrenderOverlay) closeSurrenderDialog();
+  });
+}
+
+// Close on Escape key
+document.addEventListener("keydown", (e) => {
+  if (
+    e.key === "Escape" &&
+    surrenderOverlay &&
+    surrenderOverlay.classList.contains("active")
+  ) {
+    closeSurrenderDialog();
+  }
+});

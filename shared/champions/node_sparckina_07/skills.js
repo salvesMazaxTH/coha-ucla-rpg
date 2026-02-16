@@ -5,7 +5,7 @@ const nodeSparckina07Skills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).
+    description: `O ataque básico genérico (0 cooldown, BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -13,7 +13,7 @@ const nodeSparckina07Skills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -32,7 +32,7 @@ const nodeSparckina07Skills = [
     description: `Cooldown: 2 turnos
      Contato: ✅
      Efeitos:
-     Dano Bruto = BF 125
+     Dano Bruto = BF 85
      `,
     contact: true,
     cooldown: 2,
@@ -40,7 +40,7 @@ const nodeSparckina07Skills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 125;
+      const bf = 85;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -66,7 +66,6 @@ const nodeSparckina07Skills = [
     targetSpec: ["self"],
     execute({ user, context = {} }) {
       const speedBuff = 15;
-      const evasionBuff = Math.round(user.Speed * 0.1);
 
       user.modifyStat({
         statName: "Speed",
@@ -74,6 +73,9 @@ const nodeSparckina07Skills = [
         duration: 2,
         context,
       });
+
+      // buffar a ESQ depois de buffar a VEL para garantir que o aumento de ESQ seja baseado na VEL atualizada
+      const evasionBuff = Math.round(user.Speed * 0.1);
 
       user.modifyStat({
         statName: "Evasion",
@@ -95,7 +97,7 @@ const nodeSparckina07Skills = [
     description: `Cooldown: 3 turnos
      Contato: ✅
      Efeitos:
-     Dano Bruto = BF 225
+     Dano Bruto = BF 135
      100% de chance de aplicar "Paralisado" no alvo inimigo.
      `,
     contact: true,
@@ -104,7 +106,7 @@ const nodeSparckina07Skills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 225;
+      const bf = 135;
       const baseDamage = (user.Attack * bf) / 100;
 
       enemy.applyKeyword("paralisado", 2, context);

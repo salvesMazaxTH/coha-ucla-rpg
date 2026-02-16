@@ -8,7 +8,7 @@ const gryskarchuSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (100% ATQ).
+    description: `Ataque padrão (BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -16,8 +16,10 @@ const gryskarchuSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
       const { enemy } = targets;
+      const bf = 60;
+      const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
-        baseDamage: user.Attack,
+        baseDamage,
         user,
         target: enemy,
         skill: this.name,
@@ -32,7 +34,7 @@ const gryskarchuSkills = [
     description: `Cooldown: 1 turno
      Contato: ❌
      Efeitos:
-     Dano Bruto = BF 90
+     Dano Bruto = BF 75
      Aplica "Enraizado" por 2 turnos.`,
     contact: false,
     cooldown: 1,
@@ -40,7 +42,7 @@ const gryskarchuSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
       const { enemy } = targets;
-      const bf = 90;
+      const bf = 75;
       const baseDamage = (user.Attack * bf) / 100;
 
       const rooted = enemy.applyKeyword("enraizado", 2, context);
@@ -100,7 +102,7 @@ const gryskarchuSkills = [
   },
 
   {
-    // 40% hp máx como cura , +35% DEF, CD 2, PARA O ALIADO
+    // 30% hp máx como cura , +25% DEF, CD 2, PARA O ALIADO
     key: "proteção_da_mãe_terra",
     name: "Proteção da Mãe Terra",
     description: `Cooldown: 2 turnos
@@ -113,18 +115,16 @@ const gryskarchuSkills = [
     targetSpec: ["select:ally"],
     execute({ user, targets, context }) {
       const { ally } = targets;
-      let healAmount = Math.floor(ally.maxHP * 0.4);
-      let defenseBuff = Math.floor(ally.Defense * 0.35);
-
+      let healAmount = Math.floor(ally.maxHP * 0.3);
       healAmount = Math.round(healAmount / 5) * 5;
-      defenseBuff = Math.round(defenseBuff / 5) * 5;
 
       ally.heal(healAmount, context);
       ally.modifyStat({
         statName: "Defense",
-        amount: defenseBuff,
+        amount: 25,
         duration: 2,
         context,
+        isPercent: true,
       });
 
       const bonus = Math.round(Math.floor(ally.Defense * 0.35) / 5) * 5;

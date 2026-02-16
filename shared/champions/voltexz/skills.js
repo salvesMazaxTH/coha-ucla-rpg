@@ -4,7 +4,7 @@ const voltexzSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).
+    description: `O ataque básico genérico (0 cooldown, BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -12,7 +12,7 @@ const voltexzSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -30,7 +30,7 @@ const voltexzSkills = [
     description: `
     Cooldown: 2 turnos,
     Contato: ❌
-    BF 110 (primario) / BF 110 (secundario).
+    BF 75 (primario) / BF 75 (secundario).
     (Pode escolher o mesmo alvo para ambos)
     `,
     contact: false,
@@ -40,7 +40,7 @@ const voltexzSkills = [
 
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
-      const bf = 110;
+      const bf = 75;
       const baseDamage = (user.Attack * bf) / 100;
       const results = [];
 
@@ -74,7 +74,7 @@ const voltexzSkills = [
     Cooldown: 2 turnos,
     Contato: ❌
     Prioridade: 1
-    BF 35 (Direto);
+    BF 25 (Direto);
     Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
     contact: false,
     cooldown: 2,
@@ -82,7 +82,7 @@ const voltexzSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 35;
+      const bf = 25;
       const baseDamage = (user.Attack * bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
@@ -115,14 +115,14 @@ const voltexzSkills = [
     description: `
     Cooldown: 3 turnos,
     Contato: ❌
-    BF 265.`,
+    BF 185.`,
     contact: false,
     cooldown: 3,
     priority: 0, // prioridade padrão
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 265;
+      const bf = 185;
       const baseDamage = (user.Attack * bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({

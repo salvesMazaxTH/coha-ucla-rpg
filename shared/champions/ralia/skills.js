@@ -5,7 +5,7 @@ const raliaSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 100).
+    description: `O ataque básico genérico (0 cooldown, BF 60).
     Contato: ✅`,
     contact: true,
     cooldown: 0,
@@ -13,7 +13,7 @@ const raliaSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 100;
+      const bf = 60;
       const baseDamage = (user.Attack * bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
@@ -32,9 +32,9 @@ const raliaSkills = [
     description: `
     Cooldown: 1 turno,
     Contato: ❌
-    BF 100.
+    BF 70.
     Ralia perde 30 de Defesa e 10 de HP (Dano Direto), para ganhar +35 de Ataque por 2 turnos.
-    Em seguida, executa um Ataque Básico em um inimigo.
+    Em seguida, ataca um inimigo.
   `,
     contact: false,
     cooldown: 1,
@@ -61,7 +61,7 @@ const raliaSkills = [
 
       console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
-      const bf = 100;
+      const bf = 70;
       const result = DamageEngine.resolveDamage({
         baseDamage: (user.Attack * bf) / 100,
         user,
@@ -84,7 +84,7 @@ const raliaSkills = [
     description: `
     Cooldown: 2 turnos,
     Contato: ✅
-    BF 140.
+    BF 90.
     Rália se cura em 60% do dano efetivo causado
     Arredondado para o múltiplo de 5 mais próximo
     Cura mínima: 25
@@ -95,7 +95,7 @@ const raliaSkills = [
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 140;
+      const bf = 90;
       const baseDamage = (user.Attack * bf) / 100;
       const result = DamageEngine.resolveDamage({
         baseDamage,
@@ -129,14 +129,14 @@ const raliaSkills = [
       Cooldown: 2 turnos
       Prioridade: +1
       Contato: ❌
-      BF 133.
+      BF 85.
       Rália finca sua lâmina no chão e impõe sua lei ao campo.
       Ao ativar, por 2 turnos (inclui o atual):
       1️⃣ Zona de Contestação
       Inimigos ativos sofrem:
       −20 de Ataque
       2️⃣ Golpe de Retaliação:
-      Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF 133 como Dano Direto).
+      Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF 85 como Dano Direto).
 `,
     contact: false,
     cooldown: 2,
@@ -148,7 +148,7 @@ const raliaSkills = [
         context?.allChampions?.values?.() || [],
       ).filter((champion) => champion.team !== user.team && champion.alive);
 
-      const bf = 133;
+      const bf = 85;
       const baseDamage = (user.Attack * bf) / 100;
 
       const results = [];

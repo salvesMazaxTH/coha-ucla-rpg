@@ -39,7 +39,28 @@
         <div class="turn-display">
           <p>Turno 1</p>
         </div>
+        <button id="surrender-btn" class="surrender-btn" title="Render-se">
+          Render-se
+        </button>
       </header>
+
+      <!-- Surrender Confirmation Overlay -->
+      <div id="surrender-overlay" class="surrender-overlay hidden">
+        <div class="surrender-dialog">
+          <p class="surrender-dialog-title">Tem certeza?</p>
+          <p class="surrender-dialog-subtitle">
+            Essa decisão é irreversível. Você concederá a vitória ao adversário.
+          </p>
+          <div class="surrender-dialog-actions">
+            <button id="surrender-cancel" class="surrender-cancel">
+              Cancelar
+            </button>
+            <button id="surrender-confirm" class="surrender-confirm">
+              Render-se
+            </button>
+          </div>
+        </div>
+      </div>
 
       <main class="arena">
         <div class="player-name-display" data-team="1">
