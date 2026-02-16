@@ -1,7 +1,7 @@
 import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
-const editMode = true;
+const editMode = false;
 const debugMode = false;
 
 const DEFAULT_CRIT_BONUS = 55;
