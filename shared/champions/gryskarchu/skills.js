@@ -106,12 +106,12 @@ const gryskarchuSkills = [
     description: `Cooldown: 2 turnos
     Prioridade: +5
       Efeitos:
-      Gryskarchu concede +35% de DEF a si ou a um aliado ativo por 2 turnos e o cura em 40% do HP máximo.`,
+      Gryskarchu concede +25% de DEF a si ou a um aliado ativo por 2 turnos e o cura em 30% do HP máximo. Além disso, o aliado recebe um bônus de +35% da DEF no dano causado por 2 turnos.`,
     contact: false,
     cooldown: 2,
     priority: 5,
     targetSpec: ["select:ally"],
-    execute({ user, targets }) {
+    execute({ user, targets, context }) {
       const { ally } = targets;
       let healAmount = Math.floor(ally.maxHP * 0.4);
       let defenseBuff = Math.floor(ally.Defense * 0.35);
@@ -125,6 +125,18 @@ const gryskarchuSkills = [
         amount: defenseBuff,
         duration: 2,
         context,
+      });
+
+      const bonus = Math.round(Math.floor(ally.Defense * 0.35) / 5) * 5;
+
+      ally.addDamageModifer({
+        id: "proteção_da_mãe_terra",
+        expiresAt: context.currentTurn + 2,
+
+        apply({ baseDamage, user }) {
+          const total = baseDamage + bonus;
+          return total;
+        },
       });
 
       return {

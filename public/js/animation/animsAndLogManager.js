@@ -41,7 +41,8 @@ function buildCombatAnimationContext(options) {
       DAMAGE_ANIMATION_DURATION: 958,
       EVASION_ANIMATION_DURATION: 550,
       HEAL_ANIMATION_DURATION: 900,
-      GAME_OVER_DELAY: 1800,
+      SHIELD_ANIMATION_DURATION: 900,
+      GAME_OVER_DELAY: 1250,
     },
     dialogSpeed: {
       base: 1000,
@@ -59,6 +60,10 @@ function buildCombatAnimationContext(options) {
     pendingGameState: null,
     pendingTurnUpdate: null,
     gameOverTriggered: false,
+    gameOverShown: false,
+    shouldStopQueue: false,
+    gameOverPayloadReceived: false,
+    pendingGameOverEvent: null,
     compactStateCache: new Map(),
   };
 
@@ -94,6 +99,13 @@ function createEventHandlers(ctx) {
       );
       triggerChampionHeal(event?.targetId, event?.amount);
     },
+    shield: (event) =>
+      triggerChampionVisual(
+        ctx,
+        event?.targetId,
+        "shield",
+        ctx.durations.SHIELD_ANIMATION_DURATION,
+      ),
     death: (event) => triggerChampionDeath(ctx, event?.targetId),
     gameOver: (event) => triggerGameOver(ctx, event),
   };
@@ -111,10 +123,150 @@ function normalizeEvents(item) {
   return [];
 }
 
-function enqueueCombatItem(ctx, item) {
-  ctx.combatQueue.push(item);
+function hasGameOverEvent(events) {
+  return (
+    Array.isArray(events) && events.some((event) => event?.type === "gameOver")
+  );
+}
 
+function resolveChampionName(ctx, championId, fallback) {
+  if (typeof fallback === "string" && fallback.trim()) return fallback.trim();
+  if (!championId) return "Campeao";
+  return ctx.activeChampions.get(championId)?.name || "Campeao";
+}
+
+function buildDialogFromEvents(ctx, events = []) {
+  if (!Array.isArray(events) || events.length === 0) return null;
+
+  const lines = [];
+
+  for (const event of events) {
+    if (!event || !event.type) continue;
+
+    switch (event.type) {
+      case "skill": {
+        const userName = resolveChampionName(
+          ctx,
+          event.userId || event.sourceId,
+          event.userName,
+        );
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (userName && event.skillName && event.targetId) {
+          lines.push(`${userName} usou ${event.skillName} em ${targetName}.`);
+        } else if (userName && event.skillName) {
+          lines.push(`${userName} usou ${event.skillName}.`);
+        }
+        break;
+      }
+
+      case "damage": {
+        // const targetName = resolveChampionName(
+        //   ctx,
+        //   event.targetId,
+        //   event.targetName,
+        // );
+        // if (targetName && Number.isFinite(event.amount)) {
+        //   lines.push(`${targetName} sofreu ${event.amount} de dano.`);
+        // }
+        break;
+      }
+
+      case "heal": {
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (targetName) {
+          // lines.push(`${targetName} recuperou ${event.amount} de vida.`);
+          lines.push(`${targetName} recuperou vida.`);
+        }
+        break;
+      }
+
+      case "shield": {
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (targetName) {
+          // lines.push(`${targetName} recebeu ${event.amount} de escudo.`);
+          lines.push(`${targetName} foi protegido com um escudo.`);
+        }
+        break;
+      }
+
+      case "death": {
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (targetName) {
+          lines.push(`${targetName} foi derrotado.`);
+        }
+        break;
+      }
+
+      case "keywordApplied": {
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (targetName && event.keyword) {
+          lines.push(`${targetName} está ${event.keyword}.`);
+        }
+        break;
+      }
+
+      case "keywordRemoved": {
+        const targetName = resolveChampionName(
+          ctx,
+          event.targetId,
+          event.targetName,
+        );
+        if (targetName && event.keyword) {
+          lines.push(`${targetName} não está mais ${event.keyword}.`);
+        }
+        break;
+      }
+
+      case "gameOver":
+        if (event.winnerName) {
+          lines.push(`Fim de jogo! ${event.winnerName} venceu.`);
+        }
+        break;
+
+      case "score":
+        if (event.playerName) {
+          lines.push(`${event.playerName} pontuou.`);
+        }
+        break;
+    }
+  }
+
+  return lines.length > 0 ? lines.join("\n") : null;
+}
+
+function enqueueCombatItem(ctx, item) {
   const events = normalizeEvents(item);
+  const hasGameOver = hasGameOverEvent(events);
+
+  if ((ctx.shouldStopQueue || ctx.gameOverPayloadReceived) && !hasGameOver) {
+    return;
+  }
+
+  if (ctx.gameOverPayloadReceived && hasGameOver && ctx.gameOverTriggered) {
+    return;
+  }
+
+  ctx.combatQueue.push(item);
   events
     .filter((event) => event?.type === "damage" && event?.targetId)
     .forEach((event) => moveDeathItemToEnd(ctx, event.targetId));
@@ -125,6 +277,7 @@ function enqueueCombatItem(ctx, item) {
 }
 
 function handleChampionRemoved(ctx, championId) {
+  if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
   ctx.removedChampionIds.add(championId);
   ctx.deathPendingIds.add(championId);
   enqueueCombatItem(ctx, {
@@ -133,6 +286,7 @@ function handleChampionRemoved(ctx, championId) {
 }
 
 function handleGameStateUpdate(ctx, gameState) {
+  if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
   if (ctx.combatQueueRunning || ctx.combatQueue.length > 0) {
     ctx.pendingGameState = gameState;
     return;
@@ -142,6 +296,7 @@ function handleGameStateUpdate(ctx, gameState) {
 }
 
 function handleTurnUpdate(ctx, turn) {
+  if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
   if (ctx.combatQueueRunning || ctx.combatQueue.length > 0) {
     ctx.pendingTurnUpdate = turn;
     return;
@@ -156,6 +311,10 @@ function resetManager(ctx) {
   ctx.pendingGameState = null;
   ctx.pendingTurnUpdate = null;
   ctx.gameOverTriggered = false;
+  ctx.gameOverShown = false;
+  ctx.shouldStopQueue = false;
+  ctx.gameOverPayloadReceived = false;
+  ctx.pendingGameOverEvent = null;
 
   if (ctx.combatQueueTimer) {
     clearTimeout(ctx.combatQueueTimer);
@@ -271,6 +430,18 @@ function processCombatLogPayload(ctx, payload) {
   const normalized = typeof payload === "string" ? { log: payload } : payload;
   if (!normalized || typeof normalized !== "object") return null;
 
+  const payloadEvents = normalizeEvents(normalized);
+  const hasGameOver = hasGameOverEvent(payloadEvents);
+
+  if (ctx.gameOverPayloadReceived) {
+    if (!hasGameOver || ctx.gameOverTriggered) return null;
+  } else if (hasGameOver) {
+    ctx.gameOverPayloadReceived = true;
+    if (typeof window !== "undefined") {
+      window.gameOverPayloadReceived = true;
+    }
+  }
+
   let logText = normalized.log || null;
   const stateLines = getCompactStateLogs(ctx, normalized.state);
 
@@ -280,10 +451,7 @@ function processCombatLogPayload(ctx, payload) {
       : stateLines.join("\n");
   }
 
-  const dialogText = logText ? logText.replace(/\n/g, "<br>") : null;
-
   enqueueCombatItem(ctx, {
-    text: dialogText,
     events: Array.isArray(normalized.events) ? normalized.events : null,
     event: normalized.event || null,
     state: normalized.state || null,
@@ -421,19 +589,29 @@ function processCombatQueue(ctx) {
     ctx.combatQueueTimer = null;
   }
 
+  if (ctx.shouldStopQueue) {
+    ctx.combatQueueRunning = false;
+    ctx.combatQueue.length = 0;
+    ctx.pendingGameState = null;
+    ctx.pendingTurnUpdate = null;
+    hideCombatDialog(ctx);
+    showFinalGameOver(ctx);
+    return;
+  }
+
   if (ctx.combatQueue.length === 0) {
     ctx.combatQueueRunning = false;
     hideCombatDialog(ctx);
 
-    if (ctx.pendingGameState) {
+    if (!ctx.gameOverPayloadReceived && ctx.pendingGameState) {
       applyGameStateUpdate(ctx, ctx.pendingGameState);
-      ctx.pendingGameState = null;
     }
+    ctx.pendingGameState = null;
 
-    if (ctx.pendingTurnUpdate !== null) {
+    if (!ctx.gameOverPayloadReceived && ctx.pendingTurnUpdate !== null) {
       ctx.applyTurnUpdate?.(ctx.pendingTurnUpdate);
-      ctx.pendingTurnUpdate = null;
     }
+    ctx.pendingTurnUpdate = null;
 
     return;
   }
@@ -452,19 +630,15 @@ function processCombatQueue(ctx) {
     }
   });
 
-  let compactText = compactLog(item?.text);
-  const deathSummary = buildDeathSummary(ctx, events);
-  if (deathSummary && !String(compactText || "").includes("DERROTADO")) {
-    compactText = compactText ? `${compactText} ${deathSummary}` : deathSummary;
-  }
+  const dialogText = buildDialogFromEvents(ctx, events);
 
-  if (compactText) {
-    showCombatDialog(ctx, compactText);
+  if (dialogText) {
+    showCombatDialog(ctx, dialogText);
   } else {
     hideCombatDialog(ctx);
   }
 
-  let duration = getCombatDialogDuration(ctx, compactText);
+  let duration = getCombatDialogDuration(ctx, dialogText);
 
   if (events.some((event) => event?.type === "damage")) {
     duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
@@ -474,135 +648,9 @@ function processCombatQueue(ctx) {
     duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
   }
 
-  // GameOver event doesn't pause the queue - it schedules its own delayed display
-  // But we give a bit of time for the dialog to be read
-  if (events.some((event) => event?.type === "gameOver")) {
-    duration = Math.max(duration, 2000);
-  }
-
   ctx.combatQueueTimer = setTimeout(() => {
     processCombatQueue(ctx);
   }, duration);
-}
-
-function compactLog(text) {
-  if (!text) return null;
-
-  const normalized = String(text || "").replace(/<br\s*\/?>/gi, "\n");
-  const plain = stripHtml(normalized);
-
-  const lines = plain
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length === 0) return null;
-
-  const headline = simplifyDialogLine(lines[0]);
-  if (!headline) return null;
-
-  const importantLines = lines
-    .filter((line) => isImportantDialogLine(line))
-    .map((line) => simplifyDialogLine(line))
-    .filter(Boolean);
-
-  const result = [
-    headline,
-    ...importantLines.filter((line) => line !== headline),
-  ];
-
-  return limitDialogLength(result.join(" "));
-}
-
-function isImportantDialogLine(line) {
-  if (!line) return false;
-  return (
-    line.includes("usou") ||
-    line.includes("CRÍTICO") ||
-    line.includes("DERROTADO") ||
-    line.includes("Imunidade") ||
-    line.includes("evadiu") ||
-    line.includes("CONSEGUIU") ||
-    line.includes("passiva") ||
-    line.includes("Passiva")
-  );
-}
-
-function simplifyDialogLine(line) {
-  if (!line) return null;
-
-  let text = String(line).trim();
-
-  if (/^HP\s+final/i.test(text)) return null;
-  if (/^HP\s+de/i.test(text)) return null;
-
-  const fractions = [];
-  text = text.replace(/\b\d+\s*\/\s*\d+\b/g, (match) => {
-    const token = `__FRAC_${fractions.length}__`;
-    fractions.push(match.replace(/\s+/g, ""));
-    return token;
-  });
-
-  text = text.replace(
-    /(?<![A-Za-zÀ-ÿ-])\d+(?:[.,]\d+)?%?x?(?![A-Za-zÀ-ÿ-])/g,
-    "",
-  );
-  text = text.replace(/__FRAC_(\d+)__/g, (match, index) => {
-    return fractions[Number(index)] || match;
-  });
-
-  text = text.replace(/\b[xX]\b/g, "");
-  text = text.replace(/causou\s+de\s+dano/gi, "causou dano");
-  text = text.replace(/curou\s+de/gi, "curou");
-  text = text.replace(/cura\s+de/gi, "cura");
-  text = text.replace(/roubo\s+de\s+vida\s*:?/gi, "roubo de vida");
-  text = text.replace(/\s*\+\s*/g, " ");
-  text = text.replace(/([A-Za-zÀ-ÿ])-\s+/g, "$1 ");
-  text = text.replace(/\(([^)]*)\)/g, (match, inner) => {
-    const cleaned = inner
-      .replace(
-        /\b(defesa|ataque|hp|velocidade|critico|crítico|roubo de vida)\b/gi,
-        "",
-      )
-      .replace(/[^A-Za-zÀ-ÿ]+/g, " ")
-      .trim();
-    return cleaned ? `(${inner.trim()})` : "";
-  });
-  text = text.replace(/\(\s*\)/g, "");
-  text = text.replace(/\s{2,}/g, " ").trim();
-
-  if (!text) return null;
-
-  return text;
-}
-
-function limitDialogLength(text) {
-  const MAX_LEN = 160;
-  const value = String(text || "").trim();
-  if (value.length <= MAX_LEN) return value;
-  return value.slice(0, MAX_LEN - 3).trimEnd() + "...";
-}
-
-function buildDeathSummary(ctx, events) {
-  if (!Array.isArray(events) || events.length === 0) return null;
-
-  const deathEvents = events.filter(
-    (event) => event?.type === "death" && event?.targetId,
-  );
-
-  if (deathEvents.length === 0) return null;
-
-  const names = deathEvents
-    .map((event) => ctx.activeChampions.get(event.targetId)?.name)
-    .filter(Boolean);
-
-  if (names.length === 0) return "Um campeao foi DERROTADO!";
-
-  if (names.length === 1) {
-    return `${names[0]} foi DERROTADO!`;
-  }
-
-  return `${names.join(", ")} foram DERROTADOS!`;
 }
 
 function moveDeathItemToEnd(ctx, targetId) {
@@ -765,8 +813,8 @@ function triggerGameOver(ctx, event) {
   if (ctx.gameOverTriggered) return;
 
   ctx.gameOverTriggered = true;
-
-  const { winnerTeam, winnerName } = event;
+  ctx.shouldStopQueue = true;
+  ctx.pendingGameOverEvent = event || null;
 
   // Set global gameEnded flag and disable actions
   if (window.gameEnded !== undefined) {
@@ -782,6 +830,15 @@ function triggerGameOver(ctx, event) {
   document.querySelectorAll(".skill-btn").forEach((button) => {
     button.disabled = true;
   });
+}
+
+function showFinalGameOver(ctx) {
+  if (ctx.gameOverShown) return;
+
+  ctx.gameOverShown = true;
+
+  const event = ctx.pendingGameOverEvent || {};
+  const { winnerTeam, winnerName } = event;
 
   // Get player team from global scope (set in main.js)
   const playerTeam = window.playerTeam || null;
@@ -844,11 +901,13 @@ function triggerGameOver(ctx, event) {
 
       // Start countdown
       let finalCountdownTime = RETURN_TO_LOGIN_TIME;
-      returnToLoginCountdown.textContent = finalCountdownTime;
+      returnToLoginCountdown.textContent =
+        `Retornando ao login em ${finalCountdownTime} segundos.`;
 
       const countdownInterval = setInterval(() => {
         finalCountdownTime--;
-        returnToLoginCountdown.textContent = finalCountdownTime;
+        returnToLoginCountdown.textContent =
+          `Retornando ao login em ${finalCountdownTime} segundos.`;
 
         if (finalCountdownTime <= 0) {
           clearInterval(countdownInterval);

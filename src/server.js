@@ -239,7 +239,15 @@ function removeChampionFromGame(championId, playerTeam) {
       playerNames.get(scoringPlayerSlot),
       scoringTeam,
     );
-    io.emit("combatLog", `${scoringPlayerName} pontuou!`);
+    emitCombatLogPayload({
+      events: [
+        {
+          type: "score",
+          playerName: scoringPlayerName,
+          team: scoringTeam,
+        },
+      ],
+    });
 
     // Check for game over condition but don't emit directly
     if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
@@ -653,6 +661,14 @@ function performSkillExecution(user, skill, targets) {
   turnData.skillsUsedThisTurn[user.id].push(skill.key);
 
   const payloads = [];
+  const primaryTarget = Object.values(targets || {})[0] || null;
+  const skillEvent = {
+    type: "skill",
+    userId: user.id,
+    skillKey: skill.key,
+    skillName: skill.name,
+    targetId: primaryTarget?.id || null,
+  };
 
   const pushPayloadFromResult = (entry) => {
     if (!entry || typeof entry !== "object") return;
@@ -671,6 +687,16 @@ function performSkillExecution(user, skill, targets) {
     } else {
       pushPayloadFromResult(result);
     }
+  }
+
+  if (payloads.length === 0) {
+    payloads.push({
+      log: null,
+      events: [skillEvent],
+      state: null,
+    });
+  } else {
+    payloads[0].events = [skillEvent, ...(payloads[0].events || [])];
   }
 
   if (context.healEvents.length > 0) {

@@ -274,6 +274,38 @@ export class Champion {
     duration = 1,
     context,
     isPermanent = false,
+    isPercent = false,
+  } = {}) {
+    if (amount === 0) {
+      return { appliedAmount: 0, isCappedMax: false, log: null };
+    }
+
+    if (amount > 0) {
+      return this.buffStat({
+        statName,
+        amount,
+        duration,
+        context,
+        isPermanent,
+        isPercent,
+      });
+    }
+
+    return this.debuffStat({
+      statName,
+      amount,
+      duration,
+      context,
+      isPermanent,
+    });
+  }
+
+  applyStatModifier({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
   } = {}) {
     if (!(statName in this)) {
       console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
@@ -301,11 +333,13 @@ export class Champion {
     const isCappedMax = amount > 0 && appliedAmount === 0;
     const capLog = isCappedMax ? `O stat ${statName} já está no máximo.` : null;
 
+    const currentTurn = context?.currentTurn ?? 0;
+
     if (appliedAmount !== 0) {
       this.statModifiers.push({
         statName: statName,
         amount: appliedAmount,
-        expiresAtTurn: context.currentTurn + duration,
+        expiresAtTurn: currentTurn + duration,
         isPermanent: isPermanent, // Identifica se a mudança é permanente
       });
     }
@@ -314,7 +348,7 @@ export class Champion {
       `[Champion] ${this.name} teve ${statName} alterado em ${appliedAmount}. ` +
         (isPermanent
           ? "A alteração é permanente e não será revertida."
-          : `A alteração será revertida no turno ${context.currentTurn + duration}.`),
+          : `A alteração será revertida no turno ${currentTurn + duration}.`),
     );
 
     return {
@@ -322,6 +356,68 @@ export class Champion {
       isCappedMax,
       log: capLog,
     };
+  }
+
+  buffStat({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+    isPercent = false,
+  } = {}) {
+    if (!(statName in this)) {
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
+      return;
+    }
+
+    const normalizedAmount = Math.abs(Number(amount) || 0);
+
+    let effectiveAmount = normalizedAmount;
+
+    if (isPercent) {
+      const usesBase = statName !== "HP" && statName !== "maxHP";
+      const baseKey = `base${statName}`;
+      const baseValue = usesBase ? this[baseKey] : this[statName];
+      const percentBase = Number.isFinite(baseValue)
+        ? baseValue
+        : Number.isFinite(this[statName])
+          ? this[statName]
+          : 0;
+
+      effectiveAmount = (percentBase * normalizedAmount) / 100;
+    }
+
+    return this.applyStatModifier({
+      statName,
+      amount: effectiveAmount,
+      duration,
+      context,
+      isPermanent,
+    });
+  }
+
+  debuffStat({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+  } = {}) {
+    if (!(statName in this)) {
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
+      return;
+    }
+
+    const normalizedAmount = -Math.abs(Number(amount) || 0);
+
+    return this.applyStatModifier({
+      statName,
+      amount: normalizedAmount,
+      duration,
+      context,
+      isPermanent,
+    });
   }
 
   modifyHP(amount, options = {}) {

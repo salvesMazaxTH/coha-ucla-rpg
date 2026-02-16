@@ -316,7 +316,7 @@ export const DamageEngine = {
         console.log(`🔴 EDIT MODE → 999`);
         console.groupEnd();
       }
-      return 999;
+      return 250;
     }
 
     const defensePercent = this.defenseToPercent(defenseUsed);

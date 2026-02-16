@@ -1,35 +1,28 @@
+// ============================================================
+//  IMPORTS
+// ============================================================
+
 import { championDB } from "/shared/data/championDB.js";
 import { Champion } from "/shared/core/Champion.js";
 import { StatusIndicator } from "/shared/core/statusIndicator.js";
 import { createCombatAnimationManager } from "./animation/animsAndLogManager.js";
 
+// ============================================================
+//  SOCKET
+// ============================================================
+
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
-}); // Inicializa o cliente Socket.IO
+});
 
-let playerId = null;
-let playerTeam = null;
-let username = null;
-const playerNames = new Map(); // Mapeia o slot do jogador para o nome de usuário
+// ============================================================
+//  CONFIGURAÇÃO (sobrescrita pelo servidor via "editModeUpdate")
+// ============================================================
 
-const loginScreen = document.getElementById("login-screen");
-const mainContent = document.getElementById("main-content");
-const usernameInput = document.getElementById("username-input");
-const joinArenaBtn = document.getElementById("join-arena-btn");
-const loginMessage = document.getElementById("login-message");
-const disconnectionMessage = document.getElementById("disconnection-message");
-let disconnectionCountdownInterval = null;
-
-let hasConfirmedEndTurn = false;
-
-let gameEnded = false; // Nova flag para rastrear se o jogo terminou
-window.gameEnded = gameEnded; // Expose globally for animsAndLogManager
-
-// não precisa ser mexido, pois o server manda essa informação para dar assign na variável
 const editMode = {
-  enabled: true, // Definido como true para auto-entrar para testes
+  enabled: true,
   autoLogin: false,
   autoSelection: false,
   ignoreCooldowns: false,
@@ -37,62 +30,227 @@ const editMode = {
   unreleasedChampions: true,
 };
 
-// Elementos da tela de seleção de campeões
-const championSelectionScreen = document.getElementById(
-  "champion-selection-screen",
-);
-const availableChampionsGrid = document.getElementById(
-  "availableChampionsGrid",
-);
-const selectedChampionsSlots = document.getElementById(
-  "selectedChampionsSlots",
-);
+// ============================================================
+//  ESTADO DO JOGO
+// ============================================================
+
+// --- Identidade do jogador ---
+let playerId = null;
+let playerTeam = null;
+let username = null;
+const playerNames = new Map(); // slot → nome de usuário
+
+// --- Turno & combate ---
+let currentTurn = 1;
+let hasConfirmedEndTurn = false;
+let gameEnded = false;
+
+// --- Campeões ativos em campo ---
+const activeChampions = new Map();
+
+// --- Seleção de campeões ---
+const TEAM_SIZE = 2;
+let selectedChampions = Array(TEAM_SIZE).fill(null);
+let championSelectionTimer = null;
+let championSelectionTimeLeft = 0;
+let playerTeamConfirmed = false;
+let allAvailableChampionKeys = [];
+let draggedChampionKey = null;
+let draggedFromSlotIndex = -1; // -1 = grade disponível, >= 0 = slot selecionado
+
+// --- Temporizadores ---
+let disconnectionCountdownInterval = null;
+let countdownInterval = null;
+
+// --- Overlays ---
+let portraitOverlay = null;
+let lastLoggedTurn = null; // controla headers de turno no log de combate
+
+// ============================================================
+//  REFERÊNCIAS DO DOM
+// ============================================================
+
+// --- Tela de login ---
+const loginScreen = document.getElementById("login-screen");
+const usernameInput = document.getElementById("username-input");
+const joinArenaBtn = document.getElementById("join-arena-btn");
+const loginMessage = document.getElementById("login-message");
+const disconnectionMessage = document.getElementById("disconnection-message");
+
+// --- Conteúdo principal (arena) ---
+const mainContent = document.getElementById("main-content");
+const endTurnBtn = document.querySelector("#end-turn-btn");
+const combatDialog = document.getElementById("combat-dialog");
+const combatDialogText = document.getElementById("combat-dialog-text");
+const backChampionDisplayTeam1 = document.getElementById("backChampionDisplayTeam1");
+const backChampionDisplayTeam2 = document.getElementById("backChampionDisplayTeam2");
+
+// --- Seleção de campeões ---
+const championSelectionScreen = document.getElementById("champion-selection-screen");
+const availableChampionsGrid = document.getElementById("availableChampionsGrid");
+const selectedChampionsSlots = document.getElementById("selectedChampionsSlots");
 const confirmTeamBtn = document.getElementById("confirmTeamBtn");
 const teamSelectionMessage = document.getElementById("team-selection-message");
 
-const TEAM_SIZE = 2; // Define o tamanho da equipe para 2v2, aumentar depois para 3v3 ou mais se necessário
-let selectedChampions = Array(TEAM_SIZE).fill(null); // Array para armazenar as chaves dos campeões selecionados em ordem
-let championSelectionTimer = null;
-const CHAMPION_SELECTION_TIME = 120; // 120 segundos
-let championSelectionTimeLeft = CHAMPION_SELECTION_TIME;
-let playerTeamConfirmed = false; // Flag para evitar reconfirmar a equipe
-let allAvailableChampionKeys = []; // Para armazenar todas as chaves de campeões do DB
+// --- Fim de jogo ---
+const gameOverOverlay = document.getElementById("gameOverOverlay");
+const returnToLoginBtn = document.getElementById("returnToLoginBtn");
 
-// Adicionar ao início do arquivo, para garantir que StatusIndicator está disponível globalmente se necessário
+// ============================================================
+//  EXPORTS GLOBAIS (usados por animsAndLogManager e outros)
+// ============================================================
+
 window.StatusIndicator = StatusIndicator;
+window.gameEnded = gameEnded;
+
+// ============================================================
+//  GERENCIADOR DE ANIMAÇÕES DE COMBATE
+// ============================================================
+
+const combatAnimations = createCombatAnimationManager({
+  activeChampions,
+  createNewChampion,
+  getCurrentTurn: () => currentTurn,
+  setCurrentTurn: (turn) => { currentTurn = turn; },
+  updateTurnDisplay,
+  applyTurnUpdate,
+  startStatusIndicatorRotation: (champions) =>
+    StatusIndicator.startRotationLoop(champions),
+  combatDialog,
+  combatDialogText,
+});
+
+// ============================================================
+//  LOGIN & CONEXÃO
+// ============================================================
 
 socket.on("connect", () => {
   if (editMode.enabled && editMode.autoLogin) {
-    // Entra automaticamente com um nome de usuário fixo no editMode
     username = "EditUser";
     socket.emit("requestPlayerSlot", username);
   }
-  // console.log("Conectado ao servidor com ID:", socket.id);
 });
 
 socket.on("editModeUpdate", (serverEditMode = {}) => {
   Object.assign(editMode, serverEditMode);
 });
 
+joinArenaBtn.addEventListener("click", () => {
+  const enteredUsername = usernameInput.value.trim();
+  if (enteredUsername) {
+    username = enteredUsername;
+    socket.emit("requestPlayerSlot", username);
+    loginMessage.textContent = "Conectando...";
+    joinArenaBtn.disabled = true;
+    usernameInput.disabled = true;
+  } else {
+    loginMessage.textContent = "Por favor, digite um nome de usuário.";
+  }
+});
+
 socket.on("playerAssigned", (data) => {
   playerId = data.playerId;
   playerTeam = data.team;
   username = data.username;
-
-  // Expose playerTeam globally for animsAndLogManager
   window.playerTeam = playerTeam;
-
-  /*
-  console.log(
-    `Você é ${username} (${playerId}), controlando o Time ${playerTeam}`,
-  );
-  */
-  // A UI será atualizada quando allPlayersConnected ou waitingForOpponent for recebido
 });
+
+socket.on("waitingForOpponent", (message) => {
+  loginMessage.textContent = message;
+  joinArenaBtn.disabled = true;
+  usernameInput.disabled = true;
+});
+
+socket.on("serverFull", (message) => {
+  alert(message);
+  socket.disconnect();
+});
+
+socket.on("allPlayersConnected", () => {
+  // Transição: login → conteúdo principal
+  loginScreen.classList.remove("active");
+  loginScreen.classList.add("hidden");
+  mainContent.classList.remove("hidden");
+  mainContent.classList.add("visible");
+
+  // Anexa o listener de fim de turno (usa a ref já existente)
+  if (endTurnBtn) {
+    endTurnBtn.addEventListener("click", endTurn);
+  }
+
+  // Reseta estado de seleção para novo jogo
+  selectedChampions = Array(TEAM_SIZE).fill(null);
+  playerTeamConfirmed = false;
+  confirmTeamBtn.disabled = true;
+  if (championSelectionTimer) {
+    clearInterval(championSelectionTimer);
+    championSelectionTimer = null;
+  }
+
+  // Reseta flags do jogo
+  gameEnded = false;
+  window.gameEnded = false;
+
+  // Oculta sobreposição de fim de jogo
+  gameOverOverlay.classList.remove("active", "win-background", "lose-background");
+  gameOverOverlay.classList.add("hidden");
+
+  const gameOverContent = gameOverOverlay.querySelector(".game-over-content");
+  gameOverContent.classList.add("hidden");
+  gameOverContent.classList.remove("win", "lose");
+
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  returnToLoginBtn.onclick = null;
+
+  combatAnimations.reset();
+});
+
+socket.on("forceLogout", (message) => {
+  alert(message);
+
+  // Volta para a tela de login
+  mainContent.classList.remove("visible");
+  mainContent.classList.add("hidden");
+  loginScreen.classList.remove("hidden");
+  loginScreen.classList.add("active");
+
+  // Limpa todo o estado do jogo
+  activeChampions.clear();
+  currentTurn = 1;
+  playerId = null;
+  playerTeam = null;
+  username = null;
+  playerNames.clear();
+
+  // Reseta elementos de login
+  usernameInput.value = "";
+  usernameInput.disabled = false;
+  joinArenaBtn.disabled = false;
+  loginMessage.textContent = "Entre com seu nome de usuário para jogar.";
+
+  // Limpa timers de desconexão
+  if (disconnectionCountdownInterval) {
+    clearInterval(disconnectionCountdownInterval);
+    disconnectionCountdownInterval = null;
+  }
+  disconnectionMessage.classList.remove("visible");
+  disconnectionMessage.classList.add("hidden");
+  disconnectionMessage.textContent = "";
+
+  combatAnimations.reset();
+});
+
+// ============================================================
+//  DESCONEXÃO / RECONEXÃO DO OPONENTE
+// ============================================================
 
 socket.on("opponentDisconnected", ({ timeout }) => {
   let timeLeft = timeout / 1000;
-  disconnectionMessage.textContent = `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
+  disconnectionMessage.textContent =
+    `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
   disconnectionMessage.classList.remove("hidden");
   disconnectionMessage.classList.add("visible");
 
@@ -108,7 +266,8 @@ socket.on("opponentDisconnected", ({ timeout }) => {
       disconnectionMessage.classList.remove("visible");
       disconnectionMessage.classList.add("hidden");
     } else {
-      disconnectionMessage.textContent = `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
+      disconnectionMessage.textContent =
+        `Oponente desconectado. Retornando ao login em ${timeLeft} segundos se não reconectar.`;
     }
   }, 1000);
 });
@@ -123,104 +282,12 @@ socket.on("opponentReconnected", () => {
     disconnectionMessage.classList.remove("visible");
     disconnectionMessage.classList.add("hidden");
     disconnectionMessage.textContent = "";
-  }, 3000); // Limpa a mensagem após 3 segundos
+  }, 3000);
 });
 
-socket.on("forceLogout", (message) => {
-  alert(message);
-  // Redefine a UI para a tela de login
-  mainContent.classList.remove("visible");
-  mainContent.classList.add("hidden");
-  loginScreen.classList.remove("hidden");
-  loginScreen.classList.add("active");
-
-  // Limpa o estado do jogo no lado do cliente
-  activeChampions.clear();
-  currentTurn = 1;
-  playerId = null;
-  playerTeam = null;
-  username = null;
-  playerNames.clear();
-
-  // Redefine os elementos da tela de login
-  usernameInput.value = "";
-  usernameInput.disabled = false;
-  joinArenaBtn.disabled = false;
-  loginMessage.textContent = "Entre com seu nome de usuário para jogar.";
-
-  // Limpa quaisquer mensagens/timers de desconexão
-  if (disconnectionCountdownInterval) {
-    clearInterval(disconnectionCountdownInterval);
-    disconnectionCountdownInterval = null;
-  }
-  disconnectionMessage.classList.remove("visible");
-  disconnectionMessage.classList.add("hidden");
-  disconnectionMessage.textContent = "";
-
-  combatAnimations.reset();
-
-  // Opcionalmente, força um recarregamento completo da página ou reinicializa a conexão do socket, se necessário
-  // socket.disconnect();
-  // socket.connect();
-});
-
-socket.on("waitingForOpponent", (message) => {
-  loginMessage.textContent = message;
-  joinArenaBtn.disabled = true;
-  usernameInput.disabled = true;
-});
-
-socket.on("allPlayersConnected", () => {
-  loginScreen.classList.remove("active");
-  loginScreen.classList.add("hidden");
-  mainContent.classList.remove("hidden");
-  mainContent.classList.add("visible");
-
-  // Anexa o listener do endTurnBtn aqui, depois que o mainContent estiver visível
-  const endTurnButton = document.querySelector("#end-turn-btn");
-  if (endTurnButton) {
-    endTurnButton.addEventListener("click", endTurn);
-    /*
-    console.log(
-      "[Client] Listener do endTurnBtn anexado após allPlayersConnected.",
-    );
-    */
-  } else {
-    /*
-    console.error(
-      "[Client] endTurnButton não encontrado após allPlayersConnected!",
-    );
-    */
-  }
-
-  // Redefine o estado de seleção do lado do cliente para o próximo jogo
-  selectedChampions = Array(TEAM_SIZE).fill(null);
-  playerTeamConfirmed = false;
-  confirmTeamBtn.disabled = true;
-  if (championSelectionTimer) {
-    clearInterval(championSelectionTimer);
-    championSelectionTimer = null;
-  }
-  gameEnded = false; // Redefine a flag de jogo terminado para um novo jogo
-  window.gameEnded = false; // Also reset global reference
-
-  // Oculta a sobreposição de fim de jogo se estiver ativa
-  gameOverOverlay.classList.remove("active");
-  gameOverOverlay.classList.add("hidden");
-  gameOverOverlay.classList.remove("win-background", "lose-background"); // Limpa as classes de fundo
-
-  const gameOverContent = gameOverOverlay.querySelector(".game-over-content");
-  gameOverContent.classList.add("hidden"); // Garante que o conteúdo esteja oculto
-  gameOverContent.classList.remove("win", "lose"); // Limpa as classes de conteúdo
-
-  if (countdownInterval) {
-    clearInterval(countdownInterval);
-    countdownInterval = null;
-  }
-  returnToLoginBtn.onclick = null; // Limpa o listener de evento
-
-  combatAnimations.reset();
-});
+// ============================================================
+//  NOMES DOS JOGADORES & PLACAR
+// ============================================================
 
 socket.on("playerNamesUpdate", (namesArray) => {
   playerNames.clear();
@@ -238,209 +305,90 @@ function updatePlayerNamesUI() {
   const player2Name = playerNames.get(1);
 
   if (player1NameDisplayEl) {
-    if (playerTeam === 1) {
-      player1NameDisplayEl.textContent = "Você";
-    } else {
-      player1NameDisplayEl.textContent = `Oponente (${player1Name || "Desconhecido"})`;
-    }
+    player1NameDisplayEl.textContent =
+      playerTeam === 1 ? "Você" : `Oponente (${player1Name || "Desconhecido"})`;
   }
   if (player2NameDisplayEl) {
-    if (playerTeam === 2) {
-      player2NameDisplayEl.textContent = "Você";
-    } else {
-      player2NameDisplayEl.textContent = `Oponente (${player2Name || "Desconhecido"})`;
+    player2NameDisplayEl.textContent =
+      playerTeam === 2 ? "Você" : `Oponente (${player2Name || "Desconhecido"})`;
+  }
+
+  if (scoreTeam1El) scoreTeam1El.textContent = "0";
+  if (scoreTeam2El) scoreTeam2El.textContent = "0";
+}
+
+socket.on("scoreUpdate", ({ player1, player2 }) => {
+  const scoreTeam1El = document.getElementById("score-team-1");
+  const scoreTeam2El = document.getElementById("score-team-2");
+  if (scoreTeam1El) scoreTeam1El.textContent = player1;
+  if (scoreTeam2El) scoreTeam2El.textContent = player2;
+});
+
+// ============================================================
+//  SELEÇÃO DE CAMPEÕES
+// ============================================================
+
+socket.on("startChampionSelection", ({ timeLeft }) => {
+  championSelectionScreen.classList.remove("hidden");
+  championSelectionScreen.classList.add("active");
+  mainContent.classList.remove("visible");
+  mainContent.classList.add("hidden");
+
+  renderAvailableChampions();
+
+  championSelectionTimeLeft = timeLeft;
+  updateChampionSelectionTimerUI();
+
+  if (championSelectionTimer) clearInterval(championSelectionTimer);
+
+  championSelectionTimer = setInterval(() => {
+    championSelectionTimeLeft--;
+    updateChampionSelectionTimerUI();
+    if (championSelectionTimeLeft <= 0) {
+      clearInterval(championSelectionTimer);
+      if (!playerTeamConfirmed) {
+        // Tempo esgotado — envia a seleção atual; servidor preenche ausentes
+        socket.emit("selectTeam", { team: playerTeam, champions: selectedChampions });
+        teamSelectionMessage.textContent =
+          "Tempo esgotado! Equipe enviada. Aguardando o outro jogador...";
+        playerTeamConfirmed = true;
+        confirmTeamBtn.disabled = true;
+      }
     }
-  }
+  }, 1000);
+});
 
-  // Inicializa as pontuações para 0
-  if (scoreTeam1El) {
-    scoreTeam1El.textContent = "0";
-  }
-  if (scoreTeam2El) {
-    scoreTeam2El.textContent = "0";
-  }
-}
+socket.on("allTeamsSelected", () => {
+  championSelectionScreen.classList.remove("active");
+  championSelectionScreen.classList.add("hidden");
+  mainContent.classList.remove("hidden");
+  mainContent.classList.add("visible");
 
-joinArenaBtn.addEventListener("click", () => {
-  const enteredUsername = usernameInput.value.trim();
-  if (enteredUsername) {
-    username = enteredUsername;
-    socket.emit("requestPlayerSlot", username);
-    loginMessage.textContent = "Conectando...";
-    joinArenaBtn.disabled = true;
-    usernameInput.disabled = true;
-  } else {
-    loginMessage.textContent = "Por favor, digite um nome de usuário.";
+  // Reseta estado de seleção
+  selectedChampions = Array(TEAM_SIZE).fill(null);
+  playerTeamConfirmed = false;
+  confirmTeamBtn.disabled = true;
+  if (championSelectionTimer) {
+    clearInterval(championSelectionTimer);
+    championSelectionTimer = null;
   }
 });
 
-socket.on("serverFull", (message) => {
-  alert(message);
-  socket.disconnect();
-});
-
-socket.on("playerCountUpdate", (count) => {
-  /*
-  console.log(`Jogadores atuais: ${count}`);
-  */
-  // Atualiza a UI para mostrar a contagem de jogadores se necessário em outro lugar
-});
-
-function updateTurnDisplay(turn) {
-  const turnDisplay = document.querySelector(".turn-display");
-  const turnText = turnDisplay?.querySelector("p");
-
-  if (turnText) {
-    turnText.innerHTML = `Turno ${turn}`;
+confirmTeamBtn.addEventListener("click", () => {
+  if (playerTeamConfirmed) return;
+  if (selectedChampions.includes(null)) {
+    alert("Por favor, selecione seus campeões para a equipe.");
+    return;
   }
-}
-
-socket.on("gameStateUpdate", (gameState) => {
-  combatAnimations.handleGameStateUpdate(gameState);
+  playerTeamConfirmed = true;
+  confirmTeamBtn.disabled = true;
+  socket.emit("selectTeam", { team: playerTeam, champions: selectedChampions });
+  teamSelectionMessage.textContent =
+    "Equipe confirmada! Aguardando o outro jogador...";
+  clearInterval(championSelectionTimer);
 });
 
-socket.on("championAdded", (championData) => {
-  // console.log("Campeão adicionado:", championData);
-  // Nenhuma renderização direta aqui, gameStateUpdate irá lidar com isso
-  // Apenas garantimos que os dados estejam disponíveis para gameStateUpdate
-  if (!activeChampions.has(championData.id)) {
-    const baseData = championDB[championData.championKey];
-    if (!baseData) {
-      // console.error(
-      //   "Campeão inválido recebido do servidor:",
-      //   championData.championKey,
-      // );
-      return;
-    }
-    const champion = Champion.fromBaseData(
-      baseData,
-      championData.id,
-      championData.team,
-    );
-    champion.baseAttack = baseData.Attack;
-    champion.baseDefense = baseData.Defense;
-    champion.baseSpeed = baseData.Speed;
-    champion.baseCritical = baseData.Critical;
-    champion.baseLifeSteal = baseData.LifeSteal;
-    activeChampions.set(champion.id, champion);
-  }
-});
-
-function applyTurnUpdate(turn) {
-  currentTurn = turn;
-  updateTurnDisplay(currentTurn);
-  hasConfirmedEndTurn = false; // Redefine a confirmação para um novo turno
-  endTurnBtn.disabled = false; // Reabilita o botão para um novo turno
-  enableChampionActions(); // Reabilita todas as ações do campeão
-  activeChampions.forEach((champion) => champion.resetActionStatus()); // Redefine o status de ação para todos os campeões
-  activeChampions.forEach((champion) => {
-    champion.updateUI(currentTurn); // Atualiza a UI para todos os campeões
-    // Espera DOM estabilizar
-    requestAnimationFrame(() => {
-      StatusIndicator.updateChampionIndicators(champion);
-    });
-  });
-  logCombat(`Início do Turno ${currentTurn}`);
-}
-
-socket.on("turnUpdate", (turn) => {
-  combatAnimations.handleTurnUpdate(turn);
-});
-
-socket.on("skillDenied", (message) => {
-  console.warn("[SkillDenied]", message);
-
-  alert(message);
-  // Se quiser algo mais elegante depois:
-});
-
-/*socket.on("actionFailed", (message) => {
-  alert(`Ação falhou: ${message}`);
-});*/
-
-socket.on("skillApproved", async ({ userId, skillKey }) => {
-  const user = activeChampions.get(userId);
-  if (!user) return;
-
-  const skill = user.skills.find((s) => s.key === skillKey);
-  if (!skill) return;
-
-  // Resolve seleção de alvos
-  const targets = await collectClientTargets(user, skill);
-  if (!targets) return;
-
-  const targetIds = {};
-  for (const role in targets) {
-    targetIds[role] = targets[role].id;
-  }
-
-  // 🔥 Marca ação somente AGORA
-  user.markActionTaken();
-  user.updateUI(currentTurn);
-
-  socket.emit("useSkill", {
-    userId,
-    skillKey,
-    targetIds,
-  });
-});
-
-socket.on("combatLog", (message) => {
-  logCombat(message);
-});
-
-/* document.addEventListener("click", (e) => {
-  alert("TOQUE DETECTADO");
-}, { passive: true }); */
-
-const activeChampions = new Map();
-const combatDialog = document.getElementById("combat-dialog");
-const combatDialogText = document.getElementById("combat-dialog-text");
-
-const combatAnimations = createCombatAnimationManager({
-  activeChampions,
-  createNewChampion,
-  getCurrentTurn: () => currentTurn,
-  setCurrentTurn: (turn) => {
-    currentTurn = turn;
-  },
-  updateTurnDisplay,
-  applyTurnUpdate,
-  startStatusIndicatorRotation: (champions) =>
-    StatusIndicator.startRotationLoop(champions),
-  combatDialog,
-  combatDialogText,
-});
-
-socket.on("championRemoved", (championId) => {
-  console.log("Campeão removido:", championId);
-  combatAnimations.handleChampionRemoved(championId);
-});
-
-let currentTurn = 1;
-
-const arena = document.querySelector(".arena");
-const endTurnBtn = document.querySelector("#end-turn-btn");
-const backChampionDisplayTeam1 = document.getElementById(
-  "backChampionDisplayTeam1",
-);
-const backChampionDisplayTeam2 = document.getElementById(
-  "backChampionDisplayTeam2",
-);
-
-// Elementos da sobreposição de fim de jogo
-const gameOverOverlay = document.getElementById("gameOverOverlay");
-const gameOverMessage = document.getElementById("gameOverMessage");
-const returnToLoginCountdown = document.getElementById(
-  "returnToLoginCountdown",
-);
-const returnToLoginBtn = document.getElementById("returnToLoginBtn");
-
-let countdownInterval = null;
-const GAME_OVER_MESSAGE_DISPLAY_TIME = 10; // 10 segundos para a mensagem ficar visível
-const RETURN_TO_LOGIN_TIME = 120; // 120 segundos para a contagem regressiva final
-
-// --- Lógica de Seleção de Campeões ---
+// --- Renderização da grade de campeões ---
 
 function renderAvailableChampions() {
   availableChampionsGrid.innerHTML = "";
@@ -449,10 +397,8 @@ function renderAvailableChampions() {
     const champion = championDB[key];
     const isChampion = (champion.entityType ?? "champion") === "champion";
     const isUnreleased = champion.unreleased === true;
-
     if (!isChampion) return false;
     if (isUnreleased && !editMode.unreleasedChampions) return false;
-
     return true;
   });
 
@@ -473,27 +419,30 @@ function renderAvailableChampions() {
 
     availableChampionsGrid.appendChild(card);
   });
+
   updateSelectedChampionsUI();
 }
+
+// --- Clique em card de campeão ---
 
 function handleChampionCardClick(championKey) {
   if (playerTeamConfirmed) return;
 
   const index = selectedChampions.indexOf(championKey);
   if (index > -1) {
-    // Campeão já selecionado, remove-o
     selectedChampions[index] = null;
   } else {
-    // Campeão não selecionado, adiciona-o ao primeiro slot disponível
     const emptySlotIndex = selectedChampions.indexOf(null);
     if (emptySlotIndex > -1) {
       selectedChampions[emptySlotIndex] = championKey;
     } else {
-      alert("Você já selecionou 3 campeões. Remova um para adicionar outro.");
+      alert("Todos os slots estão preenchidos. Remova um para adicionar outro.");
     }
   }
   updateSelectedChampionsUI();
 }
+
+// --- Atualização visual dos slots selecionados ---
 
 function updateSelectedChampionsUI() {
   selectedChampionsSlots.innerHTML = "";
@@ -518,36 +467,29 @@ function updateSelectedChampionsUI() {
         <img src="${champion.portrait}" alt="${champion.name}">
         <h3>${champion.name}</h3>
       `;
-      card.addEventListener("click", () =>
-        handleChampionCardClick(championKey),
-      );
-      card.addEventListener("dragstart", (e) =>
-        handleDragStart(e, championKey, index),
-      );
+      card.addEventListener("click", () => handleChampionCardClick(championKey));
+      card.addEventListener("dragstart", (e) => handleDragStart(e, championKey, index));
       slot.appendChild(card);
     } else {
       allSlotsFilled = false;
       slot.textContent = `Slot ${index + 1}`;
     }
+
     selectedChampionsSlots.appendChild(slot);
   });
 
-  // Atualiza a grade de campeões disponíveis para refletir o estado selecionado
+  // Marca os cards na grade disponível como selecionados
   document
     .querySelectorAll(".available-champions-grid .champion-card")
     .forEach((card) => {
       const key = card.dataset.championKey;
-      if (selectedChampions.includes(key)) {
-        card.classList.add("selected");
-      } else {
-        card.classList.remove("selected");
-      }
+      card.classList.toggle("selected", selectedChampions.includes(key));
     });
 
   confirmTeamBtn.disabled = !allSlotsFilled || playerTeamConfirmed;
 }
 
-let draggedFromSlotIndex = -1; // -1 se da grade disponível, caso contrário, índice em selectedChampions
+// --- Drag & Drop ---
 
 function handleDragStart(e, championKey, fromSlotIndex = -1) {
   if (playerTeamConfirmed) {
@@ -561,7 +503,7 @@ function handleDragStart(e, championKey, fromSlotIndex = -1) {
 }
 
 function handleDragOver(e) {
-  e.preventDefault(); // Permite o drop
+  e.preventDefault();
   if (playerTeamConfirmed) return;
   e.currentTarget.classList.add("drag-over");
 }
@@ -577,30 +519,23 @@ function handleDrop(e) {
 
   const droppedChampionKey = e.dataTransfer.getData("text/plain");
   const targetSlotIndex = parseInt(e.currentTarget.dataset.slotIndex);
-
   if (isNaN(targetSlotIndex)) return;
 
-  // Se estiver soltando em um slot vazio
   if (selectedChampions[targetSlotIndex] === null) {
-    // Se arrastado da grade disponível
+    // Soltando em slot vazio
     if (draggedFromSlotIndex === -1) {
-      const emptySlotIndex = selectedChampions.indexOf(null);
-      if (emptySlotIndex > -1) {
-        selectedChampions[targetSlotIndex] = droppedChampionKey;
-      }
+      selectedChampions[targetSlotIndex] = droppedChampionKey;
     } else {
-      // Se arrastado de outro slot selecionado
       selectedChampions[targetSlotIndex] = droppedChampionKey;
       selectedChampions[draggedFromSlotIndex] = null;
     }
   } else {
-    // Se estiver soltando em um slot ocupado, troca-os
+    // Soltando em slot ocupado — troca
     const temp = selectedChampions[targetSlotIndex];
     selectedChampions[targetSlotIndex] = droppedChampionKey;
     if (draggedFromSlotIndex !== -1) {
       selectedChampions[draggedFromSlotIndex] = temp;
     } else {
-      // Se arrastado da grade disponível para um slot ocupado, remove o antigo do selecionado
       const oldChampionIndex = selectedChampions.indexOf(droppedChampionKey);
       if (oldChampionIndex > -1) {
         selectedChampions[oldChampionIndex] = null;
@@ -608,101 +543,54 @@ function handleDrop(e) {
     }
   }
 
-  // Remove a classe dragging do elemento original
-  document
-    .querySelector(".champion-card.dragging")
-    ?.classList.remove("dragging");
+  document.querySelector(".champion-card.dragging")?.classList.remove("dragging");
   draggedChampionKey = null;
   draggedFromSlotIndex = -1;
   updateSelectedChampionsUI();
 }
 
-confirmTeamBtn.addEventListener("click", () => {
-  if (playerTeamConfirmed) return;
-  if (selectedChampions.includes(null)) {
-    alert("Por favor, selecione 3 campeões para sua equipe.");
-    return;
-  }
-  playerTeamConfirmed = true;
-  confirmTeamBtn.disabled = true;
-  socket.emit("selectTeam", { team: playerTeam, champions: selectedChampions });
-  teamSelectionMessage.textContent =
-    "Equipe confirmada! Aguardando o outro jogador...";
-  clearInterval(championSelectionTimer); // Para o timer
-});
-
-socket.on("startChampionSelection", ({ timeLeft }) => {
-  championSelectionScreen.classList.remove("hidden");
-  championSelectionScreen.classList.add("active");
-  mainContent.classList.remove("visible");
-  mainContent.classList.add("hidden");
-
-  allAvailableChampionKeys = Object.keys(championDB);
-  renderAvailableChampions();
-
-  championSelectionTimeLeft = timeLeft;
-  updateChampionSelectionTimerUI();
-
-  if (championSelectionTimer) {
-    clearInterval(championSelectionTimer);
-  }
-
-  championSelectionTimer = setInterval(() => {
-    championSelectionTimeLeft--;
-    updateChampionSelectionTimerUI();
-    if (championSelectionTimeLeft <= 0) {
-      clearInterval(championSelectionTimer);
-      if (!playerTeamConfirmed) {
-        // Se o tempo acabar e o jogador não confirmou, envia a seleção atual
-        // O servidor irá lidar com o preenchimento de campeões ausentes
-        socket.emit("selectTeam", {
-          team: playerTeam,
-          champions: selectedChampions,
-        });
-        teamSelectionMessage.textContent =
-          "Tempo esgotado! Equipe enviada. Aguardando o outro jogador...";
-        playerTeamConfirmed = true;
-        confirmTeamBtn.disabled = true;
-      }
-    }
-  }, 1000);
-});
+// --- Timer de seleção ---
 
 function updateChampionSelectionTimerUI() {
   const minutes = Math.floor(championSelectionTimeLeft / 60);
   const seconds = championSelectionTimeLeft % 60;
-  teamSelectionMessage.textContent = `Tempo restante para seleção: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  teamSelectionMessage.textContent =
+    `Tempo restante para seleção: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   if (playerTeamConfirmed) {
     teamSelectionMessage.textContent += " (Equipe confirmada!)";
   }
 }
 
-socket.on("allTeamsSelected", () => {
-  championSelectionScreen.classList.remove("active");
-  championSelectionScreen.classList.add("hidden");
-  mainContent.classList.remove("hidden");
-  mainContent.classList.add("visible");
-  // Redefine o estado de seleção do lado do cliente para o próximo jogo
-  selectedChampions = Array(TEAM_SIZE).fill(null);
-  playerTeamConfirmed = false;
-  confirmTeamBtn.disabled = true;
-  if (championSelectionTimer) {
-    clearInterval(championSelectionTimer);
-    championSelectionTimer = null;
-  }
+// ============================================================
+//  GERENCIAMENTO DE CAMPEÕES
+// ============================================================
+
+socket.on("championAdded", (championData) => {
+  // Pré-registra o campeão para que gameStateUpdate possa utilizá-lo
+  if (activeChampions.has(championData.id)) return;
+
+  const baseData = championDB[championData.championKey];
+  if (!baseData) return;
+
+  const champion = Champion.fromBaseData(baseData, championData.id, championData.team);
+  champion.baseAttack = baseData.Attack;
+  champion.baseDefense = baseData.Defense;
+  champion.baseSpeed = baseData.Speed;
+  champion.baseCritical = baseData.Critical;
+  champion.baseLifeSteal = baseData.LifeSteal;
+  activeChampions.set(champion.id, champion);
 });
 
+socket.on("championRemoved", (championId) => {
+  combatAnimations.handleChampionRemoved(championId);
+});
+
+/** Cria e renderiza um novo campeão no campo de batalha. */
 function createNewChampion(championData) {
   const baseData = championDB[championData.championKey];
-  if (!baseData) {
-    throw new Error("Campeão inválido");
-  }
+  if (!baseData) throw new Error("Campeão inválido");
 
-  const champion = Champion.fromBaseData(
-    baseData,
-    championData.id,
-    championData.team,
-  );
+  const champion = Champion.fromBaseData(baseData, championData.id, championData.team);
   champion.baseAttack = baseData.Attack;
   champion.baseDefense = baseData.Defense;
   champion.baseSpeed = baseData.Speed;
@@ -723,24 +611,33 @@ function createNewChampion(championData) {
   return champion;
 }
 
-// -----------------------
-// Relacionado à sobreposição do cartão/resumo do campeão
+/** Remove um campeão do time local (edit mode / debug). */
+function deleteChampion(championId) {
+  const champion = activeChampions.get(championId);
+  if (!(champion instanceof Champion)) {
+    console.error("Campeão não encontrado.");
+    return;
+  }
+  if (champion.team !== playerTeam) {
+    alert("Você só pode remover campeões do seu time.");
+    return;
+  }
+  if (confirm("Tem certeza que deseja remover este campeão?")) {
+    socket.emit("removeChampion", { championId });
+  }
+}
 
-let portraitOverlay = null;
+// ============================================================
+//  OVERLAY DE RETRATO / INFORMAÇÕES DO CAMPEÃO
+// ============================================================
 
 function handlePortraitClick(champion) {
   if (!champion) return;
-
-  if (portraitOverlay) {
-    closeOverlay();
-  }
+  if (portraitOverlay) closeOverlay();
 
   portraitOverlay = createOverlay(champion);
   document.body.appendChild(portraitOverlay);
-
-  requestAnimationFrame(() => {
-    portraitOverlay.classList.add("active");
-  });
+  requestAnimationFrame(() => portraitOverlay.classList.add("active"));
 }
 
 function createOverlay(champion) {
@@ -754,6 +651,7 @@ function createOverlay(champion) {
     </div>
   `;
 
+  // --- Helpers de sanitização ---
   const escapeHtml = (value) =>
     String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -764,6 +662,7 @@ function createOverlay(champion) {
 
   const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
+  // --- Lista de habilidades (passiva + skills) ---
   const passive = champion?.passive;
   const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
   const passiveDesc =
@@ -772,20 +671,15 @@ function createOverlay(champion) {
   const skills = Array.isArray(champion?.skills) ? champion.skills : [];
 
   const skillItemsHtml = [
-    {
-      name: passiveName,
-      description: passiveDesc,
-    },
+    { name: passiveName, description: passiveDesc },
     ...skills.map((s, index) => {
       const baseName = s?.name || "Hab.1";
       let label = "";
-
       if (index === 3) {
         label = "ULT";
       } else if (index > 0) {
         label = `Hab.${index}`;
       }
-
       return {
         name: label ? `${label} — ${baseName}` : baseName,
         description: typeof s?.description === "string" ? s.description : "",
@@ -816,10 +710,12 @@ function createOverlay(champion) {
 
   overlay.appendChild(details);
 
+  // Fechar ao clicar no backdrop
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeOverlay();
   });
 
+  // Fechar com Escape
   const handleEsc = (e) => {
     if (e.key === "Escape") closeOverlay();
   };
@@ -833,25 +729,20 @@ function closeOverlay() {
   if (!portraitOverlay) return;
 
   portraitOverlay.classList.remove("active");
-
   if (portraitOverlay._escHandler) {
     document.removeEventListener("keydown", portraitOverlay._escHandler);
   }
 
   const toRemove = portraitOverlay;
   portraitOverlay = null;
-
-  setTimeout(() => {
-    toRemove.remove();
-  }, 200);
+  setTimeout(() => toRemove.remove(), 200);
 }
 
-// -----------------------
-// Relacionado às estatísticas do campeão
+// ============================================================
+//  USO DE HABILIDADES & SELEÇÃO DE ALVOS
+// ============================================================
 
-// --------------------------------
-// Relacionado ao uso de habilidades
-
+/** Extrai o contexto (campeão + skill) a partir de um botão de habilidade. */
 function getSkillContext(button) {
   const userId = button.dataset.championId;
   const skillKey = button.dataset.skillKey;
@@ -865,26 +756,74 @@ function getSkillContext(button) {
   return { user, skill, userId, skillKey };
 }
 
-async function collectClientTargets(user, skill) {
-  if (!Array.isArray(skill.targetSpec)) {
-    // console.error("Habilidade sem targetSpec:", skill.name);
-    return null;
+/** Handler principal: valida e solicita uso de habilidade ao servidor. */
+async function handleSkillUsage(button) {
+  if (window.gameEnded) {
+    alert("O jogo já terminou. Nenhuma ação pode ser realizada.");
+    return;
   }
+
+  const ctx = getSkillContext(button);
+  if (!ctx) return;
+
+  const { user, userId, skillKey } = ctx;
+
+  if (user.team !== playerTeam) {
+    alert("Você só pode usar habilidades de campeões do seu time.");
+    return;
+  }
+
+  if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
+    alert(`${user.name} já agiu neste turno.`);
+    return;
+  }
+
+  // Solicita autorização ao servidor antes de resolver alvos
+  socket.emit("requestSkillUse", { userId, skillKey });
+}
+
+socket.on("skillDenied", (message) => {
+  console.warn("[SkillDenied]", message);
+  alert(message);
+});
+
+socket.on("skillApproved", async ({ userId, skillKey }) => {
+  const user = activeChampions.get(userId);
+  if (!user) return;
+
+  const skill = user.skills.find((s) => s.key === skillKey);
+  if (!skill) return;
+
+  // Coleta alvos no client
+  const targets = await collectClientTargets(user, skill);
+  if (!targets) return;
+
+  const targetIds = {};
+  for (const role in targets) {
+    targetIds[role] = targets[role].id;
+  }
+
+  // Marca a ação somente após resolução de alvos
+  user.markActionTaken();
+  user.updateUI(currentTurn);
+
+  socket.emit("useSkill", { userId, skillKey, targetIds });
+});
+
+// --- Coleta de alvos no client ---
+
+async function collectClientTargets(user, skill) {
+  if (!Array.isArray(skill.targetSpec)) return null;
 
   const normalizedSpec = skill.targetSpec.map((s) =>
     typeof s === "string" ? { type: s } : s,
   );
 
-  // Se há alvos globais, nenhuma seleção é necessária
+  // Alvos globais não precisam de seleção manual
   const hasGlobalTargets = skill.targetSpec.some(
     (spec) => spec === "all-enemies" || spec === "all-allies" || spec === "all",
   );
-
-  if (hasGlobalTargets) {
-    // Nenhuma seleção de alvo necessária, retorna objeto vazio
-    // O servidor resolverá os alvos com base em allChampions
-    return {};
-  }
+  if (hasGlobalTargets) return {};
 
   const championsInField = Array.from(activeChampions.values());
   const targets = {};
@@ -894,127 +833,90 @@ async function collectClientTargets(user, skill) {
 
   for (const spec of normalizedSpec) {
     const target = await selectTargetForRole(
-      spec.type,
-      user,
-      championsInField,
-      enemyCounter,
-      chosenTargets,
-      spec.unique === true,
+      spec.type, user, championsInField,
+      enemyCounter, chosenTargets, spec.unique === true,
     );
 
-    // Cancelou a habilidade inteira
-    if (target === null) return null;
-
-    // Slot opcional ignorado
-    if (target === undefined) continue;
+    if (target === null) return null;      // Cancelou a habilidade
+    if (target === undefined) continue;    // Slot opcional ignorado
 
     Object.assign(targets, target);
     hasAtLeastOneTarget = true;
   }
 
-  // Nenhum alvo, cancelou a habilidade inteira
-  if (!hasAtLeastOneTarget) return null;
-
-  return targets;
+  return hasAtLeastOneTarget ? targets : null;
 }
 
 async function selectTargetForRole(
-  role,
-  user,
-  championsInField,
-  enemyCounter,
-  chosenTargets,
-  enforceUnique,
+  role, user, championsInField, enemyCounter, chosenTargets, enforceUnique,
 ) {
-  // helper pra aplicar filtro de unicidade
-  const filterUnique = (list) => {
-    if (!enforceUnique) return list;
-    return list.filter((c) => !chosenTargets.has(c.id));
-  };
+  // Helper: filtra alvos já escolhidos quando unicidade é exigida
+  const filterUnique = (list) =>
+    enforceUnique ? list.filter((c) => !chosenTargets.has(c.id)) : list;
 
-  // 🔹 SELF
+  // SELF
   if (role === "self") {
     chosenTargets.add(user.id);
     return { self: user };
   }
 
-  // 🔹 ALLY automático
+  // ALLY (automático — primeiro aliado disponível)
   if (role === "ally") {
     let allies = championsInField.filter(
       (c) => c.team === user.team && c.id !== user.id,
     );
-
     allies = filterUnique(allies);
-
     if (allies.length === 0) return undefined;
-
     chosenTargets.add(allies[0].id);
     return { ally: allies[0] };
   }
 
-  // 🔹 SELECT ALLY
+  // SELECT ALLY (seleção manual)
   if (role === "select:ally") {
     let candidates = championsInField.filter((c) => c.team === user.team);
-
     candidates = filterUnique(candidates);
-
     if (candidates.length === 0) return null;
-
     const target = await createTargetSelectionOverlay(
-      candidates,
-      "Escolha um Aliado (ou você)",
+      candidates, "Escolha um Aliado (ou você)",
     );
-
     if (!target) return undefined;
-
     chosenTargets.add(target.id);
     return { ally: target };
   }
 
-  // 🔹 ALL ALLIES (inclui self)
-  if (role === "all:ally") {
-    return {};
-  }
+  // ALL ALLIES (inclui self — servidor resolve)
+  if (role === "all:ally") return {};
 
-  // 🔹 ENEMY
+  // ENEMY (seleção manual)
   if (role === "enemy") {
     enemyCounter.count++;
     const index = enemyCounter.count;
-
     let candidates = championsInField.filter((c) => c.team !== user.team);
-
     candidates = filterUnique(candidates);
-
     if (candidates.length === 0) return null;
-
     const target = await createTargetSelectionOverlay(
       candidates,
       index === 1 ? "Selecione o INIMIGO" : `Selecione o INIMIGO ${index}`,
     );
-
     if (!target) return null;
-
     chosenTargets.add(target.id);
-
     const key = index === 1 ? "enemy" : `enemy${index}`;
     return { [key]: target };
   }
 
-  // 🔹 FALLBACK GENÉRICO
+  // FALLBACK genérico
   let candidates = filterUnique(championsInField);
-
   if (candidates.length === 0) return null;
 
   const target = await createTargetSelectionOverlay(
-    candidates,
-    `Selecione o alvo (${role})`,
+    candidates, `Selecione o alvo (${role})`,
   );
-
   if (!target) return undefined;
-
   chosenTargets.add(target.id);
   return { [role]: target };
 }
+
+// --- Overlay de seleção de alvo ---
 
 function createTargetSelectionOverlay(candidates, title) {
   return new Promise((resolve) => {
@@ -1031,25 +933,22 @@ function createTargetSelectionOverlay(candidates, title) {
     candidates.forEach((champion) => {
       const card = document.createElement("div");
       card.classList.add("target-candidate");
-
       card.innerHTML = `
-                <img src="${champion.portrait}" alt="${champion.name}">
-                <h3>${champion.name}</h3>
-                <p>HP: ${champion.HP}/${champion.maxHP}</p>
-            `;
-
+        <img src="${champion.portrait}" alt="${champion.name}">
+        <h3>${champion.name}</h3>
+        <p>HP: ${champion.HP}/${champion.maxHP}</p>
+      `;
       card.addEventListener("click", (e) => {
-        e.stopPropagation(); // Impede o clique na sobreposição
+        e.stopPropagation();
         closeTargetOverlay(overlay);
         resolve(champion);
       });
-
       container.appendChild(card);
     });
 
     overlay.appendChild(container);
 
-    // Clique fora para cancelar
+    // Clique fora cancela a seleção
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
         closeTargetOverlay(overlay);
@@ -1058,139 +957,70 @@ function createTargetSelectionOverlay(candidates, title) {
     });
 
     document.body.appendChild(overlay);
-
-    requestAnimationFrame(() => {
-      overlay.classList.add("active");
-    });
+    requestAnimationFrame(() => overlay.classList.add("active"));
   });
 }
 
 function closeTargetOverlay(overlay) {
   overlay.classList.remove("active");
-  setTimeout(() => {
-    overlay.remove();
-  }, 200);
+  setTimeout(() => overlay.remove(), 200);
 }
 
-async function handleSkillUsage(button) {
-  if (window.gameEnded) {
-    alert("O jogo já terminou. Nenhuma ação pode ser realizada.");
-    return;
-  }
+// ============================================================
+//  GERENCIAMENTO DE TURNOS
+// ============================================================
 
-  const ctx = getSkillContext(button);
-  if (!ctx) return;
+socket.on("gameStateUpdate", (gameState) => {
+  combatAnimations.handleGameStateUpdate(gameState);
+});
 
-  const { user, skill, userId, skillKey } = ctx;
+socket.on("turnUpdate", (turn) => {
+  combatAnimations.handleTurnUpdate(turn);
+});
 
-  if (user.team !== playerTeam) {
-    alert("Você só pode usar habilidades de campeões do seu time.");
-    return;
-  }
+/** Aplica a transição de turno no client: reseta ações e atualiza a UI. */
+function applyTurnUpdate(turn) {
+  currentTurn = turn;
+  updateTurnDisplay(currentTurn);
+  hasConfirmedEndTurn = false;
+  endTurnBtn.disabled = false;
+  enableChampionActions();
 
-  if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
-    alert(`${user.name} já agiu neste turno.`);
-    return;
-  }
-  // ⭐ NOVO: pedir autorização ao servidor
-  socket.emit("requestSkillUse", {
-    userId,
-    skillKey,
+  activeChampions.forEach((champion) => champion.resetActionStatus());
+  activeChampions.forEach((champion) => {
+    champion.updateUI(currentTurn);
+    requestAnimationFrame(() => StatusIndicator.updateChampionIndicators(champion));
   });
+
+  logCombat(`Início do Turno ${currentTurn}`);
 }
 
-// variável auxiliar para rastreaer headers de turno no log
-let lastLoggedTurn = null;
-
-function logCombat(text) {
-  const payload = typeof text === "string" ? { log: text } : text || {};
-  const logText = combatAnimations.processCombatLogPayload?.(payload) || null;
-  const log = document.getElementById("combat-log");
-  if (!log) return;
-
-  let turnHeader;
-
-  if (logText && lastLoggedTurn !== currentTurn) {
-    // criar o header de turno
-    lastLoggedTurn = currentTurn;
-    turnHeader = document.createElement("h2");
-    turnHeader.classList.add("turn-header");
-    turnHeader.textContent = `Turno ${currentTurn}`;
-    log.appendChild(turnHeader);
-  }
-
-  // colocar uma quebra de linha antes de line.innerHTML se já houver linhas no log
-  if (logText) {
-    if (log.children.length > 1) {
-      const br = document.createElement("br");
-      log.appendChild(br);
-    }
-
-    const line = document.createElement("p");
-    line.innerHTML = logText.replace(/\n/g, "<br>");
-
-    turnHeader = log.querySelector(".turn-header");
-
-    log.appendChild(line);
-  }
-
-  if (!logText) {
-    return;
-  }
+function updateTurnDisplay(turn) {
+  const turnDisplay = document.querySelector(".turn-display");
+  const turnText = turnDisplay?.querySelector("p");
+  if (turnText) turnText.innerHTML = `Turno ${turn}`;
 }
-
-// --------------------------------
 
 function endTurn() {
-  // console.log("[Client] Função 'endTurn' chamada.");
   if (hasConfirmedEndTurn) {
     alert("Você já confirmou o fim do turno. Aguardando o outro jogador.");
-    // console.log("[Client] endTurn: Já confirmado neste turno.");
     return;
   }
+
   const confirmed = confirm("Tem certeza que deseja encerrar este turno?");
-  if (!confirmed) {
-    // console.log("[Client] endTurn: Usuário cancelou.");
-    return;
-  }
-  // console.log(
-  //   "[Client] Emitindo evento 'endTurn'. hasConfirmedEndTurn atual:",
-  //   hasConfirmedEndTurn,
-  //   "endTurnBtn.disabled:",
-  //   endTurnBtn.disabled,
-  // );
+  if (!confirmed) return;
+
   socket.emit("endTurn");
   hasConfirmedEndTurn = true;
-  endTurnBtn.disabled = true; // Desabilita o botão após a confirmação
-  disableChampionActions(); // Desabilita todas as ações do campeão
+  endTurnBtn.disabled = true;
+  disableChampionActions();
   logCombat("Você confirmou o fim do turno. Aguardando o outro jogador...");
 }
-
-function deleteChampion(championId) {
-  const champion = activeChampions.get(championId);
-  if (!(champion instanceof Champion)) {
-    console.error("Campeão não encontrado.");
-    return;
-  }
-  if (champion.team !== playerTeam) {
-    alert("Você só pode remover campeões do seu time.");
-    return;
-  }
-  if (confirm("Tem certeza que deseja remover este campeão?")) {
-    socket.emit("removeChampion", { championId });
-  }
-}
-
-// ----------------------------------------//
-// Listeners de eventos //
 
 socket.on("playerConfirmedEndTurn", (playerSlot) => {
   const playerName = playerNames.get(playerSlot);
   if (playerSlot !== playerTeam - 1) {
-    // Se for o oponente que confirmou
-    logCombat(
-      `${playerName} confirmou o fim do turno. Aguardando sua confirmação.`,
-    );
+    logCombat(`${playerName} confirmou o fim do turno. Aguardando sua confirmação.`);
   }
 });
 
@@ -1198,27 +1028,49 @@ socket.on("waitingForOpponentEndTurn", (message) => {
   logCombat(message);
 });
 
-socket.on("scoreUpdate", ({ player1, player2 }) => {
-  const scoreTeam1El = document.getElementById("score-team-1");
-  const scoreTeam2El = document.getElementById("score-team-2");
+// ============================================================
+//  LOG DE COMBATE
+// ============================================================
 
-  if (scoreTeam1El) {
-    scoreTeam1El.textContent = player1;
-  }
-  if (scoreTeam2El) {
-    scoreTeam2El.textContent = player2;
-  }
+socket.on("combatLog", (message) => {
+  logCombat(message);
 });
+
+function logCombat(text) {
+  const payload = typeof text === "string" ? { log: text } : text || {};
+  const logText = combatAnimations.processCombatLogPayload?.(payload) || null;
+  if (!logText) return;
+
+  const log = document.getElementById("combat-log");
+  if (!log) return;
+
+  // Header de turno — inserido apenas uma vez por turno
+  if (lastLoggedTurn !== currentTurn) {
+    lastLoggedTurn = currentTurn;
+    const turnHeader = document.createElement("h2");
+    turnHeader.classList.add("turn-header");
+    turnHeader.textContent = `Turno ${currentTurn}`;
+    log.appendChild(turnHeader);
+  }
+
+  // Separador visual entre entradas
+  if (log.children.length > 1) {
+    log.appendChild(document.createElement("br"));
+  }
+
+  const line = document.createElement("p");
+  line.innerHTML = logText.replace(/\n/g, "<br>");
+  log.appendChild(line);
+}
+
+// ============================================================
+//  EXIBIÇÃO DO CAMPEÃO DE RETAGUARDA
+// ============================================================
 
 socket.on("backChampionUpdate", ({ team, championKey }) => {
   const displayElement =
     team === 1 ? backChampionDisplayTeam1 : backChampionDisplayTeam2;
-  if (!displayElement) {
-    // console.error(
-    //   `[Client] Elemento de exibição do campeão de trás não encontrado para o time ${team}`,
-    // );
-    return;
-  }
+  if (!displayElement) return;
 
   if (championKey) {
     const champion = championDB[championKey];
@@ -1230,31 +1082,29 @@ socket.on("backChampionUpdate", ({ team, championKey }) => {
       displayElement.classList.remove("hidden");
       displayElement.classList.add("visible");
     } else {
-      // console.error(`[Client] Dados do campeão não encontrados para a chave: ${championKey}`);
       displayElement.classList.add("hidden");
       displayElement.classList.remove("visible");
     }
   } else {
-    // Nenhum campeão de trás, oculta a exibição
     displayElement.innerHTML = "";
     displayElement.classList.add("hidden");
     displayElement.classList.remove("visible");
   }
 });
 
+// ============================================================
+//  HELPERS DE UI (habilitar / desabilitar habilidades)
+// ============================================================
+
 function disableChampionActions() {
   document.querySelectorAll(".skill-btn").forEach((button) => {
     button.disabled = true;
   });
-  // Referências a championSelectBar comentadas foram removidas, pois não estão definidas.
 }
 
 function enableChampionActions() {
   document.querySelectorAll(".skill-btn").forEach((button) => {
-    if (button.dataset.cooldownActive === "true") {
-      return;
-    }
+    if (button.dataset.cooldownActive === "true") return;
     button.disabled = false;
   });
-  // Referências a championSelectBar comentadas foram removidas, pois não estão definidas.
 }
