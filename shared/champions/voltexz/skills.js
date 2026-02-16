@@ -44,25 +44,29 @@ const voltexzSkills = [
       const baseDamage = (user.Attack * bf) / 100;
       const results = [];
 
-      const primaryResult = DamageEngine.resolveDamage({
-        baseDamage,
-        user,
-        target: primary,
-        skill: this.name,
-        context,
-        allChampions: context?.allChampions,
-      });
-      results.push(primaryResult);
+      if (primary) {
+        const primaryResult = DamageEngine.resolveDamage({
+          baseDamage,
+          user,
+          target: primary,
+          skill: this.name,
+          context,
+          allChampions: context?.allChampions,
+        });
+        results.push(primaryResult);
+      }
 
-      const secondaryResult = DamageEngine.resolveDamage({
-        baseDamage,
-        user,
-        target: secondary,
-        skill: this.name,
-        context,
-        allChampions: context?.allChampions,
-      });
-      results.push(secondaryResult);
+      if (secondary) {
+        const secondaryResult = DamageEngine.resolveDamage({
+          baseDamage,
+          user,
+          target: secondary,
+          skill: this.name,
+          context,
+          allChampions: context?.allChampions,
+        });
+        results.push(secondaryResult);
+      }
 
       return results;
     },

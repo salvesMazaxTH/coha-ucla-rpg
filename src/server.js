@@ -376,12 +376,15 @@ function resolveSkillTargets(user, skill, action) {
     if (provoker && provoker.alive) {
       for (const role in action.targetIds) {
         const original = activeChampions.get(action.targetIds[role]);
-        if (original && original.team !== user.team) {
+        if (original && original.alive && original.team !== user.team) {
           currentTargets[role] = provoker;
           redirected = true;
-        } else {
+        } else if (role === "self") {
+          currentTargets[role] = user;
+        } else if (original && original.alive) {
           currentTargets[role] = original;
         }
+        // Alvo morto → não entra, a porção da skill correspondente é ignorada
       }
 
       if (redirected) {
@@ -402,14 +405,25 @@ function resolveSkillTargets(user, skill, action) {
   if (!redirected) {
     for (const role in action.targetIds) {
       const target = activeChampions.get(action.targetIds[role]);
-      if (!target || !target.alive) {
-        io.emit(
-          "combatLog",
-          `Alvo inválido ou inativo para a ação de ${formatChampionName(user)}. Ação cancelada.`,
-        );
-        return null;
+
+      if (target && target.alive) {
+        currentTargets[role] = target;
+      } else if (role === "self") {
+        // "self" sempre resolve para o próprio user
+        currentTargets[role] = user;
       }
-      currentTargets[role] = target;
+      // Alvo morto/inválido → simplesmente não entra em currentTargets.
+      // A porção da skill referente a esse alvo não será executada,
+      // mas as demais porções continuam normalmente.
+    }
+
+    // Se nenhum alvo restou, aí sim cancela a ação
+    if (Object.keys(currentTargets).length === 0) {
+      io.emit(
+        "combatLog",
+        `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
+      );
+      return null;
     }
   }
 

@@ -61,6 +61,13 @@ const raliaSkills = [
 
       console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
+      const userName = formatChampionName(user);
+      const selfLog = `${userName} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
+
+      if (!enemy) {
+        return { log: selfLog };
+      }
+
       const bf = 70;
       const result = DamageEngine.resolveDamage({
         baseDamage: (user.Attack * bf) / 100,
@@ -70,10 +77,8 @@ const raliaSkills = [
         context,
         allChampions: context?.allChampions,
       });
-      const userName = formatChampionName(user);
-      const log = `${userName} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
       // colocar dentro de result.log
-      result.log = log + " " + result.log;
+      result.log = selfLog + " " + result.log;
       return result;
     },
   },

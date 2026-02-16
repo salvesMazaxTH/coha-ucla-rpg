@@ -42,7 +42,7 @@ function buildCombatAnimationContext(options) {
       EVASION_ANIMATION_DURATION: 550,
       HEAL_ANIMATION_DURATION: 900,
       SHIELD_ANIMATION_DURATION: 900,
-      GAME_OVER_DELAY: 1250,
+      GAME_OVER_DELAY: 550,
     },
     dialogSpeed: {
       base: 1000,

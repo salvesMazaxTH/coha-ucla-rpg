@@ -75,17 +75,18 @@ const vaelSkills = [
       const baseDamage = (user.Attack * bfPrimary) / 100;
       const results = [];
 
-      const primaryResult = DamageEngine.resolveDamage({
-        baseDamage,
-        user,
-        target: primary,
-        skill: this.name,
-        context,
-        options: { disable: true }, // sem crítico
-        allChampions: context?.allChampions,
-      });
-
-      results.push(primaryResult);
+      if (primary) {
+        const primaryResult = DamageEngine.resolveDamage({
+          baseDamage,
+          user,
+          target: primary,
+          skill: this.name,
+          context,
+          options: { disable: true }, // sem crítico
+          allChampions: context?.allChampions,
+        });
+        results.push(primaryResult);
+      }
 
       if (secondary) {
         const secondaryResult = DamageEngine.resolveDamage({

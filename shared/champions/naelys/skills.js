@@ -47,17 +47,20 @@ const naelysSkills = [
       const baseDamage = (user.Attack * bf) / 100;
       const healAmount = 45;
 
-      // 🗡️ Dano no inimigo
-      const damageResult = DamageEngine.resolveDamage({
-        baseDamage,
-        user,
-        target: enemy,
-        skill: this.name,
-        context,
-        allChampions: context?.allChampions,
-      });
+      const logs = [];
 
-      const logs = [damageResult];
+      // 🗡️ Dano no inimigo (se ainda vivo)
+      if (enemy) {
+        const damageResult = DamageEngine.resolveDamage({
+          baseDamage,
+          user,
+          target: enemy,
+          skill: this.name,
+          context,
+          allChampions: context?.allChampions,
+        });
+        logs.push(damageResult);
+      }
       let allyLog = "";
       let statLog = "";
 
