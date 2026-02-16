@@ -624,7 +624,7 @@ function processCombatQueue(ctx) {
         if (
             !ctx.gameOverPayloadReceived &&
             ctx.pendingGameState &&
-            !isProcessingEvents
+            !ctx.isProcessingEvents
         ) {
             applyGameStateUpdate(ctx, ctx.pendingGameState);
         }
