@@ -257,12 +257,12 @@ function enqueueCombatItem(ctx, item) {
   }
 
   if (events.length > 1) {
-    events.forEach((event) => {
+    for (const event of events) {
       ctx.combatQueue.push({
         events: [event],
         state: item.state,
       });
-    });
+    }
   } else {
     ctx.combatQueue.push(item);
   }
@@ -617,7 +617,7 @@ function processCombatQueue(ctx) {
   ctx.combatQueueRunning = true;
 
   const item = ctx.combatQueue.shift();
-  const events = Array.isArray(item?.events) ? item.events : [];
+  const events = item.events;
   const state = item?.state;
 
   let eventIndex = 0;
