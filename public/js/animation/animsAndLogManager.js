@@ -59,6 +59,7 @@ function buildCombatAnimationContext(options) {
         combatQueue: [],
         combatQueueTimer: null,
         combatQueueRunning: false,
+        isProcessingEvents: false,
         pendingGameState: null,
         pendingTurnUpdate: null,
         gameOverTriggered: false,
@@ -287,7 +288,12 @@ function handleChampionRemoved(ctx, championId) {
 }
 
 function handleGameStateUpdate(ctx, gameState) {
-    if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
+    if (
+        ctx.shouldStopQueue ||
+        ctx.gameOverPayloadReceived ||
+        ctx.isProcessingEvents
+    )
+        return;
     if (ctx.combatQueueRunning || ctx.combatQueue.length > 0) {
         ctx.pendingGameState = gameState;
         return;
@@ -630,6 +636,8 @@ function processCombatQueue(ctx) {
 
     ctx.combatQueueRunning = true;
 
+    ctx.isProcessingEvents = true;
+
     const item = ctx.combatQueue.shift();
     const events = item.events;
     const state = item?.state;
@@ -642,7 +650,7 @@ function processCombatQueue(ctx) {
             if (Array.isArray(state)) {
                 applyCombatStateSnapshots(ctx, state);
             }
-
+            ctx.isProcessingEvents = false;
             processCombatQueue(ctx);
             return;
         }
