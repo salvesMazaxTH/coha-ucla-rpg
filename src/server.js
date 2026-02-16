@@ -559,6 +559,17 @@ function performSkillExecution(user, skill, targets) {
         amount: healAmount,
       });
     },
+    shieldEvents: [],
+    registerShield({ target, amount, sourceId } = {}) {
+      const shieldAmount = Number(amount) || 0;
+      if (!target?.id || shieldAmount <= 0) return;
+      this.shieldEvents.push({
+        type: "shield",
+        targetId: target.id,
+        sourceId: sourceId || user.id,
+        amount: shieldAmount,
+      });
+    },
   };
 
   // Injeta contexto em todos os campeões (skills podem acessar aliados/inimigos)
@@ -650,6 +661,31 @@ function performSkillExecution(user, skill, targets) {
         log: null,
         events: context.healEvents,
         state: healSnapshot,
+      });
+    }
+  }
+
+  // Anexa shield events ao payload adequado
+  if (context.shieldEvents.length > 0) {
+    const targetPayload = payloads.find((p) => p.log) || payloads[0];
+    const shieldSnapshot = buildCombatSnapshotByIds(
+      context.shieldEvents.map((e) => e.targetId),
+    );
+
+    if (targetPayload) {
+      targetPayload.events = [
+        ...(targetPayload.events || []),
+        ...context.shieldEvents,
+      ];
+      targetPayload.state = mergeCombatSnapshots(
+        targetPayload.state,
+        shieldSnapshot,
+      );
+    } else {
+      payloads.push({
+        log: null,
+        events: context.shieldEvents,
+        state: shieldSnapshot,
       });
     }
   }

@@ -499,6 +499,11 @@ export class Champion {
       type, // "regular" | "spell" | "supreme"
     });
 
+    // Registra evento de escudo no contexto para o combat dialog
+    if (context?.registerShield) {
+      context.registerShield({ target: this, amount });
+    }
+
     console.log(
       `[Champion] ${this.name} ganhou um escudo de ${amount} HP (tipo: ${type}) com decaimento de ${decayPerTurn} por turno.`,
     );

@@ -99,13 +99,15 @@ function createEventHandlers(ctx) {
       );
       triggerChampionHeal(event?.targetId, event?.amount);
     },
-    shield: (event) =>
+    shield: (event) => {
       triggerChampionVisual(
         ctx,
         event?.targetId,
         "shield",
         ctx.durations.SHIELD_ANIMATION_DURATION,
-      ),
+      );
+      triggerChampionShield(event?.targetId, event?.amount);
+    },
     death: (event) => triggerChampionDeath(ctx, event?.targetId),
     gameOver: (event) => triggerGameOver(ctx, event),
   };
@@ -650,17 +652,13 @@ function processCombatQueue(ctx) {
       setTimeout(() => {
         applyCombatStateSnapshots(ctx, state);
       }, ctx.durations.DAMAGE_ANIMATION_DURATION * 0.6);
-    }
-
-    else if (event.type === "heal") {
+    } else if (event.type === "heal") {
       duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
 
       setTimeout(() => {
         applyCombatStateSnapshots(ctx, state);
       }, ctx.durations.HEAL_ANIMATION_DURATION * 0.5);
-    }
-
-    else {
+    } else {
       // Eventos como skill, death, shield, keyword, etc.
       applyCombatStateSnapshots(ctx, state);
     }
@@ -674,13 +672,9 @@ function processCombatQueue(ctx) {
   processNextEvent();
 }
 
-
 function moveDeathItemToEnd(ctx, targetId) {
-  const index = ctx.combatQueue.findIndex(
-    (entry) =>
-      entry?.events?.some(
-        (e) => e?.type === "death" && e.targetId === targetId,
-      ),
+  const index = ctx.combatQueue.findIndex((entry) =>
+    entry?.events?.some((e) => e?.type === "death" && e.targetId === targetId),
   );
 
   if (index === -1) return;
@@ -803,6 +797,31 @@ function triggerChampionHeal(championId, amount) {
   setTimeout(() => {
     float.remove();
     element.classList.remove("heal");
+  }, 1850);
+}
+
+function triggerChampionShield(championId, amount) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+
+  const element = document.querySelector(`[data-champion-id="${championId}"]`);
+
+  if (!element) return;
+
+  const portrait = element.querySelector(".portrait") || element;
+
+  const float = document.createElement("div");
+  float.classList.add("shield-float");
+  float.textContent = `+${amount}`;
+
+  portrait.appendChild(float);
+
+  requestAnimationFrame(() => {
+    element.classList.add("shield");
+  });
+
+  setTimeout(() => {
+    float.remove();
+    element.classList.remove("shield");
   }, 1850);
 }
 
