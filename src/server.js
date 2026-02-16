@@ -517,13 +517,12 @@ function mergeCombatSnapshots(base, extra) {
 }
 
 /** Emite um payload estruturado de combatLog para todos os clientes. */
-function emitCombatLogPayload({ log, event, events, state }) {
-  if (!log && !event && !events && !state) return;
+function emitCombatLogPayload({ log, events, state }) {
+  if (!log && !events && !state) return;
 
   io.emit("combatLog", {
     ...(log ? { log } : null),
     ...(events ? { events } : null),
-    ...(event ? { event } : null),
     ...(state ? { state } : null),
   });
 }

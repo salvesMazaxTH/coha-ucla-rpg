@@ -111,18 +111,6 @@ function createEventHandlers(ctx) {
   };
 }
 
-function normalizeEvents(item) {
-  if (Array.isArray(item?.events) && item.events.length > 0) {
-    return item.events.filter(Boolean);
-  }
-
-  if (item?.event) {
-    return [item.event];
-  }
-
-  return [];
-}
-
 function hasGameOverEvent(events) {
   return (
     Array.isArray(events) && events.some((event) => event?.type === "gameOver")
@@ -437,9 +425,7 @@ function processCombatLogPayload(ctx, payload) {
   if (!normalized || typeof normalized !== "object") return null;
 
   if (!Array.isArray(normalized.events)) {
-    normalized.events = normalized.event
-      ? [normalized.event]
-      : [];
+    normalized.events = normalized.event ? [normalized.event] : [];
   }
 
   const hasGameOver = hasGameOverEvent(normalized.events);
@@ -629,44 +615,72 @@ function processCombatQueue(ctx) {
   ctx.combatQueueRunning = true;
 
   const item = ctx.combatQueue.shift();
+  const events = Array.isArray(item?.events) ? item.events : [];
+  const state = item?.state;
 
-  applyCombatStateSnapshots(ctx, item?.state);
+  let eventIndex = 0;
 
-  const events = item.events;
-  events.forEach((event) => {
+  function processNextEvent() {
+    if (eventIndex >= events.length) {
+      processCombatQueue(ctx);
+      return;
+    }
+
+    const event = events[eventIndex++];
     const handler = ctx.eventHandlers[event?.type];
+
+    // 🔹 1️⃣ Mostrar diálogo (todo evento tem texto)
+    const dialogText = buildDialogFromEvents(ctx, [event]);
+
+    if (dialogText) {
+      showCombatDialog(ctx, dialogText);
+    }
+
+    let duration = getCombatDialogDuration(ctx, dialogText);
+
+    // 🔹 2️⃣ Executar animação específica
     if (handler) {
       handler(event);
     }
-  });
 
-  const dialogText = buildDialogFromEvents(ctx, events);
+    // 🔹 3️⃣ Sincronizar snapshot no momento correto
+    if (event.type === "damage") {
+      duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
 
-  if (dialogText) {
-    showCombatDialog(ctx, dialogText);
-  } else {
-    hideCombatDialog(ctx);
+      setTimeout(() => {
+        applyCombatStateSnapshots(ctx, state);
+      }, ctx.durations.DAMAGE_ANIMATION_DURATION * 0.6);
+    }
+
+    else if (event.type === "heal") {
+      duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
+
+      setTimeout(() => {
+        applyCombatStateSnapshots(ctx, state);
+      }, ctx.durations.HEAL_ANIMATION_DURATION * 0.5);
+    }
+
+    else {
+      // Eventos como skill, death, shield, keyword, etc.
+      applyCombatStateSnapshots(ctx, state);
+    }
+
+    // 🔹 4️⃣ Ir para próximo evento após o tempo correto
+    ctx.combatQueueTimer = setTimeout(() => {
+      processNextEvent();
+    }, duration || 450);
   }
 
-  let duration = getCombatDialogDuration(ctx, dialogText);
-
-  if (events.some((event) => event?.type === "damage")) {
-    duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
-  }
-
-  if (events.some((event) => event?.type === "heal")) {
-    duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
-  }
-
-  ctx.combatQueueTimer = setTimeout(() => {
-    processCombatQueue(ctx);
-  }, duration);
+  processNextEvent();
 }
+
 
 function moveDeathItemToEnd(ctx, targetId) {
   const index = ctx.combatQueue.findIndex(
     (entry) =>
-      entry?.event?.type === "death" && entry.event.targetId === targetId,
+      entry?.events?.some(
+        (e) => e?.type === "death" && e.targetId === targetId,
+      ),
   );
 
   if (index === -1) return;
