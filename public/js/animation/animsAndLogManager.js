@@ -621,7 +621,11 @@ function processCombatQueue(ctx) {
         ctx.combatQueueRunning = false;
         hideCombatDialog(ctx);
 
-        if (!ctx.gameOverPayloadReceived && ctx.pendingGameState) {
+        if (
+            !ctx.gameOverPayloadReceived &&
+            ctx.pendingGameState &&
+            !isProcessingEvents
+        ) {
             applyGameStateUpdate(ctx, ctx.pendingGameState);
         }
         ctx.pendingGameState = null;
