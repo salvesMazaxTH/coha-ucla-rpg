@@ -646,7 +646,10 @@ function processCombatQueue(ctx) {
     }
 
     // 🔹 3️⃣ Sincronizar snapshot no momento correto
-    if (event.type === "damage") {
+    if (event.type === "skill") {
+      // Evento puramente informativo (diálogo) — não aplica state.
+      // O state será aplicado pelo evento de efeito real (damage, heal, shield, etc.)
+    } else if (event.type === "damage") {
       duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
 
       setTimeout(() => {
@@ -658,8 +661,14 @@ function processCombatQueue(ctx) {
       setTimeout(() => {
         applyCombatStateSnapshots(ctx, state);
       }, ctx.durations.HEAL_ANIMATION_DURATION * 0.5);
+    } else if (event.type === "shield") {
+      duration = Math.max(duration, ctx.durations.SHIELD_ANIMATION_DURATION);
+
+      setTimeout(() => {
+        applyCombatStateSnapshots(ctx, state);
+      }, ctx.durations.SHIELD_ANIMATION_DURATION * 0.5);
     } else {
-      // Eventos como skill, death, shield, keyword, etc.
+      // death, gameOver, keyword, etc.
       applyCombatStateSnapshots(ctx, state);
     }
 
