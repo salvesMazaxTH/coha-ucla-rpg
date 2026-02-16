@@ -2,18 +2,22 @@ import { formatChampionName } from "../../core/formatters.js";
 
 export default {
   name: "Mar que Retorna",
-  description: `
-        Sempre que Naelys receber dano,
-        ele se cura em +5 para cada 25 de HP perdido neste acerto.
-        (Máx. +35 por acerto)`,
+  healPerStack: 5,
+  hpPerStack: 25,
+  maxHeal: 35,
+  description() {
+    return `Sempre que Naelys receber dano,
+ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
+(Máx. +${this.maxHeal} por acerto)`;
+  },
   afterDamageTaken({ target, attacker, damage, self, context }) {
     if (damage <= 0) return;
 
     if (self !== target) return;
 
-    let heal = Math.floor(damage / 25) * 5;
+    let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;
 
-    heal = Math.min(heal, 35);
+    heal = Math.min(heal, this.maxHeal);
 
     if (heal <= 0) return;
 

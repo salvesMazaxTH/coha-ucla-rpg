@@ -8,17 +8,19 @@ const reyskaroneSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
     priority: 0,
+    description() {
+      return `Ataque padrão (BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
       return DamageEngine.resolveDamage({
-        baseDamage: (user.Attack * bf) / 100,
+        baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
         skill: this.name,
@@ -34,29 +36,35 @@ const reyskaroneSkills = [
   {
     key: "tributo_de_sangue",
     name: "Tributo de Sangue",
-    description: `
-    Cooldown: 1 turno
-    Contato: ❌
-    Prioridade: +1
-    BF 50.
-    Reyskarone sacrifica 15% de seu HP máximo para aplicar "Tributo" por 2 turnos.
-    Aliados que atacarem o alvo curam 15 HP e causam 10 de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF 50).`,
+    bf: 45,
+    hpSacrificePercent: 15,
+    tributeDuration: 2,
+    tributeHeal: 15,
+    tributeBonusDamage: 10,
     contact: false,
     cooldown: 2,
     priority: 1,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+Prioridade: +${this.priority}
+BF ${this.bf}.
+Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos.
+Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF ${this.bf}).`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
 
-      const hpSacrifice = Math.round((user.maxHP * 0.15) / 5) * 5;
+      const hpSacrifice =
+        Math.round((user.maxHP * (this.hpSacrificePercent / 100)) / 5) * 5;
 
       user.takeDamage(hpSacrifice);
 
-      enemy.applyKeyword("tributo", 2, context);
+      enemy.applyKeyword("tributo", this.tributeDuration, context);
 
-      const bf = 45;
       const result = DamageEngine.resolveDamage({
-        baseDamage: (user.Attack * bf) / 100,
+        baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
         skill: this.name,
@@ -78,31 +86,35 @@ const reyskaroneSkills = [
   {
     key: "transfusao_marcial",
     name: "Transfusão Marcial",
-    description: `
-    Cooldown: 2 turnos
-    Prioridade: 2
-    Concede a um aliado:
-    +20 ATQ
-    +15% LifeSteal
-    Duração: 2 turnos`,
+    atkBuff: 20,
+    lifeStealBuff: 15,
+    buffDuration: 2,
     contact: false,
     cooldown: 2,
     priority: 2,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Prioridade: +${this.priority}
+Concede a um aliado:
++${this.atkBuff} ATQ
++${this.lifeStealBuff}% LifeSteal
+Duração: ${this.buffDuration} turnos`;
+    },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
         statName: "Attack",
-        amount: 20,
-        duration: 2,
+        amount: this.atkBuff,
+        duration: this.buffDuration,
         context,
       });
 
       ally.modifyStat({
         statName: "LifeSteal",
-        amount: 15,
-        duration: 2,
+        amount: this.lifeStealBuff,
+        duration: this.buffDuration,
         context,
       });
 
@@ -121,37 +133,42 @@ const reyskaroneSkills = [
   {
     key: "pacto_carmesim",
     name: "Pacto Carmesim",
-    description: `
-    Cooldown: 2 turnos
-    Prioridade: +5
-    Seleciona um aliado:
-    Ele recebe:
-    +18% ATQ
-    +35% LifeSteal
-    Duração: 2 turnos`,
+    atkBuffPercent: 18,
+    lifeStealBuff: 35,
+    buffDuration: 2,
+    pactDuration: 3,
     contact: false,
     cooldown: 2,
     priority: 5,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Prioridade: +${this.priority}
+Seleciona um aliado:
+Ele recebe:
++${this.atkBuffPercent}% ATQ
++${this.lifeStealBuff}% LifeSteal
+Duração: ${this.buffDuration} turnos`;
+    },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
         statName: "Attack",
-        amount: 18,
-        duration: 2,
+        amount: this.atkBuffPercent,
+        duration: this.buffDuration,
         context,
         isPercent: true,
       });
 
       ally.modifyStat({
         statName: "LifeSteal",
-        amount: 35,
-        duration: 2,
+        amount: this.lifeStealBuff,
+        duration: this.buffDuration,
         context,
       });
 
-      ally.applyKeyword("pacto_carmesim", 3, context, {
+      ally.applyKeyword("pacto_carmesim", this.pactDuration, context, {
         source: user.id,
       });
 

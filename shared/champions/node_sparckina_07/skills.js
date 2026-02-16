@@ -5,16 +5,18 @@ const nodeSparckina07Skills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -29,19 +31,20 @@ const nodeSparckina07Skills = [
   {
     key: "sparkling_slash",
     name: "Sparkling Slash",
-    description: `Cooldown: 2 turnos
-     Contato: ✅
-     Efeitos:
-     Dano Bruto = BF 85
-     `,
+    bf: 85,
     contact: true,
     cooldown: 2,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+Efeitos:
+Dano Bruto = BF ${this.bf}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 85;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -56,36 +59,38 @@ const nodeSparckina07Skills = [
   {
     key: "radiant_Rush",
     name: "Radiant Rush",
-    description: `Cooldown: 2 turnos
-     Efeitos:
-     Ganha +15 VEL e 10% da VEL como ESQ.
-     `,
+    speedBuff: 15,
+    evasionPercent: 10,
+    buffDuration: 2,
     contact: false,
     cooldown: 2,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Efeitos:
+Ganha +${this.speedBuff} VEL e ${this.evasionPercent}% da VEL como ESQ.`;
+    },
     targetSpec: ["self"],
     execute({ user, context = {} }) {
-      const speedBuff = 15;
-
       user.modifyStat({
         statName: "Speed",
-        amount: speedBuff,
-        duration: 2,
+        amount: this.speedBuff,
+        duration: this.buffDuration,
         context,
       });
 
       // buffar a ESQ depois de buffar a VEL para garantir que o aumento de ESQ seja baseado na VEL atualizada
-      const evasionBuff = Math.round(user.Speed * 0.1);
+      const evasionBuff = Math.round(user.Speed * (this.evasionPercent / 100));
 
       user.modifyStat({
         statName: "Evasion",
         amount: evasionBuff,
-        duration: 2,
+        duration: this.buffDuration,
         context,
       });
 
       return {
-        log: `${formatChampionName(user)} acelera radiante (+${speedBuff} VEL, +${evasionBuff} ESQ).`,
+        log: `${formatChampionName(user)} acelera radiante (+${this.speedBuff} VEL, +${evasionBuff} ESQ).`,
       };
     },
   },
@@ -94,22 +99,24 @@ const nodeSparckina07Skills = [
     // Ultimate
     key: "radiant_burst",
     name: "Radiant Burst",
-    description: `Cooldown: 3 turnos
-     Contato: ✅
-     Efeitos:
-     Dano Bruto = BF 135
-     100% de chance de aplicar "Paralisado" no alvo inimigo.
-     `,
+    bf: 135,
+    paralyzeDuration: 2,
     contact: true,
     cooldown: 3,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+Efeitos:
+Dano Bruto = BF ${this.bf}
+100% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos no alvo inimigo.`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 135;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
 
-      enemy.applyKeyword("paralisado", 2, context);
+      enemy.applyKeyword("paralisado", this.paralyzeDuration, context);
 
       return DamageEngine.resolveDamage({
         baseDamage,

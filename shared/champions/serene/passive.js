@@ -2,8 +2,11 @@ import { formatChampionName } from "../../core/formatters.js";
 
 export default {
   name: "Calmaria Protetora",
-  description: `Sempre que Serene terminar um turno sem ter seu HP reduzido,
-  ela cura 15% do seu HP máximo no início do próximo turno.`,
+  healPercent: 15,
+  description() {
+    return `Sempre que Serene terminar um turno sem ter seu HP reduzido,
+ela cura ${this.healPercent}% do seu HP máximo no início do próximo turno.`;
+  },
 
   // Marca dano recebido no turno
   afterDamageTaken({ target, attacker, context, self }) {

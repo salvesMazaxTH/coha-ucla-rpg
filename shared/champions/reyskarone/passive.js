@@ -2,14 +2,19 @@ import { formatChampionName } from "../../core/formatters.js";
 
 export default {
   name: "Ecos de Vitalidade",
-  description: `
-      Sempre que um aliado curar por Roubo de Vida,Reyskarone recupera 35% desse valor.`,
+  lifeStealHealPercent: 35,
+  tributeBonusDamage: 10,
+  tributeHeal: 15,
+  description() {
+    return `Sempre que um aliado curar por Roubo de Vida, Reyskarone recupera ${this.lifeStealHealPercent}% desse valor.`;
+  },
 
   onLifeSteal({ source, amount, self, context }) {
     // ✔ Só aliados, ignorar o próprio Reyskarone
     if (source.team !== self.team && source !== self) return;
 
-    const heal = Math.round((amount * 0.35) / 5) * 5;
+    const heal =
+      Math.round((amount * (this.lifeStealHealPercent / 100)) / 5) * 5;
     if (heal <= 0 || self.HP >= self.maxHP) return;
 
     self.heal(heal, context);
@@ -29,7 +34,7 @@ export default {
     // não buffa inimigos nem neutros
     if (damage <= 0) return;
 
-    const bonus = 10;
+    const bonus = this.tributeBonusDamage;
 
     return {
       damage: damage + bonus,
@@ -43,7 +48,7 @@ export default {
     // só aliados do Reyskarone
     if (attacker.team !== self.team) return;
 
-    const heal = 15;
+    const heal = this.tributeHeal;
     if (heal <= 0 || attacker.HP >= attacker.maxHP) return;
     attacker.heal(heal, context);
 

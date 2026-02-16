@@ -708,7 +708,11 @@ function createOverlay(champion) {
   const passive = champion?.passive;
   const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
   const passiveDesc =
-    typeof passive?.description === "string" ? passive.description : "";
+    typeof passive?.description === "function"
+      ? passive.description()
+      : typeof passive?.description === "string"
+        ? passive.description
+        : "";
 
   const skills = Array.isArray(champion?.skills) ? champion.skills : [];
 
@@ -722,9 +726,15 @@ function createOverlay(champion) {
       } else if (index > 0) {
         label = `Hab.${index}`;
       }
+      const desc =
+        typeof s?.description === "function"
+          ? s.description()
+          : typeof s?.description === "string"
+            ? s.description
+            : "";
       return {
         name: label ? `${label} — ${baseName}` : baseName,
-        description: typeof s?.description === "string" ? s.description : "",
+        description: desc,
       };
     }),
   ]

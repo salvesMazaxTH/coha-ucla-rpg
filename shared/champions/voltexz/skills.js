@@ -4,16 +4,18 @@ const voltexzSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -27,21 +29,21 @@ const voltexzSkills = [
   {
     key: "relampagos_gemeos",
     name: "Relâmpagos Gêmeos",
-    description: `
-    Cooldown: 2 turnos,
-    Contato: ❌
-    BF 75 (primario) / BF 75 (secundario).
-    (Pode escolher o mesmo alvo para ambos)
-    `,
+    bf: 75,
     contact: false,
     cooldown: 2,
-    priority: 0, // prioridade padrão
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf} (primario) / BF ${this.bf} (secundario).
+(Pode escolher o mesmo alvo para ambos)`;
+    },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
-      const bf = 75;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
 
       if (primary) {
@@ -74,20 +76,22 @@ const voltexzSkills = [
   {
     key: "choque_estatico",
     name: "Choque Estático",
-    description: `
-    Cooldown: 2 turnos,
-    Contato: ❌
-    Prioridade: 1
-    BF 25 (Direto);
-    Efeito: Alvo é paralisado por 1 turno (perde a próxima ação neste turno).`,
+    bf: 25,
+    paralyzeDuration: 1,
     contact: false,
     cooldown: 2,
-    priority: 1, // prioridade padrão
+    priority: 1,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+Prioridade: +${this.priority}
+BF ${this.bf} (Direto);
+Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 25;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
         baseDamage,
@@ -102,7 +106,7 @@ const voltexzSkills = [
 
       results.push(damageResult);
       // Aplica o efeito de paralisia
-      enemy.applyKeyword("paralisado", 1, context, {
+      enemy.applyKeyword("paralisado", this.paralyzeDuration, context, {
         // nao reduz nada, apenas perde a ação
       });
       console.log(
@@ -116,18 +120,19 @@ const voltexzSkills = [
   {
     key: "descarga_cataclismica",
     name: "Descarga Cataclísmica",
-    description: `
-    Cooldown: 3 turnos,
-    Contato: ❌
-    BF 185.`,
+    bf: 185,
     contact: false,
     cooldown: 3,
-    priority: 0, // prioridade padrão
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 185;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
       const damageResult = DamageEngine.resolveDamage({
         baseDamage,

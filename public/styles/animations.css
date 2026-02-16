@@ -1,6 +1,11 @@
-/* Animation-heavy styles */
+/* ============================================
+      ANIMATION-HEAVY STYLES
+      ============================================ */
 
-/* Heal animation */
+/* ============================================
+      HEALING ANIMATIONS
+      ============================================ */
+
 .heal {
   animation: heal 975ms ease-out;
   will-change: transform, filter;
@@ -58,41 +63,6 @@
   animation: healFloat 1350ms ease-out forwards;
 }
 
-.damage-float {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-weight: 800;
-  color: #ff2a2a;
-  text-shadow:
-    0 0 8px rgba(255, 40, 40, 0.9),
-    0 0 12px rgba(255, 20, 20, 0.6),
-    1px 1px 2px rgba(0, 0, 0, 0.85);
-  pointer-events: none;
-  z-index: 100;
-  animation: damageFloat 1350ms ease-out forwards;
-}
-
-.damage-tier-1 {
-  font-size: 22px;
-}
-.damage-tier-2 {
-  font-size: 26px;
-}
-.damage-tier-3 {
-  font-size: 30px;
-}
-.damage-tier-4 {
-  font-size: 34px;
-}
-.damage-tier-5 {
-  font-size: 38px;
-}
-.damage-tier-6 {
-  font-size: 44px;
-}
-
 @keyframes healFloat {
   0% {
     opacity: 0;
@@ -112,6 +82,111 @@
   100% {
     opacity: 0;
     transform: translate(-50%, -110%) scale(0.9);
+  }
+}
+
+/* ============================================
+      DAMAGE ANIMATIONS
+      ============================================ */
+
+.damage {
+  animation: damage 950ms ease-out;
+  will-change: transform, opacity;
+}
+
+.damage .portrait::after,
+.portrait.damage::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 75%;
+  background: radial-gradient(
+    circle at 55% 45%,
+    rgba(255, 120, 120, 0.35),
+    rgba(255, 40, 40, 0.2) 55%,
+    transparent 75%
+  );
+  opacity: 0.8;
+  filter: blur(4px);
+  transform: translateX(4px);
+  pointer-events: none;
+}
+
+.damage-float {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 800;
+  color: #ff2a2a;
+  text-shadow:
+    0 0 8px rgba(255, 40, 40, 0.9),
+    0 0 12px rgba(255, 20, 20, 0.6),
+    1px 1px 2px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  z-index: 100;
+  animation: damageFloat 1350ms ease-out forwards;
+}
+
+.damage-tier-1 {
+  font-size: 22px;
+}
+
+.damage-tier-2 {
+  font-size: 26px;
+}
+
+.damage-tier-3 {
+  font-size: 30px;
+}
+
+.damage-tier-4 {
+  font-size: 34px;
+}
+
+.damage-tier-5 {
+  font-size: 38px;
+}
+
+.damage-tier-6 {
+  font-size: 44px;
+}
+
+@keyframes damage {
+  0% {
+    transform: translateX(0) scale(1);
+    filter: brightness(1);
+  }
+
+  12% {
+    transform: translateX(-12px) scale(0.97);
+    filter: brightness(0.6) sepia(1) saturate(6) hue-rotate(-50deg);
+  }
+
+  25% {
+    transform: translateX(10px);
+  }
+
+  35% {
+    transform: translateX(-8px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  65% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(1px);
+    filter: brightness(1.1);
+  }
+
+  100% {
+    transform: translateX(0) scale(1);
+    filter: none;
   }
 }
 
@@ -137,13 +212,15 @@
   }
 }
 
-/* Trigger automatico pra teste */
+/* ============================================
+      EVASION ANIMATIONS
+      ============================================ */
+
 .evasion {
   animation: evade 550ms ease-out;
   will-change: transform, filter;
 }
 
-/* Efeito fantasma (miragem) - aplicado na estrutura existente */
 .evasion .portrait::after,
 .portrait.evasion::after {
   content: "";
@@ -159,25 +236,6 @@
   opacity: 0.7;
   filter: blur(4px);
   transform: translateX(-8px);
-  pointer-events: none;
-}
-
-/* Dano: brilho curto para feedback simetrico */
-.damage .portrait::after,
-.portrait.damage::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 75%;
-  background: radial-gradient(
-    circle at 55% 45%,
-    rgba(255, 120, 120, 0.35),
-    rgba(255, 40, 40, 0.2) 55%,
-    transparent 75%
-  );
-  opacity: 0.8;
-  filter: blur(4px);
-  transform: translateX(4px);
   pointer-events: none;
 }
 
@@ -219,7 +277,29 @@
   }
 }
 
-/* Keyframes */
+/* ============================================
+      DEATH ANIMATIONS
+      ============================================ */
+
+.champion.dying {
+  opacity: 0.8;
+  animation: collapse 950ms ease-out forwards;
+  pointer-events: none;
+}
+
+.champion.dying::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/death_display.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: clamp(100px, 65vw, 70%);
+  opacity: 0;
+  pointer-events: none;
+  animation: deathOverlay 600ms ease-out forwards;
+}
+
 @keyframes collapse {
   0% {
     opacity: 1;
@@ -257,139 +337,97 @@
   }
 }
 
-@keyframes indicatorFloat {
-  0% {
-    transform: translate(-50%, 0px);
-  }
-  50% {
-    transform: translate(-50%, -2px);
-  }
-  100% {
-    transform: translate(-50%, 0px);
-  }
-}
+/* ============================================
+      SHIELD ANIMATIONS
+      ============================================ */
 
-@keyframes indicatorPulse {
-  0% {
-    transform: translateX(-50%) scale(0.65);
-    filter: brightness(2.2) drop-shadow(0 0 14px rgba(255, 255, 180, 0.9));
-    opacity: 0.4;
-  }
-
-  50% {
-    transform: translateX(-50%) scale(1.18);
-    filter: brightness(1.8) drop-shadow(0 0 18px rgba(255, 255, 150, 1));
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateX(-50%) scale(1);
-    filter: brightness(1.05) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(-30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes dialogIn {
-  from {
-    transform: translateY(10px) scale(0.98);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes dialogOut {
-  from {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(-6px) scale(0.985);
-    opacity: 0;
-  }
-}
-
-/* Damage animation */
-.damage {
-  animation: damage 950ms ease-out;
-  will-change: transform, opacity;
-}
-
-@keyframes damage {
-  0% {
-    transform: translateX(0) scale(1);
-    filter: brightness(1);
-  }
-
-  /* impacto vermelho */
-  12% {
-    transform: translateX(-12px) scale(0.97);
-    filter: brightness(0.6) sepia(1) saturate(6) hue-rotate(-50deg);
-  }
-
-  /* tremor */
-  25% {
-    transform: translateX(10px);
-  }
-
-  35% {
-    transform: translateX(-8px);
-  }
-
-  50% {
-    transform: translateX(6px);
-  }
-
-  65% {
-    transform: translateX(-3px);
-  }
-
-  /* recuperação */
-  80% {
-    transform: translateX(1px);
-    filter: brightness(1.1);
-  }
-
-  100% {
-    transform: translateX(0) scale(1);
-    filter: none;
-  }
-}
-
-/* Champion death animation */
-.champion.dying {
-  opacity: 0.8;
-  animation: collapse 950ms ease-out forwards;
-  pointer-events: none;
-}
-
-.champion.dying::after {
+.champion.has-shield .portrait::before {
   content: "";
   position: absolute;
-  inset: 0;
-  background-image: url("/assets/death_display.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: clamp(100px, 65vw, 70%);
-  opacity: 0;
+  width: 80%;
+  height: 60%;
+  top: 30%;
+  left: 35%;
+  border-radius: 50%;
   pointer-events: none;
-  animation: deathOverlay 600ms ease-out forwards;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.25) 40%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  opacity: 0.6;
 }
 
-/* Status Indicator */
+.champion.has-shield .portrait::after {
+  content: "";
+  z-index: 4;
+  position: absolute;
+  width: 140%;
+  height: 140%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 35%,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(200, 240, 255, 0.4) 20%,
+    rgba(120, 200, 255, 0.25) 40%,
+    rgba(80, 170, 255, 0.15) 60%,
+    rgba(80, 170, 255, 0.05) 75%,
+    transparent 85%
+  );
+  box-shadow:
+    0 0 25px rgba(100, 200, 255, 0.6),
+    inset 0 0 30px rgba(120, 220, 255, 0.6);
+  animation:
+    bubbleAppear 450ms ease-out,
+    bubblePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes bubbleAppear {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes bubblePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      0 0 20px rgba(100, 200, 255, 0.5),
+      inset 0 0 20px rgba(120, 220, 255, 0.4);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.035);
+    box-shadow:
+      0 0 40px rgba(100, 200, 255, 0.9),
+      inset 0 0 35px rgba(120, 220, 255, 0.7);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ============================================
+      STATUS INDICATOR ANIMATIONS
+      ============================================ */
+
 .status-indicator {
   position: absolute;
   top: 5px;
@@ -440,4 +478,78 @@
     transparent 70%
   );
   z-index: -1;
+}
+
+@keyframes indicatorFloat {
+  0% {
+    transform: translate(-50%, 0px);
+  }
+
+  50% {
+    transform: translate(-50%, -2px);
+  }
+
+  100% {
+    transform: translate(-50%, 0px);
+  }
+}
+
+@keyframes indicatorPulse {
+  0% {
+    transform: translateX(-50%) scale(0.65);
+    filter: brightness(2.2) drop-shadow(0 0 14px rgba(255, 255, 180, 0.9));
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.18);
+    filter: brightness(1.8) drop-shadow(0 0 18px rgba(255, 255, 150, 1));
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(-50%) scale(1);
+    filter: brightness(1.05) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+    opacity: 1;
+  }
+}
+
+/* ============================================
+      DIALOG & TRANSITION ANIMATIONS
+      ============================================ */
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes dialogIn {
+  from {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dialogOut {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-6px) scale(0.985);
+    opacity: 0;
+  }
 }

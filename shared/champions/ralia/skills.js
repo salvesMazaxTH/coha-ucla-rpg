@@ -5,16 +5,18 @@ const raliaSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -29,30 +31,40 @@ const raliaSkills = [
   {
     key: "juramento_de_ferro",
     name: "Juramento de Ferro",
-    description: `
-    Cooldown: 1 turno,
-    Contato: ❌
-    BF 70.
-    Ralia perde 30 de Defesa e 10 de HP (Dano Direto), para ganhar +35 de Ataque por 2 turnos.
-    Em seguida, ataca um inimigo.
-  `,
+    bf: 70,
+    selfDamage: 10,
+    defLoss: 30,
+    atkBuff: 35,
+    buffDuration: 2,
     contact: false,
     cooldown: 1,
     priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turno
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.
+Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (Dano Direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.
+Em seguida, ataca um inimigo.`;
+    },
     targetSpec: ["self", "enemy"],
     execute({ user, targets, context = {} }) {
-      user.takeDamage(10); // dano direto
+      user.takeDamage(this.selfDamage);
 
       user.modifyStat({
         statName: "Defense",
-        amount: -30,
-        duration: 2,
+        amount: -this.defLoss,
+        duration: this.buffDuration,
         context,
-      }); // -30 Defense for 2 turns
+      });
 
       console.log("BEFORE SELF ATK BUFF:", user.Attack);
 
-      user.modifyStat({ statName: "Attack", amount: 35, duration: 2, context }); // +35 Attack for 2 turns
+      user.modifyStat({
+        statName: "Attack",
+        amount: this.atkBuff,
+        duration: this.buffDuration,
+        context,
+      });
 
       console.log("AFTER SELF ATK BUFF:", user.Attack);
 
@@ -62,15 +74,14 @@ const raliaSkills = [
       console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
       const userName = formatChampionName(user);
-      const selfLog = `${userName} executou Juramento de Ferro, perdendo 10 HP e 30 de Defesa, mas ganhando +35 de Ataque por 2 turnos.`;
+      const selfLog = `${userName} executou Juramento de Ferro, perdendo ${this.selfDamage} HP e ${this.defLoss} de Defesa, mas ganhando +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.`;
 
       if (!enemy) {
         return { log: selfLog };
       }
 
-      const bf = 70;
       const result = DamageEngine.resolveDamage({
-        baseDamage: (user.Attack * bf) / 100,
+        baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
         skill: this.name,
@@ -86,22 +97,24 @@ const raliaSkills = [
   {
     key: "sentença_de_campo",
     name: "Sentença de Campo",
-    description: `
-    Cooldown: 2 turnos,
-    Contato: ✅
-    BF 90.
-    Rália se cura em 60% do dano efetivo causado
-    Arredondado para o múltiplo de 5 mais próximo
-    Cura mínima: 25
-  `,
+    bf: 90,
+    healPercent: 60,
+    minHeal: 25,
     contact: true,
     cooldown: 2,
     priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.
+Rália se cura em ${this.healPercent}% do dano efetivo causado
+Arredondado para o múltiplo de 5 mais próximo
+Cura mínima: ${this.minHeal}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 90;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       const result = DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -112,9 +125,9 @@ const raliaSkills = [
       });
       const effectiveDamage = result.totalDamage || 0;
       const healingAmount = Math.max(
-        25,
-        Math.round((effectiveDamage * 0.6) / 5) * 5,
-      ); // 60% do dano efetivo arredondado para múltiplo de 5, mínimo 25
+        this.minHeal,
+        Math.round((effectiveDamage * (this.healPercent / 100)) / 5) * 5,
+      );
 
       user.heal(healingAmount, context); // Cura o usuário
 
@@ -130,22 +143,25 @@ const raliaSkills = [
   {
     key: "decreto_do_bastiao",
     name: "Decreto do Bastião",
-    description: `Decreto do Bastião
-      Cooldown: 2 turnos
-      Prioridade: +1
-      Contato: ❌
-      BF 85.
-      Rália finca sua lâmina no chão e impõe sua lei ao campo.
-      Ao ativar, por 2 turnos (inclui o atual):
-      1️⃣ Zona de Contestação
-      Inimigos ativos sofrem:
-      −20 de Ataque
-      2️⃣ Golpe de Retaliação:
-      Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF 85 como Dano Direto).
-`,
+    bf: 85,
+    atkDebuff: 20,
+    debuffDuration: 2,
     contact: false,
     cooldown: 2,
     priority: 1,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Prioridade: +${this.priority}
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.
+Rália finca sua lâmina no chão e impõe sua lei ao campo.
+Ao ativar, por ${this.debuffDuration} turnos (inclui o atual):
+1️⃣ Zona de Contestação
+Inimigos ativos sofrem:
+−${this.atkDebuff} de Ataque
+2️⃣ Golpe de Retaliação:
+Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF ${this.bf} como Dano Direto).`;
+    },
     targetSpec: ["all-enemies"],
     execute({ user, context = {} }) {
       // Pegar todos os inimigos (time diferente do usuário)
@@ -153,8 +169,7 @@ const raliaSkills = [
         context?.allChampions?.values?.() || [],
       ).filter((champion) => champion.team !== user.team && champion.alive);
 
-      const bf = 85;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
 
       const results = [];
 
@@ -172,8 +187,8 @@ const raliaSkills = [
         });
         enemy.modifyStat({
           statName: "Attack",
-          amount: -20,
-          duration: 2,
+          amount: -this.atkDebuff,
+          duration: this.debuffDuration,
           context,
         }); // -20 Attack por 2 turnos
 

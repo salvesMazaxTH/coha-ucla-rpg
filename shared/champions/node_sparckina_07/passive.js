@@ -2,14 +2,19 @@ import { formatChampionName } from "../../core/formatters.js";
 
 export default {
   name: "Energia Pulsante",
-  description: `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em 10%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem 33% de chance de aplicar "Paralisado" por 2 turnos (duração aumentada por sua passiva).`,
+  speedBuff: 10,
+  paralyzeChance: 33,
+  paralyzeDuration: 2,
+  description() {
+    return `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em ${this.speedBuff}%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem ${this.paralyzeChance}% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos (duração aumentada por sua passiva).`;
+  },
   onTurnStart({ target, context }) {
     const self = target;
     if (!self) return;
 
     const result = self.modifyStat({
       statName: "Speed",
-      amount: 10,
+      amount: this.speedBuff,
       context,
       isPermanent: true,
       isPercent: true,
@@ -27,7 +32,7 @@ export default {
     if (damage <= 0) return;
 
     const roll = Math.random();
-    const success = roll < 0.3334; // 33% de chance de aplicar "Paralisado"
+    const success = roll < this.paralyzeChance / 100;
 
     if (!success) {
       console.log(
@@ -36,17 +41,17 @@ export default {
       return;
     }
 
-    target.applyKeyword("paralisado", 2, context, {
+    target.applyKeyword("paralisado", this.paralyzeDuration, context, {
       sourceId: self.id,
       sourceName: self.name,
     });
 
     console.log(
-      `— [PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por 2 turnos. roll: ${roll}`,
+      `— [PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
     );
 
     return {
-      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por 2 turnos!`,
+      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos!`,
     };
   },
 };

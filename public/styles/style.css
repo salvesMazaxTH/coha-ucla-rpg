@@ -248,9 +248,14 @@ body.team-selection-active .team-container:hover {
   cursor: pointer;
 }
 
+.portrait-wrapper {
+  position: relative;
+}
+
 .portrait {
   width: 100%;
   aspect-ratio: 3 / 4;
+/*   clip-path: ellipse(50% 60% at center); */
   overflow: hidden;
   position: relative;
   border-radius: 75%;
@@ -263,6 +268,8 @@ body.team-selection-active .team-container:hover {
 
 .portrait img {
   width: 100%;
+  position: relative;
+  z-index: 3;
   height: 100%;
   object-fit: cover;
   object-position: 60% center;
@@ -754,6 +761,8 @@ i {
 .champion {
   width: 25%;
   height: auto;
+  position: relative;
+  overflow: visible;
   transition:
     opacity 0.5s ease-out,
     transform 0.5s ease-out; /* Add transition for smooth animation */

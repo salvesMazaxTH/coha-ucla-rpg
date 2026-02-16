@@ -8,16 +8,18 @@ const gryskarchuSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `Ataque padrão (BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
     priority: 0,
+    description() {
+      return `Ataque padrão (BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -31,21 +33,28 @@ const gryskarchuSkills = [
   {
     key: "raizes_da_terra",
     name: "Raízes da Terra",
-    description: `Cooldown: 1 turno
-     Contato: ❌
-     Efeitos:
-     Dano Bruto = BF 75
-     Aplica "Enraizado" por 2 turnos.`,
+    bf: 75,
+    rootDuration: 2,
     contact: false,
     cooldown: 1,
     priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turno
+Contato: ${this.contact ? "✅" : "❌"}
+Efeitos:
+Dano Bruto = BF ${this.bf}
+Aplica "Enraizado" por ${this.rootDuration} turnos.`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
       const { enemy } = targets;
-      const bf = 75;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
 
-      const rooted = enemy.applyKeyword("enraizado", 2, context);
+      const rooted = enemy.applyKeyword(
+        "enraizado",
+        this.rootDuration,
+        context,
+      );
 
       const result = DamageEngine.resolveDamage({
         baseDamage,
@@ -65,16 +74,19 @@ const gryskarchuSkills = [
   {
     key: "florescimento_vital",
     name: "Florescimento Vital",
-    description: `Cooldown: 1 turno
-     Efeitos:
-     Gryskarchu cura a si e a todos os aliados ativos.
-     Cura = 50 HP`,
+    healAmount: 50,
     contact: false,
     cooldown: 1,
     priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turno
+Efeitos:
+Gryskarchu cura a si e a todos os aliados ativos.
+Cura = ${this.healAmount} HP`;
+    },
     targetSpec: ["all:ally"],
     execute({ user, targets, context }) {
-      const healAmount = 50;
+      const healAmount = this.healAmount;
       const healed = [];
 
       context.aliveChampions.forEach((champ) => {
@@ -105,33 +117,41 @@ const gryskarchuSkills = [
     // 30% hp máx como cura , +25% DEF, CD 2, PARA O ALIADO
     key: "proteção_da_mãe_terra",
     name: "Proteção da Mãe Terra",
-    description: `Cooldown: 2 turnos
-    Prioridade: +5
-      Efeitos:
-      Gryskarchu concede +25% de DEF a si ou a um aliado ativo por 2 turnos e o cura em 30% do HP máximo. Além disso, o aliado recebe um bônus de +35% da DEF no dano causado por 2 turnos.`,
+    defBuff: 25,
+    healPercent: 30,
+    buffDuration: 2,
+    defDamageBonus: 35,
     contact: false,
     cooldown: 2,
     priority: 5,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Prioridade: +${this.priority}
+Efeitos:
+Gryskarchu concede +${this.defBuff}% de DEF a si ou a um aliado ativo por ${this.buffDuration} turnos e o cura em ${this.healPercent}% do HP máximo. Além disso, o aliado recebe um bônus de +${this.defDamageBonus}% da DEF no dano causado por ${this.buffDuration} turnos.`;
+    },
     targetSpec: ["select:ally"],
     execute({ user, targets, context }) {
       const { ally } = targets;
-      let healAmount = Math.floor(ally.maxHP * 0.3);
+      let healAmount = Math.floor(ally.maxHP * (this.healPercent / 100));
       healAmount = Math.round(healAmount / 5) * 5;
 
       ally.heal(healAmount, context);
       ally.modifyStat({
         statName: "Defense",
-        amount: 25,
-        duration: 2,
+        amount: this.defBuff,
+        duration: this.buffDuration,
         context,
         isPercent: true,
       });
 
-      const bonus = Math.round(Math.floor(ally.Defense * 0.35) / 5) * 5;
+      const bonus =
+        Math.round(Math.floor(ally.Defense * (this.defDamageBonus / 100)) / 5) *
+        5;
 
       ally.addDamageModifer({
         id: "proteção_da_mãe_terra",
-        expiresAt: context.currentTurn + 2,
+        expiresAt: context.currentTurn + this.buffDuration,
 
         apply({ baseDamage, user }) {
           const total = baseDamage + bonus;
@@ -140,7 +160,7 @@ const gryskarchuSkills = [
       });
 
       return {
-        log: `${formatChampionName(user)} concede a ${formatChampionName(ally)} ${healAmount} de cura e +${defenseBuff} DEF por 2 turnos!`,
+        log: `${formatChampionName(user)} concede a ${formatChampionName(ally)} ${healAmount} de cura e +${this.defBuff}% DEF por ${this.buffDuration} turnos!`,
       };
     },
   },

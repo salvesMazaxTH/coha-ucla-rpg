@@ -4,16 +4,18 @@ const vaelSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -27,20 +29,20 @@ const vaelSkills = [
   {
     key: "corte_instantaneo",
     name: "Corte Instantâneo",
-    description: `
-    Cooldown: 1 turno,
-    Contato: ✅
-    BF 75.
-    📌 Pode critar normalmente
-  `,
+    bf: 75,
     contact: true,
     cooldown: 1,
-    priority: 0, // Example priority for testing
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turno
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.
+📌 Pode critar normalmente`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 75;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -54,15 +56,19 @@ const vaelSkills = [
   {
     key: "investida_transpassante",
     name: "Investida Transpassante",
-    description: `Cooldown: 2 turnos
-       Contato: ✅
-       BF 55 (primario) / BF 65 (secundario).
-       ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
-      (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
-      ✅ O alvo secundário SEMPRE sofre Acerto Crítico`,
+    bfPrimary: 55,
+    bfSecondary: 60,
     contact: true,
     cooldown: 2,
-    priority: 0, // Example priority for testing
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
+❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
+(Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
+✅ O alvo secundário SEMPRE sofre Acerto Crítico`;
+    },
     targetSpec: [
       { type: "enemy", unique: true },
       { type: "enemy", unique: true },
@@ -71,8 +77,7 @@ const vaelSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
 
-      const bfPrimary = 55;
-      const baseDamage = (user.Attack * bfPrimary) / 100;
+      const baseDamage = (user.Attack * this.bfPrimary) / 100;
       const results = [];
 
       if (primary) {
@@ -90,7 +95,7 @@ const vaelSkills = [
 
       if (secondary) {
         const secondaryResult = DamageEngine.resolveDamage({
-          baseDamage: (user.Attack * 60) / 100,
+          baseDamage: (user.Attack * this.bfSecondary) / 100,
           user,
           target: secondary,
           skill: this.name,
@@ -108,18 +113,19 @@ const vaelSkills = [
   {
     key: "veredito_do_fio_silencioso",
     name: "Veredito do Fio Silencioso",
-    description: `Cooldown: 3 turnos
-       Contato: ✅
-       BF 130.
-       `,
+    bf: 145,
     contact: true,
     cooldown: 3,
-    priority: 0, // Example priority for testing
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turnos
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 145;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
 
       return DamageEngine.resolveDamage({
         baseDamage,

@@ -585,12 +585,14 @@ export class Champion {
       const skillsHTML = buildSkillsHTML();
 
       return `
+      <div class="portrait-wrapper">
         <div class="portrait" data-id="${this.id}">
           <img 
             data-id="${this.id}"
             src="${this.portrait}"
           >
         </div>
+      </div> 
 
         <h3 class="champion-name">${this.name}</h3>
 
@@ -655,53 +657,58 @@ export class Champion {
 
   // 🔄 Atualiza UI sem buscar no DOM toda vez
   updateUI(currentTurn) {
-    if (!this.el) {
-      /*       console.error(
-        `[Client] No DOM element (this.el) found for ${this.name} (ID: ${this.id}).`,
-      ); */
-      return;
-    }
-    console.log(
-      `[Client] Updating HP for ${this.name}: ${this.HP}/${this.maxHP}`,
-    );
+    if (!this.el) return;
 
     const normalizedTurn = Number.isFinite(currentTurn) ? currentTurn : null;
 
+    // =========================
     // HP
+    // =========================
+
     const HpDiv = this.el.querySelector(".hp");
-
-    HpDiv.textContent = `${this.HP}/${this.maxHP}`;
-
     const fill = this.el.querySelector(".hp-fill");
 
+    // Remove escudos vazios PRIMEIRO
+    if (Array.isArray(this.runtime?.shields)) {
+      this.runtime.shields = this.runtime.shields.filter((s) => s.amount > 0);
+    }
+
+    const hasShield =
+      Array.isArray(this.runtime?.shields) && this.runtime.shields.length > 0;
+
+    // Texto base
+    let hpText = `${this.HP}/${this.maxHP}`;
+
+    // Se tiver escudo, soma total e adiciona ao texto
+    if (hasShield) {
+      const totalShield = this.runtime.shields.reduce(
+        (sum, s) => sum + s.amount,
+        0,
+      );
+      hpText += ` 🛡️ (${totalShield})`;
+      this.el.classList.add("has-shield");
+    } else {
+      this.el.classList.remove("has-shield");
+    }
+
+    HpDiv.textContent = hpText;
+
+    // Barra de HP
     const percent = (this.HP / this.maxHP) * 100;
     fill.style.width = `${percent}%`;
 
-    // cores dinâmicas
     if (percent <= 19) {
-      fill.style.background = "#ff2a2a"; // vermelho
+      fill.style.background = "#ff2a2a";
     } else if (percent <= 49) {
-      fill.style.background = "#ffcc00"; // amarelo
+      fill.style.background = "#ffcc00";
     } else {
-      fill.style.background = "#00ff66"; // verde
+      fill.style.background = "#00ff66";
     }
 
-    if (this.runtime?.shields?.length) {
-      const totalShield =
-        this.runtime.shields.reduce((sum, s) => sum + s.amount, 0) ?? 0;
+    // =========================
+    // STATS
+    // =========================
 
-      const extraInfo = ` 🛡️ (${totalShield})`;
-
-      HpDiv.textContent += extraInfo;
-    }
-
-    // remover escudos vazios
-    this.runtime.shields = this.runtime.shields.filter((s) => s.amount > 0);
-    if (this.runtime.shields.length === 0) {
-      HpDiv.textContent = `${this.HP}/${this.maxHP}`;
-    }
-
-    // 🔥 Função genérica pra stats
     const updateStat = (name) => {
       const el = this.el.querySelector(`.${name}`);
       if (!el) return;
@@ -717,11 +724,11 @@ export class Champion {
       el.textContent = formattedValue;
 
       if (current > base) {
-        el.style.color = "#00ff66"; // verde
+        el.style.color = "#00ff66";
       } else if (current < base) {
-        el.style.color = "#ff2a2a"; // vermelho
+        el.style.color = "#ff2a2a";
       } else {
-        el.style.color = "#ffffff"; // neutro
+        el.style.color = "#ffffff";
       }
     };
 
@@ -732,6 +739,10 @@ export class Champion {
     updateStat("Critical");
     updateStat("LifeSteal");
 
+    // =========================
+    // COOLDOWNS
+    // =========================
+
     const cooldowns =
       this.cooldowns instanceof Map
         ? this.cooldowns
@@ -740,23 +751,27 @@ export class Champion {
     this.el.querySelectorAll(".skill-btn").forEach((button) => {
       const skillKey = button.dataset.skillKey;
       const entry = cooldowns.get(skillKey);
+
       const remaining =
         entry && normalizedTurn !== null
           ? entry.availableAt - normalizedTurn
           : null;
+
       const isOnCooldown = Boolean(entry && remaining > 0);
 
       if (isOnCooldown) {
         if (!button.disabled) {
           button.dataset.disabledByCooldown = "true";
         }
+
         button.disabled = true;
         button.dataset.cooldownActive = "true";
         button.classList.add("cooldown");
+
         button.innerHTML = `
-          <i class="bx bx-hourglass"></i>
-          <span class="skill-cooldown-number">${remaining}</span>
-        `;
+        <i class="bx bx-hourglass"></i>
+        <span class="skill-cooldown-number">${remaining}</span>
+      `;
       } else {
         button.classList.remove("cooldown");
         button.dataset.cooldownActive = "false";
@@ -771,14 +786,22 @@ export class Champion {
       }
     });
 
+    // =========================
+    // LifeSteal visibility
+    // =========================
+
     const lifeStealRow = this.el.querySelector(
       `.stat-row[data-stat="LifeSteal"]`,
     );
+
     if (lifeStealRow) {
       lifeStealRow.style.display = this.LifeSteal > 0 ? "" : "none";
     }
 
-    // 🎨 Atualiza os indicadores de status
+    // =========================
+    // Status indicators
+    // =========================
+
     StatusIndicator.updateChampionIndicators(this);
   }
 

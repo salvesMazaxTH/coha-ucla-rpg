@@ -5,16 +5,18 @@ const naelysSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
-    description: `O ataque básico genérico (0 cooldown, BF 60).
-    Contato: ✅`,
+    bf: 60,
     contact: true,
     cooldown: 0,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
+    },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      const bf = 60;
-      const baseDamage = (user.Attack * bf) / 100;
+      const baseDamage = (user.Attack * this.bf) / 100;
       return DamageEngine.resolveDamage({
         baseDamage,
         user,
@@ -29,23 +31,26 @@ const naelysSkills = [
   {
     key: "toque_da_mare_serena",
     name: "Toque da Maré Serena",
-    description: ` Cooldown: 1 turno
-    Contato: ❌
-    Inimigo alvo sofre:
-    Dano Bruto = BF 75
-    Aliado ativo recupera:
-    Cura = 45 de HP`,
+    bf: 75,
+    healAmount: 45,
     contact: false,
     cooldown: 1,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `Cooldown: ${this.cooldown} turno
+Contato: ${this.contact ? "✅" : "❌"}
+Inimigo alvo sofre:
+Dano Bruto = BF ${this.bf}
+Aliado ativo recupera:
+Cura = ${this.healAmount} de HP`;
+    },
     targetSpec: ["enemy", "ally"],
 
     execute({ user, targets, context = {} }) {
       const { enemy, ally } = targets;
 
-      const bf = 75;
-      const baseDamage = (user.Attack * bf) / 100;
-      const healAmount = 45;
+      const baseDamage = (user.Attack * this.bf) / 100;
+      const healAmount = this.healAmount;
 
       const logs = [];
 
@@ -87,26 +92,29 @@ const naelysSkills = [
   {
     key: "forma_aquatica",
     name: "Forma Aquática",
-    description: `Transforma-se em uma massa de água pura.
-    Efeitos: Inerte + Imunidade Absoluta
-    Duração: 2 turnos (pode ser interrompido se executar uma ação)`,
+    effectDuration: 2,
     contact: false,
     cooldown: 2,
     priority: 1,
+    description() {
+      return `Transforma-se em uma massa de água pura.
+Efeitos: Inerte + Imunidade Absoluta
+Duração: ${this.effectDuration} turnos (pode ser interrompido se executar uma ação)`;
+    },
     targetSpec: ["self"],
 
     execute({ user, context = {} }) {
       const { currentTurn } = context;
 
       // Apply keywords
-      user.applyKeyword("inerte", 2, context, {
+      user.applyKeyword("inerte", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
-      user.applyKeyword("imunidade absoluta", 2, context);
+      user.applyKeyword("imunidade absoluta", this.effectDuration, context);
 
       const userName = formatChampionName(user);
       return {
-        log: `${userName} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + 2}. (Pode ser interrompido por ação do usuário).`,
+        log: `${userName} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + this.effectDuration}. (Pode ser interrompido por ação do usuário).`,
       };
     },
   },
@@ -114,40 +122,47 @@ const naelysSkills = [
   {
     key: "transbordar_do_mar_primordial",
     name: "Transbordar do Mar Primordial",
-    description: `Naelys aumenta seu HP em 55% do HP base. Além disso, ele recupera:
-    +50 de HP
-    Por 3 turnos (inclui o atual):
-    Naelys ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
-    Todos os Ataques que causem dano recebem:
-    ➡️ +20 de Dano Bruto para cada 20 de HP ATUAL que ele tiver
-    (Arredondado para múltiplo de 5)
-    Limite de Escala: O bônus de dano não pode exceder +140 de Dano Bruto por ação.`,
+    hpFactor: 55,
+    healAmount: 50,
+    effectDuration: 3,
+    hpPerStack: 30,
+    bonusPerStack: 20,
+    maxBonus: 160,
     contact: false,
     cooldown: 3,
-    priority: 0, // Default priority
+    priority: 0,
+    description() {
+      return `Naelys aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
++${this.healAmount} de HP
+Por ${this.effectDuration} turnos (inclui o atual):
+Naelys ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
+Todos os Ataques que causem dano recebem:
+➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver
+(Arredondado para múltiplo de 5)
+Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano Bruto por ação.`;
+    },
     targetSpec: ["self"],
 
     execute({ user, context = {} }) {
       const { currentTurn } = context;
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 
-      const factor = 0.55;
+      const factor = this.hpFactor / 100;
 
       const amount = user.baseHP * factor;
 
-      user.modifyHP(amount, { affectMax: true }); // Aumenta o HP atual proporcionalmente ao aumento do máximo
+      user.modifyHP(amount, { affectMax: true });
 
-      // Cura +50 sem passar do novo máximo
-      user.heal(50, context);
+      user.heal(this.healAmount, context);
 
       // 🔮 Aplica o modificador de dano por 3 turnos (inclui o atual)
       user.addDamageModifier({
         id: "mar-em-ascensao",
-        expiresAtTurn: currentTurn + 3,
+        expiresAtTurn: currentTurn + this.effectDuration,
 
         apply: ({ baseDamage, user }) => {
-          const stacks = Math.floor(user.HP / 30);
-          const bonus = Math.min(stacks * 20, 160); // cap +160
+          const stacks = Math.floor(user.HP / this.hpPerStack);
+          const bonus = Math.min(stacks * this.bonusPerStack, this.maxBonus);
 
           const total = baseDamage + bonus;
           return total;
