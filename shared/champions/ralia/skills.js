@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const raliaSkills = [
@@ -17,7 +17,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -80,7 +80,7 @@ Em seguida, ataca um inimigo.`;
         return { log: selfLog };
       }
 
-      const result = DamageEngine.resolveDamage({
+      const result = CombatResolver.resolveDamage({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
@@ -115,7 +115,7 @@ Cura mínima: ${this.minHeal}`;
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      const result = DamageEngine.resolveDamage({
+      const result = CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -175,7 +175,7 @@ Ralia executa um ataque automático contra todos os inimigos vivos imediatamente
 
       // Aplicar dano em cada inimigo
       enemies.forEach((enemy) => {
-        const damageResult = DamageEngine.resolveDamage({
+        const damageResult = CombatResolver.resolveDamage({
           baseDamage,
           mode: "hybrid", // 'hybrid' para Dano Direto puro ou Direto + bruto
           directDamage: baseDamage, // Dano Direto puro

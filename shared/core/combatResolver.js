@@ -7,7 +7,7 @@ const debugMode = false;
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
 
-export const DamageEngine = {
+export const CombatResolver = {
   roundToFive(x) {
     return Math.round(x / 5) * 5;
   },
@@ -129,10 +129,11 @@ export const DamageEngine = {
       console.log(`✅ Did Crit: ${crit.didCrit}`);
     }
 
-    if (crit.didCrit && user?.passive?.onCriticalHit) {
+    if (crit.didCrit) {
       if (debugMode) console.log(`🔥 Executando passiva onCriticalHit`);
-      user.passive.onCriticalHit({
+      emitCombatEvent("onCriticalHit", {
         user,
+        attacker: user,
         target,
         context,
         forced: crit.forced,

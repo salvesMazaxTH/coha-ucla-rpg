@@ -8,8 +8,7 @@ export default {
   description() {
     return `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em ${this.speedBuff}%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem ${this.paralyzeChance}% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos (duração aumentada por sua passiva).`;
   },
-  onTurnStart({ target, context }) {
-    const self = target;
+  onTurnStart({ self, context }) {
     if (!self) return;
 
     const result = self.modifyStat({
@@ -23,7 +22,7 @@ export default {
     if (result?.appliedAmount === 0) return;
 
     return {
-      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(self)} ganhou +${result?.appliedAmount ?? amount} VEL.`,
+      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(self)} ganhou +${result?.appliedAmount ?? this.speedBuff} VEL.`,
     };
   },
 

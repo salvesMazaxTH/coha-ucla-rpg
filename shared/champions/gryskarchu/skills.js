@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const gryskarchuSkills = [
@@ -20,7 +20,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     execute({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -56,7 +56,7 @@ Aplica "Enraizado" por ${this.rootDuration} turnos.`;
         context,
       );
 
-      const result = DamageEngine.resolveDamage({
+      const result = CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,

@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const naelysSkills = [
@@ -17,7 +17,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -56,7 +56,7 @@ Cura = ${this.healAmount} de HP`;
 
       // 🗡️ Dano no inimigo (se ainda vivo)
       if (enemy) {
-        const damageResult = DamageEngine.resolveDamage({
+        const damageResult = CombatResolver.resolveDamage({
           baseDamage,
           user,
           target: enemy,

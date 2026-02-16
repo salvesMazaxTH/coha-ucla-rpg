@@ -1,7 +1,7 @@
 export default {
   name: "Massa Inamolgável",
   stacksNeeded: 2,
-  defBonus: 10,
+  defBonus: 15,
   hpBonus: 10,
   description() {
     return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (cura e aumenta a vida máxima).`;
@@ -27,7 +27,7 @@ export default {
       context,
       isPermanent: true,
     });
-    self.modifyHP(this.hpBonus, { maxHPOnly: true, affectMax: true });
+    self.modifyHP(this.hpBonus, { maxHPOnly: true });
     self.heal(this.hpBonus, context);
 
     let log = `[Passiva - Massa Inamolgável] ${self.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;

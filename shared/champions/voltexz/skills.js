@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 
 const voltexzSkills = [
   {
@@ -16,7 +16,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -47,7 +47,7 @@ BF ${this.bf} (primario) / BF ${this.bf} (secundario).
       const results = [];
 
       if (primary) {
-        const primaryResult = DamageEngine.resolveDamage({
+        const primaryResult = CombatResolver.resolveDamage({
           baseDamage,
           user,
           target: primary,
@@ -59,7 +59,7 @@ BF ${this.bf} (primario) / BF ${this.bf} (secundario).
       }
 
       if (secondary) {
-        const secondaryResult = DamageEngine.resolveDamage({
+        const secondaryResult = CombatResolver.resolveDamage({
           baseDamage,
           user,
           target: secondary,
@@ -93,7 +93,7 @@ Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima 
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = DamageEngine.resolveDamage({
+      const damageResult = CombatResolver.resolveDamage({
         baseDamage,
         mode: "hybrid", // 'hybrid' para Dano Direto puro ou parte Bruto e parte Direto
         directDamage: baseDamage, // Dano Direto puro
@@ -134,7 +134,7 @@ BF ${this.bf}.`;
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = DamageEngine.resolveDamage({
+      const damageResult = CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,

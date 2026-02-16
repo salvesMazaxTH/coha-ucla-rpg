@@ -17,16 +17,18 @@ export function emitCombatEvent(eventName, payload, champions) {
     : Array.from(champions.values());
 
   for (const champ of champArray) {
-    const hook = champ.passive?.[eventName];
+    const passive = champ.passive;
+    if (!passive) continue;
 
-    if (!hook) continue;
+    const hook = passive[eventName];
+    if (typeof hook !== "function") continue;
 
     if (debugMode) {
       console.log(`➡️ Triggering ${champ.name}`);
     }
 
     try {
-      const res = hook({
+      const res = hook.call(passive, {
         ...payload,
         self: champ,
       });

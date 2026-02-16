@@ -15,23 +15,20 @@ ela cura ${this.healPercent}% do seu HP máximo no início do próximo turno.`;
   },
 
   // Executa no início do turno
-  onTurnStart({ target, context }) {
-    const self = target;
+  onTurnStart({ self, context }) {
     const lastDamaged = self.runtime.sereneDamagedTurn;
-
-    if (self !== target) return;
 
     // Se NÃO tomou dano no turno anterior
     if (lastDamaged === context.currentTurn - 1) return;
 
-    const heal = Math.round((target.maxHP * 0.15) / 5) * 5;
-    if (heal <= 0 || target.HP >= target.maxHP) return;
+    const heal = Math.round((self.maxHP * 0.15) / 5) * 5;
+    if (heal <= 0 || self.HP >= self.maxHP) return;
 
-    const before = target.HP;
-    target.heal(heal, context);
+    const before = self.HP;
+    self.heal(heal, context);
 
     return {
-      log: `[PASSIVA — Calmaria Protetora] ${formatChampionName(target)} recuperou ${heal} HP (${before} → ${target.HP}).`,
+      log: `[PASSIVA — Calmaria Protetora] ${formatChampionName(self)} recuperou ${heal} HP (${before} → ${self.HP}).`,
     };
   },
 };

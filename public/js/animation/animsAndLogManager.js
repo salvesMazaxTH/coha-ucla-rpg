@@ -779,7 +779,7 @@ function triggerChampionHeal(championId, amount) {
   setTimeout(() => {
     float.remove();
     element.classList.remove("heal");
-  }, 950);
+  }, 1850);
 }
 
 function triggerChampionDamage(championId, amount) {
@@ -805,7 +805,7 @@ function triggerChampionDamage(championId, amount) {
   setTimeout(() => {
     float.remove();
     element.classList.remove("damage");
-  }, 950);
+  }, 1800);
 }
 
 function triggerGameOver(ctx, event) {

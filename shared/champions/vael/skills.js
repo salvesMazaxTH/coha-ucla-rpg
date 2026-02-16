@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 
 const vaelSkills = [
   {
@@ -16,7 +16,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -43,7 +43,7 @@ BF ${this.bf}.
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,
@@ -81,7 +81,7 @@ BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
       const results = [];
 
       if (primary) {
-        const primaryResult = DamageEngine.resolveDamage({
+        const primaryResult = CombatResolver.resolveDamage({
           baseDamage,
           user,
           target: primary,
@@ -94,7 +94,7 @@ BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
       }
 
       if (secondary) {
-        const secondaryResult = DamageEngine.resolveDamage({
+        const secondaryResult = CombatResolver.resolveDamage({
           baseDamage: (user.Attack * this.bfSecondary) / 100,
           user,
           target: secondary,
@@ -127,7 +127,7 @@ BF ${this.bf}.`;
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage,
         user,
         target: enemy,

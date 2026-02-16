@@ -19,6 +19,7 @@ import {
   formatChampionName,
   formatPlayerName,
 } from "../shared/core/formatters.js";
+import { emitCombatEvent } from "../shared/core/combatEvents.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -769,51 +770,55 @@ function handleEndTurn() {
     (c) => c.alive,
   );
 
-  activeChampions.forEach((champion) => {
-    const hook = champion.passive?.onTurnStart;
-    if (!hook) return;
+  const turnStartContext = {
+    currentTurn,
+    allChampions: activeChampions,
+    aliveChampions: aliveChampionsArray,
+    healEvents: [],
+    registerHeal({ target, amount, sourceId } = {}) {
+      const healAmount = Number(amount) || 0;
+      if (!target?.id || healAmount <= 0) return;
+      turnStartContext.healEvents.push({
+        type: "heal",
+        targetId: target.id,
+        sourceId: sourceId || target.id,
+        amount: healAmount,
+      });
+    },
+  };
 
-    const context = {
-      currentTurn,
-      allChampions: activeChampions,
-      aliveChampions: aliveChampionsArray,
-      healEvents: [],
-      healSourceId: champion.id,
-      registerHeal({ target, amount, sourceId } = {}) {
-        const healAmount = Number(amount) || 0;
-        if (!target?.id || healAmount <= 0) return;
-        context.healEvents.push({
-          type: "heal",
-          targetId: target.id,
-          sourceId: sourceId || context.healSourceId || target.id,
-          amount: healAmount,
-        });
-      },
-    };
+  activeChampions.forEach((c) => {
+    c.runtime = c.runtime || {};
+    c.runtime.currentContext = turnStartContext;
+  });
 
-    activeChampions.forEach((c) => {
-      c.runtime = c.runtime || {};
-      c.runtime.currentContext = context;
-    });
+  const turnStartResults = emitCombatEvent(
+    "onTurnStart",
+    { context: turnStartContext },
+    activeChampions,
+  );
 
-    const result = hook({ target: champion, context });
+  activeChampions.forEach((c) => {
+    if (c.runtime) delete c.runtime.currentContext;
+  });
 
-    activeChampions.forEach((c) => {
-      if (c.runtime) delete c.runtime.currentContext;
-    });
-
-    const state = context.healEvents.length
-      ? buildCombatSnapshotByIds(context.healEvents.map((e) => e.targetId))
+  for (const result of turnStartResults) {
+    const state = turnStartContext.healEvents.length
+      ? buildCombatSnapshotByIds(
+          turnStartContext.healEvents.map((e) => e.targetId),
+        )
       : null;
 
-    if (result?.log || context.healEvents.length > 0) {
+    if (result?.log || turnStartContext.healEvents.length > 0) {
       emitCombatLogPayload({
         log: result?.log,
-        events: context.healEvents.length ? context.healEvents : null,
+        events: turnStartContext.healEvents.length
+          ? turnStartContext.healEvents
+          : null,
         state,
       });
     }
-  });
+  }
 
   // 6. Limpar modificadores de stats expirados
   const revertedStats = [];

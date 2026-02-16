@@ -1,4 +1,4 @@
-import { DamageEngine } from "../../core/combatResolver.js";
+import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
 const reyskaroneSkills = [
@@ -19,7 +19,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
-      return DamageEngine.resolveDamage({
+      return CombatResolver.resolveDamage({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
@@ -63,7 +63,7 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
 
       enemy.applyKeyword("tributo", this.tributeDuration, context);
 
-      const result = DamageEngine.resolveDamage({
+      const result = CombatResolver.resolveDamage({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
