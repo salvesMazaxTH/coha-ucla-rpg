@@ -33,6 +33,7 @@ const editMode = {
   actMultipleTimesPerTurn: false,
   unreleasedChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
+  alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 2;
@@ -982,8 +983,8 @@ io.on("connection", (socket) => {
     if (!assignResult) return;
 
     const { playerSlot, finalUsername } = assignResult;
-    // Envia editMode ao client SEM propriedades server-only (damageOutput, etc.)
-    const { damageOutput, ...clientEditMode } = editMode;
+    // Envia editMode ao client SEM propriedades server-only (damageOutput, alwaysCrit, etc.)
+    const { damageOutput, alwaysCrit, ...clientEditMode } = editMode;
     socket.emit("editModeUpdate", clientEditMode);
 
     // Aguarda segundo jogador

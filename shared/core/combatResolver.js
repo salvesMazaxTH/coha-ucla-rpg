@@ -76,9 +76,8 @@ export const CombatResolver = {
       };
     }
 
-    roll = Math.random() * 100; // Descomente para uso normal
-    /* roll = 10; // Descomente para teste fixo */
-    didCrit = roll < chance;
+    roll = Math.random() * 100;
+    didCrit = context?.editMode?.alwaysCrit ? true : roll < chance;
 
     if (debugMode) {
       console.log(`🎯 Roll: ${roll.toFixed(2)}`);
