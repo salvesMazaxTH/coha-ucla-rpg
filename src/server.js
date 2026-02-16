@@ -29,7 +29,7 @@ const editMode = {
   enabled: true,
   autoLogin: false,
   autoSelection: false,
-  ignoreCooldowns: false,
+  ignoreCooldowns: true,
   actMultipleTimesPerTurn: false,
   unreleasedChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
@@ -406,18 +406,50 @@ function resolveSkillTargets(user, skill, action) {
 
   // --- Resolução normal ---
   if (!redirected) {
-    for (const role in action.targetIds) {
-      const target = activeChampions.get(action.targetIds[role]);
+    // Verifica se a skill possui alvos globais (all-enemies, all-allies, all)
+    const normalizedSpec = Array.isArray(skill.targetSpec)
+      ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
+      : [];
 
-      if (target && target.alive) {
-        currentTargets[role] = target;
-      } else if (role === "self") {
-        // "self" sempre resolve para o próprio user
-        currentTargets[role] = user;
+    const hasAllEnemies = normalizedSpec.includes("all-enemies");
+    const hasAllAllies = normalizedSpec.includes("all-allies");
+    const hasAll = normalizedSpec.includes("all");
+
+    if (hasAllEnemies || hasAllAllies || hasAll) {
+      // Alvos globais — resolvidos automaticamente pelo servidor
+      if (hasAllEnemies || hasAll) {
+        const enemies = Array.from(activeChampions.values()).filter(
+          (c) => c.team !== user.team && c.alive,
+        );
+        enemies.forEach((e, i) => {
+          const key = i === 0 ? "enemy" : `enemy${i + 1}`;
+          currentTargets[key] = e;
+        });
       }
-      // Alvo morto/inválido → simplesmente não entra em currentTargets.
-      // A porção da skill referente a esse alvo não será executada,
-      // mas as demais porções continuam normalmente.
+      if (hasAllAllies || hasAll) {
+        const allies = Array.from(activeChampions.values()).filter(
+          (c) => c.team === user.team && c.alive,
+        );
+        allies.forEach((a, i) => {
+          const key = i === 0 ? "ally" : `ally${i + 1}`;
+          currentTargets[key] = a;
+        });
+      }
+    } else {
+      // Alvos manuais — enviados pelo client via targetIds
+      for (const role in action.targetIds) {
+        const target = activeChampions.get(action.targetIds[role]);
+
+        if (target && target.alive) {
+          currentTargets[role] = target;
+        } else if (role === "self") {
+          // "self" sempre resolve para o próprio user
+          currentTargets[role] = user;
+        }
+        // Alvo morto/inválido → simplesmente não entra em currentTargets.
+        // A porção da skill referente a esse alvo não será executada,
+        // mas as demais porções continuam normalmente.
+      }
     }
 
     // Se nenhum alvo restou, aí sim cancela a ação

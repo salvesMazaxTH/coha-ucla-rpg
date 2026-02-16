@@ -646,6 +646,18 @@ function processCombatQueue(ctx) {
     }
 
     // 🔹 3️⃣ Sincronizar snapshot no momento correto
+    // Filtra o state para aplicar APENAS ao(s) campeão(ões) relevante(s) ao evento atual,
+    // evitando atualizar a UI de alvos cujas animações ainda não rodaram.
+    const eventTargetIds = new Set();
+    if (event.targetId) eventTargetIds.add(event.targetId);
+    if (event.sourceId) eventTargetIds.add(event.sourceId);
+    if (event.userId) eventTargetIds.add(event.userId);
+
+    const scopedState =
+      eventTargetIds.size > 0 && Array.isArray(state)
+        ? state.filter((s) => eventTargetIds.has(s.id))
+        : state;
+
     if (event.type === "skill") {
       // Evento puramente informativo (diálogo) — não aplica state.
       // O state será aplicado pelo evento de efeito real (damage, heal, shield, etc.)
@@ -653,23 +665,23 @@ function processCombatQueue(ctx) {
       duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
 
       setTimeout(() => {
-        applyCombatStateSnapshots(ctx, state);
+        applyCombatStateSnapshots(ctx, scopedState);
       }, ctx.durations.DAMAGE_ANIMATION_DURATION * 0.6);
     } else if (event.type === "heal") {
       duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
 
       setTimeout(() => {
-        applyCombatStateSnapshots(ctx, state);
+        applyCombatStateSnapshots(ctx, scopedState);
       }, ctx.durations.HEAL_ANIMATION_DURATION * 0.5);
     } else if (event.type === "shield") {
       duration = Math.max(duration, ctx.durations.SHIELD_ANIMATION_DURATION);
 
       setTimeout(() => {
-        applyCombatStateSnapshots(ctx, state);
+        applyCombatStateSnapshots(ctx, scopedState);
       }, ctx.durations.SHIELD_ANIMATION_DURATION * 0.5);
     } else {
       // death, gameOver, keyword, etc.
-      applyCombatStateSnapshots(ctx, state);
+      applyCombatStateSnapshots(ctx, scopedState);
     }
 
     // 🔹 4️⃣ Ir para próximo evento após o tempo correto
