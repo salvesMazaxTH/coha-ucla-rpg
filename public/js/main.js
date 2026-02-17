@@ -66,7 +66,6 @@ let countdownInterval = null;
 
 // --- Overlays ---
 let portraitOverlay = null;
-let lastLoggedTurn = null; // controla headers de turno no log de combate
 
 // ============================================================
 //  REFERÊNCIAS DO DOM
@@ -1101,35 +1100,19 @@ socket.on("waitingForOpponentEndTurn", (message) => {
 //  LOG DE COMBATE
 // ============================================================
 
+socket.on("combatAction", (envelope) => {
+  combatAnimations.handleCombatAction(envelope);
+});
+
 socket.on("combatLog", (message) => {
-  logCombat(message);
+  if (typeof message === "string") {
+    combatAnimations.handleCombatLog(message);
+  }
 });
 
 function logCombat(text) {
-  const payload = typeof text === "string" ? { log: text } : text || {};
-  const logText = combatAnimations.processCombatLogPayload?.(payload) || null;
-  if (!logText) return;
-
-  const log = document.getElementById("combat-log");
-  if (!log) return;
-
-  // Header de turno — inserido apenas uma vez por turno
-  if (lastLoggedTurn !== currentTurn) {
-    lastLoggedTurn = currentTurn;
-    const turnHeader = document.createElement("h2");
-    turnHeader.classList.add("turn-header");
-    turnHeader.textContent = `Turno ${currentTurn}`;
-    log.appendChild(turnHeader);
-  }
-
-  // Separador visual entre entradas
-  if (log.children.length > 1) {
-    log.appendChild(document.createElement("br"));
-  }
-
-  const line = document.createElement("p");
-  line.innerHTML = logText.replace(/\n/g, "<br>");
-  log.appendChild(line);
+  if (typeof text !== "string" || !text) return;
+  combatAnimations.appendToLog(text);
 }
 
 // ============================================================

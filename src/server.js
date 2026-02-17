@@ -198,18 +198,10 @@ function removeChampionFromGame(championId, playerTeam) {
       player2: playerScores[1],
     });
 
-    emitCombatLogPayload({
-      events: [
-        {
-          type: "score",
-          playerName: formatPlayerName(
-            playerNames.get(scoringPlayerSlot),
-            scoringTeam,
-          ),
-          team: scoringTeam,
-        },
-      ],
-    });
+    io.emit(
+      "combatLog",
+      `${formatPlayerName(playerNames.get(scoringPlayerSlot), scoringTeam)} marcou um ponto!`,
+    );
 
     if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
       gameEnded = true;
@@ -466,97 +458,108 @@ function resolveSkillTargets(user, skill, action) {
 }
 
 // ============================================================
-//  CONSTRUÇÃO DE PAYLOADS DE COMBATE
+//  EMISSÃO DE AÇÕES DE COMBATE (v2)
 // ============================================================
 
-/** Converte o resultado de uma skill em eventos de combate (damage, heal, evasion). */
-function buildCombatEventsFromResult(result) {
-  if (!result || typeof result !== "object") return [];
+/**
+ * Extrai efeitos visuais ordenados a partir de um resultado do CombatResolver.
+ * Retorna um array de efeitos que o cliente animará sequencialmente.
+ */
+function extractEffectsFromResult(result) {
+  const effects = [];
+  if (!result || typeof result !== "object") return effects;
 
-  const { targetId, userId, totalDamage, evaded } = result;
-  const events = [];
-
-  if (evaded && targetId) {
-    events.push({ type: "evasion", targetId, sourceId: userId });
-    return events;
+  // Evasão — se evadiu, não há dano nem heal
+  if (result.evaded && result.targetId) {
+    effects.push({
+      type: "evasion",
+      targetId: result.targetId,
+      sourceId: result.userId,
+    });
+    return effects;
   }
 
-  if (totalDamage > 0 && targetId) {
-    events.push({
+  // Imunidade absoluta — totalDamage 0, log menciona imunidade
+  if (
+    result.totalDamage === 0 &&
+    !result.evaded &&
+    result.log?.includes("Imunidade Absoluta")
+  ) {
+    effects.push({
+      type: "immune",
+      targetId: result.targetId,
+      sourceId: result.userId,
+    });
+    return effects;
+  }
+
+  // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
+  if (
+    result.totalDamage === 0 &&
+    !result.evaded &&
+    result.log?.includes("bloqueou completamente")
+  ) {
+    effects.push({
+      type: "shieldBlock",
+      targetId: result.targetId,
+      sourceId: result.userId,
+    });
+    return effects;
+  }
+
+  // Dano
+  if (result.totalDamage > 0 && result.targetId) {
+    effects.push({
       type: "damage",
-      targetId,
-      sourceId: userId,
-      amount: totalDamage,
+      targetId: result.targetId,
+      sourceId: result.userId,
+      amount: result.totalDamage,
+      isCritical: result.crit?.didCrit || false,
     });
   }
 
-  const healData = result.heal || null;
-  const healAmount = Number(healData?.amount) || 0;
-  const healTargetId = healData?.targetId || null;
-
-  if (healAmount > 0 && healTargetId) {
-    events.push({
+  // Heal direto do resultado (lifesteal)
+  if (result.heal && result.heal.amount > 0 && result.heal.targetId) {
+    effects.push({
       type: "heal",
-      targetId: healTargetId,
-      sourceId: healData?.sourceId || userId,
-      amount: healAmount,
+      targetId: result.heal.targetId,
+      sourceId: result.heal.sourceId || result.userId,
+      amount: result.heal.amount,
     });
   }
 
-  return events;
+  return effects;
 }
 
-/** Gera snapshot serializado dos campeões envolvidos em um resultado. */
-function buildCombatSnapshot(result) {
-  if (!result || typeof result !== "object") return null;
+/**
+ * Gera snapshots serializados dos campeões a partir de uma lista de IDs.
+ * Usado para enviar o estado final pós-ação ao cliente.
+ */
+function snapshotChampions(ids) {
+  if (!ids || ids.length === 0) return null;
 
-  const ids = new Set();
-  if (result.userId) ids.add(result.userId);
-  if (result.targetId) ids.add(result.targetId);
-  if (ids.size === 0) return null;
-
+  const uniqueIds = [...new Set(ids)];
   const snapshots = [];
-  ids.forEach((id) => {
+
+  for (const id of uniqueIds) {
     const champion = activeChampions.get(id);
     if (champion?.serialize) snapshots.push(champion.serialize());
-  });
+  }
 
-  return snapshots.length ? snapshots : null;
+  return snapshots.length > 0 ? snapshots : null;
 }
 
-/** Gera snapshot serializado a partir de uma lista de IDs. */
-function buildCombatSnapshotByIds(ids) {
-  if (!Array.isArray(ids) || ids.length === 0) return null;
-
-  const snapshots = [];
-  ids.forEach((id) => {
-    const champion = activeChampions.get(id);
-    if (champion?.serialize) snapshots.push(champion.serialize());
-  });
-
-  return snapshots.length ? snapshots : null;
-}
-
-/** Mescla dois arrays de snapshots, priorizando entradas mais recentes. */
-function mergeCombatSnapshots(base, extra) {
-  if (!extra || extra.length === 0) return base || null;
-  if (!base || base.length === 0) return extra;
-
-  const merged = new Map(base.map((snap) => [snap.id, snap]));
-  extra.forEach((snap) => merged.set(snap.id, snap));
-
-  return Array.from(merged.values());
-}
-
-/** Emite um payload estruturado de combatLog para todos os clientes. */
-function emitCombatLogPayload({ log, events, state }) {
-  if (!log && !events && !state) return;
-
-  io.emit("combatLog", {
-    ...(log ? { log } : null),
-    ...(events ? { events } : null),
-    ...(state ? { state } : null),
-  });
+/**
+ * Emite um envelope de ação de combate para todos os clientes.
+ * Formato:
+ *   action  — info sobre a skill usada (null para passivas/efeitos de turno)
+ *   effects — array ordenado de efeitos a animar
+ *   log     — texto verboso para o log de combate
+ *   state   — snapshots do estado final dos campeões afetados
+ */
+function emitCombatAction(envelope) {
+  if (!envelope) return;
+  io.emit("combatAction", envelope);
 }
 
 // ============================================================
@@ -636,93 +639,66 @@ function performSkillExecution(user, skill, targets) {
   }
   turnData.skillsUsedThisTurn[user.id].push(skill.key);
 
-  // --- Montagem dos payloads de combate ---
-  const payloads = [];
-  const primaryTarget = Object.values(targets || {})[0] || null;
-  const skillEvent = {
-    type: "skill",
-    userId: user.id,
-    skillKey: skill.key,
-    skillName: skill.name,
-    targetId: primaryTarget?.id || null,
-  };
+  // --- Montagem do envelope de combate (v2) ---
+  const results = Array.isArray(result) ? result : result ? [result] : [];
+  const effects = [];
+  const affectedIds = new Set();
+  affectedIds.add(user.id);
 
-  const pushPayloadFromResult = (entry) => {
-    if (!entry || typeof entry !== "object") return;
-    const events = buildCombatEventsFromResult(entry);
-    payloads.push({
-      log: entry?.log,
-      events: events.length ? events : null,
-      state: buildCombatSnapshot(entry),
+  // 1. Extrair efeitos de cada resultado
+  for (const entry of results) {
+    if (!entry || typeof entry !== "object") continue;
+    effects.push(...extractEffectsFromResult(entry));
+    if (entry.targetId) affectedIds.add(entry.targetId);
+    if (entry.userId) affectedIds.add(entry.userId);
+    if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
+  }
+
+  // 2. Anexar heals do contexto (curas indiretas, passivas)
+  for (const h of context.healEvents) {
+    effects.push({
+      type: "heal",
+      targetId: h.targetId,
+      sourceId: h.sourceId,
+      amount: h.amount,
     });
-  };
-
-  if (result) {
-    if (Array.isArray(result)) {
-      result.forEach((entry) => pushPayloadFromResult(entry));
-    } else {
-      pushPayloadFromResult(result);
-    }
+    affectedIds.add(h.targetId);
   }
 
-  // Insere o evento da skill no primeiro payload
-  if (payloads.length === 0) {
-    payloads.push({ log: null, events: [skillEvent], state: null });
-  } else {
-    payloads[0].events = [skillEvent, ...(payloads[0].events || [])];
+  // 3. Anexar shields do contexto
+  for (const s of context.shieldEvents) {
+    effects.push({
+      type: "shield",
+      targetId: s.targetId,
+      sourceId: s.sourceId,
+      amount: s.amount,
+    });
+    affectedIds.add(s.targetId);
   }
 
-  // Anexa heal events ao payload adequado
-  if (context.healEvents.length > 0) {
-    const targetPayload = payloads.find((p) => p.log) || payloads[0];
-    const healSnapshot = buildCombatSnapshotByIds(
-      context.healEvents.map((e) => e.targetId),
-    );
+  // 4. Montar log verboso
+  const logParts = results.map((r) => r?.log).filter(Boolean);
+  const log = logParts.length > 0 ? logParts.join("\n") : null;
 
-    if (targetPayload) {
-      targetPayload.events = [
-        ...(targetPayload.events || []),
-        ...context.healEvents,
-      ];
-      targetPayload.state = mergeCombatSnapshots(
-        targetPayload.state,
-        healSnapshot,
-      );
-    } else {
-      payloads.push({
-        log: null,
-        events: context.healEvents,
-        state: healSnapshot,
-      });
-    }
-  }
+  // 5. Snapshot do estado final de todos os campeões afetados
+  const state = snapshotChampions([...affectedIds]);
 
-  // Anexa shield events ao payload adequado
-  if (context.shieldEvents.length > 0) {
-    const targetPayload = payloads.find((p) => p.log) || payloads[0];
-    const shieldSnapshot = buildCombatSnapshotByIds(
-      context.shieldEvents.map((e) => e.targetId),
-    );
+  // 6. Info da ação (skill usada)
+  const primaryTarget = Object.values(targets || {})[0] || null;
 
-    if (targetPayload) {
-      targetPayload.events = [
-        ...(targetPayload.events || []),
-        ...context.shieldEvents,
-      ];
-      targetPayload.state = mergeCombatSnapshots(
-        targetPayload.state,
-        shieldSnapshot,
-      );
-    } else {
-      payloads.push({
-        log: null,
-        events: context.shieldEvents,
-        state: shieldSnapshot,
-      });
-    }
-  }
-
-  payloads.forEach((payload) => emitCombatLogPayload(payload));
+  emitCombatAction({
+    action: {
+      userId: user.id,
+      userName: user.name,
+      skillKey: skill.key,
+      skillName: skill.name,
+      targetId: primaryTarget?.id || null,
+      targetName: primaryTarget?.name || null,
+    },
+    effects,
+    log,
+    state,
+  });
 
   // Remove Epifania ao agir
   if (user.hasKeyword?.("epifania_ativa")) {
@@ -800,9 +776,10 @@ function processChampionsDeaths() {
     const winnerTeam = winnerSlot + 1;
     const winnerName = playerNames.get(winnerSlot);
 
-    emitCombatLogPayload({
+    emitCombatAction({
+      action: null,
+      effects: [{ type: "gameOver", winnerTeam, winnerName }],
       log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-      events: [{ type: "gameOver", winnerTeam, winnerName }],
       state: null,
     });
   }
@@ -874,22 +851,28 @@ function handleEndTurn() {
     if (c.runtime) delete c.runtime.currentContext;
   });
 
-  for (const result of turnStartResults) {
-    const state = turnStartContext.healEvents.length
-      ? buildCombatSnapshotByIds(
-          turnStartContext.healEvents.map((e) => e.targetId),
-        )
-      : null;
+  // Emitir efeitos de início de turno consolidados
+  const turnStartLogs = turnStartResults.map((r) => r?.log).filter(Boolean);
+  const turnStartEffects = turnStartContext.healEvents.map((h) => ({
+    type: "heal",
+    targetId: h.targetId,
+    sourceId: h.sourceId,
+    amount: h.amount,
+  }));
 
-    if (result?.log || turnStartContext.healEvents.length > 0) {
-      emitCombatLogPayload({
-        log: result?.log,
-        events: turnStartContext.healEvents.length
-          ? turnStartContext.healEvents
+  if (turnStartLogs.length > 0 || turnStartEffects.length > 0) {
+    const affectedTurnStartIds = [
+      ...new Set(turnStartEffects.map((e) => e.targetId)),
+    ];
+    emitCombatAction({
+      action: null,
+      effects: turnStartEffects,
+      log: turnStartLogs.join("\n") || null,
+      state:
+        affectedTurnStartIds.length > 0
+          ? snapshotChampions(affectedTurnStartIds)
           : null,
-        state,
-      });
-    }
+    });
   }
 
   // 6. Limpar modificadores de stats expirados
@@ -1451,9 +1434,10 @@ io.on("connection", (socket) => {
       player2: playerScores[1],
     });
 
-    emitCombatLogPayload({
+    emitCombatAction({
+      action: null,
+      effects: [{ type: "gameOver", winnerTeam, winnerName }],
       log: `${formatPlayerName(surrendererName, surrenderingTeam)} se rendeu! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-      events: [{ type: "gameOver", winnerTeam, winnerName }],
       state: null,
     });
   });

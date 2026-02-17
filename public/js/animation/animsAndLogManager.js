@@ -1,1038 +1,795 @@
-export function createCombatAnimationManager({
-  activeChampions,
-  createNewChampion,
-  getCurrentTurn,
-  setCurrentTurn,
-  updateTurnDisplay,
-  applyTurnUpdate,
-  startStatusIndicatorRotation,
-  combatDialog,
-  combatDialogText,
-} = {}) {
-  const ctx = buildCombatAnimationContext({
-    activeChampions,
-    createNewChampion,
-    getCurrentTurn,
-    setCurrentTurn,
-    updateTurnDisplay,
-    applyTurnUpdate,
-    startStatusIndicatorRotation,
-    combatDialog,
-    combatDialogText,
-  });
+// ============================================================
+//  animsAndLogManager.js — Combat Animation & Log System (v2)
+//
+//  Queue-based, deterministic animation system.
+//  Receives structured combat action envelopes from the server
+//  and plays effects sequentially with proper visual ordering.
+//
+//  Architecture:
+//    Server emits "combatAction" envelopes with:
+//      { action, effects[], log, state[] }
+//    This manager queues them and processes one at a time.
+//    Each effect is animated before the next begins.
+//    Final state is applied only after all effects are animated.
+// ============================================================
 
-  return {
-    applyGameStateUpdate: (gameState) => applyGameStateUpdate(ctx, gameState),
-    enqueueCombatItem: (item) => enqueueCombatItem(ctx, item),
-    processCombatLogPayload: (payload) => processCombatLogPayload(ctx, payload),
-    handleChampionRemoved: (championId) =>
-      handleChampionRemoved(ctx, championId),
-    handleGameStateUpdate: (gameState) => handleGameStateUpdate(ctx, gameState),
-    handleTurnUpdate: (turn) => handleTurnUpdate(ctx, turn),
-    reset: () => resetManager(ctx),
-  };
-}
+// ============================================================
+//  TIMING CONSTANTS (derived from CSS keyframe durations)
+// ============================================================
 
-function buildCombatAnimationContext(options) {
-  const ctx = {
-    ...options,
-    durations: {
-      CHAMPION_DEATH_ANIMATION_DURATION: 2000,
-      DAMAGE_ANIMATION_DURATION: 958,
-      EVASION_ANIMATION_DURATION: 550,
-      HEAL_ANIMATION_DURATION: 900,
-      SHIELD_ANIMATION_DURATION: 900,
-      GAME_OVER_DELAY: 550,
-    },
-    dialogSpeed: {
-      base: 1000,
-      perChar: 25,
-      max: 4500,
-    },
-    dyingChampionIds: new Set(),
-    removedChampionIds: new Set(),
-    deathPendingIds: new Set(),
-    lastKnownHP: new Map(),
-    championVisualTimers: new Map(),
-    combatQueue: [],
-    combatQueueTimer: null,
-    combatQueueRunning: false,
-    isProcessingEvents: false,
-    pendingGameState: null,
-    pendingTurnUpdate: null,
-    gameOverTriggered: false,
-    gameOverShown: false,
-    shouldStopQueue: false,
-    gameOverPayloadReceived: false,
-    pendingGameOverEvent: null,
-    compactStateCache: new Map(),
-  };
+const TIMING = {
+  // Portrait animation class durations (from animations.css)
+  DAMAGE_ANIM: 950,
+  HEAL_ANIM: 975,
+  EVASION_ANIM: 550,
 
-  ctx.eventHandlers = createEventHandlers(ctx);
+  // Float element lifetime (auto-removed after CSS animation)
+  FLOAT_LIFETIME: 1900,
 
-  return ctx;
-}
+  // Death collapse animation
+  DEATH_ANIM: 2000,
 
-function createEventHandlers(ctx) {
-  return {
-    evasion: (event) =>
-      triggerChampionVisual(
-        ctx,
-        event?.targetId,
-        "evasion",
-        ctx.durations.EVASION_ANIMATION_DURATION,
-      ),
-    damage: (event) => {
-      triggerChampionVisual(
-        ctx,
-        event?.targetId,
-        "damage",
-        ctx.durations.DAMAGE_ANIMATION_DURATION,
-      );
-      triggerChampionDamage(event?.targetId, event?.amount);
-    },
-    heal: (event) => {
-      triggerChampionVisual(
-        ctx,
-        event?.targetId,
-        "heal",
-        ctx.durations.HEAL_ANIMATION_DURATION,
-      );
-      triggerChampionHeal(event?.targetId, event?.amount);
-    },
-    shield: (event) => {
-      triggerChampionVisual(
-        ctx,
-        event?.targetId,
-        "shield",
-        ctx.durations.SHIELD_ANIMATION_DURATION,
-      );
-      triggerChampionShield(event?.targetId, event?.amount);
-    },
-    death: (event) => triggerChampionDeath(ctx, event?.targetId),
-    gameOver: (event) => triggerGameOver(ctx, event),
-  };
-}
+  // Combat dialog bubble
+  DIALOG_DISPLAY: 1500,
+  DIALOG_LEAVE: 250,
 
-function hasGameOverEvent(events) {
-  return (
-    Array.isArray(events) && events.some((event) => event?.type === "gameOver")
-  );
-}
-
-function resolveChampionName(ctx, championId, fallback) {
-  if (typeof fallback === "string" && fallback.trim()) return fallback.trim();
-  if (!championId) return "Campeao";
-  return ctx.activeChampions.get(championId)?.name || "Campeao";
-}
-
-function buildDialogFromEvents(ctx, events = []) {
-  if (!Array.isArray(events) || events.length === 0) return null;
-
-  const lines = [];
-
-  for (const event of events) {
-    if (!event || !event.type) continue;
-
-    switch (event.type) {
-      case "skill": {
-        const userName = resolveChampionName(
-          ctx,
-          event.userId || event.sourceId,
-          event.userName,
-        );
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (userName && event.skillName && event.targetId) {
-          lines.push(`${userName} usou ${event.skillName} em ${targetName}.`);
-        } else if (userName && event.skillName) {
-          lines.push(`${userName} usou ${event.skillName}.`);
-        }
-        break;
-      }
-
-      case "damage": {
-        // const targetName = resolveChampionName(
-        //   ctx,
-        //   event.targetId,
-        //   event.targetName,
-        // );
-        // if (targetName && Number.isFinite(event.amount)) {
-        //   lines.push(`${targetName} sofreu ${event.amount} de dano.`);
-        // }
-        break;
-      }
-
-      case "heal": {
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (targetName) {
-          // lines.push(`${targetName} recuperou ${event.amount} de vida.`);
-          lines.push(`${targetName} recuperou vida.`);
-        }
-        break;
-      }
-
-      case "shield": {
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (targetName) {
-          // lines.push(`${targetName} recebeu ${event.amount} de escudo.`);
-          lines.push(`${targetName} foi protegido com um escudo.`);
-        }
-        break;
-      }
-
-      case "death": {
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (targetName) {
-          lines.push(`${targetName} foi derrotado.`);
-        }
-        break;
-      }
-
-      case "keywordApplied": {
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (targetName && event.keyword) {
-          lines.push(`${targetName} está ${event.keyword}.`);
-        }
-        break;
-      }
-
-      case "keywordRemoved": {
-        const targetName = resolveChampionName(
-          ctx,
-          event.targetId,
-          event.targetName,
-        );
-        if (targetName && event.keyword) {
-          lines.push(`${targetName} não está mais ${event.keyword}.`);
-        }
-        break;
-      }
-
-      case "gameOver":
-        if (event.winnerName) {
-          lines.push(`Fim de jogo! ${event.winnerName} venceu.`);
-        }
-        break;
-
-      case "score":
-        if (event.playerName) {
-          lines.push(`${event.playerName} pontuou.`);
-        }
-        break;
-    }
-  }
-
-  return lines.length > 0 ? lines.join("\n") : null;
-}
-
-function enqueueCombatItem(ctx, item) {
-  const events = item.events;
-  const hasGameOver = hasGameOverEvent(events);
-
-  if ((ctx.shouldStopQueue || ctx.gameOverPayloadReceived) && !hasGameOver) {
-    return;
-  }
-
-  if (ctx.gameOverPayloadReceived && hasGameOver && ctx.gameOverTriggered) {
-    return;
-  }
-
-  if (events.length > 1) {
-    // State snapshot só vai no ÚLTIMO evento split.
-    // Caso contrário o snapshot (estado final) sobrescreve o HP visual
-    // após o primeiro evento, e os eventos seguintes subtraem do valor errado.
-    for (let i = 0; i < events.length; i++) {
-      ctx.combatQueue.push({
-        events: [events[i]],
-        state: i === events.length - 1 ? item.state : null,
-      });
-    }
-  } else {
-    ctx.combatQueue.push(item);
-  }
-
-  if (!ctx.combatQueueRunning) {
-    processCombatQueue(ctx);
-  }
-}
-
-function handleChampionRemoved(ctx, championId) {
-  if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
-  ctx.removedChampionIds.add(championId);
-  ctx.deathPendingIds.add(championId);
-  enqueueCombatItem(ctx, {
-    events: [{ type: "death", targetId: championId }],
-  });
-}
-
-function handleGameStateUpdate(ctx, gameState) {
-  if (
-    ctx.shouldStopQueue ||
-    ctx.gameOverPayloadReceived ||
-    ctx.isProcessingEvents
-  )
-    return;
-  if (ctx.combatQueueRunning || ctx.combatQueue.length > 0) {
-    ctx.pendingGameState = gameState;
-    return;
-  }
-
-  applyGameStateUpdate(ctx, gameState);
-}
-
-function handleTurnUpdate(ctx, turn) {
-  if (ctx.shouldStopQueue || ctx.gameOverPayloadReceived) return;
-  if (ctx.combatQueueRunning || ctx.combatQueue.length > 0) {
-    ctx.pendingTurnUpdate = turn;
-    return;
-  }
-
-  ctx.applyTurnUpdate?.(turn);
-}
-
-function resetManager(ctx) {
-  ctx.combatQueue.length = 0;
-  ctx.combatQueueRunning = false;
-  ctx.pendingGameState = null;
-  ctx.pendingTurnUpdate = null;
-  ctx.gameOverTriggered = false;
-  ctx.gameOverShown = false;
-  ctx.shouldStopQueue = false;
-  ctx.gameOverPayloadReceived = false;
-  ctx.pendingGameOverEvent = null;
-
-  if (ctx.combatQueueTimer) {
-    clearTimeout(ctx.combatQueueTimer);
-    ctx.combatQueueTimer = null;
-  }
-
-  for (const timer of ctx.championVisualTimers.values()) {
-    clearTimeout(timer);
-  }
-  ctx.championVisualTimers.clear();
-
-  ctx.dyingChampionIds.clear();
-  ctx.removedChampionIds.clear();
-  ctx.deathPendingIds.clear();
-  ctx.lastKnownHP.clear();
-  ctx.compactStateCache.clear();
-
-  hideCombatDialog(ctx);
-}
-
-const STAT_LABELS = {
-  Attack: "Ataque",
-  Defense: "Defesa",
-  Speed: "Velocidade",
-  Critical: "Critico",
-  LifeSteal: "Roubo de Vida",
+  // Sequencing gaps
+  BETWEEN_EFFECTS: 200,
+  BETWEEN_ACTIONS: 350,
 };
 
-function extractKeywordSet(keywordEntries) {
-  if (!Array.isArray(keywordEntries)) return new Set();
-  return new Set(
-    keywordEntries
-      .map((entry) => entry?.[0])
-      .filter((name) => typeof name === "string" && name.trim().length > 0),
-  );
+// ============================================================
+//  DAMAGE TIER CLASSIFICATION (maps to CSS .damage-tier-N)
+// ============================================================
+
+function getDamageTier(amount) {
+  if (amount >= 251) return 6;
+  if (amount >= 151) return 5;
+  if (amount >= 101) return 4;
+  if (amount >= 61) return 3;
+  if (amount >= 31) return 2;
+  return 1;
 }
 
-function formatKeywordLabel(keyword) {
-  const value = String(keyword || "")
-    .replace(/_/g, " ")
-    .trim();
-  if (!value) return "";
-  return value.charAt(0).toUpperCase() + value.slice(1);
+// ============================================================
+//  UTILITY
+// ============================================================
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getCompactStateLogs(ctx, stateList) {
-  if (!Array.isArray(stateList) || stateList.length === 0) return [];
+function getChampionElement(championId) {
+  return document.querySelector(`.champion[data-champion-id="${championId}"]`);
+}
 
-  const logs = [];
+// ============================================================
+//  FACTORY
+// ============================================================
 
-  stateList.forEach((championData) => {
-    const id = championData?.id;
-    if (!id) return;
+/**
+ * Creates the combat animation manager.
+ *
+ * @param {object} deps
+ * @param {Map}      deps.activeChampions
+ * @param {Function} deps.createNewChampion
+ * @param {Function} deps.getCurrentTurn
+ * @param {Function} deps.setCurrentTurn
+ * @param {Function} deps.updateTurnDisplay
+ * @param {Function} deps.applyTurnUpdate
+ * @param {Function} deps.startStatusIndicatorRotation
+ * @param {Element}  deps.combatDialog
+ * @param {Element}  deps.combatDialogText
+ */
+export function createCombatAnimationManager(deps) {
+  // ============================================================
+  //  QUEUE STATE
+  // ============================================================
 
-    const name = championData?.name || "Campeao";
-    const currentKeywords = extractKeywordSet(championData?.keywords);
-    const currentStats = {
-      Attack: championData?.Attack,
-      Defense: championData?.Defense,
-      Speed: championData?.Speed,
-      Critical: championData?.Critical,
-      LifeSteal: championData?.LifeSteal,
-    };
+  const queue = [];
+  let processing = false;
+  let lastLoggedTurn = null;
 
-    const previous = ctx.compactStateCache.get(id);
+  // ============================================================
+  //  QUEUE MANAGEMENT
+  // ============================================================
 
-    if (previous) {
-      const addedKeywords = Array.from(currentKeywords).filter(
-        (keyword) => !previous.keywords.has(keyword),
+  function enqueue(type, data) {
+    queue.push({ type, data });
+    if (!processing) drainQueue();
+  }
+
+  async function drainQueue() {
+    if (processing) return;
+    processing = true;
+
+    while (queue.length > 0) {
+      const item = queue.shift();
+      try {
+        await dispatchQueueItem(item);
+      } catch (err) {
+        console.error("[AnimManager] Queue item error:", err);
+      }
+    }
+
+    processing = false;
+  }
+
+  async function dispatchQueueItem(item) {
+    switch (item.type) {
+      case "combatAction":
+        await processCombatAction(item.data);
+        await wait(TIMING.BETWEEN_ACTIONS);
+        break;
+
+      case "gameStateUpdate":
+        processGameStateUpdate(item.data);
+        break;
+
+      case "turnUpdate":
+        processTurnUpdate(item.data);
+        break;
+
+      case "championRemoved":
+        await processChampionRemoved(item.data);
+        break;
+
+      case "combatLog":
+        appendToLog(item.data);
+        break;
+
+      default:
+        console.warn("[AnimManager] Unknown queue type:", item.type);
+    }
+  }
+
+  // ============================================================
+  //  COMBAT ACTION PROCESSING
+  // ============================================================
+
+  async function processCombatAction(envelope) {
+    const { action, effects, log, state } = envelope;
+
+    // 1. Show skill usage dialog bubble
+    if (action) {
+      const userName = action.userName || "Alguém";
+      const targetName = action.targetName || null;
+      const skillName = action.skillName || "uma habilidade";
+
+      const dialogText = targetName
+        ? `${userName} usou ${skillName} em ${targetName}.`
+        : `${userName} usou ${skillName}.`;
+
+      await showDialog(dialogText);
+    }
+
+    // 2. Animate each effect sequentially — deterministic order
+    if (Array.isArray(effects)) {
+      for (let i = 0; i < effects.length; i++) {
+        await animateEffect(effects[i]);
+
+        if (i < effects.length - 1) {
+          await wait(TIMING.BETWEEN_EFFECTS);
+        }
+      }
+    }
+
+    // 3. Apply authoritative final state (corrects any visual discrepancies)
+    if (state) {
+      applyStateSnapshots(state);
+    }
+
+    // 4. Append verbose log text to the combat log panel
+    if (log) {
+      appendToLog(log);
+    }
+  }
+
+  // ============================================================
+  //  EFFECT ANIMATION DISPATCH
+  // ============================================================
+
+  async function animateEffect(effect) {
+    if (!effect || !effect.type) return;
+
+    switch (effect.type) {
+      case "damage":
+        await animateDamage(effect);
+        break;
+
+      case "heal":
+        await animateHeal(effect);
+        break;
+
+      case "evasion":
+        await animateEvasion(effect);
+        break;
+
+      case "shield":
+        await animateShield(effect);
+        break;
+
+      case "gameOver":
+        await handleGameOver(effect);
+        break;
+
+      case "immune":
+        await animateImmune(effect);
+        break;
+
+      case "shieldBlock":
+        await animateShieldBlock(effect);
+        break;
+
+      default:
+        console.warn("[AnimManager] Unknown effect type:", effect.type);
+    }
+  }
+
+  // ============================================================
+  //  DAMAGE ANIMATION
+  //
+  //  CSS mapping:
+  //    .damage           → on .champion (shake + red tint via ::after)
+  //    .damage-float     → inside .portrait-wrapper (floating number)
+  //    .damage-tier-{N}  → font size tier for the float
+  // ============================================================
+
+  async function animateDamage(effect) {
+    const { targetId, amount, isCritical } = effect;
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+
+    // Show critical hit dialog if applicable
+    if (isCritical) {
+      const champion = deps.activeChampions.get(targetId);
+      const name = champion?.name || "Alvo";
+      await showDialog(`CRÍTICO! ${name} sofreu ${amount} de dano!`);
+    }
+
+    // Apply .damage class to .champion element
+    // CSS: .damage triggers shake animation
+    // CSS: .damage .portrait::after creates red overlay on portrait
+    championEl.classList.add("damage");
+
+    // Create floating damage number inside .portrait-wrapper
+    if (portraitWrapper) {
+      createFloatElement(
+        portraitWrapper,
+        `-${amount}`,
+        "damage-float",
+        `damage-tier-${getDamageTier(amount)}`,
       );
-      const removedKeywords = Array.from(previous.keywords).filter(
-        (keyword) => !currentKeywords.has(keyword),
-      );
-
-      addedKeywords.forEach((keyword) => {
-        const label = formatKeywordLabel(keyword);
-        if (label) {
-          logs.push(`Status: ${name} ficou ${label}.`);
-        }
-      });
-
-      removedKeywords.forEach((keyword) => {
-        const label = formatKeywordLabel(keyword);
-        if (label) {
-          logs.push(`Status: ${name} nao esta mais ${label}.`);
-        }
-      });
-
-      Object.keys(STAT_LABELS).forEach((statName) => {
-        const prevValue = previous.stats?.[statName];
-        const nextValue = currentStats?.[statName];
-
-        if (!Number.isFinite(prevValue) || !Number.isFinite(nextValue)) return;
-        if (nextValue > prevValue) {
-          logs.push(`Buff: ${name} ${STAT_LABELS[statName]} aumentou.`);
-        } else if (nextValue < prevValue) {
-          logs.push(`Debuff: ${name} ${STAT_LABELS[statName]} diminuiu.`);
-        }
-      });
     }
 
-    ctx.compactStateCache.set(id, {
-      keywords: currentKeywords,
-      stats: currentStats,
-      name,
-    });
-  });
+    // Update HP bar incrementally (visual only, not authoritative)
+    updateVisualHP(targetId, -amount);
 
-  return logs;
-}
+    // Wait for the damage shake animation to complete
+    await wait(TIMING.DAMAGE_ANIM);
 
-function processCombatLogPayload(ctx, payload) {
-  const normalized = typeof payload === "string" ? { log: payload } : payload;
-  if (!normalized || typeof normalized !== "object") return null;
-
-  if (!Array.isArray(normalized.events)) {
-    normalized.events = normalized.event ? [normalized.event] : [];
+    // Remove animation class (::after pseudo-element disappears)
+    championEl.classList.remove("damage");
   }
 
-  const hasGameOver = hasGameOverEvent(normalized.events);
+  // ============================================================
+  //  HEAL ANIMATION
+  //
+  //  CSS mapping:
+  //    .heal        → on .champion (green glow via ::after)
+  //    .heal-float  → inside .portrait-wrapper (floating number)
+  // ============================================================
 
-  if (ctx.gameOverPayloadReceived) {
-    if (!hasGameOver || ctx.gameOverTriggered) return null;
-  } else if (hasGameOver) {
-    ctx.gameOverPayloadReceived = true;
-    if (typeof window !== "undefined") {
-      window.gameOverPayloadReceived = true;
+  async function animateHeal(effect) {
+    const { targetId, amount } = effect;
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const champion = deps.activeChampions.get(targetId);
+    const name = champion?.name || "Alvo";
+
+    // Show heal dialog
+    await showDialog(`${name} recuperou vida.`);
+
+    // Apply .heal class to .champion element
+    championEl.classList.add("heal");
+
+    // Create floating heal number inside .portrait-wrapper
+    if (portraitWrapper) {
+      createFloatElement(portraitWrapper, `+${amount}`, "heal-float");
     }
+
+    // Update HP bar incrementally
+    updateVisualHP(targetId, amount);
+
+    // Wait for the heal glow animation to complete
+    await wait(TIMING.HEAL_ANIM);
+
+    championEl.classList.remove("heal");
   }
 
-  let logText = normalized.log || null;
-  const stateLines = getCompactStateLogs(ctx, normalized.state);
+  // ============================================================
+  //  EVASION ANIMATION
+  //
+  //  CSS mapping:
+  //    .evasion → on .champion (dodge weave + flash via ::after)
+  // ============================================================
 
-  if (stateLines.length > 0) {
-    logText = logText
-      ? `${logText}\n${stateLines.join("\n")}`
-      : stateLines.join("\n");
+  async function animateEvasion(effect) {
+    const { targetId } = effect;
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const champion = deps.activeChampions.get(targetId);
+    const name = champion?.name || "Alvo";
+
+    // Show evasion dialog
+    await showDialog(`${name} tentou evadir o ataque... E CONSEGUIU!`);
+
+    // Apply .evasion class to .champion element
+    championEl.classList.add("evasion");
+
+    await wait(TIMING.EVASION_ANIM);
+
+    championEl.classList.remove("evasion");
   }
 
-  // Só enfileira se houver eventos ou state para processar.
-  // Payloads puramente textuais (ex: "Início do Turno X") não precisam entrar na fila.
-  if (normalized.events.length > 0 || normalized.state) {
-    enqueueCombatItem(ctx, {
-      events: normalized.events,
-      state: normalized.state || null,
-    });
+  // ============================================================
+  //  SHIELD ANIMATION
+  //
+  //  CSS mapping:
+  //    .shield-float → inside .portrait-wrapper (floating number)
+  //    .has-shield   → applied on .champion via updateUI (bubble effect)
+  // ============================================================
+
+  async function animateShield(effect) {
+    const { targetId, amount } = effect;
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const champion = deps.activeChampions.get(targetId);
+    const name = champion?.name || "Alvo";
+
+    // Show shield dialog
+    await showDialog(`${name} recebeu um escudo.`);
+
+    // Create floating shield number inside .portrait-wrapper
+    if (portraitWrapper) {
+      createFloatElement(portraitWrapper, `🛡️ ${amount}`, "shield-float");
+    }
+
+    // Shield bubble visual (.has-shield) is applied when state syncs via updateUI
+    await wait(600);
   }
 
-  return logText;
-}
+  // ============================================================
+  //  IMMUNE ANIMATION
+  // ============================================================
 
-function applyGameStateUpdate(ctx, gameState) {
-  if (!gameState) return;
+  async function animateImmune(effect) {
+    const { targetId } = effect;
+    const champion = deps.activeChampions.get(targetId);
+    const name = champion?.name || "Alvo";
 
-  ctx.setCurrentTurn?.(gameState.currentTurn);
-  ctx.updateTurnDisplay?.(gameState.currentTurn);
-
-  const existingChampionElements = new Map();
-  document.querySelectorAll(".champion").forEach((el) => {
-    existingChampionElements.set(el.dataset.championId, el);
-  });
-
-  gameState.champions.forEach((championData) => {
-    if (ctx.dyingChampionIds.has(championData.id)) {
-      return;
-    }
-
-    const isRemoved = ctx.removedChampionIds.has(championData.id);
-    const isDeathPending = ctx.deathPendingIds.has(championData.id);
-
-    if (isRemoved && !isDeathPending) {
-      return;
-    }
-
-    let champion = ctx.activeChampions.get(championData.id);
-    if (champion) {
-      if (!champion.el) {
-        if (isRemoved) {
-          return;
-        }
-
-        ctx.activeChampions.delete(championData.id);
-        champion = ctx.createNewChampion(championData);
-      }
-
-      syncChampionFromData(ctx, champion, championData);
-      existingChampionElements.delete(championData.id);
-    } else {
-      if (isRemoved) {
-        return;
-      }
-
-      const newChampion = ctx.createNewChampion(championData);
-      syncChampionFromData(ctx, newChampion, championData);
-    }
-  });
-
-  existingChampionElements.forEach((el, id) => {
-    if (!ctx.dyingChampionIds.has(id) && !ctx.deathPendingIds.has(id)) {
-      el.remove();
-      ctx.activeChampions.delete(id);
-      ctx.lastKnownHP.delete(id);
-    }
-  });
-
-  ctx.startStatusIndicatorRotation?.(Array.from(ctx.activeChampions.values()));
-}
-
-function syncChampionFromData(ctx, champion, championData) {
-  const currentTurn = ctx.getCurrentTurn?.() ?? 1;
-
-  champion.HP = championData.HP;
-  champion.maxHP = championData.maxHP;
-  champion.Attack = championData.Attack;
-  champion.Defense = championData.Defense;
-  champion.Speed = championData.Speed;
-  champion.Critical = championData.Critical;
-  champion.LifeSteal = championData.LifeSteal;
-  champion.cooldowns = new Map(championData.cooldowns || []);
-  champion.alive = championData.HP > 0;
-  champion.keywords = new Map(championData.keywords || []);
-
-  if (championData.runtime) {
-    champion.runtime = {
-      ...champion.runtime,
-      shields: Array.isArray(championData.runtime.shields)
-        ? championData.runtime.shields
-        : [],
-    };
+    await showDialog(`${name} está com Imunidade Absoluta!`);
   }
 
-  champion.updateUI(currentTurn);
+  // ============================================================
+  //  SHIELD BLOCK ANIMATION
+  // ============================================================
 
-  ctx.lastKnownHP.set(championData.id, championData.HP);
-}
+  async function animateShieldBlock(effect) {
+    const { targetId } = effect;
+    const champion = deps.activeChampions.get(targetId);
+    const name = champion?.name || "Alvo";
 
-function applyCombatStateSnapshots(ctx, stateList) {
-  if (!Array.isArray(stateList) || stateList.length === 0) return;
-
-  stateList.forEach((championData) => {
-    if (ctx.dyingChampionIds.has(championData.id)) {
-      return;
-    }
-
-    const isRemoved = ctx.removedChampionIds.has(championData.id);
-    const isDeathPending = ctx.deathPendingIds.has(championData.id);
-
-    if (isRemoved && !isDeathPending) {
-      return;
-    }
-
-    let champion = ctx.activeChampions.get(championData.id);
-
-    if (!champion) {
-      if (isRemoved) {
-        return;
-      }
-
-      champion = ctx.createNewChampion(championData);
-    } else if (!champion.el) {
-      if (isRemoved) {
-        return;
-      }
-
-      ctx.activeChampions.delete(championData.id);
-      champion = ctx.createNewChampion(championData);
-    }
-
-    syncChampionFromData(ctx, champion, championData);
-  });
-
-  ctx.startStatusIndicatorRotation?.(Array.from(ctx.activeChampions.values()));
-}
-
-function processCombatQueue(ctx) {
-  if (ctx.combatQueueTimer) {
-    clearTimeout(ctx.combatQueueTimer);
-    ctx.combatQueueTimer = null;
+    await showDialog(`O escudo de ${name} bloqueou o ataque!`);
   }
 
-  if (ctx.shouldStopQueue) {
-    ctx.combatQueueRunning = false;
-    ctx.combatQueue.length = 0;
-    ctx.pendingGameState = null;
-    ctx.pendingTurnUpdate = null;
-    hideCombatDialog(ctx);
-    showFinalGameOver(ctx);
-    return;
-  }
+  // ============================================================
+  //  GAME OVER HANDLING
+  // ============================================================
 
-  if (ctx.combatQueue.length === 0) {
-    ctx.combatQueueRunning = false;
-    hideCombatDialog(ctx);
+  async function handleGameOver(effect) {
+    const { winnerTeam, winnerName } = effect;
 
-    // Captura e limpa ANTES de chamar handlers para evitar recursão infinita.
-    // (applyTurnUpdate → logCombat → processCombatLogPayload → enqueueCombatItem
-    //  → processCombatQueue → pendingTurnUpdate ainda existe → loop infinito)
-    const savedGameState = ctx.pendingGameState;
-    const savedTurnUpdate = ctx.pendingTurnUpdate;
-    ctx.pendingGameState = null;
-    ctx.pendingTurnUpdate = null;
-
-    if (
-      !ctx.gameOverPayloadReceived &&
-      savedGameState &&
-      !ctx.isProcessingEvents
-    ) {
-      applyGameStateUpdate(ctx, savedGameState);
-    }
-
-    if (!ctx.gameOverPayloadReceived && savedTurnUpdate !== null) {
-      ctx.applyTurnUpdate?.(savedTurnUpdate);
-    }
-
-    return;
-  }
-
-  ctx.combatQueueRunning = true;
-
-  ctx.isProcessingEvents = true;
-
-  const item = ctx.combatQueue.shift();
-  const events = item.events;
-  const state = item?.state;
-
-  let eventIndex = 0;
-
-  function processNextEvent() {
-    if (eventIndex >= events.length) {
-      // ✅ Aplicar snapshot REAL apenas ao final do ciclo do item
-      if (Array.isArray(state)) {
-        applyCombatStateSnapshots(ctx, state);
-      }
-      ctx.isProcessingEvents = false;
-      processCombatQueue(ctx);
-      return;
-    }
-
-    const event = events[eventIndex++];
-
-    const handler = ctx.eventHandlers[event?.type];
-
-    // 🔹 1️⃣ Mostrar diálogo (todo evento tem texto)
-    const dialogText = buildDialogFromEvents(ctx, [event]);
-
-    if (dialogText) {
-      showCombatDialog(ctx, dialogText);
-    }
-
-    let duration = getCombatDialogDuration(ctx, dialogText);
-
-    // 🔹 2️⃣ EVENTO: SKILL (extensível para animação futura)
-    if (event.type === "skill") {
-      // 🔥 FUTURO: aqui você pode animar o usuário da skill
-      // ex: highlight, glow, focus, etc.
-      // Exemplo preparado (não obrigatório):
-      // const champion = ctx.activeChampions.get(event.userId);
-      // if (champion?.el) {
-      //   champion.el.classList.add("skill-cast");
-      // }
-      // Se futuramente quiser duração própria:
-      // duration = Math.max(duration, ctx.durations.SKILL_ANIMATION_DURATION || 600);
-    }
-
-    // 🔹 3️⃣ Executar animação base (float, shake, etc)
-    if (handler) {
-      handler(event);
-    }
-
-    // 🔹 4️⃣ Atualização VISUAL incremental de HP
-
-    if (event.type === "damage") {
-      duration = Math.max(duration, ctx.durations.DAMAGE_ANIMATION_DURATION);
-
-      const champion = ctx.activeChampions.get(event.targetId);
-      if (champion && Number.isFinite(event.amount)) {
-        const currentVisual = ctx.lastKnownHP.get(champion.id) ?? champion.HP;
-
-        const newVisual = Math.max(0, currentVisual - event.amount);
-
-        ctx.lastKnownHP.set(champion.id, newVisual);
-
-        champion.HP = newVisual;
-        champion.updateUI(ctx.getCurrentTurn?.());
-      }
-    } else if (event.type === "heal") {
-      duration = Math.max(duration, ctx.durations.HEAL_ANIMATION_DURATION);
-
-      const champion = ctx.activeChampions.get(event.targetId);
-      if (champion && Number.isFinite(event.amount)) {
-        const currentVisual = ctx.lastKnownHP.get(champion.id) ?? champion.HP;
-
-        const newVisual = Math.min(
-          champion.maxHP,
-          currentVisual + event.amount,
-        );
-
-        ctx.lastKnownHP.set(champion.id, newVisual);
-
-        champion.HP = newVisual;
-        champion.updateUI(ctx.getCurrentTurn?.());
-      }
-    } else if (event.type === "shield") {
-      duration = Math.max(duration, ctx.durations.SHIELD_ANIMATION_DURATION);
-    }
-
-    // 🔹 5️⃣ Próximo evento após tempo correto
-    ctx.combatQueueTimer = setTimeout(() => {
-      processNextEvent();
-    }, duration || 450);
-  }
-
-  processNextEvent();
-}
-
-function moveDeathItemToEnd(ctx, targetId) {
-  const index = ctx.combatQueue.findIndex((entry) =>
-    entry?.events?.some((e) => e?.type === "death" && e.targetId === targetId),
-  );
-
-  if (index === -1) return;
-
-  const [deathItem] = ctx.combatQueue.splice(index, 1);
-  ctx.combatQueue.push(deathItem);
-}
-
-function getCombatDialogDuration(ctx, text) {
-  if (!text) return 450;
-
-  const length = stripHtml(text).trim().length;
-
-  return Math.min(
-    ctx.dialogSpeed.max,
-    ctx.dialogSpeed.base + length * ctx.dialogSpeed.perChar,
-  );
-}
-
-function stripHtml(value) {
-  return String(value || "").replace(/<[^>]*>/g, "");
-}
-
-function showCombatDialog(ctx, text) {
-  if (!ctx.combatDialog || !ctx.combatDialogText) return;
-
-  ctx.combatDialogText.innerHTML = String(text).replace(/\n/g, "<br>");
-  ctx.combatDialog.classList.remove("hidden", "leaving");
-  ctx.combatDialog.classList.add("active");
-}
-
-function hideCombatDialog(ctx) {
-  if (!ctx.combatDialog) return;
-
-  if (!ctx.combatDialog.classList.contains("active")) {
-    ctx.combatDialog.classList.add("hidden");
-    ctx.combatDialog.classList.remove("leaving");
-    return;
-  }
-
-  ctx.combatDialog.classList.remove("active");
-  ctx.combatDialog.classList.add("leaving");
-
-  setTimeout(() => {
-    ctx.combatDialog.classList.add("hidden");
-    ctx.combatDialog.classList.remove("leaving");
-  }, 200);
-}
-
-function triggerChampionVisual(ctx, championId, className, durationMs) {
-  const champion = ctx.activeChampions.get(championId);
-  const element =
-    champion?.el ||
-    document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  const timerKey = `${championId}:${className}`;
-  const existingTimer = ctx.championVisualTimers.get(timerKey);
-
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-
-  element.classList.remove(className);
-  void element.offsetWidth;
-  element.classList.add(className);
-
-  if (Number.isFinite(durationMs) && durationMs > 0) {
-    const timer = setTimeout(() => {
-      element.classList.remove(className);
-      ctx.championVisualTimers.delete(timerKey);
-    }, durationMs);
-
-    ctx.championVisualTimers.set(timerKey, timer);
-  }
-}
-
-function triggerChampionDeath(ctx, championId) {
-  const champion = ctx.activeChampions.get(championId);
-  const element =
-    champion?.el ||
-    document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  if (ctx.dyingChampionIds.has(championId)) return;
-
-  ctx.deathPendingIds.delete(championId);
-  element.classList.add("dying");
-  ctx.dyingChampionIds.add(championId);
-  ctx.lastKnownHP.delete(championId);
-
-  setTimeout(() => {
-    element.remove();
-    ctx.dyingChampionIds.delete(championId);
-    ctx.activeChampions.delete(championId);
-  }, ctx.durations.CHAMPION_DEATH_ANIMATION_DURATION);
-}
-
-function triggerChampionHeal(championId, amount) {
-  if (!Number.isFinite(amount) || amount <= 0) return;
-
-  const element = document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  const portrait = element.querySelector(".portrait") || element;
-
-  const float = document.createElement("div");
-  float.classList.add("heal-float");
-  float.textContent = `+${amount}`;
-
-  portrait.appendChild(float);
-
-  requestAnimationFrame(() => {
-    element.classList.add("heal");
-  });
-
-  setTimeout(() => {
-    float.remove();
-    element.classList.remove("heal");
-  }, 1850);
-}
-
-function triggerChampionShield(championId, amount) {
-  if (!Number.isFinite(amount) || amount <= 0) return;
-
-  const element = document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  const portrait = element.querySelector(".portrait") || element;
-
-  const float = document.createElement("div");
-  float.classList.add("shield-float");
-  float.textContent = `+${amount}`;
-
-  portrait.appendChild(float);
-
-  requestAnimationFrame(() => {
-    element.classList.add("shield");
-  });
-
-  setTimeout(() => {
-    float.remove();
-    element.classList.remove("shield");
-  }, 1850);
-}
-
-function triggerChampionDamage(championId, amount) {
-  if (!Number.isFinite(amount) || amount <= 0) return;
-
-  const element = document.querySelector(`[data-champion-id="${championId}"]`);
-
-  if (!element) return;
-
-  const portrait = element.querySelector(".portrait") || element;
-  const tier = getDamageTier(amount);
-
-  const float = document.createElement("div");
-  float.classList.add("damage-float", `damage-tier-${tier}`);
-  float.textContent = `-${amount}`;
-
-  portrait.appendChild(float);
-
-  requestAnimationFrame(() => {
-    element.classList.add("damage");
-  });
-
-  setTimeout(() => {
-    float.remove();
-    element.classList.remove("damage");
-  }, 1850);
-}
-
-function triggerGameOver(ctx, event) {
-  // Prevent multiple triggers
-  if (ctx.gameOverTriggered) return;
-
-  ctx.gameOverTriggered = true;
-  ctx.shouldStopQueue = true;
-  ctx.pendingGameOverEvent = event || null;
-
-  // Set global gameEnded flag and disable actions
-  if (window.gameEnded !== undefined) {
     window.gameEnded = true;
-  }
 
-  const endTurnBtn = document.querySelector("#end-turn-btn");
-  if (endTurnBtn) {
-    endTurnBtn.disabled = true;
-  }
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const gameOverContent =
+      gameOverOverlay?.querySelector(".game-over-content");
+    const gameOverMessage = document.getElementById("gameOverMessage");
+    const returnToLoginBtn = document.getElementById("returnToLoginBtn");
 
-  // Disable all champion actions
-  document.querySelectorAll(".skill-btn").forEach((button) => {
-    button.disabled = true;
-  });
-}
+    if (!gameOverOverlay || !gameOverContent || !gameOverMessage) return;
 
-function showFinalGameOver(ctx) {
-  if (ctx.gameOverShown) return;
+    const playerTeam = window.playerTeam;
+    const isWinner = playerTeam === winnerTeam;
 
-  ctx.gameOverShown = true;
+    gameOverMessage.textContent = isWinner
+      ? `Vitória! Parabéns, ${winnerName || "Jogador"}!`
+      : `Derrota. ${winnerName || "O adversário"} venceu.`;
 
-  const event = ctx.pendingGameOverEvent || {};
-  const { winnerTeam, winnerName } = event;
+    gameOverContent.classList.remove("hidden", "win", "lose");
+    gameOverContent.classList.add(isWinner ? "win" : "lose");
 
-  // Get player team from global scope (set in main.js)
-  const playerTeam = window.playerTeam || null;
-  const isWinner = playerTeam === winnerTeam;
-
-  const gameOverOverlay = document.getElementById("gameOverOverlay");
-  const gameOverContent = document.getElementById("gameOverContent");
-  const gameOverMessage = document.getElementById("gameOverMessage");
-
-  if (!gameOverOverlay || !gameOverContent || !gameOverMessage) {
-    console.error("[GameOver] Required DOM elements not found");
-    return;
-  }
-
-  // Wait a bit after the death animation to show game over
-  setTimeout(() => {
-    // Show overlay
-    gameOverOverlay.classList.remove("hidden");
-    gameOverOverlay.classList.add("active");
-
-    // Apply background class
+    gameOverOverlay.classList.remove(
+      "hidden",
+      "win-background",
+      "lose-background",
+    );
     gameOverOverlay.classList.add(
+      "active",
       isWinner ? "win-background" : "lose-background",
     );
-    gameOverOverlay.classList.remove(
-      isWinner ? "lose-background" : "win-background",
-    );
 
-    // Apply content class
-    gameOverContent.classList.add(isWinner ? "win" : "lose");
-    gameOverContent.classList.remove(isWinner ? "lose" : "win");
-    gameOverContent.classList.remove("hidden");
+    // Timer for return to login
+    const timerOverlay = document.getElementById("timerOverlay");
+    const countdownEl = document.getElementById("returnToLoginCountdown");
 
-    // Set message
-    gameOverMessage.textContent = isWinner ? "VITÓRIA!" : "DERROTA!";
+    if (timerOverlay && countdownEl && returnToLoginBtn) {
+      // Show game over screen for 10 seconds, then show countdown timer
+      await wait(10000);
 
-    // After showing win/lose message, transition to timer overlay
-    const GAME_OVER_MESSAGE_DISPLAY_TIME = 10;
-    const RETURN_TO_LOGIN_TIME = 120;
-
-    setTimeout(() => {
-      // Hide the game over overlay
       gameOverOverlay.classList.remove("active");
       gameOverOverlay.classList.add("hidden");
-
-      // Show the timer overlay
-      const timerOverlay = document.getElementById("timerOverlay");
-      const returnToLoginCountdown = document.getElementById(
-        "returnToLoginCountdown",
-      );
-      const returnToLoginBtn = document.getElementById("returnToLoginBtn");
-
-      if (!timerOverlay || !returnToLoginCountdown || !returnToLoginBtn) {
-        console.error("[GameOver] Timer overlay elements not found");
-        return;
-      }
 
       timerOverlay.classList.remove("hidden");
       timerOverlay.classList.add("active");
 
-      // Start countdown
-      let finalCountdownTime = RETURN_TO_LOGIN_TIME;
-      returnToLoginCountdown.textContent = `Retornando ao login em ${finalCountdownTime} segundos.`;
+      let timeLeft = 120;
+      countdownEl.textContent = `Retornando ao login em ${timeLeft}s...`;
 
-      const countdownInterval = setInterval(() => {
-        finalCountdownTime--;
-        returnToLoginCountdown.textContent = `Retornando ao login em ${finalCountdownTime} segundos.`;
-
-        if (finalCountdownTime <= 0) {
-          clearInterval(countdownInterval);
+      const interval = setInterval(() => {
+        timeLeft--;
+        countdownEl.textContent = `Retornando ao login em ${timeLeft}s...`;
+        if (timeLeft <= 0) {
+          clearInterval(interval);
           window.location.reload();
         }
       }, 1000);
 
-      // Manual return button
       returnToLoginBtn.onclick = () => {
-        clearInterval(countdownInterval);
+        clearInterval(interval);
         window.location.reload();
       };
-    }, GAME_OVER_MESSAGE_DISPLAY_TIME * 1000);
-  }, ctx.durations.GAME_OVER_DELAY);
-}
+    }
+  }
 
-function getDamageTier(amount) {
-  if (amount >= 250) return 6;
-  if (amount >= 155) return 5;
-  if (amount >= 100) return 4;
-  if (amount >= 55) return 3;
-  if (amount >= 35) return 2;
-  return 1;
+  // ============================================================
+  //  VISUAL HP UPDATE (incremental, before final state sync)
+  //
+  //  Reads current displayed HP from the DOM, applies a delta,
+  //  and updates the HP text + fill bar. This ensures the bar
+  //  never jumps to the final value before the animation plays.
+  //
+  //  The authoritative state is applied AFTER all effects via
+  //  applyStateSnapshots() which calls champion.updateUI().
+  // ============================================================
+
+  function updateVisualHP(championId, delta) {
+    const el = getChampionElement(championId);
+    if (!el) return;
+
+    const hpSpan = el.querySelector(".hp");
+    const fill = el.querySelector(".hp-fill");
+    if (!hpSpan || !fill) return;
+
+    // Parse current displayed HP (format: "current/max" or "current/max 🛡️ (N)")
+    const hpText = hpSpan.textContent;
+    const match = hpText.match(/^(\d+)\/(\d+)/);
+    if (!match) return;
+
+    let currentVisualHP = parseInt(match[1], 10);
+    const maxHP = parseInt(match[2], 10);
+
+    // Apply delta and clamp
+    currentVisualHP = Math.max(0, Math.min(maxHP, currentVisualHP + delta));
+
+    // Preserve shield info if present
+    const shieldMatch = hpText.match(/🛡️\s*\(\d+\)/);
+    const shieldSuffix = shieldMatch ? ` ${shieldMatch[0]}` : "";
+
+    hpSpan.textContent = `${currentVisualHP}/${maxHP}${shieldSuffix}`;
+
+    // Update fill bar width and color
+    const percent = (currentVisualHP / maxHP) * 100;
+    fill.style.width = `${percent}%`;
+
+    if (percent <= 19) {
+      fill.style.background = "#ff2a2a";
+    } else if (percent <= 49) {
+      fill.style.background = "#ffcc00";
+    } else {
+      fill.style.background = "#00ff66";
+    }
+  }
+
+  // ============================================================
+  //  FLOAT ELEMENT CREATION
+  //
+  //  Creates a floating number element (damage/heal/shield)
+  //  inside a container (typically .portrait-wrapper).
+  //  Auto-removes after the CSS animation completes.
+  // ============================================================
+
+  function createFloatElement(container, text, ...cssClasses) {
+    const float = document.createElement("span");
+    float.classList.add(...cssClasses.filter(Boolean));
+    float.textContent = text;
+    container.appendChild(float);
+
+    // Auto-remove after float animation lifetime
+    setTimeout(() => {
+      if (float.parentNode) float.remove();
+    }, TIMING.FLOAT_LIFETIME + 200);
+
+    return float;
+  }
+
+  // ============================================================
+  //  COMBAT DIALOG (JRPG-style speech bubbles)
+  //
+  //  Shows a short, non-verbose text in the combat dialog overlay.
+  //  Each call waits for the dialog to display and fade out
+  //  before returning, ensuring sequential dialog display.
+  //
+  //  CSS classes used:
+  //    .combat-dialog.hidden   → not visible
+  //    .combat-dialog.active   → visible (triggers dialogIn)
+  //    .combat-dialog.leaving  → fading out (triggers dialogOut)
+  // ============================================================
+
+  async function showDialog(text) {
+    const dialog = deps.combatDialog;
+    const dialogText = deps.combatDialogText;
+    if (!dialog || !dialogText) return;
+
+    // Set text content
+    dialogText.textContent = text;
+
+    // Show dialog (triggers CSS dialogIn animation on .combat-dialog-bubble)
+    dialog.classList.remove("hidden", "leaving");
+    dialog.classList.add("active");
+
+    // Display duration
+    await wait(TIMING.DIALOG_DISPLAY);
+
+    // Fade out (triggers CSS dialogOut animation)
+    dialog.classList.add("leaving");
+    await wait(TIMING.DIALOG_LEAVE);
+
+    // Hide completely
+    dialog.classList.remove("active", "leaving");
+    dialog.classList.add("hidden");
+  }
+
+  // ============================================================
+  //  STATE SYNCHRONIZATION
+  //
+  //  Applies authoritative champion state from server snapshots.
+  //  Called AFTER all effects are animated for an action,
+  //  ensuring the visual state matches the server truth.
+  // ============================================================
+
+  function applyStateSnapshots(snapshots) {
+    if (!Array.isArray(snapshots)) return;
+
+    for (const snap of snapshots) {
+      if (!snap?.id) continue;
+
+      const champion = deps.activeChampions.get(snap.id);
+      if (!champion) continue;
+
+      syncChampionFromSnapshot(champion, snap);
+      champion.updateUI(deps.getCurrentTurn());
+    }
+  }
+
+  function syncChampionFromSnapshot(champion, snap) {
+    // Core stats
+    if (snap.HP !== undefined) champion.HP = snap.HP;
+    if (snap.maxHP !== undefined) champion.maxHP = snap.maxHP;
+    if (snap.Attack !== undefined) champion.Attack = snap.Attack;
+    if (snap.Defense !== undefined) champion.Defense = snap.Defense;
+    if (snap.Speed !== undefined) champion.Speed = snap.Speed;
+    if (snap.Evasion !== undefined) champion.Evasion = snap.Evasion;
+    if (snap.Critical !== undefined) champion.Critical = snap.Critical;
+    if (snap.LifeSteal !== undefined) champion.LifeSteal = snap.LifeSteal;
+
+    // Runtime (shields)
+    if (snap.runtime) {
+      champion.runtime = {
+        ...champion.runtime,
+        shields: Array.isArray(snap.runtime.shields)
+          ? snap.runtime.shields
+          : [],
+      };
+    }
+
+    // Keywords
+    if (Array.isArray(snap.keywords)) {
+      champion.keywords = new Map(snap.keywords);
+    }
+
+    // Cooldowns
+    if (Array.isArray(snap.cooldowns)) {
+      champion.cooldowns = new Map(snap.cooldowns);
+    }
+
+    // Alive status
+    if (snap.HP !== undefined) {
+      champion.alive = snap.HP > 0;
+    }
+  }
+
+  // ============================================================
+  //  GAME STATE UPDATE (full state sync)
+  //
+  //  Called after team selection, champion additions, and
+  //  at end of each turn. Creates new champions if needed
+  //  and syncs all champion data to server truth.
+  // ============================================================
+
+  function processGameStateUpdate(gameState) {
+    if (!gameState) return;
+
+    const { champions, currentTurn } = gameState;
+
+    if (currentTurn !== undefined) {
+      deps.setCurrentTurn(currentTurn);
+      deps.updateTurnDisplay(currentTurn);
+    }
+
+    if (!Array.isArray(champions)) return;
+
+    for (const champData of champions) {
+      if (!champData?.id) continue;
+
+      let champion = deps.activeChampions.get(champData.id);
+
+      if (!champion) {
+        // New champion — create and render in the arena
+        try {
+          champion = deps.createNewChampion(champData);
+        } catch (err) {
+          console.error("[AnimManager] Failed to create champion:", err);
+          continue;
+        }
+      }
+
+      syncChampionFromSnapshot(champion, champData);
+      champion.updateUI(deps.getCurrentTurn());
+    }
+
+    // Refresh status indicators for all champions
+    deps.startStatusIndicatorRotation([...deps.activeChampions.values()]);
+  }
+
+  // ============================================================
+  //  TURN UPDATE
+  // ============================================================
+
+  function processTurnUpdate(turn) {
+    deps.applyTurnUpdate(turn);
+  }
+
+  // ============================================================
+  //  CHAMPION REMOVED (death animation)
+  //
+  //  CSS class: .champion.dying → collapse animation (950ms)
+  //  Waits for animation, then removes the DOM element.
+  // ============================================================
+
+  async function processChampionRemoved(championId) {
+    const champion = deps.activeChampions.get(championId);
+    if (!champion) return;
+
+    const el = champion.el;
+    if (el) {
+      // Apply dying class — triggers CSS collapse animation
+      el.classList.add("dying");
+
+      // Wait for the death animation to play
+      await wait(TIMING.DEATH_ANIM);
+
+      // Remove from DOM
+      el.remove();
+      champion.el = null;
+    }
+
+    deps.activeChampions.delete(championId);
+  }
+
+  // ============================================================
+  //  COMBAT LOG APPENDING
+  //
+  //  Manages the text-based combat log panel, including
+  //  turn headers for visual separation between turns.
+  // ============================================================
+
+  function appendToLog(text) {
+    if (!text) return;
+
+    const log = document.getElementById("combat-log");
+    if (!log) return;
+
+    const currentTurn = deps.getCurrentTurn();
+
+    // Insert turn header if this is the first log entry for this turn
+    if (lastLoggedTurn !== currentTurn) {
+      lastLoggedTurn = currentTurn;
+      const turnHeader = document.createElement("h2");
+      turnHeader.classList.add("turn-header");
+      turnHeader.textContent = `Turno ${currentTurn}`;
+      log.appendChild(turnHeader);
+    }
+
+    // Visual separator between log entries
+    if (log.children.length > 1) {
+      log.appendChild(document.createElement("br"));
+    }
+
+    const line = document.createElement("p");
+    line.innerHTML = text.replace(/\n/g, "<br>");
+    log.appendChild(line);
+
+    // Auto-scroll to latest entry
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ============================================================
+  //  RESET
+  // ============================================================
+
+  function reset() {
+    queue.length = 0;
+    processing = false;
+    lastLoggedTurn = null;
+  }
+
+  // ============================================================
+  //  PUBLIC API
+  // ============================================================
+
+  return {
+    /** Queue a structured combat action envelope for animation. */
+    handleCombatAction(envelope) {
+      enqueue("combatAction", envelope);
+    },
+
+    /** Queue a plain text combat log message. */
+    handleCombatLog(text) {
+      enqueue("combatLog", text);
+    },
+
+    /** Queue a full game state sync. */
+    handleGameStateUpdate(gameState) {
+      enqueue("gameStateUpdate", gameState);
+    },
+
+    /** Queue a turn update. */
+    handleTurnUpdate(turn) {
+      enqueue("turnUpdate", turn);
+    },
+
+    /** Queue a champion death animation. */
+    handleChampionRemoved(championId) {
+      enqueue("championRemoved", championId);
+    },
+
+    /**
+     * Direct (non-queued) log append.
+     * Used by main.js for local messages (e.g., "Você confirmou o fim do turno")
+     * that don't need to wait in the animation queue.
+     */
+    appendToLog,
+
+    /** Reset all queue state. */
+    reset,
+  };
 }
