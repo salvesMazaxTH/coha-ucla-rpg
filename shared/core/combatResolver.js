@@ -129,13 +129,17 @@ export const CombatResolver = {
 
     if (crit.didCrit) {
       if (debugMode) console.log(`🔥 Executando passiva onCriticalHit`);
-      emitCombatEvent("onCriticalHit", {
-        user,
-        attacker: user,
-        target,
-        context,
-        forced: crit.forced,
-      });
+      emitCombatEvent(
+        "onCriticalHit",
+        {
+          user,
+          attacker: user,
+          target,
+          context,
+          forced: crit.forced,
+        },
+        context?.allChampions || context?.aliveChampions,
+      );
     }
 
     crit.critBonusFactor = critBonusFactor;

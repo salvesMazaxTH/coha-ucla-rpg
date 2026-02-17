@@ -135,12 +135,44 @@ export function createCombatAnimationManager(deps) {
         break;
 
       case "combatLog":
-        appendToLog(item.data);
+        await processCombatLog(item.data);
         break;
 
       default:
         console.warn("[AnimManager] Unknown queue type:", item.type);
     }
+  }
+
+  async function processCombatLog(text) {
+    if (shouldShowLogDialog(text)) {
+      const dialogText = stripHtmlTags(text);
+      await showDialog(dialogText);
+    }
+
+    appendToLog(text);
+  }
+
+  function shouldShowLogDialog(text) {
+    if (typeof text !== "string") return false;
+
+    const normalized = text.toLowerCase();
+
+    return (
+      normalized.includes("aguardando o outro jogador") ||
+      normalized.includes("aguardando sua confirmação") ||
+      normalized.includes("aguardando por você") ||
+      normalized.includes("esperando pelo oponente") ||
+      normalized.includes("confirmou o fim do turno") ||
+      normalized.includes("marcou um ponto") ||
+      normalized.includes("pontuou") ||
+      normalized.includes("tentou agir") ||
+      normalized.includes("ação pendente")
+    );
+  }
+
+  function stripHtmlTags(value) {
+    if (typeof value !== "string") return "";
+    return value.replace(/<[^>]*>/g, "").trim();
   }
 
   // ============================================================
@@ -150,8 +182,10 @@ export function createCombatAnimationManager(deps) {
   async function processCombatAction(envelope) {
     const { action, effects, log, state } = envelope;
 
-    // 1. Show skill usage dialog bubble
-    if (action) {
+    const hasEffects = Array.isArray(effects) && effects.length > 0;
+
+    // 1. Show skill usage dialog bubble (fallback when there are no effects)
+    if (action && !hasEffects) {
       const userName = action.userName || "Alguém";
       const targetName = action.targetName || null;
       const skillName = action.skillName || "uma habilidade";
@@ -164,9 +198,23 @@ export function createCombatAnimationManager(deps) {
     }
 
     // 2. Animate each effect sequentially — deterministic order
-    if (Array.isArray(effects)) {
+    if (hasEffects) {
       for (let i = 0; i < effects.length; i++) {
-        await animateEffect(effects[i]);
+        const effect = effects[i];
+
+        if (action && shouldShowActionDialog(effect)) {
+          const userName = action.userName || "Alguém";
+          const targetName = effect?.targetName || action.targetName || null;
+          const skillName = action.skillName || "uma habilidade";
+
+          const dialogText = targetName
+            ? `${userName} usou ${skillName} em ${targetName}.`
+            : `${userName} usou ${skillName}.`;
+
+          await showDialog(dialogText);
+        }
+
+        await animateEffect(effect);
 
         if (i < effects.length - 1) {
           await wait(TIMING.BETWEEN_EFFECTS);
@@ -221,9 +269,19 @@ export function createCombatAnimationManager(deps) {
         await animateShieldBlock(effect);
         break;
 
+      case "buff":
+        await animateBuff(effect);
+        break;
+
       default:
         console.warn("[AnimManager] Unknown effect type:", effect.type);
     }
+  }
+
+  function shouldShowActionDialog(effect) {
+    if (!effect || !effect.type) return false;
+
+    return ["damage", "evasion", "immune", "shieldBlock"].includes(effect.type);
   }
 
   // ============================================================
@@ -388,6 +446,44 @@ export function createCombatAnimationManager(deps) {
     const name = champion?.name || "Alvo";
 
     await showDialog(`O escudo de ${name} bloqueou o ataque!`);
+  }
+
+  // ============================================================
+  //  BUFF ANIMATION
+  // ============================================================
+
+  async function animateBuff(effect) {
+    const { sourceId, targetId, sourceName, targetName } = effect || {};
+    const resolvedTargetName =
+      targetName || deps.activeChampions.get(targetId)?.name || "Alvo";
+    const resolvedSourceName =
+      sourceName || deps.activeChampions.get(sourceId)?.name || null;
+    const championEl = getChampionElement(targetId);
+    const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
+
+    let text = `${resolvedTargetName} foi fortalecido.`;
+
+    if (sourceId && targetId && sourceId === targetId) {
+      text = `${resolvedTargetName} fortaleceu-se.`;
+    } else if (resolvedSourceName) {
+      text = `${resolvedTargetName} foi fortalecido por ${resolvedSourceName}.`;
+    }
+
+    await showDialog(text);
+
+    if (championEl) {
+      championEl.classList.add("buff");
+    }
+
+    if (portraitWrapper) {
+      createFloatElement(portraitWrapper, "+BUFF", "buff-float");
+    }
+
+    await wait(TIMING.HEAL_ANIM);
+
+    if (championEl) {
+      championEl.classList.remove("buff");
+    }
   }
 
   // ============================================================

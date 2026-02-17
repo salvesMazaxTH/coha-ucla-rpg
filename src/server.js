@@ -469,12 +469,17 @@ function extractEffectsFromResult(result) {
   const effects = [];
   if (!result || typeof result !== "object") return effects;
 
+  const getNameById = (id) =>
+    id ? activeChampions.get(id)?.name || null : null;
+
   // Evasão — se evadiu, não há dano nem heal
   if (result.evaded && result.targetId) {
     effects.push({
       type: "evasion",
       targetId: result.targetId,
       sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
     });
     return effects;
   }
@@ -489,6 +494,8 @@ function extractEffectsFromResult(result) {
       type: "immune",
       targetId: result.targetId,
       sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
     });
     return effects;
   }
@@ -503,6 +510,8 @@ function extractEffectsFromResult(result) {
       type: "shieldBlock",
       targetId: result.targetId,
       sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
     });
     return effects;
   }
@@ -515,6 +524,8 @@ function extractEffectsFromResult(result) {
       sourceId: result.userId,
       amount: result.totalDamage,
       isCritical: result.crit?.didCrit || false,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
     });
   }
 
@@ -525,6 +536,8 @@ function extractEffectsFromResult(result) {
       targetId: result.heal.targetId,
       sourceId: result.heal.sourceId || result.userId,
       amount: result.heal.amount,
+      targetName: getNameById(result.heal.targetId),
+      sourceName: getNameById(result.heal.sourceId || result.userId),
     });
   }
 
@@ -584,6 +597,8 @@ function performSkillExecution(user, skill, targets) {
     aliveChampions: aliveChampionsArray,
     healEvents: [],
     healSourceId: user.id,
+    buffEvents: [],
+    buffSourceId: user.id,
     registerHeal({ target, amount, sourceId } = {}) {
       const healAmount = Number(amount) || 0;
       if (!target?.id || healAmount <= 0) return;
@@ -592,6 +607,17 @@ function performSkillExecution(user, skill, targets) {
         targetId: target.id,
         sourceId: sourceId || this.healSourceId || target.id,
         amount: healAmount,
+      });
+    },
+    registerBuff({ target, amount, statName, sourceId } = {}) {
+      const buffAmount = Number(amount) || 0;
+      if (!target?.id || buffAmount <= 0) return;
+      this.buffEvents.push({
+        type: "buff",
+        targetId: target.id,
+        sourceId: sourceId || this.buffSourceId || target.id,
+        amount: buffAmount,
+        statName,
       });
     },
     shieldEvents: [],
@@ -661,6 +687,8 @@ function performSkillExecution(user, skill, targets) {
       targetId: h.targetId,
       sourceId: h.sourceId,
       amount: h.amount,
+      targetName: activeChampions.get(h.targetId)?.name || null,
+      sourceName: activeChampions.get(h.sourceId)?.name || null,
     });
     affectedIds.add(h.targetId);
   }
@@ -672,18 +700,34 @@ function performSkillExecution(user, skill, targets) {
       targetId: s.targetId,
       sourceId: s.sourceId,
       amount: s.amount,
+      targetName: activeChampions.get(s.targetId)?.name || null,
+      sourceName: activeChampions.get(s.sourceId)?.name || null,
     });
     affectedIds.add(s.targetId);
   }
 
-  // 4. Montar log verboso
+  // 4. Anexar buffs do contexto
+  for (const b of context.buffEvents) {
+    effects.push({
+      type: "buff",
+      targetId: b.targetId,
+      sourceId: b.sourceId,
+      amount: b.amount,
+      statName: b.statName,
+      targetName: activeChampions.get(b.targetId)?.name || null,
+      sourceName: activeChampions.get(b.sourceId)?.name || null,
+    });
+    affectedIds.add(b.targetId);
+  }
+
+  // 5. Montar log verboso
   const logParts = results.map((r) => r?.log).filter(Boolean);
   const log = logParts.length > 0 ? logParts.join("\n") : null;
 
-  // 5. Snapshot do estado final de todos os campeões afetados
+  // 6. Snapshot do estado final de todos os campeões afetados
   const state = snapshotChampions([...affectedIds]);
 
-  // 6. Info da ação (skill usada)
+  // 7. Info da ação (skill usada)
   const primaryTarget = Object.values(targets || {})[0] || null;
 
   emitCombatAction({
@@ -824,6 +868,8 @@ function handleEndTurn() {
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
     healEvents: [],
+    buffEvents: [],
+    buffSourceId: null,
     registerHeal({ target, amount, sourceId } = {}) {
       const healAmount = Number(amount) || 0;
       if (!target?.id || healAmount <= 0) return;
@@ -832,6 +878,17 @@ function handleEndTurn() {
         targetId: target.id,
         sourceId: sourceId || target.id,
         amount: healAmount,
+      });
+    },
+    registerBuff({ target, amount, statName, sourceId } = {}) {
+      const buffAmount = Number(amount) || 0;
+      if (!target?.id || buffAmount <= 0) return;
+      turnStartContext.buffEvents.push({
+        type: "buff",
+        targetId: target.id,
+        sourceId: sourceId || turnStartContext.buffSourceId || target.id,
+        amount: buffAmount,
+        statName,
       });
     },
   };
@@ -860,13 +917,23 @@ function handleEndTurn() {
     amount: h.amount,
   }));
 
-  if (turnStartLogs.length > 0 || turnStartEffects.length > 0) {
+  const turnStartBuffEffects = turnStartContext.buffEvents.map((b) => ({
+    type: "buff",
+    targetId: b.targetId,
+    sourceId: b.sourceId,
+    amount: b.amount,
+    statName: b.statName,
+  }));
+
+  const allTurnStartEffects = [...turnStartEffects, ...turnStartBuffEffects];
+
+  if (turnStartLogs.length > 0 || allTurnStartEffects.length > 0) {
     const affectedTurnStartIds = [
-      ...new Set(turnStartEffects.map((e) => e.targetId)),
+      ...new Set(allTurnStartEffects.map((e) => e.targetId)),
     ];
     emitCombatAction({
       action: null,
-      effects: turnStartEffects,
+      effects: allTurnStartEffects,
       log: turnStartLogs.join("\n") || null,
       state:
         affectedTurnStartIds.length > 0

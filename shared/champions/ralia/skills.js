@@ -143,7 +143,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
   {
     key: "decreto_do_bastiao",
     name: "Decreto do Bastião",
-    bf: 85,
+    bf: 55,
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
@@ -151,16 +151,16 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     priority: 1,
     description() {
       return `Cooldown: ${this.cooldown} turnos
-Prioridade: +${this.priority}
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.
-Rália finca sua lâmina no chão e impõe sua lei ao campo.
-Ao ativar, por ${this.debuffDuration} turnos (inclui o atual):
-1️⃣ Zona de Contestação
-Inimigos ativos sofrem:
-−${this.atkDebuff} de Ataque
-2️⃣ Golpe de Retaliação:
-Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF ${this.bf} como Dano Direto).`;
+        Prioridade: +${this.priority}
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf}.
+        Rália finca sua lâmina no chão e impõe sua lei ao campo.
+        Ao ativar, por ${this.debuffDuration} turnos (inclui o atual):
+        1️⃣ Zona de Contestação
+        Inimigos ativos sofrem:
+        −${this.atkDebuff} de Ataque
+        2️⃣ Golpe de Retaliação:
+        Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF ${this.bf} como Dano Direto).`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, context = {} }) {

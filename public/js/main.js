@@ -1112,7 +1112,7 @@ socket.on("combatLog", (message) => {
 
 function logCombat(text) {
   if (typeof text !== "string" || !text) return;
-  combatAnimations.appendToLog(text);
+  combatAnimations.handleCombatLog(text);
 }
 
 // ============================================================

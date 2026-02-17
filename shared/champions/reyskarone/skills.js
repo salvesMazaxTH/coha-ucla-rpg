@@ -91,7 +91,7 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
     buffDuration: 2,
     contact: false,
     cooldown: 2,
-    priority: 2,
+    priority: 4,
     description() {
       return `Cooldown: ${this.cooldown} turnos
 Prioridade: +${this.priority}

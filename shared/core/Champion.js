@@ -352,6 +352,15 @@ export class Champion {
       });
     }
 
+    if (appliedAmount > 0 && context?.registerBuff) {
+      context.registerBuff({
+        target: this,
+        amount: appliedAmount,
+        statName,
+        sourceId: context.buffSourceId,
+      });
+    }
+
     console.log(
       `[Champion] ${this.name} teve ${statName} alterado em ${appliedAmount}. ` +
         (isPermanent
