@@ -223,6 +223,11 @@ export class Champion {
       this.mana = clamped;
     }
 
+    // Atualiza máximo histórico (base dinâmica da barra)
+    if (!this.resourceMaxSeen || clamped > this.resourceMaxSeen) {
+      this.resourceMaxSeen = clamped;
+    }
+
     return {
       applied,
       value: clamped,
@@ -231,7 +236,7 @@ export class Champion {
   }
 
   // Frontend only:
-    getSkillCost(skill) {
+  getSkillCost(skill) {
     if (!skill) return 0;
 
     const baseCost = Number(skill.cost);
@@ -999,9 +1004,10 @@ export class Champion {
 
     if (mpValueEl && mpFill) {
       const mpCurrent = resourceState.current;
-      // O valor base do recurso do campeão
-      const mpBase = this.resourceBase || this.baseMana || this.baseEnergy || 0;
-      // A barra cheia é o valor base do campeão
+
+      // Base dinâmica = maior valor já atingido
+      const mpBase = this.resourceMaxSeen || mpCurrent || 0;
+
       const mpPercent =
         mpBase > 0 ? Math.max(0, Math.min(100, (mpCurrent / mpBase) * 100)) : 0;
 
@@ -1038,9 +1044,11 @@ export class Champion {
 
     const mpSegments = this.el.querySelector(".mp-segments");
     if (mpSegments) {
-      // O número de segmentos é baseado no valor base do recurso do campeão
-      const mpBase = this.resourceBase || this.baseMana || this.baseEnergy || 0;
+      console.log("resourceMaxSeen:", this.resourceMaxSeen);
+
+      const mpBase = this.resourceMaxSeen || 0;
       const mpPerSegment = 75;
+
       const mpSegmentCount = Math.floor(mpBase / mpPerSegment);
       const currentMpCount = Number(mpSegments.dataset.segmentCount) || 0;
 

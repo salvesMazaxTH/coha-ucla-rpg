@@ -1023,15 +1023,12 @@ function processChampionsDeaths() {
 /** Pipeline completo de finalização do turno. */
 function handleEndTurn() {
   // 1. Resolver ações pendentes
-  console.log("1 - resolveSkillActions");
   resolveSkillActions();
 
   // 2. Processar mortes
-  console.log("2 - processDeaths");
   processChampionsDeaths();
 
   // 3. Avançar turno
-  console.log("3 - increment turn");
   currentTurn++;
   playersReadyToEndTurn.clear();
 
@@ -1088,16 +1085,11 @@ function handleEndTurn() {
     champ.runtime.currentContext = turnStartContext;
   });
 
-  console.log("4 - before emitCombatEvent");
-
   const turnStartResults = emitCombatEvent(
     "onTurnStart",
     { context: turnStartContext },
     activeChampions,
   );
-
-  console.log("5 - after emitCombatEvent");
-
   // 7. Limpar referência temporária
   activeChampions.forEach((champ) => {
     if (champ.runtime) delete champ.runtime.currentContext;
