@@ -7,5 +7,5 @@ export default {
   Speed: 35,
   Critical: 0,
   LifeSteal: 0,
-  mana: 120,
+  mana: 300,
 };

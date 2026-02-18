@@ -48,7 +48,7 @@ function restoreChampionResource(champion, amount) {
 function applyGlobalTurnRegen(champion, context) {
   if (!champion) return 0;
 
-  const BASE_REGEN = 75;
+  const BASE_REGEN = 80;
 
   const result = champion.applyResourceChange({
     amount: BASE_REGEN,
