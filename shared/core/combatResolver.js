@@ -790,7 +790,8 @@ export const CombatResolver = {
       const regenApplied = this.applyRegenFromDamage(user, actualDmg);
       if (regenApplied > 0) {
         const isEnergy = user.energy !== undefined;
-        const label = isEnergy ? "energia" : "mana";
+const resourceType = isEnergy ? "energy" : "mana";
+const label = isEnergy ? "energia" : "mana";
 
         log += `\n${formatChampionName(user)} regenerou ${regenApplied} de ${label} ao causar dano!`;
 
