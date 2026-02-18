@@ -30,9 +30,9 @@ BF ${this.bf}.`;
   {
     key: "relampagos_gemeos",
     name: "Relâmpagos Gêmeos",
-    bf: 75,
+    bf: 35,
     contact: false,
-    manaCost: 20,
+    manaCost: 175,
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
@@ -134,7 +134,7 @@ Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima 
     name: "Descarga Cataclísmica",
     bf: 185,
     contact: false,
-    manaCost: 40,
+    manaCost: 400,
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP

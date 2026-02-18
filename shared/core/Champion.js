@@ -30,6 +30,8 @@ export class Champion {
     this.baseCritical = stats.Critical;
     this.baseLifeSteal = stats.LifeSteal;
 
+    this.resourceCap = 999;
+
     this.initializeResources(stats);
 
     // COMBATE
@@ -65,8 +67,8 @@ export class Champion {
         Evasion: baseData.Evasion,
         Critical: baseData.Critical,
         LifeSteal: baseData.LifeSteal,
-        maxMana: baseData.maxMana,
-        maxEnergy: baseData.maxEnergy,
+        mana: baseData.mana,
+        energy: baseData.energy,
       },
 
       combat: {
@@ -83,11 +85,9 @@ export class Champion {
       resourceState.type === "energy"
         ? {
             energy: resourceState.current,
-            maxEnergy: resourceState.max,
           }
         : {
             mana: resourceState.current,
-            maxMana: resourceState.max,
           };
 
     return {
@@ -130,34 +130,125 @@ export class Champion {
     };
   }
 
+  // ======== Resource Management System ========
+
   roundResource(value) {
     return Math.round(Number(value) || 0);
   }
 
+  getResourceState() {
+    const isEnergy = this.energy !== undefined;
+
+    return {
+      type: isEnergy ? "energy" : "mana",
+      currentKey: isEnergy ? "energy" : "mana",
+      current: isEnergy ? Number(this.energy ?? 0) : Number(this.mana ?? 0),
+    };
+  }
+
   initializeResources(stats = {}) {
-    const hasEnergy = Number.isFinite(stats.maxEnergy);
-    const hasMana = Number.isFinite(stats.maxMana);
+    const hasEnergy = Number.isFinite(stats.energy);
+    const hasMana = Number.isFinite(stats.mana);
 
     if (hasEnergy && hasMana) {
       throw new Error(
-        `[Champion] ${this.name} declarou Mana e Energia. Apenas um recurso e permitido.`,
+        `[Champion] ${this.name} declarou Mana e Energia. Apenas um recurso é permitido.`,
       );
     }
 
-    if (hasEnergy) {
-      this.maxEnergy = Math.max(1, this.roundResource(stats.maxEnergy));
-      this.energy = this.roundResource(this.maxEnergy * 0.35);
-      this.maxMana = undefined;
-      this.mana = undefined;
-      return;
+    const type = hasEnergy ? "energy" : "mana";
+    const initialValue = hasEnergy ? stats.energy : hasMana ? stats.mana : 0;
+
+    if (!hasEnergy && !hasMana) {
+      console.warn(
+        `[Champion] ${this.name} não declarou mana ou energia. Usando 0 por padrão.`,
+      );
     }
 
-    const maxMana = Number.isFinite(stats.maxMana) ? stats.maxMana : 100;
-    this.maxMana = Math.max(1, this.roundResource(maxMana));
-    this.mana = this.roundResource(this.maxMana * 0.35);
-    this.maxEnergy = undefined;
-    this.energy = undefined;
+    this.resourceCap = Number.isFinite(this.resourceCap)
+      ? this.resourceCap
+      : 999;
+
+    this.applyResourceChange({
+      amount: initialValue,
+      type,
+      mode: "set",
+    });
+
+    if (type === "energy") this.mana = undefined;
+    else this.energy = undefined;
   }
+
+  spendResource(cost) {
+    const amount = Math.max(0, Number(cost) || 0);
+    if (amount === 0) return true;
+
+    if (this.energy !== undefined) {
+      if (this.energy < amount) return false;
+      this.energy = Math.max(0, this.energy - amount);
+      return true;
+    }
+
+    if (this.mana < amount) return false;
+    this.mana = Math.max(0, this.mana - amount);
+    return true;
+  }
+
+  applyResourceChange({ amount, type, mode = "add" } = {}) {
+    const cap = Number.isFinite(this.resourceCap) ? this.resourceCap : 999;
+
+    const resolvedType =
+      type || (this.energy !== undefined ? "energy" : "mana");
+
+    const isEnergy = resolvedType === "energy";
+
+    const currentValue = Number(
+      isEnergy ? (this.energy ?? 0) : (this.mana ?? 0),
+    );
+
+    const delta = this.roundResource(amount);
+
+    const rawNext = mode === "set" ? delta : currentValue + delta;
+
+    const clamped = Math.max(0, Math.min(cap, rawNext));
+
+    const applied =
+      mode === "set"
+        ? clamped - currentValue
+        : Math.max(0, clamped - currentValue);
+
+    if (isEnergy) {
+      this.energy = clamped;
+    } else {
+      this.mana = clamped;
+    }
+
+    return {
+      applied,
+      value: clamped,
+      isCappedMax: clamped >= cap,
+    };
+  }
+
+  // Frontend only:
+    getSkillCost(skill) {
+    if (!skill) return 0;
+
+    const baseCost = Number(skill.cost);
+    if (Number.isFinite(baseCost)) {
+      return Math.max(0, baseCost);
+    }
+
+    if (this.energy !== undefined) {
+      return Number.isFinite(skill.energyCost)
+        ? Math.max(0, skill.energyCost)
+        : 0;
+    }
+
+    return Number.isFinite(skill.manaCost) ? Math.max(0, skill.manaCost) : 0;
+  }
+
+  // ======== Runtime ========
 
   buildRuntime(runtime = {}) {
     return {
@@ -170,85 +261,6 @@ export class Champion {
         ? runtime.resourceRegenFlatBonus
         : 0,
     };
-  }
-
-  getResourceState() {
-    if (this.maxEnergy !== undefined) {
-      return {
-        type: "energy",
-        currentKey: "energy",
-        maxKey: "maxEnergy",
-        current: this.energy,
-        max: this.maxEnergy,
-      };
-    }
-
-    return {
-      type: "mana",
-      currentKey: "mana",
-      maxKey: "maxMana",
-      current: this.mana,
-      max: this.maxMana,
-    };
-  }
-
-  getSkillCost(skill) {
-    if (!skill) return 0;
-
-    const baseCost = Number(skill.cost);
-    if (Number.isFinite(baseCost)) return Math.max(0, baseCost);
-
-    const resource = this.getResourceState().type;
-    if (resource === "energy") {
-      return Number.isFinite(skill.energyCost)
-        ? Math.max(0, skill.energyCost)
-        : 0;
-    }
-
-    return Number.isFinite(skill.manaCost) ? Math.max(0, skill.manaCost) : 0;
-  }
-
-  spendResource(cost) {
-    const amount = Math.max(0, Number(cost) || 0);
-    if (amount === 0) return true;
-
-    if (this.maxEnergy !== undefined) {
-      if (this.energy < amount) return false;
-      this.energy = Math.max(0, this.energy - amount);
-      return true;
-    }
-
-    if (this.mana < amount) return false;
-    this.mana = Math.max(0, this.mana - amount);
-    return true;
-  }
-
-  restoreResource(amount) {
-    const value = Math.max(0, Number(amount) || 0);
-    if (value === 0) return 0;
-
-    if (this.maxEnergy !== undefined) {
-      const before = this.energy;
-      const next = Math.min(this.maxEnergy, before + value);
-      this.energy = next;
-      return Math.max(0, next - before);
-    }
-
-    const before = this.mana;
-    const next = Math.min(this.maxMana, before + value);
-    this.mana = next;
-    return Math.max(0, next - before);
-  }
-
-  getResourceRegenAmount(baseAmount) {
-    const base = Math.max(0, Number(baseAmount) || 0);
-    const multiplier = Number.isFinite(this.runtime?.resourceRegenMultiplier)
-      ? this.runtime.resourceRegenMultiplier
-      : 1;
-    const flat = Number.isFinite(this.runtime?.resourceRegenFlatBonus)
-      ? this.runtime.resourceRegenFlatBonus
-      : 0;
-    return this.roundResource(base * multiplier + flat);
   }
 
   // ======== Keyword System ========
@@ -829,14 +841,16 @@ export class Champion {
 
         <div class="hp-bar">
           <div class="hp-fill"></div>
+          <div class="hp-segments"></div>
         </div>
 
         <p><span class="resource-label">${
           resourceState.type === "energy" ? "EN" : "MP"
-        }</span>: <span class="mp">${resourceState.current}/${resourceState.max}</span></p>
+        }</span>: <span class="mp">${resourceState.current}</span></p>
 
         <div class="mp-bar">
           <div class="mp-fill"></div>
+          <div class="mp-segments"></div>
         </div>
 
         ${statRow("Ataque", "Attack", this.Attack)}
@@ -985,10 +999,13 @@ export class Champion {
 
     if (mpValueEl && mpFill) {
       const mpCurrent = resourceState.current;
-      const mpMax = resourceState.max || 1;
-      const mpPercent = Math.max(0, Math.min(100, (mpCurrent / mpMax) * 100));
+      // O valor base do recurso do campeão
+      const mpBase = this.resourceBase || this.baseMana || this.baseEnergy || 0;
+      // A barra cheia é o valor base do campeão
+      const mpPercent =
+        mpBase > 0 ? Math.max(0, Math.min(100, (mpCurrent / mpBase) * 100)) : 0;
 
-      mpValueEl.textContent = `${mpCurrent}/${mpMax}`;
+      mpValueEl.textContent = `${mpCurrent}`;
       mpFill.style.width = `${mpPercent}%`;
       mpFill.style.background =
         resourceState.type === "energy" ? "#f4d03f" : "#4aa3ff";
@@ -998,6 +1015,44 @@ export class Champion {
 
     if (resourceLabel) {
       resourceLabel.textContent = resourceState.type === "energy" ? "EN" : "MP";
+    }
+
+    // =========================
+    // SEGMENTOS (HP / RECURSO)
+    // =========================
+
+    const hpSegments = this.el.querySelector(".hp-segments");
+    if (hpSegments) {
+      const hpPerSegment = 50;
+      const hpSegmentCount = Math.floor(this.maxHP / hpPerSegment);
+      const currentHpCount = Number(hpSegments.dataset.segmentCount) || 0;
+
+      if (hpSegmentCount !== currentHpCount) {
+        hpSegments.innerHTML = "";
+        for (let i = 0; i < hpSegmentCount; i++) {
+          hpSegments.appendChild(document.createElement("div"));
+        }
+        hpSegments.dataset.segmentCount = String(hpSegmentCount);
+      }
+    }
+
+    const mpSegments = this.el.querySelector(".mp-segments");
+    if (mpSegments) {
+      // O número de segmentos é baseado no valor base do recurso do campeão
+      const mpBase = this.resourceBase || this.baseMana || this.baseEnergy || 0;
+      const mpPerSegment = 75;
+      const mpSegmentCount = Math.floor(mpBase / mpPerSegment);
+      const currentMpCount = Number(mpSegments.dataset.segmentCount) || 0;
+
+      if (mpSegmentCount !== currentMpCount) {
+        mpSegments.innerHTML = "";
+        for (let i = 0; i < mpSegmentCount; i++) {
+          const seg = document.createElement("div");
+          seg.className = "mp-segment";
+          mpSegments.appendChild(seg);
+        }
+        mpSegments.dataset.segmentCount = String(mpSegmentCount);
+      }
     }
 
     // =========================

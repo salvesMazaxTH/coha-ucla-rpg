@@ -386,7 +386,7 @@ export const CombatResolver = {
       console.groupEnd();
     }
 
-    return hpAfter;
+    return { hpAfter, actualDmg };
   },
 
   _applyBeforeTakingPassive(
@@ -535,6 +535,31 @@ export const CombatResolver = {
     }
 
     return logs;
+  },
+
+  applyRegenFromDamage(attacker, damageDealt) {
+    if (!attacker || damageDealt <= 0) return 0;
+
+    const isEnergy = attacker.energy !== undefined;
+    const current = isEnergy
+      ? Number(attacker.energy ?? 0)
+      : Number(attacker.mana ?? 0);
+
+    const cap = Number.isFinite(attacker.resourceCap)
+      ? attacker.resourceCap
+      : 999;
+
+    if (current >= cap) return 0;
+
+    // 5% base + 5% atual
+    const regenAmount = Math.floor(cap * 0.05 + current * 0.05);
+
+    const result = attacker.applyResourceChange({
+      amount: regenAmount,
+      mode: "add",
+    });
+
+    return result.applied;
   },
 
   // -----------------------------------
@@ -754,7 +779,30 @@ export const CombatResolver = {
 
     context.extraLogs = [];
 
-    const hpAfter = this._applyDamage(target, finalDamage, context);
+    const { hpAfter, actualDmg } = this._applyDamage(
+      target,
+      finalDamage,
+      context,
+    );
+
+    // Aplica regen de mana/energia baseado no dano causado
+    if (actualDmg > 0) {
+      const regenApplied = this.applyRegenFromDamage(user, actualDmg);
+      if (regenApplied > 0) {
+        const isEnergy = user.energy !== undefined;
+        const label = isEnergy ? "energia" : "mana";
+
+        log += `\n${formatChampionName(user)} regenerou ${regenApplied} de ${label} ao causar dano!`;
+
+        context.effects = context.effects || [];
+        context.effects.push({
+          type: "resourceGain",
+          targetId: user.id,
+          amount: regenApplied,
+          resourceType,
+        });
+      }
+    }
 
     // AFTER HOOKS
     const afterTakeLogs = this._applyAfterTakingPassive(

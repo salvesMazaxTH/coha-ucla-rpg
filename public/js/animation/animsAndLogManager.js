@@ -484,7 +484,12 @@ export function createCombatAnimationManager(deps) {
       resolvedType,
     );
 
+    console.log("START resource anim");
+
     await wait(TIMING.RESOURCE_ANIM);
+
+    console.log("END resource anim");
+
   }
 
   // ============================================================
@@ -691,13 +696,22 @@ export function createCombatAnimationManager(deps) {
 
     const mpText = mpSpan.textContent;
     const match = mpText.match(/^(\d+)\/(\d+)/);
-    if (!match) return;
+    let current = 0;
+    let max = 999;
 
-    let current = parseInt(match[1], 10);
-    const max = parseInt(match[2], 10) || 1;
+    if (match) {
+      current = parseInt(match[1], 10);
+      max = Number.isFinite(parseInt(match[2], 10))
+        ? parseInt(match[2], 10)
+        : 999;
+    } else {
+      const single = mpText.match(/^(\d+)/);
+      if (!single) return;
+      current = parseInt(single[1], 10);
+    }
 
     current = Math.max(0, Math.min(max, current + delta));
-    mpSpan.textContent = `${current}/${max}`;
+    mpSpan.textContent = `${current}`;
 
     const percent = (current / max) * 100;
     fill.style.width = `${percent}%`;
@@ -801,22 +815,18 @@ export function createCombatAnimationManager(deps) {
     if (snap.LifeSteal !== undefined) champion.LifeSteal = snap.LifeSteal;
 
     // Resource
-    const hasEnergy = snap.energy !== undefined || snap.maxEnergy !== undefined;
-    const hasMana = snap.mana !== undefined || snap.maxMana !== undefined;
+    const hasEnergy = snap.energy !== undefined;
+    const hasMana = snap.mana !== undefined;
 
     if (hasEnergy) {
       if (snap.energy !== undefined) champion.energy = snap.energy;
-      if (snap.maxEnergy !== undefined) champion.maxEnergy = snap.maxEnergy;
       champion.mana = undefined;
-      champion.maxMana = undefined;
     }
 
     if (hasMana) {
       if (snap.mana !== undefined) champion.mana = snap.mana;
-      if (snap.maxMana !== undefined) champion.maxMana = snap.maxMana;
       if (!hasEnergy) {
         champion.energy = undefined;
-        champion.maxEnergy = undefined;
       }
     }
 

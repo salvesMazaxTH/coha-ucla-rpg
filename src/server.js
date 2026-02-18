@@ -1,4 +1,96 @@
 // ============================================================
+//  HELPERS DE MANIPULAÇÃO DE RECURSOS
+// ============================================================
+
+/**
+ * Retorna info do recurso do campeão: { isEnergy, current, type, key }
+ */
+function getChampionResourceInfo(champion) {
+  const isEnergy = champion.energy !== undefined;
+  return {
+    isEnergy,
+    current: isEnergy
+      ? Number(champion.energy ?? 0)
+      : Number(champion.mana ?? 0),
+    type: isEnergy ? "energy" : "mana",
+    key: isEnergy ? "energy" : "mana",
+  };
+}
+
+/**
+ * Calcula o custo de uma skill para o campeão
+ */
+function getSkillCost(champion, skill) {
+  const { isEnergy } = getChampionResourceInfo(champion);
+  if (!skill) return 0;
+  if (Number.isFinite(Number(skill.cost)))
+    return Math.max(0, Number(skill.cost));
+  if (isEnergy && Number.isFinite(skill.energyCost))
+    return Math.max(0, skill.energyCost);
+  if (!isEnergy && Number.isFinite(skill.manaCost))
+    return Math.max(0, skill.manaCost);
+  return 0;
+}
+
+/**
+ * Restaura recurso do campeão.
+ */
+function restoreChampionResource(champion, amount) {
+  return champion.applyResourceChange({
+    amount: Math.max(0, Number(amount) || 0),
+    mode: "add",
+  }).applied;
+}
+
+/**
+ * Aplica regeneração de recurso (com multiplicadores/flat) e retorna quanto regenerou.
+ */
+function applyGlobalTurnRegen(champion, context) {
+  if (!champion) return 0;
+
+  const BASE_REGEN = 75;
+
+  const result = champion.applyResourceChange({
+    amount: BASE_REGEN,
+    mode: "add",
+  });
+
+  const applied = result.applied;
+
+  if (applied > 0) {
+    const isEnergy = champion.energy !== undefined;
+    const resourceType = isEnergy ? "energy" : "mana";
+
+    context.resourceEvents = context.resourceEvents || [];
+    context.resourceEvents.push({
+      type: "resourceGain",
+      targetId: champion.id,
+      amount: applied,
+      resourceType,
+    });
+  }
+
+  return applied;
+}
+
+/**
+ * Helper para snapshot do recurso
+ */
+function getChampionResourceSnapshot(champion) {
+  return getChampionResourceInfo(champion).current;
+}
+
+/**
+ * Reembolso de recurso (ex: ação negada)
+ */
+function refundActionResource(user, action) {
+  if (!user || !action) return;
+  const amount = Number(action.resourceCost) || 0;
+  if (amount > 0) {
+    restoreChampionResource(user, amount);
+  }
+}
+// ============================================================
 //  IMPORTS
 // ============================================================
 
@@ -283,14 +375,6 @@ function validateActionIntent(user, skill, socket) {
   return true;
 }
 
-function refundActionResource(user, action) {
-  if (!user || !action) return;
-  const amount = Number(action.resourceCost) || 0;
-  if (amount > 0) {
-    user.restoreResource(amount);
-  }
-}
-
 /**
  * Valida se o campeão pode EXECUTAR a ação no momento da resolução do turno.
  * Diferente de validateActionIntent — aqui o estado pode ter mudado.
@@ -563,7 +647,13 @@ function emitCombatAction(envelope) {
 // ============================================================
 
 /** Executa a habilidade, emite payloads e registra no histórico. */
-function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
+function performSkillExecution(
+  user,
+  skill,
+  targets,
+  actionResourceCost = 0,
+  actionResourceSnapshot = null,
+) {
   const aliveChampionsArray = [...activeChampions.values()].filter(
     (c) => c.alive,
   );
@@ -614,37 +704,32 @@ function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
     registerResourceChange({ target, amount, sourceId } = {}) {
       const normalizedAmount = Number(amount) || 0;
       if (!target?.id || normalizedAmount === 0) return 0;
-
-      const resourceState = target.getResourceState?.();
-      if (!resourceState) return 0;
-
+      const isEnergy = target.energy !== undefined;
       let applied = 0;
-
       if (normalizedAmount > 0) {
-        applied = target.restoreResource(normalizedAmount);
+        const result = target.applyResourceChange({
+          amount: normalizedAmount,
+          mode: "add",
+        });
+        applied = result.applied;
       } else {
-        const spend = Math.min(
-          resourceState.current,
-          Math.abs(normalizedAmount),
-        );
+        const current = isEnergy
+          ? Number(target.energy ?? 0)
+          : Number(target.mana ?? 0);
+        const spend = Math.min(current, Math.abs(normalizedAmount));
         if (spend <= 0) return 0;
-        target[resourceState.currentKey] = Math.max(
-          0,
-          resourceState.current - spend,
-        );
+        if (isEnergy) target.energy = Math.max(0, current - spend);
+        else target.mana = Math.max(0, current - spend);
         applied = -spend;
       }
-
       if (applied === 0) return 0;
-
       this.resourceEvents.push({
         type: applied > 0 ? "resourceGain" : "resourceSpend",
         targetId: target.id,
         sourceId: sourceId || user.id,
         amount: Math.abs(applied),
-        resourceType: resourceState.type,
+        resourceType: isEnergy ? "energy" : "mana",
       });
-
       return applied;
     },
   };
@@ -688,18 +773,16 @@ function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
   affectedIds.add(user.id);
 
   if (actionResourceCost > 0) {
-    const resourceState = user.getResourceState?.();
-    if (resourceState) {
-      effects.push({
-        type: "resourceSpend",
-        targetId: user.id,
-        sourceId: user.id,
-        amount: actionResourceCost,
-        resourceType: resourceState.type,
-        targetName: user.name,
-        sourceName: user.name,
-      });
-    }
+    const isEnergy = user.energy !== undefined;
+    effects.push({
+      type: "resourceSpend",
+      targetId: user.id,
+      sourceId: user.id,
+      amount: actionResourceCost,
+      resourceType: isEnergy ? "energy" : "mana",
+      targetName: user.name,
+      sourceName: user.name,
+    });
   }
 
   // 1. Extrair efeitos de cada resultado
@@ -709,6 +792,55 @@ function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
     if (entry.targetId) affectedIds.add(entry.targetId);
     if (entry.userId) affectedIds.add(entry.userId);
     if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
+  }
+
+  // 1.1. Regeneracao por dano (uma vez por acao que causou dano)
+  const didDealDamage = results.some(
+    (entry) => entry?.userId === user.id && entry.totalDamage > 0,
+  );
+
+  if (didDealDamage) {
+    const isEnergy = user.energy !== undefined;
+    const baseValue = Number.isFinite(user.resourceBase)
+      ? user.resourceBase
+      : isEnergy
+        ? Number(user.energy ?? 0)
+        : Number(user.mana ?? 0);
+    const currentValue = Number.isFinite(actionResourceSnapshot)
+      ? actionResourceSnapshot
+      : isEnergy
+        ? Number(user.energy ?? 0)
+        : Number(user.mana ?? 0);
+    const rawRegen = baseValue * 0.05 + currentValue * 0.05;
+    const mult = Number.isFinite(user.runtime?.resourceRegenMultiplier)
+      ? user.runtime.resourceRegenMultiplier
+      : 1;
+    const flat = Number.isFinite(user.runtime?.resourceRegenFlatBonus)
+      ? user.runtime.resourceRegenFlatBonus
+      : 0;
+    const modifiedRegen = rawRegen * mult + flat;
+    const regenAmount = user.roundToFive
+      ? user.roundToFive(modifiedRegen)
+      : Math.round(modifiedRegen / 5) * 5;
+    if (regenAmount > 0) {
+      const result = user.applyResourceChange({
+        amount: regenAmount,
+        mode: "add",
+      });
+      const restored = result.applied;
+      if (restored > 0) {
+        effects.push({
+          type: "resourceGain",
+          targetId: user.id,
+          sourceId: user.id,
+          amount: restored,
+          resourceType: isEnergy ? "energy" : "mana",
+          targetName: user.name,
+          sourceName: user.name,
+        });
+        affectedIds.add(user.id);
+      }
+    }
   }
 
   // 2. Anexar heals do contexto (curas indiretas, passivas)
@@ -833,7 +965,13 @@ function executeSkillAction(action) {
     return false;
   }
 
-  performSkillExecution(user, skill, targets, action.resourceCost);
+  performSkillExecution(
+    user,
+    skill,
+    targets,
+    action.resourceCost,
+    action.resourceSnapshot,
+  );
   return true;
 }
 
@@ -885,32 +1023,37 @@ function processChampionsDeaths() {
 /** Pipeline completo de finalização do turno. */
 function handleEndTurn() {
   // 1. Resolver ações pendentes
+  console.log("1 - resolveSkillActions");
   resolveSkillActions();
 
   // 2. Processar mortes
+  console.log("2 - processDeaths");
   processChampionsDeaths();
 
   // 3. Avançar turno
+  console.log("3 - increment turn");
   currentTurn++;
   playersReadyToEndTurn.clear();
 
-  // 4. Disparar passivas de início de turno
+  // 4. Preparar contexto único de início de turno
   const aliveChampionsArray = [...activeChampions.values()].filter(
     (c) => c.alive,
   );
 
   const turnStartContext = {
     currentTurn,
-    editMode, // Injetado pelo server — única fonte de verdade para damageOutput
+    editMode,
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
     healEvents: [],
     buffEvents: [],
-    buffSourceId: null,
     resourceEvents: [],
+    buffSourceId: null,
+
     registerHeal({ target, amount, sourceId } = {}) {
       const healAmount = Number(amount) || 0;
       if (!target?.id || healAmount <= 0) return;
+
       turnStartContext.healEvents.push({
         type: "heal",
         targetId: target.id,
@@ -918,9 +1061,11 @@ function handleEndTurn() {
         amount: healAmount,
       });
     },
+
     registerBuff({ target, amount, statName, sourceId } = {}) {
       const buffAmount = Number(amount) || 0;
       if (!target?.id || buffAmount <= 0) return;
+
       turnStartContext.buffEvents.push({
         type: "buff",
         targetId: target.id,
@@ -929,48 +1074,21 @@ function handleEndTurn() {
         statName,
       });
     },
-    registerResourceChange({ target, amount, sourceId } = {}) {
-      const normalizedAmount = Number(amount) || 0;
-      if (!target?.id || normalizedAmount === 0) return 0;
-
-      const resourceState = target.getResourceState?.();
-      if (!resourceState) return 0;
-
-      let applied = 0;
-
-      if (normalizedAmount > 0) {
-        applied = target.restoreResource(normalizedAmount);
-      } else {
-        const spend = Math.min(
-          resourceState.current,
-          Math.abs(normalizedAmount),
-        );
-        if (spend <= 0) return 0;
-        target[resourceState.currentKey] = Math.max(
-          0,
-          resourceState.current - spend,
-        );
-        applied = -spend;
-      }
-
-      if (applied === 0) return 0;
-
-      turnStartContext.resourceEvents.push({
-        type: applied > 0 ? "resourceGain" : "resourceSpend",
-        targetId: target.id,
-        sourceId: sourceId || target.id,
-        amount: Math.abs(applied),
-        resourceType: resourceState.type,
-      });
-
-      return applied;
-    },
   };
 
-  activeChampions.forEach((c) => {
-    c.runtime = c.runtime || {};
-    c.runtime.currentContext = turnStartContext;
+  // ✅ 5. Regen global via helper
+  activeChampions.forEach((champion) => {
+    applyGlobalTurnRegen(champion, turnStartContext);
   });
+
+  // 6. Injetar contexto nas passivas
+  activeChampions.forEach((champ) => {
+    if (!champ.alive) return;
+    champ.runtime = champ.runtime || {};
+    champ.runtime.currentContext = turnStartContext;
+  });
+
+  console.log("4 - before emitCombatEvent");
 
   const turnStartResults = emitCombatEvent(
     "onTurnStart",
@@ -978,32 +1096,18 @@ function handleEndTurn() {
     activeChampions,
   );
 
-  activeChampions.forEach((c) => {
-    if (c.runtime) delete c.runtime.currentContext;
+  console.log("5 - after emitCombatEvent");
+
+  // 7. Limpar referência temporária
+  activeChampions.forEach((champ) => {
+    if (champ.runtime) delete champ.runtime.currentContext;
   });
 
-  // 5. Regeneração base de recurso
-  const resourceRegenEvents = [];
-  activeChampions.forEach((champion) => {
-    const resourceState = champion.getResourceState();
-    const baseRegen = resourceState.max * 0.25;
-    const regenAmount = champion.getResourceRegenAmount(baseRegen);
-    if (regenAmount > 0) {
-      const restored = champion.restoreResource(regenAmount);
-      if (restored > 0) {
-        resourceRegenEvents.push({
-          type: "resourceGain",
-          targetId: champion.id,
-          amount: restored,
-          resourceType: resourceState.type,
-        });
-      }
-    }
-  });
+  // 8. Consolidar efeitos
+  const turnStartLogs =
+    turnStartResults?.map((r) => r?.log).filter(Boolean) || [];
 
-  // Emitir efeitos de início de turno consolidados
-  const turnStartLogs = turnStartResults.map((r) => r?.log).filter(Boolean);
-  const turnStartEffects = turnStartContext.healEvents.map((h) => ({
+  const turnStartHealEffects = turnStartContext.healEvents.map((h) => ({
     type: "heal",
     targetId: h.targetId,
     sourceId: h.sourceId,
@@ -1019,35 +1123,32 @@ function handleEndTurn() {
   }));
 
   const allTurnStartEffects = [
-    ...turnStartEffects,
+    ...turnStartHealEffects,
     ...turnStartBuffEffects,
     ...turnStartContext.resourceEvents,
-    ...resourceRegenEvents,
   ];
 
   if (turnStartLogs.length > 0 || allTurnStartEffects.length > 0) {
-    const affectedTurnStartIds = [
+    const affectedIds = [
       ...new Set(allTurnStartEffects.map((e) => e.targetId)),
     ];
+
     emitCombatAction({
       action: null,
       effects: allTurnStartEffects,
       log: turnStartLogs.join("\n") || null,
-      state:
-        affectedTurnStartIds.length > 0
-          ? snapshotChampions(affectedTurnStartIds)
-          : null,
+      state: affectedIds.length > 0 ? snapshotChampions(affectedIds) : null,
     });
   }
 
-  // 6. Limpar modificadores de stats expirados
+  // 9. Limpar modificadores de stats expirados
   const revertedStats = [];
   activeChampions.forEach((champion) => {
     const expired = champion.purgeExpiredStatModifiers(currentTurn);
     if (expired.length > 0) revertedStats.push(...expired);
   });
 
-  // 7. Limpar keywords expiradas
+  // 10. Limpar keywords expiradas
   activeChampions.forEach((champion) => {
     const expiredKeywords = champion.purgeExpiredKeywords(currentTurn);
     if (expiredKeywords.length > 0) {
@@ -1060,7 +1161,7 @@ function handleEndTurn() {
     }
   });
 
-  // 8. Emitir atualizações
+  // 11. Emitir atualizações
   io.emit("turnUpdate", currentTurn);
   if (revertedStats.length > 0) io.emit("statsReverted", revertedStats);
   io.emit("gameStateUpdate", getGameState());
@@ -1514,10 +1615,10 @@ io.on("connection", (socket) => {
 
     if (!validateActionIntent(user, skill, socket)) return;
 
-    const resourceState = user.getResourceState();
-    const cost = user.getSkillCost(skill);
-    if (cost > resourceState.current) {
-      const label = resourceState.type === "energy" ? "EN" : "MP";
+    const cost = getSkillCost(user, skill);
+    const { isEnergy, current } = getChampionResourceInfo(user);
+    if (cost > current) {
+      const label = isEnergy ? "EN" : "MP";
       return socket.emit("skillDenied", `${label} insuficiente.`);
     }
 
@@ -1547,12 +1648,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const cost = user.getSkillCost(skill);
+    const cost = getSkillCost(user, skill);
+    const { isEnergy, current } = getChampionResourceInfo(user);
     if (!user.spendResource(cost)) {
-      const label = user.getResourceState().type === "energy" ? "EN" : "MP";
+      const label = isEnergy ? "EN" : "MP";
       socket.emit("actionFailed", `${label} insuficiente.`);
       return;
     }
+    const resourceSnapshot = current;
 
     // Valida alvos
     const targets = {};
@@ -1572,6 +1675,7 @@ io.on("connection", (socket) => {
       speed: user.Speed,
       turn: currentTurn,
       resourceCost: cost,
+      resourceSnapshot,
     });
 
     io.to(socket.id).emit(
