@@ -4,7 +4,7 @@ export default {
   defBonus: 15,
   hpBonus: 10,
   description() {
-    return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (cura e aumenta a vida máxima).`;
+    return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (aumenta a vida).`;
   },
   afterDamageTaken({ target, damage, context, attacker, self }) {
     if (self !== target) return;
@@ -27,8 +27,8 @@ export default {
       context,
       isPermanent: true,
     });
-    self.modifyHP(this.hpBonus, { maxHPOnly: true });
-    self.heal(this.hpBonus, context);
+
+    self.modifyHP(this.hpBonus, { affectMax: true });
 
     let log = `[Passiva - Massa Inamolgável] ${self.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
 

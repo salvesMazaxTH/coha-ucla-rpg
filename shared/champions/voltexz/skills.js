@@ -6,11 +6,12 @@ const voltexzSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
+      return `Custo: ${this.manaCost} MP
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -31,10 +32,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     name: "Relâmpagos Gêmeos",
     bf: 75,
     contact: false,
-    cooldown: 2,
+    manaCost: 20,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 BF ${this.bf} (primario) / BF ${this.bf} (secundario).
 (Pode escolher o mesmo alvo para ambos)`;
@@ -79,10 +80,10 @@ BF ${this.bf} (primario) / BF ${this.bf} (secundario).
     bf: 25,
     paralyzeDuration: 1,
     contact: false,
-    cooldown: 2,
+    manaCost: 25,
     priority: 1,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Prioridade: +${this.priority}
 BF ${this.bf} (Direto);
@@ -133,10 +134,10 @@ Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima 
     name: "Descarga Cataclísmica",
     bf: 185,
     contact: false,
-    cooldown: 3,
+    manaCost: 40,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 BF ${this.bf}.`;
     },

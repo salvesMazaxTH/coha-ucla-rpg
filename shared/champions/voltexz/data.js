@@ -7,4 +7,5 @@ export default {
   Speed: 85,
   Critical: 0,
   LifeSteal: 0,
+  maxMana: 110,
 };

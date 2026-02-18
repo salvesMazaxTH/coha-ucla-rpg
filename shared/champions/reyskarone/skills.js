@@ -10,10 +10,11 @@ const reyskaroneSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `Ataque padrão (BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque padrão (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -42,10 +43,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     tributeHeal: 15,
     tributeBonusDamage: 10,
     contact: false,
-    cooldown: 2,
+    manaCost: 22,
     priority: 1,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Prioridade: +${this.priority}
 BF ${this.bf}.
@@ -61,7 +62,11 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
 
       user.takeDamage(hpSacrifice);
 
-      const tributeApplied = enemy.applyKeyword("tributo", this.tributeDuration, context);
+      const tributeApplied = enemy.applyKeyword(
+        "tributo",
+        this.tributeDuration,
+        context,
+      );
 
       const result = CombatResolver.resolveDamage({
         baseDamage: (user.Attack * this.bf) / 100,
@@ -90,10 +95,10 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
     lifeStealBuff: 15,
     buffDuration: 2,
     contact: false,
-    cooldown: 2,
+    manaCost: 28,
     priority: 4,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Prioridade: +${this.priority}
 Concede a um aliado:
 +${this.atkBuff} ATQ
@@ -138,10 +143,10 @@ Duração: ${this.buffDuration} turnos`;
     buffDuration: 2,
     pactDuration: 3,
     contact: false,
-    cooldown: 2,
+    manaCost: 36,
     priority: 5,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Prioridade: +${this.priority}
 Seleciona um aliado:
 Ele recebe:

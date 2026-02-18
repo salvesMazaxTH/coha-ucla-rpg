@@ -7,10 +7,11 @@ const nodeSparckina07Skills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque básico genérico (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -33,10 +34,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     name: "Sparkling Slash",
     bf: 85,
     contact: true,
-    cooldown: 2,
+    manaCost: 20,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Efeitos:
 Dano Bruto = BF ${this.bf}`;
@@ -63,10 +64,10 @@ Dano Bruto = BF ${this.bf}`;
     evasionPercent: 10,
     buffDuration: 2,
     contact: false,
-    cooldown: 2,
+    manaCost: 22,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Efeitos:
 Ganha +${this.speedBuff} VEL e ${this.evasionPercent}% da VEL como ESQ.`;
     },
@@ -102,10 +103,10 @@ Ganha +${this.speedBuff} VEL e ${this.evasionPercent}% da VEL como ESQ.`;
     bf: 135,
     paralyzeDuration: 2,
     contact: true,
-    cooldown: 3,
+    manaCost: 36,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Efeitos:
 Dano Bruto = BF ${this.bf}
@@ -116,7 +117,11 @@ Dano Bruto = BF ${this.bf}
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const paralyzed = enemy.applyKeyword("paralisado", this.paralyzeDuration, context);
+      const paralyzed = enemy.applyKeyword(
+        "paralisado",
+        this.paralyzeDuration,
+        context,
+      );
 
       if (!paralyzed) {
         console.log(

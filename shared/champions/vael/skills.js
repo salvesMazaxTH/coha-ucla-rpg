@@ -6,11 +6,12 @@ const vaelSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    energyCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
+      return `Custo: ${this.energyCost} EN
+Ataque básico genérico (BF ${this.bf}).
+    Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -31,12 +32,12 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     name: "Corte Instantâneo",
     bf: 75,
     contact: true,
-    cooldown: 1,
+    energyCost: 18,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.energyCost} EN
 Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.
+    BF ${this.bf}.
 📌 Pode critar normalmente`;
     },
     targetSpec: ["enemy"],
@@ -59,12 +60,12 @@ BF ${this.bf}.
     bfPrimary: 55,
     bfSecondary: 60,
     contact: true,
-    cooldown: 2,
+    energyCost: 28,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.energyCost} EN
 Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
+    BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
 ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
 (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
 ✅ O alvo secundário SEMPRE sofre Acerto Crítico`;
@@ -115,12 +116,12 @@ BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
     name: "Veredito do Fio Silencioso",
     bf: 145,
     contact: true,
-    cooldown: 3,
+    energyCost: 40,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.energyCost} EN
 Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.`;
+    BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

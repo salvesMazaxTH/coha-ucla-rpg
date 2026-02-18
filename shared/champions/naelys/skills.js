@@ -7,10 +7,11 @@ const naelysSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque básico genérico (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -34,10 +35,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     bf: 75,
     healAmount: 45,
     contact: false,
-    cooldown: 1,
+    manaCost: 18,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Inimigo alvo sofre:
 Dano Bruto = BF ${this.bf}
@@ -94,10 +95,11 @@ Cura = ${this.healAmount} de HP`;
     name: "Forma Aquática",
     effectDuration: 2,
     contact: false,
-    cooldown: 2,
+    manaCost: 24,
     priority: 1,
     description() {
-      return `Transforma-se em uma massa de água pura.
+      return `Custo: ${this.manaCost} MP
+Transforma-se em uma massa de água pura.
 Efeitos: Inerte + Imunidade Absoluta
 Duração: ${this.effectDuration} turnos (pode ser interrompido se executar uma ação)`;
     },
@@ -129,10 +131,11 @@ Duração: ${this.effectDuration} turnos (pode ser interrompido se executar uma 
     bonusPerStack: 20,
     maxBonus: 160,
     contact: false,
-    cooldown: 3,
+    manaCost: 38,
     priority: 0,
     description() {
-      return `Naelys aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
+      return `Custo: ${this.manaCost} MP
+Naelys aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
 +${this.healAmount} de HP
 Por ${this.effectDuration} turnos (inclui o atual):
 Naelys ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
@@ -151,9 +154,11 @@ Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano B
 
       const amount = user.baseHP * factor;
 
-      user.modifyHP(amount, { affectMax: true });
-
-      user.heal(this.healAmount, context);
+      user.modifyHP(amount, {
+        context,
+        affectMax: true,
+        isPermanent: true,
+      });
 
       // 🔮 Aplica o modificador de dano por 3 turnos (inclui o atual)
       user.addDamageModifier({

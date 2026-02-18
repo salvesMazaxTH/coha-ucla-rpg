@@ -9,4 +9,5 @@ export default {
   Critical: 0,
   LifeSteal: 0,
   Evasion: 5,
+  maxMana: 105,
 };

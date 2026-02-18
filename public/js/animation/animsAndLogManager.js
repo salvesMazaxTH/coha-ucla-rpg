@@ -22,6 +22,7 @@ const TIMING = {
   DAMAGE_ANIM: 950,
   HEAL_ANIM: 975,
   EVASION_ANIM: 550,
+  RESOURCE_ANIM: 850,
 
   // Float element lifetime (auto-removed after CSS animation)
   FLOAT_LIFETIME: 1900,
@@ -257,6 +258,14 @@ export function createCombatAnimationManager(deps) {
         await animateShield(effect);
         break;
 
+      case "resourceGain":
+        await animateResourceGain(effect);
+        break;
+
+      case "resourceSpend":
+        await animateResourceSpend(effect);
+        break;
+
       case "gameOver":
         await handleGameOver(effect);
         break;
@@ -422,6 +431,60 @@ export function createCombatAnimationManager(deps) {
 
     // Shield bubble visual (.has-shield) is applied when state syncs via updateUI
     await wait(600);
+  }
+
+  // ============================================================
+  //  RESOURCE REGEN ANIMATION
+  // ============================================================
+
+  async function animateResourceGain(effect) {
+    await animateResourceChange(effect, 1);
+  }
+
+  async function animateResourceSpend(effect) {
+    await animateResourceChange(effect, -1);
+  }
+
+  async function animateResourceChange(effect, direction) {
+    const { targetId, amount, resourceType } = effect || {};
+    const normalizedAmount = Math.abs(Number(amount) || 0);
+    if (!targetId || normalizedAmount <= 0) return;
+
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const resolvedType = resolveResourceType(
+      championEl,
+      targetId,
+      resourceType,
+    );
+    const label = resolvedType === "energy" ? "EN" : "MP";
+    const sign = direction >= 0 ? "+" : "-";
+
+    if (portraitWrapper) {
+      const floatClass =
+        direction >= 0
+          ? resolvedType === "energy"
+            ? "resource-float-energy"
+            : "resource-float-mana"
+          : "resource-float-spend";
+
+      createFloatElement(
+        portraitWrapper,
+        `${sign}${normalizedAmount} ${label}`,
+        "resource-float",
+        floatClass,
+      );
+    }
+
+    updateVisualResource(
+      targetId,
+      direction >= 0 ? normalizedAmount : -normalizedAmount,
+      resolvedType,
+    );
+
+    await wait(TIMING.RESOURCE_ANIM);
   }
 
   // ============================================================
@@ -605,6 +668,46 @@ export function createCombatAnimationManager(deps) {
     }
   }
 
+  function resolveResourceType(championEl, championId, explicitType) {
+    if (explicitType === "energy" || explicitType === "mana") {
+      return explicitType;
+    }
+
+    const dataType = championEl?.dataset?.resourceType;
+    if (dataType === "energy" || dataType === "mana") return dataType;
+
+    const champion = deps.activeChampions.get(championId);
+    const fallbackType = champion?.getResourceState?.().type;
+    return fallbackType === "energy" ? "energy" : "mana";
+  }
+
+  function updateVisualResource(championId, delta, resourceType) {
+    const el = getChampionElement(championId);
+    if (!el) return;
+
+    const mpSpan = el.querySelector(".mp");
+    const fill = el.querySelector(".mp-fill");
+    if (!mpSpan || !fill) return;
+
+    const mpText = mpSpan.textContent;
+    const match = mpText.match(/^(\d+)\/(\d+)/);
+    if (!match) return;
+
+    let current = parseInt(match[1], 10);
+    const max = parseInt(match[2], 10) || 1;
+
+    current = Math.max(0, Math.min(max, current + delta));
+    mpSpan.textContent = `${current}/${max}`;
+
+    const percent = (current / max) * 100;
+    fill.style.width = `${percent}%`;
+    fill.style.background = resourceType === "energy" ? "#f4d03f" : "#4aa3ff";
+
+    if (resourceType === "energy" || resourceType === "mana") {
+      el.dataset.resourceType = resourceType;
+    }
+  }
+
   // ============================================================
   //  FLOAT ELEMENT CREATION
   //
@@ -697,6 +800,26 @@ export function createCombatAnimationManager(deps) {
     if (snap.Critical !== undefined) champion.Critical = snap.Critical;
     if (snap.LifeSteal !== undefined) champion.LifeSteal = snap.LifeSteal;
 
+    // Resource
+    const hasEnergy = snap.energy !== undefined || snap.maxEnergy !== undefined;
+    const hasMana = snap.mana !== undefined || snap.maxMana !== undefined;
+
+    if (hasEnergy) {
+      if (snap.energy !== undefined) champion.energy = snap.energy;
+      if (snap.maxEnergy !== undefined) champion.maxEnergy = snap.maxEnergy;
+      champion.mana = undefined;
+      champion.maxMana = undefined;
+    }
+
+    if (hasMana) {
+      if (snap.mana !== undefined) champion.mana = snap.mana;
+      if (snap.maxMana !== undefined) champion.maxMana = snap.maxMana;
+      if (!hasEnergy) {
+        champion.energy = undefined;
+        champion.maxEnergy = undefined;
+      }
+    }
+
     // Runtime (shields)
     if (snap.runtime) {
       champion.runtime = {
@@ -710,11 +833,6 @@ export function createCombatAnimationManager(deps) {
     // Keywords
     if (Array.isArray(snap.keywords)) {
       champion.keywords = new Map(snap.keywords);
-    }
-
-    // Cooldowns
-    if (Array.isArray(snap.cooldowns)) {
-      champion.cooldowns = new Map(snap.cooldowns);
     }
 
     // Alive status

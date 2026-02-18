@@ -7,11 +7,12 @@ const raliaSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
+      return `Custo: ${this.manaCost} MP
+Contato: ${this.contact ? "✅" : "❌"}
+BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -37,10 +38,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     atkBuff: 35,
     buffDuration: 2,
     contact: false,
-    cooldown: 1,
+    manaCost: 25,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}
         BF ${this.bf}.
         Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (Dano Direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.
@@ -101,10 +102,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     healPercent: 60,
     minHeal: 25,
     contact: true,
-    cooldown: 2,
+    manaCost: 30,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}
         BF ${this.bf}.
         Rália se cura em ${this.healPercent}% do dano efetivo causado
@@ -147,10 +148,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
-    cooldown: 2,
+    manaCost: 35,
     priority: 1,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
         Prioridade: +${this.priority}
         Contato: ${this.contact ? "✅" : "❌"}
         BF ${this.bf}.

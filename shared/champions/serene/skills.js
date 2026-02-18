@@ -7,10 +7,11 @@ const sereneSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque básico genérico (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -35,10 +36,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     shieldReduced: 35,
     hpThreshold: 65,
     contact: false,
-    cooldown: 1,
+    manaCost: 20,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Serene concede ${this.shieldFull} de escudo a si mesma ou a um aliado ativo. Caso ela esteja abaixo de ${this.hpThreshold}% do HP máximo, o valor do escudo concedido cai para ${this.shieldReduced}.
 
 Escudo:
@@ -74,10 +75,10 @@ Escudo:
     hpDamagePercent: 15,
     stunDuration: 1,
     contact: false,
-    cooldown: 1,
+    manaCost: 26,
     priority: 1,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Prioridade: +${this.priority}
 Contato: ${this.contact ? "✅" : "❌"}
 Dano:
@@ -90,7 +91,11 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
       const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
 
       // aplica status
-      const stunned = enemy.applyKeyword("atordoado", this.stunDuration, context);
+      const stunned = enemy.applyKeyword(
+        "atordoado",
+        this.stunDuration,
+        context,
+      );
 
       // resolve dano
       const result = CombatResolver.resolveDamage({
@@ -122,10 +127,10 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
     reductionDuration: 2,
     surviveHP: 50,
     contact: false,
-    cooldown: 3,
+    manaCost: 35,
     priority: 4,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Prioridade: +${this.priority}
 Ao ativar, até que a próxima ação de Serene seja resolvida:
 1️⃣ Proteção de Campo

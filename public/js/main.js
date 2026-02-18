@@ -27,7 +27,6 @@ const editMode = {
   enabled: false,
   autoLogin: false,
   autoSelection: false,
-  ignoreCooldowns: false,
   actMultipleTimesPerTurn: false,
   unreleasedChampions: false,
 };
@@ -639,7 +638,6 @@ function createNewChampion(championData) {
   champion.baseSpeed = baseData.Speed;
   champion.baseCritical = baseData.Critical;
   champion.baseLifeSteal = baseData.LifeSteal;
-  champion.cooldowns = new Map(championData.cooldowns || []);
 
   activeChampions.set(champion.id, champion);
 
@@ -816,10 +814,12 @@ async function handleSkillUsage(button) {
     return;
   }
 
+  if (button.disabled) return;
+
   const ctx = getSkillContext(button);
   if (!ctx) return;
 
-  const { user, userId, skillKey } = ctx;
+  const { user, userId, skillKey, skill } = ctx;
 
   if (user.team !== playerTeam) {
     alert("Você só pode usar habilidades de campeões do seu time.");
@@ -828,6 +828,16 @@ async function handleSkillUsage(button) {
 
   if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
     alert(`${user.name} já agiu neste turno.`);
+    return;
+  }
+
+  const resourceState = user.getResourceState();
+  const cost = user.getSkillCost(skill);
+  if (cost > resourceState.current) {
+    alert(
+      resourceState.type === "energy" ? "EN insuficiente." : "MP insuficiente.",
+    );
+    user.updateUI(currentTurn);
     return;
   }
 
@@ -1156,7 +1166,6 @@ function disableChampionActions() {
 
 function enableChampionActions() {
   document.querySelectorAll(".skill-btn").forEach((button) => {
-    if (button.dataset.cooldownActive === "true") return;
     button.disabled = false;
   });
 }

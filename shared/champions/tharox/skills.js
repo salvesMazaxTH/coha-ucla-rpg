@@ -7,10 +7,11 @@ const tharoxSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `O ataque básico genérico (${this.cooldown} cooldown, BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque básico genérico (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -35,10 +36,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     damageReductionAmount: 20,
     damageReductionDuration: 2,
     contact: false,
-    cooldown: 1,
+    manaCost: 22,
     priority: 2,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Tharox solta um bramido bestial.
 Efeitos neste turno:
 Todos os inimigos ativos são Provocados
@@ -77,10 +78,10 @@ Tharox recebe:
     bf: 80,
     defScaling: 20,
     contact: true,
-    cooldown: 2,
+    manaCost: 28,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Dano:
 BF ${this.bf} + ${this.defScaling}% DEF`;
@@ -112,10 +113,10 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
     maxDamageBonus: 80,
     modifierDuration: 3,
     contact: false,
-    cooldown: 3,
+    manaCost: 40,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Tharox libera sua forma de guerra.
 Ao ativar:
 Ganha +${this.hpGain} HP

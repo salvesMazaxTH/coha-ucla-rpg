@@ -30,6 +30,8 @@ export class Champion {
     this.baseCritical = stats.Critical;
     this.baseLifeSteal = stats.LifeSteal;
 
+    this.initializeResources(stats);
+
     // COMBATE
     this.skills = combat.skills;
     this.passive = combat.passive || null;
@@ -42,10 +44,7 @@ export class Champion {
     this.hasActedThisTurn = false;
 
     // RUNTIME
-    this.runtime = {
-      ...runtime,
-      shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
-    };
+    this.runtime = this.buildRuntime(runtime);
   }
 
   static fromBaseData(baseData, id, team) {
@@ -66,6 +65,8 @@ export class Champion {
         Evasion: baseData.Evasion,
         Critical: baseData.Critical,
         LifeSteal: baseData.LifeSteal,
+        maxMana: baseData.maxMana,
+        maxEnergy: baseData.maxEnergy,
       },
 
       combat: {
@@ -77,6 +78,18 @@ export class Champion {
 
   // Método para serializar o estado do campeão
   serialize() {
+    const resourceState = this.getResourceState();
+    const resourcePayload =
+      resourceState.type === "energy"
+        ? {
+            energy: resourceState.current,
+            maxEnergy: resourceState.max,
+          }
+        : {
+            mana: resourceState.current,
+            maxMana: resourceState.max,
+          };
+
     return {
       id: this.id,
       championKey:
@@ -98,6 +111,8 @@ export class Champion {
       Critical: this.Critical,
       LifeSteal: this.LifeSteal,
 
+      ...resourcePayload,
+
       runtime: {
         ...this.runtime,
         shields: Array.isArray(this.runtime?.shields)
@@ -112,9 +127,128 @@ export class Champion {
         description: s.description,
         priority: s.priority || 0,
       })),
-
-      cooldowns: Array.from(this.cooldowns.entries()),
     };
+  }
+
+  roundResource(value) {
+    return Math.round(Number(value) || 0);
+  }
+
+  initializeResources(stats = {}) {
+    const hasEnergy = Number.isFinite(stats.maxEnergy);
+    const hasMana = Number.isFinite(stats.maxMana);
+
+    if (hasEnergy && hasMana) {
+      throw new Error(
+        `[Champion] ${this.name} declarou Mana e Energia. Apenas um recurso e permitido.`,
+      );
+    }
+
+    if (hasEnergy) {
+      this.maxEnergy = Math.max(1, this.roundResource(stats.maxEnergy));
+      this.energy = this.roundResource(this.maxEnergy * 0.35);
+      this.maxMana = undefined;
+      this.mana = undefined;
+      return;
+    }
+
+    const maxMana = Number.isFinite(stats.maxMana) ? stats.maxMana : 100;
+    this.maxMana = Math.max(1, this.roundResource(maxMana));
+    this.mana = this.roundResource(this.maxMana * 0.35);
+    this.maxEnergy = undefined;
+    this.energy = undefined;
+  }
+
+  buildRuntime(runtime = {}) {
+    return {
+      ...runtime,
+      shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
+      resourceRegenMultiplier: Number.isFinite(runtime?.resourceRegenMultiplier)
+        ? runtime.resourceRegenMultiplier
+        : 1,
+      resourceRegenFlatBonus: Number.isFinite(runtime?.resourceRegenFlatBonus)
+        ? runtime.resourceRegenFlatBonus
+        : 0,
+    };
+  }
+
+  getResourceState() {
+    if (this.maxEnergy !== undefined) {
+      return {
+        type: "energy",
+        currentKey: "energy",
+        maxKey: "maxEnergy",
+        current: this.energy,
+        max: this.maxEnergy,
+      };
+    }
+
+    return {
+      type: "mana",
+      currentKey: "mana",
+      maxKey: "maxMana",
+      current: this.mana,
+      max: this.maxMana,
+    };
+  }
+
+  getSkillCost(skill) {
+    if (!skill) return 0;
+
+    const baseCost = Number(skill.cost);
+    if (Number.isFinite(baseCost)) return Math.max(0, baseCost);
+
+    const resource = this.getResourceState().type;
+    if (resource === "energy") {
+      return Number.isFinite(skill.energyCost)
+        ? Math.max(0, skill.energyCost)
+        : 0;
+    }
+
+    return Number.isFinite(skill.manaCost) ? Math.max(0, skill.manaCost) : 0;
+  }
+
+  spendResource(cost) {
+    const amount = Math.max(0, Number(cost) || 0);
+    if (amount === 0) return true;
+
+    if (this.maxEnergy !== undefined) {
+      if (this.energy < amount) return false;
+      this.energy = Math.max(0, this.energy - amount);
+      return true;
+    }
+
+    if (this.mana < amount) return false;
+    this.mana = Math.max(0, this.mana - amount);
+    return true;
+  }
+
+  restoreResource(amount) {
+    const value = Math.max(0, Number(amount) || 0);
+    if (value === 0) return 0;
+
+    if (this.maxEnergy !== undefined) {
+      const before = this.energy;
+      const next = Math.min(this.maxEnergy, before + value);
+      this.energy = next;
+      return Math.max(0, next - before);
+    }
+
+    const before = this.mana;
+    const next = Math.min(this.maxMana, before + value);
+    this.mana = next;
+    return Math.max(0, next - before);
+  }
+
+  getResourceRegenAmount(baseAmount) {
+    const base = Math.max(0, Number(baseAmount) || 0);
+    const multiplier = Number.isFinite(this.runtime?.resourceRegenMultiplier)
+      ? this.runtime.resourceRegenMultiplier
+      : 1;
+    const flat = Number.isFinite(this.runtime?.resourceRegenFlatBonus)
+      ? this.runtime.resourceRegenFlatBonus
+      : 0;
+    return this.roundResource(base * multiplier + flat);
   }
 
   // ======== Keyword System ========
@@ -411,28 +545,82 @@ export class Champion {
     });
   }
 
-  modifyHP(amount, options = {}) {
-    const { maxHPOnly = false, affectMax = false } = options;
-
+  modifyHP(
+    amount,
+    {
+      duration = 1,
+      context,
+      isPermanent = false,
+      maxHPOnly = false,
+      affectMax = false,
+    } = {},
+  ) {
     amount = this.roundToFive(amount);
 
-    // Ajuste de maxHP
-    if (maxHPOnly || affectMax) {
-      this.maxHP += amount;
+    if (amount === 0) {
+      return { appliedAmount: 0, isCappedMax: false, log: null };
     }
 
-    // Ajuste de HP atual
-    if (!maxHPOnly) {
-      if (amount > 0) {
-        this.heal(amount);
-      } else if (amount < 0) {
-        this.takeDamage(-amount);
-      }
+    // 🔹 Alteração estrutural proporcional (buff real de vida)
+    if (affectMax) {
+      const previousHP = this.HP;
+
+      const result =
+        amount > 0
+          ? this.buffStat({
+              statName: "maxHP",
+              amount,
+              duration,
+              context,
+              isPermanent,
+            })
+          : this.debuffStat({
+              statName: "maxHP",
+              amount,
+              duration,
+              context,
+              isPermanent,
+            });
+
+      // Aplica o mesmo delta ao HP atual
+      const nextHP = this.roundToFive(previousHP + result.appliedAmount);
+      this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
+
+      return result;
+    }
+    // 🔹 Apenas altera o teto, sem mexer proporcionalmente
+    if (maxHPOnly) {
+      return amount > 0
+        ? this.buffStat({
+            statName: "maxHP",
+            amount,
+            duration,
+            context,
+            isPermanent,
+          })
+        : this.debuffStat({
+            statName: "maxHP",
+            amount,
+            duration,
+            context,
+            isPermanent,
+          });
     }
 
-    // Clamps finais para garantir que HP não ultrapasse 999, o limite global
-    this.maxHP = Math.max(5, Math.min(this.maxHP, 999));
-    this.HP = Math.max(0, Math.min(this.HP, this.maxHP));
+    // 🔹 HP atual (cura/dano)
+    if (amount > 0) {
+      this.heal(amount, context);
+    } else {
+      const previous = this.HP;
+      const newHP = Math.max(0, previous + amount); // amount já é negativo
+      this.HP = newHP;
+    }
+
+    return {
+      appliedAmount: amount,
+      isCappedMax: false,
+      log: null,
+    };
   }
 
   /**
@@ -531,6 +719,11 @@ export class Champion {
       if (modifier.expiresAtTurn <= currentTurn && !modifier.isPermanent) {
         // Revert the stat change only if not permanent
         this[modifier.statName] -= modifier.amount;
+        if (modifier.statName === "maxHP") {
+          // Keep current HP in sync with maxHP reverting
+          const nextHP = this.roundToFive(this.HP - modifier.amount);
+          this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
+        }
         revertedStats.push({
           championId: this.id,
           statName: modifier.statName,
@@ -587,6 +780,7 @@ export class Champion {
 
     // Função auxiliar: construir HTML do campeão
     const buildChampionHTML = ({ editMode = true } = {}) => {
+      const resourceState = this.getResourceState();
       const statRow = (label, className, value) => `
         <div class="stat-row" data-stat="${className}" data-id="${this.id}">
           <span class="stat-label">${label}:</span>
@@ -635,6 +829,14 @@ export class Champion {
 
         <div class="hp-bar">
           <div class="hp-fill"></div>
+        </div>
+
+        <p><span class="resource-label">${
+          resourceState.type === "energy" ? "EN" : "MP"
+        }</span>: <span class="mp">${resourceState.current}/${resourceState.max}</span></p>
+
+        <div class="mp-bar">
+          <div class="mp-fill"></div>
         </div>
 
         ${statRow("Ataque", "Attack", this.Attack)}
@@ -693,8 +895,6 @@ export class Champion {
   // 🔄 Atualiza UI sem buscar no DOM toda vez
   updateUI(currentTurn) {
     if (!this.el) return;
-
-    const normalizedTurn = Number.isFinite(currentTurn) ? currentTurn : null;
 
     // =========================
     // HP
@@ -775,49 +975,53 @@ export class Champion {
     updateStat("LifeSteal");
 
     // =========================
-    // COOLDOWNS
+    // RECURSO (MP)
     // =========================
 
-    const cooldowns =
-      this.cooldowns instanceof Map
-        ? this.cooldowns
-        : new Map(this.cooldowns || []);
+    const resourceState = this.getResourceState();
+    const mpValueEl = this.el.querySelector(".mp");
+    const mpFill = this.el.querySelector(".mp-fill");
+    const resourceLabel = this.el.querySelector(".resource-label");
+
+    if (mpValueEl && mpFill) {
+      const mpCurrent = resourceState.current;
+      const mpMax = resourceState.max || 1;
+      const mpPercent = Math.max(0, Math.min(100, (mpCurrent / mpMax) * 100));
+
+      mpValueEl.textContent = `${mpCurrent}/${mpMax}`;
+      mpFill.style.width = `${mpPercent}%`;
+      mpFill.style.background =
+        resourceState.type === "energy" ? "#f4d03f" : "#4aa3ff";
+
+      this.el.dataset.resourceType = resourceState.type;
+    }
+
+    if (resourceLabel) {
+      resourceLabel.textContent = resourceState.type === "energy" ? "EN" : "MP";
+    }
+
+    // =========================
+    // SKILLS (custo de recurso)
+    // =========================
 
     this.el.querySelectorAll(".skill-btn").forEach((button) => {
       const skillKey = button.dataset.skillKey;
-      const entry = cooldowns.get(skillKey);
+      const skill = this.skills.find((s) => s.key === skillKey);
+      const cost = this.getSkillCost(skill);
+      const hasResource = resourceState.current >= cost;
 
-      const remaining =
-        entry && normalizedTurn !== null
-          ? entry.availableAt - normalizedTurn
-          : null;
-
-      const isOnCooldown = Boolean(entry && remaining > 0);
-
-      if (isOnCooldown) {
+      if (!hasResource) {
         if (!button.disabled) {
-          button.dataset.disabledByCooldown = "true";
+          button.dataset.disabledByResource = "true";
         }
-
         button.disabled = true;
-        button.dataset.cooldownActive = "true";
-        button.classList.add("cooldown");
-
-        button.innerHTML = `
-        <i class="bx bx-hourglass"></i>
-        <span class="skill-cooldown-number">${remaining}</span>
-      `;
+        button.classList.add("resource-locked");
       } else {
-        button.classList.remove("cooldown");
-        button.dataset.cooldownActive = "false";
-
-        if (button.dataset.disabledByCooldown === "true") {
+        button.classList.remove("resource-locked");
+        if (button.dataset.disabledByResource === "true") {
           button.disabled = false;
-          button.dataset.disabledByCooldown = "false";
+          button.dataset.disabledByResource = "false";
         }
-
-        const defaultLabel = button.dataset.defaultLabel || "";
-        button.innerHTML = `<span class="skill-label">${defaultLabel}</span>`;
       }
     });
 

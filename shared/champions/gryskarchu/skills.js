@@ -10,10 +10,11 @@ const gryskarchuSkills = [
     name: "Ataque Básico",
     bf: 60,
     contact: true,
-    cooldown: 0,
+    manaCost: 0,
     priority: 0,
     description() {
-      return `Ataque padrão (BF ${this.bf}).
+      return `Custo: ${this.manaCost} MP
+Ataque padrão (BF ${this.bf}).
 Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
@@ -36,10 +37,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     bf: 75,
     rootDuration: 2,
     contact: false,
-    cooldown: 1,
+    manaCost: 18,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Contato: ${this.contact ? "✅" : "❌"}
 Efeitos:
 Dano Bruto = BF ${this.bf}
@@ -76,10 +77,10 @@ Aplica "Enraizado" por ${this.rootDuration} turnos.`;
     name: "Florescimento Vital",
     healAmount: 50,
     contact: false,
-    cooldown: 1,
+    manaCost: 24,
     priority: 0,
     description() {
-      return `Cooldown: ${this.cooldown} turno
+      return `Custo: ${this.manaCost} MP
 Efeitos:
 Gryskarchu cura a si e a todos os aliados ativos.
 Cura = ${this.healAmount} HP`;
@@ -122,10 +123,10 @@ Cura = ${this.healAmount} HP`;
     buffDuration: 2,
     defDamageBonus: 35,
     contact: false,
-    cooldown: 2,
+    manaCost: 34,
     priority: 5,
     description() {
-      return `Cooldown: ${this.cooldown} turnos
+      return `Custo: ${this.manaCost} MP
 Prioridade: +${this.priority}
 Efeitos:
 Gryskarchu concede +${this.defBuff}% de DEF a si ou a um aliado ativo por ${this.buffDuration} turnos e o cura em ${this.healPercent}% do HP máximo. Além disso, o aliado recebe um bônus de +${this.defDamageBonus}% da DEF no dano causado por ${this.buffDuration} turnos.`;
