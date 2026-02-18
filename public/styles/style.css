@@ -394,8 +394,8 @@ body.team-selection-active .team-container:hover {
 
 .mp-segments > div {
   flex: 1 1 0;
-  border-right: 2px solid rgba(255, 255, 255, 0.13);
-  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.15);
+  border-right: 2px solid rgba(50, 50, 50, 0.7);
+  box-shadow: 1px 0 0 rgba(50, 50, 50, 0.7);
 }
 
 .hp-controls {

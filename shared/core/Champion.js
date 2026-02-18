@@ -1,4 +1,5 @@
 import { StatusIndicator } from "./statusIndicator.js";
+import { CombatResolver } from "./combatResolver.js";
 
 export class Champion {
   constructor(data = {}) {
@@ -210,7 +211,7 @@ export class Champion {
 
     const rawNext = mode === "set" ? delta : currentValue + delta;
 
-    const clamped = Math.max(0, Math.min(cap, rawNext));
+    const clamped = this.roundToFive(Math.max(0, Math.min(cap, rawNext)));
 
     const applied =
       mode === "set"

@@ -704,32 +704,27 @@ function performSkillExecution(
     registerResourceChange({ target, amount, sourceId } = {}) {
       const normalizedAmount = Number(amount) || 0;
       if (!target?.id || normalizedAmount === 0) return 0;
+
       const isEnergy = target.energy !== undefined;
-      let applied = 0;
-      if (normalizedAmount > 0) {
-        const result = target.applyResourceChange({
-          amount: normalizedAmount,
-          mode: "add",
-        });
-        applied = result.applied;
-      } else {
-        const current = isEnergy
-          ? Number(target.energy ?? 0)
-          : Number(target.mana ?? 0);
-        const spend = Math.min(current, Math.abs(normalizedAmount));
-        if (spend <= 0) return 0;
-        if (isEnergy) target.energy = Math.max(0, current - spend);
-        else target.mana = Math.max(0, current - spend);
-        applied = -spend;
-      }
+
+      // 🔹 Centraliza tudo no applyResourceChange
+      const result = target.applyResourceChange({
+        amount: normalizedAmount, // pode ser positivo ou negativo
+        mode: "add",
+      });
+
+      const applied = result.applied;
+
       if (applied === 0) return 0;
+
       this.resourceEvents.push({
         type: applied > 0 ? "resourceGain" : "resourceSpend",
         targetId: target.id,
-        sourceId: sourceId || user.id,
+        sourceId: sourceId || target.id,
         amount: Math.abs(applied),
         resourceType: isEnergy ? "energy" : "mana",
       });
+
       return applied;
     },
   };
