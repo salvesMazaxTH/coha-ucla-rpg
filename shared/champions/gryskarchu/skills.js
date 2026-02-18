@@ -149,9 +149,9 @@ Gryskarchu concede +${this.defBuff}% de DEF a si ou a um aliado ativo por ${this
         Math.round(Math.floor(ally.Defense * (this.defDamageBonus / 100)) / 5) *
         5;
 
-      ally.addDamageModifer({
+      ally.addDamageModifier({
         id: "proteção_da_mãe_terra",
-        expiresAt: context.currentTurn + this.buffDuration,
+        expiresAtTurn: context.currentTurn + this.buffDuration,
 
         apply({ baseDamage, user }) {
           const total = baseDamage + bonus;

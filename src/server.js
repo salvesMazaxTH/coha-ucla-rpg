@@ -26,10 +26,10 @@ import { emitCombatEvent } from "../shared/core/combatEvents.js";
 // ============================================================
 
 const editMode = {
-    enabled: false,
+    enabled: true,
     autoLogin: false,
     autoSelection: false,
-    ignoreCooldowns: false,
+    ignoreCooldowns: true,
     actMultipleTimesPerTurn: false,
     unreleasedChampions: false,
     damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)

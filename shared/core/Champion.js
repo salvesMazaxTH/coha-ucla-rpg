@@ -39,7 +39,6 @@ export class Champion {
     this.damageReductionModifiers = [];
     this.keywords = new Map();
     this.alive = true;
-    this.cooldowns = new Map();
     this.hasActedThisTurn = false;
 
     // RUNTIME
@@ -47,31 +46,6 @@ export class Champion {
       ...runtime,
       shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
     };
-
-    // 🔥 ULTIMATE LOCK (cooldown inicial)
-    this.initUltimateLock();
-  }
-
-  // Método para inicializar o bloqueio da ultimate no início do combate
-  initUltimateLock() {
-    if (!this.skills || this.skills.length === 0) return;
-
-    // Convenção: última skill = ultimate
-    const ultimate = this.skills[this.skills.length - 1];
-
-    if (!ultimate.cooldown || ultimate.cooldown <= 0) return;
-
-    const availableAt = 3; // 🔥 Regra global fixa
-
-    this.cooldowns.set(ultimate.key, {
-      availableAt,
-      duration: 2, // apenas informativo/debug
-      isUltimateLock: true, // só pra debug
-    });
-
-    console.log(
-      `[ULT LOCK] ${this.name} → ${ultimate.name} bloqueada até o turno ${availableAt}`,
-    );
   }
 
   static fromBaseData(baseData, id, team) {

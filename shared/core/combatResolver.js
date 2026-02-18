@@ -1,7 +1,7 @@
 import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
-const debugMode = false;
+const debugMode = true;
 
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
