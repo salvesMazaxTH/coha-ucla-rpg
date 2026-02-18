@@ -125,7 +125,7 @@ Cura = ${this.healAmount} HP`;
         buffDuration: 2,
         defDamageBonus: 35,
         contact: false,
-        manaCost: 34,
+        manaCost: 280,
         priority: 5,
         description() {
             return `Custo: ${this.manaCost} MP
