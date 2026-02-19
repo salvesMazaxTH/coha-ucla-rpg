@@ -40,19 +40,19 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     priority: 2,
     description() {
       return `Custo: ${this.manaCost} MP
-Tharox solta um bramido bestial.
-Efeitos neste turno:
-Todos os inimigos ativos são Provocados
-→ Devem mirar Tharox se causarem dano
-Tharox recebe:
-−${this.damageReductionAmount} de Dano Bruto Final recebido
-(respeita o Piso de 10)`;
+      Tharox solta um bramido bestial.
+      Efeitos neste turno:
+      Todos os inimigos ativos são Provocados
+      → Devem mirar Tharox se causarem dano
+      Tharox recebe:
+      −${this.damageReductionAmount} de Dano Bruto Final recebido
+      (respeita o Piso de 10)`;
     },
     targetSpec: ["self"],
     execute({ user, targets, context = {} }) {
       user.applyDamageReduction({
-        damageReductionAmount: this.damageReductionAmount,
-        damageReductionDuration: this.damageReductionDuration,
+        amount: this.damageReductionAmount,
+        duration: this.damageReductionDuration,
         context,
       });
 
@@ -117,14 +117,14 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Tharox libera sua forma de guerra.
-Ao ativar:
-Ganha +${this.hpGain} HP
-Ganha +${this.defGain} DEF
-Cura a si mesmo em:
-5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (${this.baseDef})
-Enquanto estiver ativo:
-Ataques que causam dano passam a causar um bônus de dano igual a ${this.defDamagePercent}% da DEF atual de Tharox (com um teto de ${this.maxDamageBonus} de dano adicional).`;
+      Tharox libera sua forma de guerra.
+      Ao ativar:
+      Ganha +${this.hpGain} HP
+      Ganha +${this.defGain} DEF
+      Cura a si mesmo em:
+      5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (${this.baseDef})
+      Enquanto estiver ativo:
+      Ataques que causam dano passam a causar um bônus de dano igual a ${this.defDamagePercent}% da DEF atual de Tharox (com um teto de ${this.maxDamageBonus} de dano adicional).`;
     },
     targetSpec: ["self"],
     execute({ user, context = {} }) {
