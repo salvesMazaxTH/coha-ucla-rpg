@@ -148,6 +148,8 @@ export class Champion {
   }
 
   initializeResources(stats = {}) {
+    console.log("INITIALIZANDO RECURSO:", this.name);
+
     const hasEnergy = Number.isFinite(stats.energy);
     const hasMana = Number.isFinite(stats.mana);
 
@@ -180,18 +182,31 @@ export class Champion {
     else this.energy = undefined;
   }
 
+  addResource(amount) {
+    const value = Math.max(0, Number(amount) || 0);
+    if (value === 0) return 0;
+
+    const result = this.applyResourceChange({
+      amount: value,
+      mode: "add",
+    });
+
+    return result.applied;
+  }
+
   spendResource(cost) {
     const amount = Math.max(0, Number(cost) || 0);
     if (amount === 0) return true;
 
-    if (this.energy !== undefined) {
-      if (this.energy < amount) return false;
-      this.energy = Math.max(0, this.energy - amount);
-      return true;
-    }
+    const current = this.energy !== undefined ? this.energy : this.mana;
 
-    if (this.mana < amount) return false;
-    this.mana = Math.max(0, this.mana - amount);
+    if (current < amount) return false;
+
+    this.applyResourceChange({
+      amount: -amount,
+      mode: "add",
+    });
+
     return true;
   }
 
@@ -202,6 +217,15 @@ export class Champion {
       type || (this.energy !== undefined ? "energy" : "mana");
 
     const isEnergy = resolvedType === "energy";
+
+    console.log(
+      "[RESOURCE CHANGE]",
+      this.name,
+      "Amount:",
+      amount,
+      "Before:",
+      isEnergy ? this.energy : this.mana,
+    );
 
     const currentValue = Number(
       isEnergy ? (this.energy ?? 0) : (this.mana ?? 0),
@@ -214,15 +238,20 @@ export class Champion {
     const clamped = this.roundToFive(Math.max(0, Math.min(cap, rawNext)));
 
     const applied =
-      mode === "set"
-        ? clamped - currentValue
-        : Math.max(0, clamped - currentValue);
+      mode === "set" ? clamped - currentValue : clamped - currentValue;
 
     if (isEnergy) {
       this.energy = clamped;
     } else {
       this.mana = clamped;
     }
+
+    console.log(
+      "[RESOURCE AFTER]",
+      this.name,
+      "After:",
+      isEnergy ? this.energy : this.mana,
+    );
 
     // Atualiza máximo histórico (base dinâmica da barra)
     if (!this.resourceMaxSeen || clamped > this.resourceMaxSeen) {

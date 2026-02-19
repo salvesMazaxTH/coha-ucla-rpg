@@ -36,10 +36,7 @@ function getSkillCost(champion, skill) {
  * Restaura recurso do campeão.
  */
 function restoreChampionResource(champion, amount) {
-  return champion.applyResourceChange({
-    amount: Math.max(0, Number(amount) || 0),
-    mode: "add",
-  }).applied;
+  return champion.addResource(amount);
 }
 
 /**
@@ -50,12 +47,9 @@ function applyGlobalTurnRegen(champion, context) {
 
   const BASE_REGEN = 80;
 
-  const result = champion.applyResourceChange({
-    amount: BASE_REGEN,
-    mode: "add",
-  });
+  const applied = champion.addResource(BASE_REGEN);
 
-  const applied = result.applied;
+  console.log("GLOBAL REGEN APPLIED:", champion.name, applied);
 
   if (applied > 0) {
     const isEnergy = champion.energy !== undefined;
@@ -707,13 +701,17 @@ function performSkillExecution(
 
       const isEnergy = target.energy !== undefined;
 
-      // 🔹 Centraliza tudo no applyResourceChange
-      const result = target.applyResourceChange({
-        amount: normalizedAmount, // pode ser positivo ou negativo
-        mode: "add",
-      });
+      let applied = 0;
 
-      const applied = result.applied;
+      if (normalizedAmount > 0) {
+        applied = target.addResource(normalizedAmount);
+      } else {
+        const spendAmount = Math.abs(normalizedAmount);
+
+        if (!target.spendResource(spendAmount)) return 0;
+
+        applied = -spendAmount;
+      }
 
       if (applied === 0) return 0;
 
@@ -789,39 +787,49 @@ function performSkillExecution(
     if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
   }
 
+  // Descomentar caso um dia achar necessário que o manaRegen seja por ação e não por alvo
   // 1.1. Regeneracao por dano (uma vez por acao que causou dano)
-  const didDealDamage = results.some(
+  /*   const didDealDamage = results.some(
     (entry) => entry?.userId === user.id && entry.totalDamage > 0,
   );
 
   if (didDealDamage) {
     const isEnergy = user.energy !== undefined;
+
     const baseValue = Number.isFinite(user.resourceBase)
       ? user.resourceBase
       : isEnergy
         ? Number(user.energy ?? 0)
         : Number(user.mana ?? 0);
+
     const currentValue = Number.isFinite(actionResourceSnapshot)
       ? actionResourceSnapshot
       : isEnergy
         ? Number(user.energy ?? 0)
         : Number(user.mana ?? 0);
+
     const rawRegen = baseValue * 0.05 + currentValue * 0.05;
+
     const mult = Number.isFinite(user.runtime?.resourceRegenMultiplier)
       ? user.runtime.resourceRegenMultiplier
       : 1;
+
     const flat = Number.isFinite(user.runtime?.resourceRegenFlatBonus)
       ? user.runtime.resourceRegenFlatBonus
       : 0;
+
     const modifiedRegen = rawRegen * mult + flat;
+
     const regenAmount = user.roundToFive
       ? user.roundToFive(modifiedRegen)
       : Math.round(modifiedRegen / 5) * 5;
+
     if (regenAmount > 0) {
       const result = user.applyResourceChange({
         amount: regenAmount,
         mode: "add",
       });
+
       const restored = result.applied;
       if (restored > 0) {
         effects.push({
@@ -836,7 +844,7 @@ function performSkillExecution(
         affectedIds.add(user.id);
       }
     }
-  }
+  } */
 
   // 2. Anexar heals do contexto (curas indiretas, passivas)
   for (const h of context.healEvents) {

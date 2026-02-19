@@ -552,7 +552,7 @@ export const CombatResolver = {
 
     const base = attacker.baseMana ?? attacker.baseEnergy ?? 0;
 
-    if (current >= cap) return 0;
+    if (current >= 999) return 0;
 
     // 5% base + 5% atual
     const regenAmount = Math.floor(base * 0.05 + current * 0.05);
@@ -561,6 +561,15 @@ export const CombatResolver = {
       amount: regenAmount,
       mode: "add",
     });
+
+    console.log(
+      "[REGEN FROM DAMAGE]",
+      attacker.name,
+      "Damage:",
+      damageDealt,
+      "Regen:",
+      result.applied,
+    );
 
     return result.applied;
   },
