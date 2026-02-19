@@ -32,7 +32,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
   {
     key: "provocação_primeva",
     name: "Provocação Primeva",
-    provokeDuration: 1,
+    tauntDuration: 1,
     damageReductionAmount: 20,
     damageReductionDuration: 2,
     contact: false,
@@ -62,7 +62,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
       ).filter((c) => c.team !== user.team && c.alive);
 
       enemyChampions.forEach((enemy) => {
-        enemy.applyProvoke(user.id, this.provokeDuration, context);
+        enemy.applyTaunt(user.id, this.tauntDuration, context);
       });
 
       const userName = formatChampionName(user);

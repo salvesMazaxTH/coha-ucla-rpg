@@ -1,3 +1,12 @@
+/* Cores de time para nomes em balão de diálogo de combate */
+.combat-dialog-bubble .team-1 {
+  color: #00bfff !important;
+  font-weight: bold;
+}
+.combat-dialog-bubble .team-2 {
+  color: #ff4444 !important;
+  font-weight: bold;
+}
 * {
   padding: 0;
   margin: 0;

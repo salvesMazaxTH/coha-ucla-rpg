@@ -1,4 +1,41 @@
 /* ============================================
+     TAUNT FLOAT (PROVOCAÇÃO)
+============================================ */
+.taunt-float {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffb347;
+  text-shadow:
+    0 0 8px #ffb347,
+    0 0 12px #ffb34799,
+    1px 1px 2px #000a;
+  pointer-events: none;
+  z-index: 110;
+  animation: tauntFloat 1850ms ease-out forwards;
+}
+
+@keyframes tauntFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -55%) scale(1.1);
+  }
+  70% {
+    transform: translate(-50%, -75%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -90%) scale(1);
+  }
+}
+/* ============================================
       ANIMATION-HEAVY STYLES
       ============================================ */
 

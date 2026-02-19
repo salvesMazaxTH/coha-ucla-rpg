@@ -102,6 +102,7 @@ import {
   formatPlayerName,
 } from "../shared/core/formatters.js";
 import { emitCombatEvent } from "../shared/core/combatEvents.js";
+import { log } from "console";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -419,21 +420,33 @@ function canExecuteAction(user, action) {
 //  RESOLUÇÃO DE ALVOS
 // ============================================================
 
-/** Resolve os alvos de uma ação, respeitando Provoke e validando existência. */
+/** Resolve os alvos de uma ação, respeitando Taunt e validando existência. */
 function resolveSkillTargets(user, skill, action) {
   const currentTargets = {};
   let redirected = false;
 
-  // --- PROVOKE ---
-  if (user.provokeEffects.length > 0 && skill.targetSpec.includes("enemy")) {
-    const provokerId = user.provokeEffects[0].provokerId;
-    const provoker = activeChampions.get(provokerId);
+  // --- TAUNT ---
+  const hasTaunt = user.tauntEffects?.some(
+    (effect) => effect.expiresAtTurn > currentTurn,
+  );
 
-    if (provoker && provoker.alive) {
+  const normalizedSpec = Array.isArray(skill.targetSpec)
+    ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
+    : [];
+
+  const isOffensiveSkill = normalizedSpec.some((spec) =>
+    spec.includes("enemy"),
+  );
+
+  if (hasTaunt && isOffensiveSkill) {
+    const taunterId = user.tauntEffects[0].taunterId;
+    const taunter = activeChampions.get(taunterId);
+
+    if (taunter && taunter.alive) {
       for (const role in action.targetIds) {
         const original = activeChampions.get(action.targetIds[role]);
         if (original && original.alive && original.team !== user.team) {
-          currentTargets[role] = provoker;
+          currentTargets[role] = taunter;
           redirected = true;
         } else if (role === "self") {
           currentTargets[role] = user;
@@ -446,8 +459,21 @@ function resolveSkillTargets(user, skill, action) {
       if (redirected) {
         io.emit(
           "combatLog",
-          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(provoker)}!`,
+          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
         );
+        emitCombatAction({
+          action: null,
+          effects: [
+            {
+              type: "tauntRedirection",
+              attackerId: user.id,
+              newTargetId: taunter.id,
+              taunterId: taunter.id,
+            },
+          ],
+          log: `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
+          state: null,
+        });
       }
     } else {
       io.emit(
@@ -514,6 +540,8 @@ function resolveSkillTargets(user, skill, action) {
       return null;
     }
   }
+
+  console.log("FINAL TARGETS:", Object.keys(currentTargets));
 
   return currentTargets;
 }

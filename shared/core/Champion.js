@@ -40,7 +40,7 @@ export class Champion {
     this.passive = combat.passive || null;
     this.damageModifiers = [];
     this.statModifiers = [];
-    this.provokeEffects = [];
+    this.tauntEffects = [];
     this.damageReductionModifiers = [];
     this.keywords = new Map();
     this.alive = true;
@@ -727,20 +727,18 @@ export class Champion {
     );
   }
 
-  applyProvoke(provokerId, duration, context) {
-    this.provokeEffects.push({
-      provokerId: provokerId,
+  applyTaunt(taunterId, duration, context) {
+    this.tauntEffects.push({
+      taunterId: taunterId,
       expiresAtTurn: context.currentTurn + duration,
     });
     console.log(
-      `[Champion] ${this.name} provoked by ${provokerId}. Will expire at turn ${context.currentTurn + duration}.`,
+      `[Champion] ${this.name} taunted by ${taunterId}. Will expire at turn ${context.currentTurn + duration}.`,
     );
   }
 
-  isProvokedBy(provokerId) {
-    return this.provokeEffects.some(
-      (effect) => effect.provokerId === provokerId,
-    );
+  isTauntedBy(taunterId) {
+    return this.tauntEffects.some((effect) => effect.taunterId === taunterId);
   }
 
   applyDamageReduction({ amount, duration, context }) {
@@ -786,10 +784,10 @@ export class Champion {
       return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
     });
 
-    this.provokeEffects = this.provokeEffects.filter((effect) => {
+    this.tauntEffects = this.tauntEffects.filter((effect) => {
       if (effect.expiresAtTurn <= currentTurn) {
         console.log(
-          `[Champion] Provoke effect from ${effect.provokerId} on ${this.name} expired.`,
+          `[Champion] Taunt effect from ${effect.taunterId} on ${this.name} expired.`,
         );
         return false;
       }

@@ -1,3 +1,4 @@
+import { formatChampionName } from "/shared/core/formatters.js";
 // ============================================================
 //  animsAndLogManager.js — Combat Animation & Log System (v2)
 //
@@ -187,15 +188,25 @@ export function createCombatAnimationManager(deps) {
 
     // 1. Show skill usage dialog bubble (fallback when there are no effects)
     if (action && !hasEffects) {
-      const userName = action.userName || "Alguém";
-      const targetName = action.targetName || null;
-      const skillName = action.skillName || "uma habilidade";
+      const userChampion = deps.activeChampions.get(action.userId);
+      const userName = userChampion
+        ? formatChampionName(userChampion)
+        : action.userName || "Alguém";
+      const targetChampion = action.targetId
+        ? deps.activeChampions.get(action.targetId)
+        : null;
+      const targetName = targetChampion
+        ? formatChampionName(targetChampion)
+        : action.targetName || null;
+      const skillName = action.skillName
+        ? `<b>${action.skillName}</b>`
+        : "<b>uma habilidade</b>";
 
       const dialogText = targetName
         ? `${userName} usou ${skillName} em ${targetName}.`
         : `${userName} usou ${skillName}.`;
 
-      await showDialog(dialogText);
+      await showDialog(dialogText, true);
     }
 
     // 2. Animate each effect sequentially — deterministic order
@@ -204,15 +215,27 @@ export function createCombatAnimationManager(deps) {
         const effect = effects[i];
 
         if (action && shouldShowActionDialog(effect)) {
-          const userName = action.userName || "Alguém";
-          const targetName = effect?.targetName || action.targetName || null;
-          const skillName = action.skillName || "uma habilidade";
+          const userChampion = deps.activeChampions.get(action.userId);
+          const userName = userChampion
+            ? formatChampionName(userChampion)
+            : action.userName || "Alguém";
+          const targetChampion = effect?.targetId
+            ? deps.activeChampions.get(effect.targetId)
+            : action.targetId
+              ? deps.activeChampions.get(action.targetId)
+              : null;
+          const targetName = targetChampion
+            ? formatChampionName(targetChampion)
+            : effect?.targetName || action.targetName || null;
+          const skillName = action.skillName
+            ? `<b>${action.skillName}</b>`
+            : "<b>uma habilidade</b>";
 
           const dialogText = targetName
             ? `${userName} usou ${skillName} em ${targetName}.`
             : `${userName} usou ${skillName}.`;
 
-          await showDialog(dialogText);
+          await showDialog(dialogText, true);
         }
 
         await animateEffect(effect);
@@ -282,6 +305,10 @@ export function createCombatAnimationManager(deps) {
         await animateBuff(effect);
         break;
 
+      case "tauntRedirection":
+        await animateTauntRedirection(effect);
+        break;
+
       default:
         console.warn("[AnimManager] Unknown effect type:", effect.type);
     }
@@ -312,8 +339,11 @@ export function createCombatAnimationManager(deps) {
     // Show critical hit dialog if applicable
     if (isCritical) {
       const champion = deps.activeChampions.get(targetId);
-      const name = champion?.name || "Alvo";
-      await showDialog(`CRÍTICO! ${name} sofreu ${amount} de dano!`);
+      const name = champion ? formatChampionName(champion) : "Alvo";
+      await showDialog(
+        `CRÍTICO! ${name} sofreu <b>${amount}</b> de dano!`,
+        true,
+      );
     }
 
     // Apply .damage class to .champion element
@@ -356,10 +386,8 @@ export function createCombatAnimationManager(deps) {
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
     const champion = deps.activeChampions.get(targetId);
-    const name = champion?.name || "Alvo";
-
-    // Show heal dialog
-    await showDialog(`${name} recuperou vida.`);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    await showDialog(`${name} recuperou vida.`, true);
 
     // Apply .heal class to .champion element
     championEl.classList.add("heal");
@@ -391,10 +419,11 @@ export function createCombatAnimationManager(deps) {
     if (!championEl) return;
 
     const champion = deps.activeChampions.get(targetId);
-    const name = champion?.name || "Alvo";
-
-    // Show evasion dialog
-    await showDialog(`${name} tentou evadir o ataque... E CONSEGUIU!`);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    await showDialog(
+      `${name} tentou evadir o ataque... <b>E CONSEGUIU!</b>`,
+      true,
+    );
 
     // Apply .evasion class to .champion element
     championEl.classList.add("evasion");
@@ -419,10 +448,8 @@ export function createCombatAnimationManager(deps) {
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
     const champion = deps.activeChampions.get(targetId);
-    const name = champion?.name || "Alvo";
-
-    // Show shield dialog
-    await showDialog(`${name} recebeu um escudo.`);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    await showDialog(`${name} recebeu um escudo.`, true);
 
     // Create floating shield number inside .portrait-wrapper
     if (portraitWrapper) {
@@ -489,7 +516,6 @@ export function createCombatAnimationManager(deps) {
     await wait(TIMING.RESOURCE_ANIM);
 
     console.log("END resource anim");
-
   }
 
   // ============================================================
@@ -499,9 +525,8 @@ export function createCombatAnimationManager(deps) {
   async function animateImmune(effect) {
     const { targetId } = effect;
     const champion = deps.activeChampions.get(targetId);
-    const name = champion?.name || "Alvo";
-
-    await showDialog(`${name} está com Imunidade Absoluta!`);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    await showDialog(`${name} está com <b>Imunidade Absoluta!</b>`, true);
   }
 
   // ============================================================
@@ -511,9 +536,8 @@ export function createCombatAnimationManager(deps) {
   async function animateShieldBlock(effect) {
     const { targetId } = effect;
     const champion = deps.activeChampions.get(targetId);
-    const name = champion?.name || "Alvo";
-
-    await showDialog(`O escudo de ${name} bloqueou o ataque!`);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    await showDialog(`O escudo de ${name} bloqueou o ataque!`, true);
   }
 
   // ============================================================
@@ -522,22 +546,24 @@ export function createCombatAnimationManager(deps) {
 
   async function animateBuff(effect) {
     const { sourceId, targetId, sourceName, targetName } = effect || {};
-    const resolvedTargetName =
-      targetName || deps.activeChampions.get(targetId)?.name || "Alvo";
-    const resolvedSourceName =
-      sourceName || deps.activeChampions.get(sourceId)?.name || null;
+    const targetChampion = deps.activeChampions.get(targetId);
+    const resolvedTargetName = targetChampion
+      ? formatChampionName(targetChampion)
+      : targetName || "Alvo";
+    const sourceChampion = deps.activeChampions.get(sourceId);
+    const resolvedSourceName = sourceChampion
+      ? formatChampionName(sourceChampion)
+      : sourceName || null;
     const championEl = getChampionElement(targetId);
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
     let text = `${resolvedTargetName} foi fortalecido.`;
-
     if (sourceId && targetId && sourceId === targetId) {
       text = `${resolvedTargetName} fortaleceu-se.`;
     } else if (resolvedSourceName) {
       text = `${resolvedTargetName} foi fortalecido por ${resolvedSourceName}.`;
     }
-
-    await showDialog(text);
+    await showDialog(text, true);
 
     if (championEl) {
       championEl.classList.add("buff");
@@ -553,6 +579,38 @@ export function createCombatAnimationManager(deps) {
       championEl.classList.remove("buff");
     }
   }
+
+  // ============================================================
+  //  TAUNT ANIMATION
+  // ============================================================
+
+  async function animateTauntRedirection(effect) {
+    const { attackerId, newTargetId, taunterId } = effect;
+    const champion = deps.activeChampions.get(attackerId);
+    const name = champion ? formatChampionName(champion) : "Alvo";
+    const championEl = getChampionElement(attackerId);
+    const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
+
+    // Show taunt dialog
+    await showDialog(
+      `${name} foi <b>provocado</b> e teve seu alvo redirecionado!`,
+      true,
+    );
+
+    if (championEl) {
+      championEl.classList.add("taunt");
+    }
+    if (portraitWrapper) {
+      createFloatElement(portraitWrapper, "PROVOCAÇÃO", "taunt-float");
+    }
+
+    await wait(TIMING.HEAL_ANIM);
+
+    if (championEl) {
+      championEl.classList.remove("taunt");
+    }
+  }
+  // ============================================================
 
   // ============================================================
   //  GAME OVER HANDLING
@@ -735,12 +793,9 @@ export function createCombatAnimationManager(deps) {
     float.classList.add(...cssClasses.filter(Boolean));
     float.textContent = text;
     container.appendChild(float);
-
-    // Auto-remove after float animation lifetime
     setTimeout(() => {
       if (float.parentNode) float.remove();
     }, TIMING.FLOAT_LIFETIME + 200);
-
     return float;
   }
 
@@ -757,13 +812,17 @@ export function createCombatAnimationManager(deps) {
   //    .combat-dialog.leaving  → fading out (triggers dialogOut)
   // ============================================================
 
-  async function showDialog(text) {
+  async function showDialog(text, isHtml = false) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
 
-    // Set text content
-    dialogText.textContent = text;
+    // Set text content (HTML or plain)
+    if (isHtml) {
+      dialogText.innerHTML = text;
+    } else {
+      dialogText.textContent = text;
+    }
 
     // Show dialog (triggers CSS dialogIn animation on .combat-dialog-bubble)
     dialog.classList.remove("hidden", "leaving");
@@ -981,39 +1040,22 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   return {
-    /** Queue a structured combat action envelope for animation. */
     handleCombatAction(envelope) {
       enqueue("combatAction", envelope);
     },
-
-    /** Queue a plain text combat log message. */
     handleCombatLog(text) {
       enqueue("combatLog", text);
     },
-
-    /** Queue a full game state sync. */
     handleGameStateUpdate(gameState) {
       enqueue("gameStateUpdate", gameState);
     },
-
-    /** Queue a turn update. */
     handleTurnUpdate(turn) {
       enqueue("turnUpdate", turn);
     },
-
-    /** Queue a champion death animation. */
     handleChampionRemoved(championId) {
       enqueue("championRemoved", championId);
     },
-
-    /**
-     * Direct (non-queued) log append.
-     * Used by main.js for local messages (e.g., "Você confirmou o fim do turno")
-     * that don't need to wait in the animation queue.
-     */
     appendToLog,
-
-    /** Reset all queue state. */
     reset,
   };
 }
