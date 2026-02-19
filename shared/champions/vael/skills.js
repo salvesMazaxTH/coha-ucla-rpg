@@ -10,8 +10,8 @@ const vaelSkills = [
     priority: 0,
     description() {
       return `Custo: ${this.energyCost} EN
-Ataque básico genérico (BF ${this.bf}).
-    Contato: ${this.contact ? "✅" : "❌"}`;
+        Ataque básico genérico (BF ${this.bf}).
+        Contato: ${this.contact ? "✅" : "❌"}`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -32,13 +32,13 @@ Ataque básico genérico (BF ${this.bf}).
     name: "Corte Instantâneo",
     bf: 75,
     contact: true,
-    energyCost: 18,
+    energyCost: 120,
     priority: 0,
     description() {
       return `Custo: ${this.energyCost} EN
-Contato: ${this.contact ? "✅" : "❌"}
-    BF ${this.bf}.
-📌 Pode critar normalmente`;
+      Contato: ${this.contact ? "✅" : "❌"}
+      BF ${this.bf}.
+      📌 Pode critar normalmente`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -60,15 +60,15 @@ Contato: ${this.contact ? "✅" : "❌"}
     bfPrimary: 55,
     bfSecondary: 60,
     contact: true,
-    energyCost: 28,
+    energyCost: 200,
     priority: 0,
     description() {
       return `Custo: ${this.energyCost} EN
-Contato: ${this.contact ? "✅" : "❌"}
-    BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
-❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
-(Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
-✅ O alvo secundário SEMPRE sofre Acerto Crítico`;
+       Contato: ${this.contact ? "✅" : "❌"}
+       BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
+      ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
+      (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
+      ✅ O alvo secundário SEMPRE sofre Acerto Crítico`;
     },
     targetSpec: [
       { type: "enemy", unique: true },
@@ -116,12 +116,12 @@ Contato: ${this.contact ? "✅" : "❌"}
     name: "Veredito do Fio Silencioso",
     bf: 145,
     contact: true,
-    energyCost: 40,
+    energyCost: 420,
     priority: 0,
     description() {
       return `Custo: ${this.energyCost} EN
-Contato: ${this.contact ? "✅" : "❌"}
-    BF ${this.bf}.`;
+       Contato: ${this.contact ? "✅" : "❌"}
+       BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

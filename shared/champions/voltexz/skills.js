@@ -10,8 +10,8 @@ const voltexzSkills = [
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -30,15 +30,15 @@ BF ${this.bf}.`;
   {
     key: "relampagos_gemeos",
     name: "Relâmpagos Gêmeos",
-    bf: 35,
+    bf: 40,
     contact: false,
-    manaCost: 175,
+    manaCost: 200,
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf} (primario) / BF ${this.bf} (secundario).
-(Pode escolher o mesmo alvo para ambos)`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf} (primario) / BF ${this.bf} (secundario).
+        (Pode escolher o mesmo alvo para ambos)`;
     },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
@@ -80,14 +80,14 @@ BF ${this.bf} (primario) / BF ${this.bf} (secundario).
     bf: 25,
     paralyzeDuration: 1,
     contact: false,
-    manaCost: 25,
+    manaCost: 60,
     priority: 1,
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-Prioridade: +${this.priority}
-BF ${this.bf} (Direto);
-Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        Prioridade: +${this.priority}
+        BF ${this.bf} (Direto);
+        Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -138,8 +138,8 @@ Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima 
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-BF ${this.bf}.`;
+        Contato: ${this.contact ? "✅" : "❌"}
+        BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
