@@ -36,7 +36,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     damageReductionAmount: 20,
     damageReductionDuration: 2,
     contact: false,
-    manaCost: 22,
+    manaCost: 180,
     priority: 2,
     description() {
       return `Custo: ${this.manaCost} MP
@@ -78,7 +78,7 @@ Tharox recebe:
     bf: 80,
     defScaling: 20,
     contact: true,
-    manaCost: 28,
+    manaCost: 60,
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
@@ -113,7 +113,7 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
     maxDamageBonus: 80,
     modifierDuration: 3,
     contact: false,
-    manaCost: 40,
+    manaCost: 300,
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP

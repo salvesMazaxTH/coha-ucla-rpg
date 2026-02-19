@@ -43,15 +43,15 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     tributeHeal: 15,
     tributeBonusDamage: 10,
     contact: false,
-    manaCost: 22,
+    manaCost: 80,
     priority: 1,
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-Prioridade: +${this.priority}
-BF ${this.bf}.
-Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos.
-Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF ${this.bf}).`;
+      Contato: ${this.contact ? "✅" : "❌"}
+      Prioridade: +${this.priority}
+      BF ${this.bf}.
+      Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos.
+      Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF ${this.bf}).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -95,15 +95,15 @@ Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tribute
     lifeStealBuff: 15,
     buffDuration: 2,
     contact: false,
-    manaCost: 28,
+    manaCost: 180,
     priority: 4,
     description() {
       return `Custo: ${this.manaCost} MP
-Prioridade: +${this.priority}
-Concede a um aliado:
-+${this.atkBuff} ATQ
-+${this.lifeStealBuff}% LifeSteal
-Duração: ${this.buffDuration} turnos`;
+       Prioridade: +${this.priority}
+       Concede a um aliado:
+       +${this.atkBuff} ATQ
+       +${this.lifeStealBuff}% LifeSteal
+       Duração: ${this.buffDuration} turnos`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
@@ -143,16 +143,16 @@ Duração: ${this.buffDuration} turnos`;
     buffDuration: 2,
     pactDuration: 3,
     contact: false,
-    manaCost: 36,
+    manaCost: 300,
     priority: 5,
     description() {
       return `Custo: ${this.manaCost} MP
-Prioridade: +${this.priority}
-Seleciona um aliado:
-Ele recebe:
-+${this.atkBuffPercent}% ATQ
-+${this.lifeStealBuff}% LifeSteal
-Duração: ${this.buffDuration} turnos`;
+      Prioridade: +${this.priority}
+      Seleciona um aliado:
+      Ele recebe:
+      +${this.atkBuffPercent}% ATQ
+      +${this.lifeStealBuff}% LifeSteal
+      Duração: ${this.buffDuration} turnos`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
