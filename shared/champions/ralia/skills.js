@@ -22,7 +22,7 @@ BF ${this.bf}.`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -85,7 +85,7 @@ BF ${this.bf}.`;
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -120,7 +120,7 @@ BF ${this.bf}.`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -182,7 +182,7 @@ BF ${this.bf}.`;
           directDamage: baseDamage, // Dano Direto puro
           user,
           target: enemy,
-          skill: this.name,
+          skill: this,
           context,
           allChampions: context?.allChampions,
         });

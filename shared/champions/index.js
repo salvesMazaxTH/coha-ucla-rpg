@@ -7,6 +7,7 @@ import serene from "./serene/index.js";
 import reyskarone from "./reyskarone/index.js";
 import gryskarchu from "./gryskarchu/index.js";
 import node_sparckina_07 from "./node_sparckina_07/index.js";
+import kai from "./kai/index.js";
 
 const championDB = {
   ralia,
@@ -18,6 +19,7 @@ const championDB = {
   reyskarone,
   gryskarchu,
   node_sparckina_07,
+  kai,
 };
 
 export default championDB;

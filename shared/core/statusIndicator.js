@@ -7,7 +7,7 @@ export const StatusIndicator = {
   keywordIcons: {
     paralisado: {
       type: "emoji",
-      value: "⚡ 🚷 ⚡",
+      value: "⚡🚫⚡",
       background: "rgba(226, 109, 31, 0.8)",
     },
     atordoado: {
@@ -35,6 +35,16 @@ export const StatusIndicator = {
       value: "TRIB.",
       color: "#ff2a2a",
     },
+    queimando:{
+      type: "emoji",
+      value: "🔥",
+      background: "rgba(255, 69, 0, 0.8)",
+    },
+    enraizado: {
+      type: "emoji",
+      value: "🌱",
+      background: "rgba(34, 139, 34, 0.8)",
+    }
   },
 
   // Duração mínima visual para indicadores (em ms)

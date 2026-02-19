@@ -113,7 +113,7 @@ const editMode = {
   autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unreleasedChampions: false,
+  unreleasedChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
 };
@@ -360,9 +360,10 @@ function validateActionIntent(user, skill, socket) {
 
   // Enraizado bloqueia apenas habilidades de contato
   if (user.hasKeyword?.("enraizado") && skill.contact) {
+    const skillName = skill && typeof skill === "object" ? skill.name : skill;
     socket.emit(
       "skillDenied",
-      `${user.name} está Enraizado e não pode usar habilidades de contato!`,
+      `${user.name} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
     );
     return false;
   }

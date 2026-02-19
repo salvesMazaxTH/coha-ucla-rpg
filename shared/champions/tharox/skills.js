@@ -22,7 +22,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -95,7 +95,7 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
         user,
         baseDamage,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });

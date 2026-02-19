@@ -218,14 +218,14 @@ export class Champion {
 
     const isEnergy = resolvedType === "energy";
 
-    console.log(
+    /*    console.log(
       "[RESOURCE CHANGE]",
       this.name,
       "Amount:",
       amount,
       "Before:",
       isEnergy ? this.energy : this.mana,
-    );
+    ); */
 
     const currentValue = Number(
       isEnergy ? (this.energy ?? 0) : (this.mana ?? 0),
@@ -246,12 +246,12 @@ export class Champion {
       this.mana = clamped;
     }
 
-    console.log(
+    /*     console.log(
       "[RESOURCE AFTER]",
       this.name,
       "After:",
       isEnergy ? this.energy : this.mana,
-    );
+    ); */
 
     // Atualiza máximo histórico (base dinâmica da barra)
     if (!this.resourceMaxSeen || clamped > this.resourceMaxSeen) {

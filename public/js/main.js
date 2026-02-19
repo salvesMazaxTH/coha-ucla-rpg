@@ -742,7 +742,7 @@ function createOverlay(champion) {
       (s) => `
         <div class="skill-detail">
           <div class="skill-name">${escapeHtml(s.name)}</div>
-          <div class="skill-description">${toParagraphs(s.description)}</div>
+          <div class="skill-description">${toParagraphs(typeof s.description === "function" ? s.description.call(s) : s.description)}</div>
         </div>
       `,
     )
@@ -876,7 +876,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
 // --- Coleta de alvos no client ---
 
 async function collectClientTargets(user, skill) {
-  if (!Array.isArray(skill.targetSpec)) return null;
+  if (!skill || !Array.isArray(skill.targetSpec)) return null;
 
   const normalizedSpec = skill.targetSpec.map((s) =>
     typeof s === "string" ? { type: s } : s,

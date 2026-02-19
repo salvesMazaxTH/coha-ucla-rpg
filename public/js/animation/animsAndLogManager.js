@@ -199,7 +199,7 @@ export function createCombatAnimationManager(deps) {
         ? formatChampionName(targetChampion)
         : action.targetName || null;
       const skillName = action.skillName
-        ? `<b>${action.skillName}</b>`
+        ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
         : "<b>uma habilidade</b>";
 
       const dialogText = targetName

@@ -21,7 +21,7 @@ const vaelSkills = [
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -48,7 +48,7 @@ const vaelSkills = [
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -86,7 +86,7 @@ const vaelSkills = [
           baseDamage,
           user,
           target: primary,
-          skill: this.name,
+          skill: this,
           context,
           options: { disable: true }, // sem crítico
           allChampions: context?.allChampions,
@@ -99,7 +99,7 @@ const vaelSkills = [
           baseDamage: (user.Attack * this.bfSecondary) / 100,
           user,
           target: secondary,
-          skill: this.name,
+          skill: this,
           context,
           options: { force: true }, // crítico garantido
           allChampions: context?.allChampions,
@@ -132,7 +132,7 @@ const vaelSkills = [
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });

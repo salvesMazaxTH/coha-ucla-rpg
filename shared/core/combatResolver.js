@@ -1,7 +1,7 @@
 import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
-const debugMode = true;
+const debugMode = false;
 
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
@@ -296,6 +296,7 @@ export const CombatResolver = {
     const currentDefense = target.Defense;
 
     // ⭐ crítico ignora buffs de defesa
+    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
     const defenseUsed = crit.didCrit
       ? Math.min(baseDefense, currentDefense)
       : currentDefense;
@@ -432,15 +433,16 @@ export const CombatResolver = {
     return { damage, crit, logs };
   },
 
-  _applyBeforeDealingPassive(
+  _applyBeforeDealingPassive({
     mode,
+    skill,
     damage,
     crit,
     attacker,
     target,
     context,
     allChampions,
-  ) {
+  }) {
     const results = emitCombatEvent(
       "beforeDamageDealt",
       {
@@ -470,20 +472,32 @@ export const CombatResolver = {
     return { damage, crit, logs };
   },
 
-  _applyAfterTakingPassive(
+  _applyAfterTakingPassive({
     attacker,
     target,
+    skill,
     damage,
     mode,
     crit,
     context,
     allChampions,
-  ) {
+  }) {
+    console.log("🔥 _applyAfterTakingPassive ENTER");
+    console.log({
+      attacker: attacker?.name,
+      target: target?.name,
+      skill,
+      damage,
+      mode,
+      crit,
+    });
+
     const results = emitCombatEvent(
       "afterDamageTaken",
       {
         attacker,
         target,
+        skill,
         damage,
         mode,
         crit,
@@ -506,15 +520,16 @@ export const CombatResolver = {
     return logs;
   },
 
-  _applyAfterDealingPassive(
+  _applyAfterDealingPassive({
     attacker,
     target,
     damage,
     mode,
     crit,
+    skill,
     context,
     allChampions,
-  ) {
+  }) {
     const results = emitCombatEvent(
       "afterDamageDealt",
       {
@@ -580,7 +595,9 @@ export const CombatResolver = {
     const userName = formatChampionName(user);
     const targetName = formatChampionName(target);
 
-    let log = `${userName} usou ${skill} e causou ${dmg} de dano a ${targetName}`;
+    // skill pode ser objeto ou string
+    const skillName = skill && typeof skill === "object" ? skill.name : skill;
+    let log = `${userName} usou ${skillName} e causou ${dmg} de dano a ${targetName}`;
 
     if (crit.didCrit)
       log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;
@@ -669,7 +686,7 @@ export const CombatResolver = {
       targetId: target.id,
       userId: user.id,
       evaded: false,
-      log: `${username} tentou usar ${skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
+      log: `${username} tentou usar ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
   },
@@ -684,7 +701,7 @@ export const CombatResolver = {
       targetId: target.id,
       userId: user.id,
       evaded: false,
-      log: `${username} usou ${skill} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
+      log: `${username} usou ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
   },
@@ -705,6 +722,16 @@ export const CombatResolver = {
     // =========================
     // 1️⃣ PRÉ-CHECAGENS
     // =========================
+
+    const depth = context.damageDepth ?? 0;
+
+    if (depth === 0) {
+      console.group(`⚔️ AÇÃO PRINCIPAL: ${user.name} → ${target.name}`);
+    } else {
+      console.group(
+        `↪️ REAÇÃO (${context.origin || "extra"}): ${user.name} → ${target.name}`,
+      );
+    }
 
     if (this._isImmune(target)) {
       return this._buildImmuneResult(baseDamage, user, target, skill);
@@ -744,6 +771,8 @@ export const CombatResolver = {
       options,
     }) || { didCrit: false, bonus: 0 };
 
+    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
+
     let damage = this._applyDamageModifiers(
       baseDamage,
       user,
@@ -752,31 +781,43 @@ export const CombatResolver = {
       context,
     );
 
-    const beforeDeal = this._applyBeforeDealingPassive(
+    const beforeDeal = this._applyBeforeDealingPassive({
       mode,
+      skill,
       damage,
       crit,
       user,
       target,
       context,
       allChampions,
-    );
+    });
 
-    damage = beforeDeal.damage;
-    crit = beforeDeal.crit;
+    if (beforeDeal.crit !== undefined) {
+      crit = beforeDeal.crit;
+    }
 
-    const beforeTake = this._applyBeforeTakingPassive(
+    if (beforeDeal.damage !== undefined) {
+      damage = beforeDeal.damage;
+    }
+
+    const beforeTake = this._applyBeforeTakingPassive({
       mode,
+      skill,
       damage,
       crit,
       user,
       target,
       context,
       allChampions,
-    );
+    });
 
-    damage = beforeTake.damage;
-    crit = beforeTake.crit;
+    if (beforeTake.crit !== undefined) {
+      crit = beforeTake.crit;
+    }
+
+    if (beforeTake.damage !== undefined) {
+      damage = beforeTake.damage;
+    }
 
     const finalDamage = this._composeFinalDamage(
       mode,
@@ -803,25 +844,38 @@ export const CombatResolver = {
     // 4️⃣ AFTER HOOKS
     // =========================
 
-    const afterTakeLogs = this._applyAfterTakingPassive(
-      user,
-      target,
-      finalDamage,
+    console.log("➡️ Chamando _applyAfterTakingPassive com:");
+    console.log({
+      attacker: user?.name,
+      target: target?.name,
+      damage: finalDamage,
       mode,
       crit,
-      context,
+      depth: context.damageDepth,
       allChampions,
-    );
+    });
 
-    const afterDealLogs = this._applyAfterDealingPassive(
-      user,
+    const afterTakeLogs = this._applyAfterTakingPassive({
+      attacker: user,
+      skill,
       target,
-      finalDamage,
+      damage: finalDamage,
       mode,
       crit,
       context,
       allChampions,
-    );
+    });
+
+    const afterDealLogs = this._applyAfterDealingPassive({
+      attacker: user,
+      skill,
+      target,
+      damage: finalDamage,
+      mode,
+      crit,
+      context,
+      allChampions,
+    });
 
     // =========================
     // 5️⃣ EFEITOS SECUNDÁRIOS
@@ -854,6 +908,28 @@ export const CombatResolver = {
     const ls = this._applyLifeSteal(user, finalDamage, allChampions);
     const lsAmount = Number(ls?.amount) || 0;
 
+    // 🔥 Processa fila de danos extras (ex: contra-ataques)
+    let extraResults = [];
+
+    if (context.extraDamageQueue?.length) {
+      const queue = [...context.extraDamageQueue];
+      context.extraDamageQueue = [];
+
+      for (const extra of queue) {
+        const result = this.resolveDamage({
+          ...extra,
+          context: {
+            ...context,
+            damageDepth: (context.damageDepth ?? 0) + 1,
+            origin: extra.skill?.key || "reaction",
+          },
+          allChampions,
+        });
+
+        if (result) extraResults.push(result);
+      }
+    }
+
     // =========================
     // 6️⃣ CONSTRUÇÃO DO LOG
     // =========================
@@ -875,11 +951,17 @@ export const CombatResolver = {
       if (ls.passiveLogs.length) log += "\n   " + ls.passiveLogs.join("\n");
     }
 
+    for (const r of extraResults) {
+      if (r.log) log += "\n" + r.log;
+    }
+
     if (context.extraLogs.length) log += "\n" + context.extraLogs.join("\n");
 
     // =========================
     // 7️⃣ RETORNO FINAL
     // =========================
+
+    console.groupEnd();
 
     return {
       baseDamage,

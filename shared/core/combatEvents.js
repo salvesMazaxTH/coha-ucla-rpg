@@ -1,4 +1,4 @@
-const debugMode = false;
+const debugMode = true;
 
 export function emitCombatEvent(eventName, payload, champions) {
   const results = [];
@@ -16,29 +16,56 @@ export function emitCombatEvent(eventName, payload, champions) {
     ? champions
     : Array.from(champions.values());
 
+  console.log("📡 EMIT:", eventName);
+  console.log(
+    "🎯 Champions recebidos:",
+    champArray.map((c) => c.name),
+  );
+
   for (const champ of champArray) {
-    const passive = champ.passive;
-    if (!passive) continue;
+    const hookSources = [];
 
-    const hook = passive[eventName];
-    if (typeof hook !== "function") continue;
-
-    if (debugMode) {
-      console.log(`➡️ Triggering ${champ.name}`);
+    // 🔹 Passiva real
+    if (champ.passive) {
+      hookSources.push(champ.passive);
     }
 
-    try {
-      const res = hook.call(passive, {
-        ...payload,
-        self: champ,
-      });
+    // 🔹 Hook effects temporários
+    if (champ.runtime?.hookEffects?.length) {
+      hookSources.push(...champ.runtime.hookEffects);
+    }
 
-      if (res) {
-        if (debugMode) console.log(`⬅️ Result:`, res);
-        results.push(res);
+    console.log(
+      "🧩 Hooks de",
+      champ.name,
+      ":",
+      (champ.runtime?.hookEffects || []).map((h) => h.key),
+    );
+
+    for (const source of hookSources) {
+      const hook = source[eventName];
+      if (typeof hook !== "function") continue;
+
+      if (debugMode) {
+        console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
       }
-    } catch (err) {
-      console.error(`[PASSIVE ERROR] ${champ.name}`, err);
+
+      try {
+        const res = hook.call(source, {
+          ...payload,
+          self: champ,
+        });
+
+        if (res) {
+          if (debugMode) console.log(`⬅️ Result:`, res);
+          results.push(res);
+        }
+      } catch (err) {
+        console.error(
+          `[HOOK ERROR] ${champ.name} (${source.key || "passive"})`,
+          err,
+        );
+      }
     }
   }
 

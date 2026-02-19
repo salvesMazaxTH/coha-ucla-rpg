@@ -22,7 +22,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -104,7 +104,7 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
         direct: baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });

@@ -22,7 +22,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -50,7 +50,7 @@ Dano Bruto = BF ${this.bf}`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -133,7 +133,7 @@ Ganha +${this.speedBuff} VEL e ${this.evasionPercent}% da VEL como ESQ.`;
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });

@@ -21,7 +21,7 @@ const voltexzSkills = [
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -52,7 +52,7 @@ const voltexzSkills = [
           baseDamage,
           user,
           target: primary,
-          skill: this.name,
+          skill: this,
           context,
           allChampions: context?.allChampions,
         });
@@ -64,7 +64,7 @@ const voltexzSkills = [
           baseDamage,
           user,
           target: secondary,
-          skill: this.name,
+          skill: this,
           context,
           allChampions: context?.allChampions,
         });
@@ -100,7 +100,7 @@ const voltexzSkills = [
         directDamage: baseDamage, // Dano Direto puro
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
@@ -150,7 +150,7 @@ const voltexzSkills = [
         baseDamage,
         user,
         target: enemy,
-        skill: this.name,
+        skill: this,
         context,
         allChampions: context?.allChampions,
       });
