@@ -3,7 +3,7 @@ export default {
   portrait: "/assets/portraits/kai.png",
   unreleased: true,
   HP: 330,
-  Attack: 270,
+  Attack: 185,
   Defense: 110,
   Speed: 55,
   Critical: 0,

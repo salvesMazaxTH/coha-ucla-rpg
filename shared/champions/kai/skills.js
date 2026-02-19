@@ -11,10 +11,10 @@ const kaiSkills = [
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.`;
+Ataque básico genérico (BF ${this.bf}).
+Contato: ${this.contact ? "✅" : "❌"}`;
     },
-    targetSpec: ["all-enemies"],
+    targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;

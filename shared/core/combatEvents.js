@@ -35,13 +35,6 @@ export function emitCombatEvent(eventName, payload, champions) {
       hookSources.push(...champ.runtime.hookEffects);
     }
 
-    console.log(
-      "🧩 Hooks de",
-      champ.name,
-      ":",
-      (champ.runtime?.hookEffects || []).map((h) => h.key),
-    );
-
     for (const source of hookSources) {
       const hook = source[eventName];
       if (typeof hook !== "function") continue;

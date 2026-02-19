@@ -102,7 +102,8 @@ import {
   formatPlayerName,
 } from "../shared/core/formatters.js";
 import { emitCombatEvent } from "../shared/core/combatEvents.js";
-import { log } from "console";
+
+import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -1165,6 +1166,9 @@ function handleEndTurn() {
     });
   }
 
+  // 8.1 Processar keywords de início de turno (DoTs, etc)
+  processTurnStartKeywords({ activeChampions, context: turnStartContext });
+
   // 9. Limpar modificadores de stats expirados
   const revertedStats = [];
   activeChampions.forEach((champion) => {
@@ -1189,6 +1193,72 @@ function handleEndTurn() {
   io.emit("turnUpdate", currentTurn);
   if (revertedStats.length > 0) io.emit("statsReverted", revertedStats);
   io.emit("gameStateUpdate", getGameState());
+}
+
+function processTurnStartKeywords({ activeChampions, context }) {
+  const dotResults = [];
+
+  activeChampions.forEach((champion) => {
+    if (!champion.alive) return;
+
+    for (const [keywordName] of champion.keywords) {
+      const effect = KeywordTurnEffects?.[keywordName];
+      if (!effect?.onTurnStart) continue;
+
+      const result = effect.onTurnStart({
+        champion,
+        context,
+        allChampions: activeChampions,
+      });
+
+      if (!result) continue;
+
+      if (result.type === "damage") {
+        const before = champion.HP;
+        const damage = Math.max(0, Number(result.amount) || 0);
+
+        champion.HP = Math.max(0, champion.HP - damage);
+
+        dotResults.push({
+          targetId: champion.id,
+          userId: champion.id,
+          totalDamage: damage,
+          log: `${formatChampionName(champion)} sofreu ${damage} de ${result.skill?.name || "efeito"} (${before} → ${champion.HP}).`,
+        });
+      }
+    }
+  });
+
+  if (dotResults.length === 0) return;
+
+  const effects = [];
+  const logs = [];
+  const affectedIds = new Set();
+
+  dotResults.forEach((r) => {
+    if (!r) return;
+
+    if (r.totalDamage > 0) {
+      effects.push({
+        type: "damage",
+        targetId: r.targetId,
+        sourceId: r.userId,
+        amount: r.totalDamage,
+        isDot: true,
+      });
+
+      affectedIds.add(r.targetId);
+    }
+
+    if (r.log) logs.push(r.log);
+  });
+
+  emitCombatAction({
+    action: null,
+    effects,
+    log: logs.join("\n") || null,
+    state: affectedIds.size > 0 ? snapshotChampions([...affectedIds]) : null,
+  });
 }
 
 // ============================================================

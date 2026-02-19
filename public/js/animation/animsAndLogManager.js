@@ -214,7 +214,7 @@ export function createCombatAnimationManager(deps) {
       for (let i = 0; i < effects.length; i++) {
         const effect = effects[i];
 
-        if (action && shouldShowActionDialog(effect)) {
+        if (!effect.isDot && action && shouldShowActionDialog(effect)) {
           const userChampion = deps.activeChampions.get(action.userId);
           const userName = userChampion
             ? formatChampionName(userChampion)
@@ -330,18 +330,24 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
-    const { targetId, amount, isCritical } = effect;
+    const { targetId, amount, isCritical , isDot} = effect;
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+
+    if (isDot) {
+      const champion = deps.activeChampions.get(targetId);
+      const name = champion ? formatChampionName(champion) : "Alvo";
+      await showDialog(`${name} sofreu dano.`, true);
+    }
 
     // Show critical hit dialog if applicable
     if (isCritical) {
       const champion = deps.activeChampions.get(targetId);
       const name = champion ? formatChampionName(champion) : "Alvo";
       await showDialog(
-        `CRÍTICO! ${name} sofreu <b>${amount}</b> de dano!`,
+        `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
         true,
       );
     }

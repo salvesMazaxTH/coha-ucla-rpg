@@ -399,6 +399,7 @@ export const CombatResolver = {
     mode,
     damage,
     crit,
+    skill,
     attacker,
     target,
     context,
@@ -410,6 +411,7 @@ export const CombatResolver = {
         mode,
         damage,
         crit,
+        skill,
         attacker,
         target,
         context,
@@ -449,6 +451,7 @@ export const CombatResolver = {
         mode,
         damage,
         crit,
+        skill,
         attacker,
         target,
         context,
@@ -530,6 +533,17 @@ export const CombatResolver = {
     context,
     allChampions,
   }) {
+    const arr = Array.isArray(allChampions)
+      ? allChampions
+      : Array.from(allChampions.values());
+
+    console.log(
+      "[_applyAfterDealingPassive] array de allChampions.map: ",
+      arr.map((c) => c.name),
+    );
+
+    if (context?.isDot) return [];
+
     const results = emitCombatEvent(
       "afterDamageDealt",
       {
@@ -538,6 +552,7 @@ export const CombatResolver = {
         damage,
         mode,
         crit,
+        skill,
         context,
       },
       allChampions,
@@ -731,6 +746,11 @@ export const CombatResolver = {
       console.group(
         `↪️ REAÇÃO (${context.origin || "extra"}): ${user.name} → ${target.name}`,
       );
+    }
+
+    if (!Number.isFinite(baseDamage)) {
+      console.error("❌ baseDamage inválido:", baseDamage);
+      baseDamage = 0;
     }
 
     if (this._isImmune(target)) {
