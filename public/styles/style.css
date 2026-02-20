@@ -557,7 +557,7 @@ i {
 
 .skill-btn.resource-locked {
   opacity: 0.7;
-  filter: grayscale(0.3);
+  filter: grayscale(0.58);
 }
 
 .skill-label {

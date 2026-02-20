@@ -148,7 +148,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
               if (attacker !== self) return;
               if (!target?.applyKeyword) return;
 
-              target.applyKeyword("queimando", 3, context, { source: self });
+              target.applyKeyword("queimando", 2, context, { source: self });
 
               return {
                 log: `${formatChampionName(target)} está Queimando (Brasa Viva)!`,
@@ -201,7 +201,7 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     name: "Barragem de Socos Incandescentes",
     bf: 0,
     damagePerHit: 35,
-    hits: 5,
+    hits: 7,
     contact: true,
     manaCost: 380,
     priority: 0,
