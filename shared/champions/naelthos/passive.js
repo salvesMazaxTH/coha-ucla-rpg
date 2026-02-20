@@ -6,7 +6,7 @@ export default {
   hpPerStack: 25,
   maxHeal: 35,
   description() {
-    return `Sempre que Naelys receber dano,
+    return `Sempre que Naelthos receber dano,
 ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
 (Máx. +${this.maxHeal} por acerto)`;
   },
@@ -25,7 +25,7 @@ ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido 
     self.heal(heal, context);
 
     console.log(
-      `[PASSIVA NAELYS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${self.HP}`,
+      `[PASSIVA NAELTHOS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${self.HP}`,
     );
 
     const selfName = formatChampionName(self);

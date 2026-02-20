@@ -533,15 +533,6 @@ export const CombatResolver = {
     context,
     allChampions,
   }) {
-    const arr = Array.isArray(allChampions)
-      ? allChampions
-      : Array.from(allChampions.values());
-
-    console.log(
-      "[_applyAfterDealingPassive] array de allChampions.map: ",
-      arr.map((c) => c.name),
-    );
-
     if (context?.isDot) return [];
 
     const results = emitCombatEvent(
@@ -864,7 +855,7 @@ export const CombatResolver = {
     // 4️⃣ AFTER HOOKS
     // =========================
 
-    console.log("➡️ Chamando _applyAfterTakingPassive com:");
+    /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
     console.log({
       attacker: user?.name,
       target: target?.name,
@@ -873,7 +864,7 @@ export const CombatResolver = {
       crit,
       depth: context.damageDepth,
       allChampions,
-    });
+    }); */
 
     const afterTakeLogs = this._applyAfterTakingPassive({
       attacker: user,
@@ -936,12 +927,13 @@ export const CombatResolver = {
       context.extraDamageQueue = [];
 
       for (const extra of queue) {
+        const originSkillKey = extra.skill?.key;
         const result = this.resolveDamage({
           ...extra,
           context: {
             ...context,
             damageDepth: (context.damageDepth ?? 0) + 1,
-            origin: extra.skill?.key || "reaction",
+            origin: originSkillKey || "reaction",
           },
           allChampions,
         });
@@ -983,7 +975,7 @@ export const CombatResolver = {
 
     console.groupEnd();
 
-    return {
+    const mainResult = {
       baseDamage,
       totalDamage: finalDamage,
       finalHP: target.HP,
@@ -1007,6 +999,16 @@ export const CombatResolver = {
         bonus: crit.bonus,
         roll: crit.roll,
       },
+
+      // 🔥 ESSENCIAL
+      damageDepth: context.damageDepth ?? 0,
+      skill,
     };
+
+    if (extraResults.length > 0) {
+      return [mainResult, ...extraResults];
+    }
+
+    return mainResult;
   },
 };

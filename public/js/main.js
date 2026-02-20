@@ -151,6 +151,27 @@ socket.on("connect", () => {
 
 socket.on("editModeUpdate", (serverEditMode = {}) => {
   Object.assign(editMode, serverEditMode);
+  // Auto-login in edit mode: if server enabled autoLogin, fill username and join
+  try {
+    if (
+      editMode.enabled &&
+      editMode.autoLogin &&
+      usernameInput &&
+      joinArenaBtn &&
+      loginScreen.classList.contains("active") &&
+      !playerId
+    ) {
+      const storedName =
+        localStorage.getItem("dev_username") ||
+        serverEditMode.autoLoginName ||
+        "dev";
+      usernameInput.value = storedName;
+      // simulate user clicking the join button
+      joinArenaBtn.click();
+    }
+  } catch (e) {
+    console.warn("Auto-login failed:", e);
+  }
 });
 
 joinArenaBtn.addEventListener("click", () => {

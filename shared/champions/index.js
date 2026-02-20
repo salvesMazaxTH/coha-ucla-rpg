@@ -1,5 +1,5 @@
 import ralia from "./ralia/index.js";
-import naelys from "./naelys/index.js";
+import naelthos from "./naelthos/index.js";
 import tharox from "./tharox/index.js";
 import vael from "./vael/index.js";
 import voltexz from "./voltexz/index.js";
@@ -11,7 +11,7 @@ import kai from "./kai/index.js";
 
 const championDB = {
   ralia,
-  naelys,
+  naelthos,
   tharox,
   vael,
   voltexz,

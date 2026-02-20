@@ -48,9 +48,7 @@ function applyGlobalTurnRegen(champion, context) {
   const BASE_REGEN = 80;
 
   const applied = champion.addResource(BASE_REGEN);
-
-  console.log("GLOBAL REGEN APPLIED:", champion.name, applied);
-
+  
   if (applied > 0) {
     const isEnergy = champion.energy !== undefined;
     const resourceType = isEnergy ? "energy" : "mana";
@@ -111,7 +109,7 @@ import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
 
 const editMode = {
   enabled: true,
-  autoLogin: false,
+  autoLogin: true,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
   unreleasedChampions: true,
@@ -635,6 +633,188 @@ function extractEffectsFromResult(result) {
   return effects;
 }
 
+function emitCombatEnvelopesFromResults({
+  results,
+  user,
+  skill,
+  targets,
+  context,
+  actionResourceCost,
+}) {
+  const primaryTarget = Object.values(targets || {})[0] || null;
+
+  const hasSideEffects =
+    actionResourceCost > 0 ||
+    context.healEvents.length > 0 ||
+    context.buffEvents.length > 0 ||
+    context.shieldEvents.length > 0 ||
+    context.resourceEvents.length > 0;
+
+  // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais
+  if ((!results || results.length === 0) && hasSideEffects) {
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: [],
+      context,
+      includeContextEvents: true,
+      actionResourceCost,
+      user,
+    });
+
+    const state = snapshotChampions([...affectedIds]);
+
+    emitCombatAction({
+      action: {
+        userId: user.id,
+        userName: user.name,
+        skillKey: skill.key,
+        skillName: skill.name,
+        targetId: primaryTarget?.id || null,
+        targetName: primaryTarget?.name || null,
+      },
+      effects,
+      log: null,
+      state,
+    });
+
+    return;
+  }
+
+  // 🔹 CASO 2: Itera cada resultado individualmente (principal + reações)
+  for (let i = 0; i < results.length; i++) {
+    const entry = results[i];
+    if (!entry || typeof entry !== "object") continue;
+
+    const isPrimary = (entry.damageDepth ?? 0) === 0;
+
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: [entry],
+      context,
+      includeContextEvents: isPrimary,
+      actionResourceCost: isPrimary ? actionResourceCost : 0,
+      user,
+    });
+
+    const state = snapshotChampions([...affectedIds]);
+
+    emitCombatAction({
+      action: isPrimary
+        ? {
+            userId: user.id,
+            userName: user.name,
+            skillKey: skill.key,
+            skillName: skill.name,
+            targetId: primaryTarget?.id || null,
+            targetName: primaryTarget?.name || null,
+          }
+        : {
+            userId: entry.userId,
+            userName:
+              activeChampions.get(entry.userId)?.name || null,
+            skillKey: entry.skill?.key || "reaction",
+            skillName: entry.skill?.name || "Reação",
+            targetId: entry.targetId || null,
+            targetName:
+              activeChampions.get(entry.targetId)?.name || null,
+          },
+      effects,
+      log: entry.log || null,
+      state,
+    });
+  }
+}
+
+function buildEffectsFromGroup({
+  resultsGroup,
+  context,
+  includeContextEvents,
+  actionResourceCost,
+  user,
+}) {
+  const effects = [];
+  const affectedIds = new Set();
+
+  // 🔥 Effects vindos do resolveDamage
+  for (const entry of resultsGroup) {
+    const extracted = extractEffectsFromResult(entry);
+    effects.push(...extracted);
+
+    if (entry.targetId) affectedIds.add(entry.targetId);
+    if (entry.userId) affectedIds.add(entry.userId);
+    if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
+  }
+
+  // 🔥 Gasto de recurso da skill principal
+  if (includeContextEvents && actionResourceCost > 0) {
+    const isEnergy = user.energy !== undefined;
+
+    effects.push({
+      type: "resourceSpend",
+      targetId: user.id,
+      sourceId: user.id,
+      amount: actionResourceCost,
+      resourceType: isEnergy ? "energy" : "mana",
+      targetName: user.name,
+      sourceName: user.name,
+    });
+
+    affectedIds.add(user.id);
+  }
+
+  if (includeContextEvents) {
+    for (const h of context.healEvents) {
+      effects.push({
+        type: "heal",
+        targetId: h.targetId,
+        sourceId: h.sourceId,
+        amount: h.amount,
+        targetName: activeChampions.get(h.targetId)?.name || null,
+        sourceName: activeChampions.get(h.sourceId)?.name || null,
+      });
+      affectedIds.add(h.targetId);
+    }
+
+    for (const s of context.shieldEvents) {
+      effects.push({
+        type: "shield",
+        targetId: s.targetId,
+        sourceId: s.sourceId,
+        amount: s.amount,
+        targetName: activeChampions.get(s.targetId)?.name || null,
+        sourceName: activeChampions.get(s.sourceId)?.name || null,
+      });
+      affectedIds.add(s.targetId);
+    }
+
+    for (const b of context.buffEvents) {
+      effects.push({
+        type: "buff",
+        targetId: b.targetId,
+        sourceId: b.sourceId,
+        amount: b.amount,
+        statName: b.statName,
+        targetName: activeChampions.get(b.targetId)?.name || null,
+        sourceName: activeChampions.get(b.sourceId)?.name || null,
+      });
+      affectedIds.add(b.targetId);
+    }
+
+    for (const r of context.resourceEvents) {
+      effects.push({
+        type: r.type,
+        targetId: r.targetId,
+        sourceId: r.sourceId,
+        amount: r.amount,
+        resourceType: r.resourceType,
+        targetName: activeChampions.get(r.targetId)?.name || null,
+        sourceName: activeChampions.get(r.sourceId)?.name || null,
+      });
+      affectedIds.add(r.targetId);
+    }
+  }
+
+  return { effects, affectedIds };
+}
+
 /**
  * Gera snapshots serializados dos campeões a partir de uma lista de IDs.
  * Usado para enviar o estado final pós-ação ao cliente.
@@ -678,24 +858,78 @@ function performSkillExecution(
   actionResourceCost = 0,
   actionResourceSnapshot = null,
 ) {
+  // 🔹 1. Criar contexto
+  const context = createSkillExecutionContext(user, skill);
+
+  // 🔹 2. Injetar contexto nos campeões
+  activeChampions.forEach((champion) => {
+    champion.runtime = champion.runtime || {};
+    champion.runtime.currentContext = context;
+  });
+
+  context.currentSkill = skill;
+
+  // 🔹 3. Executar skill
+  const result = skill.execute({ user, targets, context });
+
+  // 🔹 4. Limpar contexto
+  activeChampions.forEach((champion) => {
+    if (champion.runtime) delete champion.runtime.currentContext;
+  });
+
+  // 🔹 5. Registrar no histórico do turno
+  registerSkillUsageInTurn(user, skill, targets);
+
+  // 🔹 6. Normalizar resultado
+  const results = Array.isArray(result) ? result : result ? [result] : [];
+
+  // 🔹 7. Emitir envelopes
+  emitCombatEnvelopesFromResults({
+    results,
+    user,
+    skill,
+    targets,
+    context,
+    actionResourceCost,
+  });
+
+  // 🔹 8. Limpeza de keyword especial
+  if (user.hasKeyword?.("epifania_ativa")) {
+    user.removeKeyword("epifania_ativa");
+    user.removeDamageReductionBySource?.("epifania");
+    user.removeKeyword("imunidade absoluta");
+
+    io.emit(
+      "combatLog",
+      `${formatChampionName(user)} deixou o Limiar da Existência.`,
+    );
+  }
+}
+
+function createSkillExecutionContext(user, skill) {
   const aliveChampionsArray = [...activeChampions.values()].filter(
     (c) => c.alive,
   );
 
-  // Contexto compartilhado para a execução da skill
-  const context = {
+  return {
     currentTurn,
-    editMode, // Injetado pelo server — única fonte de verdade para damageOutput
+    editMode,
     allChampions: activeChampions,
     aliveChampions: aliveChampionsArray,
+
     healEvents: [],
     healSourceId: user.id,
+
     buffEvents: [],
     buffSourceId: user.id,
+
     resourceEvents: [],
+    shieldEvents: [],
+
     registerHeal({ target, amount, sourceId } = {}) {
       const healAmount = Number(amount) || 0;
       if (!target?.id || healAmount <= 0) return;
+
       this.healEvents.push({
         type: "heal",
         targetId: target.id,
@@ -703,9 +937,11 @@ function performSkillExecution(
         amount: healAmount,
       });
     },
+
     registerBuff({ target, amount, statName, sourceId } = {}) {
       const buffAmount = Number(amount) || 0;
       if (!target?.id || buffAmount <= 0) return;
+
       this.buffEvents.push({
         type: "buff",
         targetId: target.id,
@@ -714,10 +950,11 @@ function performSkillExecution(
         statName,
       });
     },
-    shieldEvents: [],
+
     registerShield({ target, amount, sourceId } = {}) {
       const shieldAmount = Number(amount) || 0;
       if (!target?.id || shieldAmount <= 0) return;
+
       this.shieldEvents.push({
         type: "shield",
         targetId: target.id,
@@ -725,21 +962,19 @@ function performSkillExecution(
         amount: shieldAmount,
       });
     },
+
     registerResourceChange({ target, amount, sourceId } = {}) {
       const normalizedAmount = Number(amount) || 0;
       if (!target?.id || normalizedAmount === 0) return 0;
 
       const isEnergy = target.energy !== undefined;
-
       let applied = 0;
 
       if (normalizedAmount > 0) {
         applied = target.addResource(normalizedAmount);
       } else {
         const spendAmount = Math.abs(normalizedAmount);
-
         if (!target.spendResource(spendAmount)) return 0;
-
         applied = -spendAmount;
       }
 
@@ -756,22 +991,9 @@ function performSkillExecution(
       return applied;
     },
   };
+}
 
-  // Injeta contexto em todos os campeões (skills podem acessar aliados/inimigos)
-  activeChampions.forEach((champion) => {
-    champion.runtime = champion.runtime || {};
-    champion.runtime.currentContext = context;
-  });
-
-  context.currentSkill = skill; // Injeta skill atual no contexto (para checks de Escudo de Feitiço)
-  const result = skill.execute({ user, targets, context });
-
-  // Limpa contexto
-  activeChampions.forEach((champion) => {
-    if (champion.runtime) delete champion.runtime.currentContext;
-  });
-
-  // --- Registro no histórico ---
+function registerSkillUsageInTurn(user, skill, targets) {
   logTurnEvent("skillUsed", {
     championId: user.id,
     championName: user.name,
@@ -784,186 +1006,12 @@ function performSkillExecution(
   });
 
   const turnData = ensureTurnEntry();
+
   if (!turnData.skillsUsedThisTurn[user.id]) {
     turnData.skillsUsedThisTurn[user.id] = [];
   }
+
   turnData.skillsUsedThisTurn[user.id].push(skill.key);
-
-  // --- Montagem do envelope de combate (v2) ---
-  const results = Array.isArray(result) ? result : result ? [result] : [];
-  const effects = [];
-  const affectedIds = new Set();
-  affectedIds.add(user.id);
-
-  if (actionResourceCost > 0) {
-    const isEnergy = user.energy !== undefined;
-    effects.push({
-      type: "resourceSpend",
-      targetId: user.id,
-      sourceId: user.id,
-      amount: actionResourceCost,
-      resourceType: isEnergy ? "energy" : "mana",
-      targetName: user.name,
-      sourceName: user.name,
-    });
-  }
-
-  // 1. Extrair efeitos de cada resultado
-  for (const entry of results) {
-    if (!entry || typeof entry !== "object") continue;
-    effects.push(...extractEffectsFromResult(entry));
-    if (entry.targetId) affectedIds.add(entry.targetId);
-    if (entry.userId) affectedIds.add(entry.userId);
-    if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
-  }
-
-  // Descomentar caso um dia achar necessário que o manaRegen seja por ação e não por alvo
-  // 1.1. Regeneracao por dano (uma vez por acao que causou dano)
-  /*   const didDealDamage = results.some(
-    (entry) => entry?.userId === user.id && entry.totalDamage > 0,
-  );
-
-  if (didDealDamage) {
-    const isEnergy = user.energy !== undefined;
-
-    const baseValue = Number.isFinite(user.resourceBase)
-      ? user.resourceBase
-      : isEnergy
-        ? Number(user.energy ?? 0)
-        : Number(user.mana ?? 0);
-
-    const currentValue = Number.isFinite(actionResourceSnapshot)
-      ? actionResourceSnapshot
-      : isEnergy
-        ? Number(user.energy ?? 0)
-        : Number(user.mana ?? 0);
-
-    const rawRegen = baseValue * 0.05 + currentValue * 0.05;
-
-    const mult = Number.isFinite(user.runtime?.resourceRegenMultiplier)
-      ? user.runtime.resourceRegenMultiplier
-      : 1;
-
-    const flat = Number.isFinite(user.runtime?.resourceRegenFlatBonus)
-      ? user.runtime.resourceRegenFlatBonus
-      : 0;
-
-    const modifiedRegen = rawRegen * mult + flat;
-
-    const regenAmount = user.roundToFive
-      ? user.roundToFive(modifiedRegen)
-      : Math.round(modifiedRegen / 5) * 5;
-
-    if (regenAmount > 0) {
-      const result = user.applyResourceChange({
-        amount: regenAmount,
-        mode: "add",
-      });
-
-      const restored = result.applied;
-      if (restored > 0) {
-        effects.push({
-          type: "resourceGain",
-          targetId: user.id,
-          sourceId: user.id,
-          amount: restored,
-          resourceType: isEnergy ? "energy" : "mana",
-          targetName: user.name,
-          sourceName: user.name,
-        });
-        affectedIds.add(user.id);
-      }
-    }
-  } */
-
-  // 2. Anexar heals do contexto (curas indiretas, passivas)
-  for (const h of context.healEvents) {
-    effects.push({
-      type: "heal",
-      targetId: h.targetId,
-      sourceId: h.sourceId,
-      amount: h.amount,
-      targetName: activeChampions.get(h.targetId)?.name || null,
-      sourceName: activeChampions.get(h.sourceId)?.name || null,
-    });
-    affectedIds.add(h.targetId);
-  }
-
-  // 3. Anexar shields do contexto
-  for (const s of context.shieldEvents) {
-    effects.push({
-      type: "shield",
-      targetId: s.targetId,
-      sourceId: s.sourceId,
-      amount: s.amount,
-      targetName: activeChampions.get(s.targetId)?.name || null,
-      sourceName: activeChampions.get(s.sourceId)?.name || null,
-    });
-    affectedIds.add(s.targetId);
-  }
-
-  // 4. Anexar buffs do contexto
-  for (const b of context.buffEvents) {
-    effects.push({
-      type: "buff",
-      targetId: b.targetId,
-      sourceId: b.sourceId,
-      amount: b.amount,
-      statName: b.statName,
-      targetName: activeChampions.get(b.targetId)?.name || null,
-      sourceName: activeChampions.get(b.sourceId)?.name || null,
-    });
-    affectedIds.add(b.targetId);
-  }
-
-  // 5. Anexar mudanças de recurso do contexto
-  for (const r of context.resourceEvents) {
-    effects.push({
-      type: r.type,
-      targetId: r.targetId,
-      sourceId: r.sourceId,
-      amount: r.amount,
-      resourceType: r.resourceType,
-      targetName: activeChampions.get(r.targetId)?.name || null,
-      sourceName: activeChampions.get(r.sourceId)?.name || null,
-    });
-    affectedIds.add(r.targetId);
-  }
-
-  // 6. Montar log verboso
-  const logParts = results.map((r) => r?.log).filter(Boolean);
-  const log = logParts.length > 0 ? logParts.join("\n") : null;
-
-  // 7. Snapshot do estado final de todos os campeões afetados
-  const state = snapshotChampions([...affectedIds]);
-
-  // 8. Info da ação (skill usada)
-  const primaryTarget = Object.values(targets || {})[0] || null;
-
-  emitCombatAction({
-    action: {
-      userId: user.id,
-      userName: user.name,
-      skillKey: skill.key,
-      skillName: skill.name,
-      targetId: primaryTarget?.id || null,
-      targetName: primaryTarget?.name || null,
-    },
-    effects,
-    log,
-    state,
-  });
-
-  // Remove Epifania ao agir
-  if (user.hasKeyword?.("epifania_ativa")) {
-    user.removeKeyword("epifania_ativa");
-    user.removeDamageReductionBySource?.("epifania");
-    user.removeKeyword("imunidade absoluta");
-    io.emit(
-      "combatLog",
-      `${formatChampionName(user)} deixou o Limiar da Existência.`,
-    );
-  }
 }
 
 /** Executa uma ação individual pendente. */

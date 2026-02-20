@@ -1,7 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 
-const naelysSkills = [
+const naelthosSkills = [
   {
     key: "ataque_basico",
     name: "Ataque Básico",
@@ -135,10 +135,10 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Naelys aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
+Naelthos aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
 +${this.healAmount} de HP
 Por ${this.effectDuration} turnos (inclui o atual):
-Naelys ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
+Naelthos ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
 Todos os Ataques que causem dano recebem:
 ➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver
 (Arredondado para múltiplo de 5)
@@ -182,4 +182,4 @@ Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano B
   },
 ];
 
-export default naelysSkills;
+export default naelthosSkills;

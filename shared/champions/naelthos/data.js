@@ -1,6 +1,6 @@
 export default {
-  name: "Naelys",
-  portrait: "/assets/portraits/naelys.png",
+  name: "Naelthos",
+  portrait: "/assets/portraits/naelthos.png",
   HP: 320,
   Attack: 130,
   Defense: 120,

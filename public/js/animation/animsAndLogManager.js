@@ -186,8 +186,8 @@ export function createCombatAnimationManager(deps) {
 
     const hasEffects = Array.isArray(effects) && effects.length > 0;
 
-    // 1. Show skill usage dialog bubble (fallback when there are no effects)
-    if (action && !hasEffects) {
+    // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
+    if (action) {
       const userChampion = deps.activeChampions.get(action.userId);
       const userName = userChampion
         ? formatChampionName(userChampion)
@@ -202,9 +202,13 @@ export function createCombatAnimationManager(deps) {
         ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
         : "<b>uma habilidade</b>";
 
-      const dialogText = targetName
-        ? `${userName} usou ${skillName} em ${targetName}.`
-        : `${userName} usou ${skillName}.`;
+      // Se self, não mostra 'em X'
+      let dialogText;
+      if (targetName && action.userId !== action.targetId) {
+        dialogText = `${userName} usou ${skillName} em ${targetName}.`;
+      } else {
+        dialogText = `${userName} usou ${skillName}.`;
+      }
 
       await showDialog(dialogText, true);
     }
@@ -214,32 +218,7 @@ export function createCombatAnimationManager(deps) {
       for (let i = 0; i < effects.length; i++) {
         const effect = effects[i];
 
-        if (!effect.isDot && action && shouldShowActionDialog(effect)) {
-          const userChampion = deps.activeChampions.get(action.userId);
-          const userName = userChampion
-            ? formatChampionName(userChampion)
-            : action.userName || "Alguém";
-          const targetChampion = effect?.targetId
-            ? deps.activeChampions.get(effect.targetId)
-            : action.targetId
-              ? deps.activeChampions.get(action.targetId)
-              : null;
-          const targetName = targetChampion
-            ? formatChampionName(targetChampion)
-            : effect?.targetName || action.targetName || null;
-          const skillName = action.skillName
-            ? `<b>${action.skillName}</b>`
-            : "<b>uma habilidade</b>";
-
-          const dialogText = targetName
-            ? `${userName} usou ${skillName} em ${targetName}.`
-            : `${userName} usou ${skillName}.`;
-
-          await showDialog(dialogText, true);
-        }
-
         await animateEffect(effect);
-
         if (i < effects.length - 1) {
           await wait(TIMING.BETWEEN_EFFECTS);
         }
@@ -330,7 +309,7 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
-    const { targetId, amount, isCritical , isDot} = effect;
+    const { targetId, amount, isCritical, isDot } = effect;
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
@@ -869,8 +848,11 @@ export function createCombatAnimationManager(deps) {
   }
 
   function syncChampionFromSnapshot(champion, snap) {
-    // Core stats
-    if (snap.HP !== undefined) champion.HP = snap.HP;
+    // 🔥 HP só é aplicado se NÃO houve animação de dano
+    if (snap.HP !== undefined) {
+      champion.HP = snap.HP;
+    }
+
     if (snap.maxHP !== undefined) champion.maxHP = snap.maxHP;
     if (snap.Attack !== undefined) champion.Attack = snap.Attack;
     if (snap.Defense !== undefined) champion.Defense = snap.Defense;
@@ -884,18 +866,16 @@ export function createCombatAnimationManager(deps) {
     const hasMana = snap.mana !== undefined;
 
     if (hasEnergy) {
-      if (snap.energy !== undefined) champion.energy = snap.energy;
+      champion.energy = snap.energy;
       champion.mana = undefined;
     }
 
     if (hasMana) {
-      if (snap.mana !== undefined) champion.mana = snap.mana;
-      if (!hasEnergy) {
-        champion.energy = undefined;
-      }
+      champion.mana = snap.mana;
+      if (!hasEnergy) champion.energy = undefined;
     }
 
-    // Runtime (shields)
+    // Runtime shields
     if (snap.runtime) {
       champion.runtime = {
         ...champion.runtime,
@@ -910,7 +890,7 @@ export function createCombatAnimationManager(deps) {
       champion.keywords = new Map(snap.keywords);
     }
 
-    // Alive status
+    // Alive
     if (snap.HP !== undefined) {
       champion.alive = snap.HP > 0;
     }

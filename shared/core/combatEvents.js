@@ -40,7 +40,7 @@ export function emitCombatEvent(eventName, payload, champions) {
       if (typeof hook !== "function") continue;
 
       if (debugMode) {
-        console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
+        //console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
       }
 
       try {
