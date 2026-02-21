@@ -1,34 +1,15 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
+import basicAttack from "../basicAttack.js";
 
 const naelthosSkills = [
-  {
-    key: "ataque_basico",
-    name: "Ataque Básico",
-    bf: 60,
-    contact: true,
-    manaCost: 0,
-    priority: 0,
-    description() {
-      return `Custo: ${this.manaCost} MP
-Ataque básico genérico (BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
-    },
-    targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
-      const { enemy } = targets;
-      const baseDamage = (user.Attack * this.bf) / 100;
-      return CombatResolver.resolveDamage({
-        baseDamage,
-        user,
-        target: enemy,
-        skill: this,
-        context,
-        allChampions: context?.allChampions,
-      });
-    },
-  },
-
+  // ========================
+  // Ataque Básico
+  // ========================
+  basicAttack,
+  // ========================
+  // Habilidades Especiais
+  // ========================
   {
     key: "toque_da_mare_serena",
     name: "Toque da Maré Serena",
@@ -135,14 +116,14 @@ Contato: ${this.contact ? "✅" : "❌"}`;
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Naelthos aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
-+${this.healAmount} de HP
-Por ${this.effectDuration} turnos (inclui o atual):
-Naelthos ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
-Todos os Ataques que causem dano recebem:
-➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver
-(Arredondado para múltiplo de 5)
-Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano Bruto por ação.`;
+        Naelthos aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
+        +${this.healAmount} de HP
+        Por ${this.effectDuration} turnos (inclui o atual):
+        Naelthos ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
+        Todos os Ataques que causem dano recebem:
+        ➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver
+        (Arredondado para múltiplo de 5)
+        Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano Bruto por ação.`;
     },
     targetSpec: ["self"],
 

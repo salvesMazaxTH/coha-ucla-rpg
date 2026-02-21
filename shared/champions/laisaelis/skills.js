@@ -1,0 +1,37 @@
+export default [
+  {
+    key: "ataque_basico",
+    name: "Ataque Básico",
+    bf: 15,
+    bonusFlat: 20,
+    contact: true,
+    manaCost: 0,
+    priority: 0,
+    description: "basic",
+    targetSpec: ["enemy"],
+  {
+    name: "hab.1",
+    type: "active",
+    cost: "mana",
+    target: "enemy",
+    description: "none",
+  },
+    description: "none",
+  {
+    name: "hab.2",
+    type: "active",
+    cost: "mana",
+    target: "enemy",
+    description: "none",
+  },
+    description: "none",
+  {
+    name: "ult",
+    type: "ultimate",
+    cost: "mana",
+    target: "enemy",
+    description: "none",
+  },
+    description: "none",
+  },
+];

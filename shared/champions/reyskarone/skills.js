@@ -1,35 +1,14 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
+import basicAttack from "../basicAttack.js";
 
 const reyskaroneSkills = [
   // =========================
   // Ataque Básico
   // =========================
-  {
-    key: "ataque_basico",
-    name: "Ataque Básico",
-    bf: 60,
-    contact: true,
-    manaCost: 0,
-    priority: 0,
-    description() {
-      return `Custo: ${this.manaCost} MP
-Ataque padrão (BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
-    },
-    targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
-      const { enemy } = targets;
-      return CombatResolver.resolveDamage({
-        baseDamage: (user.Attack * this.bf) / 100,
-        user,
-        target: enemy,
-        skill: this,
-        context,
-        allChampions: context?.allChampions,
-      });
-    },
-  },
+  basicAttack,
+  // =========================
+  // Habilidades Especiais
 
   // =========================
   // H1 — Corte Tributário

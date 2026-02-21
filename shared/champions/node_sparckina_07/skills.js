@@ -1,33 +1,12 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
+import basicAttack from "../basicAttack.js";
 
 const nodeSparckina07Skills = [
-  {
-    key: "ataque_basico",
-    name: "Ataque Básico",
-    bf: 60,
-    contact: true,
-    energyCost: 0,
-    priority: 0,
-    description() {
-      return `Custo: ${this.energyCost} MP
-Ataque básico genérico (BF ${this.bf}).
-Contato: ${this.contact ? "✅" : "❌"}`;
-    },
-    targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
-      const { enemy } = targets;
-      const baseDamage = (user.Attack * this.bf) / 100;
-      return CombatResolver.resolveDamage({
-        baseDamage,
-        user,
-        target: enemy,
-        skill: this,
-        context,
-        allChampions: context?.allChampions,
-      });
-    },
-  },
+  basicAttack,
+  // ========================
+  // Habilidades Especiais
+  // ========================
 
   {
     key: "sparkling_slash",

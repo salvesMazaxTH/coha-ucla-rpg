@@ -48,7 +48,7 @@ function applyGlobalTurnRegen(champion, context) {
   const BASE_REGEN = 80;
 
   const applied = champion.addResource(BASE_REGEN);
-  
+
   if (applied > 0) {
     const isEnergy = champion.energy !== undefined;
     const resourceType = isEnergy ? "energy" : "mana";
@@ -708,13 +708,11 @@ function emitCombatEnvelopesFromResults({
           }
         : {
             userId: entry.userId,
-            userName:
-              activeChampions.get(entry.userId)?.name || null,
+            userName: activeChampions.get(entry.userId)?.name || null,
             skillKey: entry.skill?.key || "reaction",
             skillName: entry.skill?.name || "Reação",
             targetId: entry.targetId || null,
-            targetName:
-              activeChampions.get(entry.targetId)?.name || null,
+            targetName: activeChampions.get(entry.targetId)?.name || null,
           },
       effects,
       log: entry.log || null,
@@ -1079,6 +1077,14 @@ function resolveSkillActions() {
   pendingActions = [];
 }
 
+function handleEndTurn() {
+  resolveSkillActions();
+  processChampionsDeaths();
+
+  // NÃO chama início de turno aqui.
+  // Espera confirmação do client.
+}
+
 /** Remove campeões mortos do jogo e verifica fim de partida. */
 function processChampionsDeaths() {
   for (const champ of activeChampions.values()) {
@@ -1101,19 +1107,11 @@ function processChampionsDeaths() {
   }
 }
 
-/** Pipeline completo de finalização do turno. */
-function handleEndTurn() {
-  // 1. Resolver ações pendentes
-  resolveSkillActions();
-
-  // 2. Processar mortes
-  processChampionsDeaths();
-
-  // 3. Avançar turno
+/** Aplica regeneração global de HP/MP/Energy no início do turno. */
+function handleStartTurn() {
   currentTurn++;
   playersReadyToEndTurn.clear();
 
-  // 4. Preparar contexto único de início de turno
   const aliveChampionsArray = [...activeChampions.values()].filter(
     (c) => c.alive,
   );
@@ -1154,12 +1152,12 @@ function handleEndTurn() {
     },
   };
 
-  // ✅ 5. Regen global via helper
+  // Regen global
   activeChampions.forEach((champion) => {
     applyGlobalTurnRegen(champion, turnStartContext);
   });
 
-  // 6. Injetar contexto nas passivas
+  // Injetar contexto temporário
   activeChampions.forEach((champ) => {
     if (!champ.alive) return;
     champ.runtime = champ.runtime || {};
@@ -1171,12 +1169,11 @@ function handleEndTurn() {
     { context: turnStartContext },
     activeChampions,
   );
-  // 7. Limpar referência temporária
+
   activeChampions.forEach((champ) => {
     if (champ.runtime) delete champ.runtime.currentContext;
   });
 
-  // 8. Consolidar efeitos
   const turnStartLogs =
     turnStartResults?.map((r) => r?.log).filter(Boolean) || [];
 
@@ -1214,35 +1211,23 @@ function handleEndTurn() {
     });
   }
 
-  // 8.1 Processar keywords de início de turno (DoTs, etc)
-  processTurnStartKeywords({ activeChampions, context: turnStartContext });
-
-  // 9. Limpar modificadores de stats expirados
-  const revertedStats = [];
-  activeChampions.forEach((champion) => {
-    const expired = champion.purgeExpiredStatModifiers(currentTurn);
-    if (expired.length > 0) revertedStats.push(...expired);
+  // Agora DoTs
+  processTurnStartKeywords({
+    activeChampions: Array.from(activeChampions.values()),
+    context: turnStartContext,
   });
 
-  // 10. Limpar keywords expiradas
+  // Limpar expirados
   activeChampions.forEach((champion) => {
-    const expiredKeywords = champion.purgeExpiredKeywords(currentTurn);
-    if (expiredKeywords.length > 0) {
-      expiredKeywords.forEach((keyword) => {
-        io.emit(
-          "combatLog",
-          `Efeito "${keyword}" expirou para ${formatChampionName(champion)}.`,
-        );
-      });
-    }
+    champion.purgeExpiredStatModifiers(currentTurn);
+    champion.purgeExpiredKeywords(currentTurn);
   });
 
-  // 11. Emitir atualizações
   io.emit("turnUpdate", currentTurn);
-  if (revertedStats.length > 0) io.emit("statsReverted", revertedStats);
   io.emit("gameStateUpdate", getGameState());
 }
 
+/** Processa keywords que disparam no início do turno (DoTs, etc). */
 function processTurnStartKeywords({ activeChampions, context }) {
   const dotResults = [];
 
@@ -1284,20 +1269,15 @@ function processTurnStartKeywords({ activeChampions, context }) {
   const affectedIds = new Set();
 
   dotResults.forEach((r) => {
-    if (!r) return;
+    effects.push({
+      type: "damage",
+      targetId: r.targetId,
+      sourceId: r.userId,
+      amount: r.totalDamage,
+      isDot: true,
+    });
 
-    if (r.totalDamage > 0) {
-      effects.push({
-        type: "damage",
-        targetId: r.targetId,
-        sourceId: r.userId,
-        amount: r.totalDamage,
-        isDot: true,
-      });
-
-      affectedIds.add(r.targetId);
-    }
-
+    affectedIds.add(r.targetId);
     if (r.log) logs.push(r.log);
   });
 
@@ -1305,7 +1285,7 @@ function processTurnStartKeywords({ activeChampions, context }) {
     action: null,
     effects,
     log: logs.join("\n") || null,
-    state: affectedIds.size > 0 ? snapshotChampions([...affectedIds]) : null,
+    state: snapshotChampions([...affectedIds]),
   });
 }
 
@@ -1327,8 +1307,22 @@ function resetGameState() {
 //  SOCKET HANDLERS
 // ============================================================
 
+const playersFinishedAnimations = new Set();
+
 io.on("connection", (socket) => {
   console.log("Um usuário conectado:", socket.id);
+
+  // --- Socket handler para início de turno após animações ---
+  socket.on("combatAnimationsFinished", () => {
+    playersFinishedAnimations.add(socket.id);
+
+    const totalPlayers = io.engine.clientsCount;
+
+    if (playersFinishedAnimations.size === totalPlayers) {
+      playersFinishedAnimations.clear();
+      handleStartTurn();
+    }
+  });
 
   // --- Helpers internos à conexão ---
 

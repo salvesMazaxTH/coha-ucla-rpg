@@ -136,6 +136,10 @@ const combatAnimations = createCombatAnimationManager({
     StatusIndicator.startRotationLoop(champions),
   combatDialog,
   combatDialogText,
+
+  onQueueEmpty: () => {
+    socket.emit("combatAnimationsFinished");
+  },
 });
 
 // ============================================================
@@ -438,10 +442,20 @@ confirmTeamBtn.addEventListener("click", () => {
 
 // --- Renderização da grade de campeões ---
 
+// Função para ordenar campeões por ordem alfabética
+function sortChampionKeysAlphabetically(keys) {
+  return keys.sort((a, b) => {
+    const nameA = championDB[a]?.name?.toLowerCase() || "";
+    const nameB = championDB[b]?.name?.toLowerCase() || "";
+    return nameA.localeCompare(nameB);
+  });
+}
+
 function renderAvailableChampions() {
   availableChampionsGrid.innerHTML = "";
 
-  allAvailableChampionKeys = Object.keys(championDB).filter((key) => {
+  // Filtra campeões válidos
+  let allAvailableChampionKeys = Object.keys(championDB).filter((key) => {
     const champion = championDB[key];
     const isChampion = (champion.entityType ?? "champion") === "champion";
     const isUnreleased = champion.unreleased === true;
@@ -449,6 +463,11 @@ function renderAvailableChampions() {
     if (isUnreleased && !editMode.unreleasedChampions) return false;
     return true;
   });
+
+  // Ordena por ordem alfabética
+  allAvailableChampionKeys = sortChampionKeysAlphabetically(
+    allAvailableChampionKeys,
+  );
 
   allAvailableChampionKeys.forEach((key) => {
     const champion = championDB[key];

@@ -89,8 +89,10 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   const queue = [];
+  const { onQueueEmpty } = deps;
   let processing = false;
   let lastLoggedTurn = null;
+  let currentPhase = "null"; 
 
   // ============================================================
   //  QUEUE MANAGEMENT
@@ -115,6 +117,11 @@ export function createCombatAnimationManager(deps) {
     }
 
     processing = false;
+
+    if (typeof onQueueEmpty === "function" && currentPhase === "combat") {
+      currentPhase = "null";
+      onQueueEmpty();
+    }
   }
 
   async function dispatchQueueItem(item) {
@@ -188,6 +195,7 @@ export function createCombatAnimationManager(deps) {
 
     // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
     if (action) {
+      currentPhase = "combat"
       const userChampion = deps.activeChampions.get(action.userId);
       const userName = userChampion
         ? formatChampionName(userChampion)
