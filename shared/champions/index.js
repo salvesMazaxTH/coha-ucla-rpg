@@ -13,6 +13,7 @@ import barao_estrondoso from "./barao_estrondoso/index.js";
 /* import laisaelis from "./laisaelis/index.js";
 import laiserisa from "./laiserisa/index.js";
 import laisaelis_laiserisa from "./laisaelis_laiserisa/index.js"; */
+import blyskartri from "./blyskartri/index.js";
 
 const championDB = {
   ralia,
@@ -30,6 +31,7 @@ const championDB = {
   laiserisa,
   laisaelis_laiserisa, */
   barao_estrondoso,
+  blyskartri,
 };
 
 export default championDB;

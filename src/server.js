@@ -857,7 +857,8 @@ function performSkillExecution(
   actionResourceSnapshot = null,
 ) {
   // 🔹 1. Criar contexto
-  const context = createSkillExecutionContext(user, skill);
+  const context = createBaseContext({ sourceId: user.id });
+  context.currentSkill = skill;
 
   // 🔹 2. Injetar contexto nos campeões
   activeChampions.forEach((champion) => {
@@ -902,93 +903,6 @@ function performSkillExecution(
       `${formatChampionName(user)} deixou o Limiar da Existência.`,
     );
   }
-}
-
-function createSkillExecutionContext(user, skill) {
-  const aliveChampionsArray = [...activeChampions.values()].filter(
-    (c) => c.alive,
-  );
-
-  return {
-    currentTurn,
-    editMode,
-    allChampions: activeChampions,
-    aliveChampions: aliveChampionsArray,
-
-    healEvents: [],
-    healSourceId: user.id,
-
-    buffEvents: [],
-    buffSourceId: user.id,
-
-    resourceEvents: [],
-    shieldEvents: [],
-
-    registerHeal({ target, amount, sourceId } = {}) {
-      const healAmount = Number(amount) || 0;
-      if (!target?.id || healAmount <= 0) return;
-
-      this.healEvents.push({
-        type: "heal",
-        targetId: target.id,
-        sourceId: sourceId || this.healSourceId || target.id,
-        amount: healAmount,
-      });
-    },
-
-    registerBuff({ target, amount, statName, sourceId } = {}) {
-      const buffAmount = Number(amount) || 0;
-      if (!target?.id || buffAmount <= 0) return;
-
-      this.buffEvents.push({
-        type: "buff",
-        targetId: target.id,
-        sourceId: sourceId || this.buffSourceId || target.id,
-        amount: buffAmount,
-        statName,
-      });
-    },
-
-    registerShield({ target, amount, sourceId } = {}) {
-      const shieldAmount = Number(amount) || 0;
-      if (!target?.id || shieldAmount <= 0) return;
-
-      this.shieldEvents.push({
-        type: "shield",
-        targetId: target.id,
-        sourceId: sourceId || user.id,
-        amount: shieldAmount,
-      });
-    },
-
-    registerResourceChange({ target, amount, sourceId } = {}) {
-      const normalizedAmount = Number(amount) || 0;
-      if (!target?.id || normalizedAmount === 0) return 0;
-
-      const isEnergy = target.energy !== undefined;
-      let applied = 0;
-
-      if (normalizedAmount > 0) {
-        applied = target.addResource(normalizedAmount);
-      } else {
-        const spendAmount = Math.abs(normalizedAmount);
-        if (!target.spendResource(spendAmount)) return 0;
-        applied = -spendAmount;
-      }
-
-      if (applied === 0) return 0;
-
-      this.resourceEvents.push({
-        type: applied > 0 ? "resourceGain" : "resourceSpend",
-        targetId: target.id,
-        sourceId: sourceId || target.id,
-        amount: Math.abs(applied),
-        resourceType: isEnergy ? "energy" : "mana",
-      });
-
-      return applied;
-    },
-  };
 }
 
 function registerSkillUsageInTurn(user, skill, targets) {
@@ -1054,6 +968,116 @@ function executeSkillAction(action) {
   return true;
 }
 
+function createBaseContext({ sourceId = null } = {}) {
+  const aliveChampionsArray = [...activeChampions.values()].filter(
+    (c) => c.alive,
+  );
+
+  return {
+    currentTurn,
+    editMode,
+    allChampions: activeChampions,
+    aliveChampions: aliveChampionsArray,
+
+    // ========================
+    // EVENT BUFFERS
+    // ========================
+
+    healEvents: [],
+    buffEvents: [],
+    resourceEvents: [],
+    shieldEvents: [],
+
+    healSourceId: sourceId,
+    buffSourceId: sourceId,
+
+    // ========================
+    // REGISTRIES
+    // ========================
+
+    registerHeal({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value <= 0) return;
+
+      this.healEvents.push({
+        type: "heal",
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: value,
+      });
+    },
+
+    registerBuff({ target, amount, statName, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value === 0) return;
+
+      this.buffEvents.push({
+        type: "buff",
+        targetId: target.id,
+        sourceId: sourceId || this.buffSourceId || target.id,
+        amount: value,
+        statName,
+      });
+    },
+
+    registerShield({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value <= 0) return;
+
+      this.shieldEvents.push({
+        type: "shield",
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: value,
+      });
+    },
+
+    registerResourceChange({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value === 0) return 0;
+
+      const isEnergy = target.energy !== undefined;
+      let applied = 0;
+
+      if (value > 0) {
+        applied = target.addResource(value);
+      } else {
+        const spend = Math.abs(value);
+        if (!target.spendResource(spend)) return 0;
+        applied = -spend;
+      }
+
+      if (applied === 0) return 0;
+
+      const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
+
+      this.resourceEvents.push({
+        type: eventType,
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: Math.abs(applied),
+        resourceType: isEnergy ? "energy" : "mana",
+      });
+
+      // 🔥 Agora dispara hook corretamente
+      emitCombatEvent(
+        applied > 0 ? "onResourceGain" : "onResourceSpend",
+        {
+          target: target,
+          amount: Math.abs(applied),
+          context: this,
+          type: eventType,
+          resourceType: isEnergy ? "energy" : "mana",
+          source: activeChampions.get(sourceId) || null,
+        },
+        this.allChampions,
+      );
+
+      return applied;
+    },
+  };
+}
+
 // ============================================================
 //  RESOLUÇÃO DE TURNOS
 // ============================================================
@@ -1112,45 +1136,7 @@ function handleStartTurn() {
   currentTurn++;
   playersReadyToEndTurn.clear();
 
-  const aliveChampionsArray = [...activeChampions.values()].filter(
-    (c) => c.alive,
-  );
-
-  const turnStartContext = {
-    currentTurn,
-    editMode,
-    allChampions: activeChampions,
-    aliveChampions: aliveChampionsArray,
-    healEvents: [],
-    buffEvents: [],
-    resourceEvents: [],
-    buffSourceId: null,
-
-    registerHeal({ target, amount, sourceId } = {}) {
-      const healAmount = Number(amount) || 0;
-      if (!target?.id || healAmount <= 0) return;
-
-      turnStartContext.healEvents.push({
-        type: "heal",
-        targetId: target.id,
-        sourceId: sourceId || target.id,
-        amount: healAmount,
-      });
-    },
-
-    registerBuff({ target, amount, statName, sourceId } = {}) {
-      const buffAmount = Number(amount) || 0;
-      if (!target?.id || buffAmount <= 0) return;
-
-      turnStartContext.buffEvents.push({
-        type: "buff",
-        targetId: target.id,
-        sourceId: sourceId || turnStartContext.buffSourceId || target.id,
-        amount: buffAmount,
-        statName,
-      });
-    },
-  };
+  const turnStartContext = createBaseContext({ sourceId: null });
 
   // Regen global
   activeChampions.forEach((champion) => {
