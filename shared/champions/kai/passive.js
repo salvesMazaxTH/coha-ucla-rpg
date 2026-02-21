@@ -7,7 +7,7 @@ export default {
   burnDuration: 1,
   description() {
     return `Sempre que Kai causa dano com um Ataque Básico, ele aplica um impacto térmico adicional:
-        - O impacto térmico causa ${this.flamingFistsDamage}dano direto.
+        - O impacto térmico causa ${this.flamingFistsDamage} de Dano Direto.
         Aplicação de Estado:
         Se o alvo não tiver Afinidade: Terra, Água ou Fogo:
         → O alvo fica "Queimando".`;
