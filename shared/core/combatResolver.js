@@ -395,19 +395,13 @@ export const CombatResolver = {
     return { hpAfter, actualDmg };
   },
 
-  _hasAnyHook(allChampions, hookName) {
-    return allChampions.some(
-      (champ) => typeof champ.passive?.[hookName] === "function",
-    );
-  },
-
   _applyBeforeTakingPassive(
     mode,
     damage,
     crit,
     skill,
-    dmgSource,
-    dmgTarget,
+    attacker,
+    target,
     context,
     allChampions,
   ) {
@@ -418,8 +412,8 @@ export const CombatResolver = {
         damage,
         crit,
         skill,
-        dmgSource,
-        dmgTarget,
+        attacker,
+        target,
         context,
       },
       allChampions,
@@ -446,8 +440,8 @@ export const CombatResolver = {
     skill,
     damage,
     crit,
-    dmgSource,
-    dmgTarget,
+    attacker,
+    target,
     context,
     allChampions,
   }) {
@@ -458,8 +452,8 @@ export const CombatResolver = {
         damage,
         crit,
         skill,
-        dmgSource,
-        dmgTarget,
+        attacker,
+        target,
         context,
       },
       allChampions,
@@ -482,8 +476,8 @@ export const CombatResolver = {
   },
 
   _applyAfterTakingPassive({
-    dmgSource,
-    dmgTarget,
+    attacker,
+    target,
     skill,
     damage,
     mode,
@@ -493,8 +487,8 @@ export const CombatResolver = {
   }) {
     console.log("🔥 _applyAfterTakingPassive ENTER");
     console.log({
-      dmgSource: dmgSource?.name,
-      dmgTarget: dmgTarget?.name,
+      attacker: attacker?.name,
+      target: target?.name,
       skill,
       damage,
       mode,
@@ -504,8 +498,8 @@ export const CombatResolver = {
     const results = emitCombatEvent(
       "afterDamageTaken",
       {
-        dmgSource,
-        dmgTarget,
+        attacker,
+        target,
         skill,
         damage,
         mode,
@@ -530,8 +524,8 @@ export const CombatResolver = {
   },
 
   _applyAfterDealingPassive({
-    dmgSource,
-    dmgTarget,
+    attacker,
+    target,
     damage,
     mode,
     crit,
@@ -544,8 +538,8 @@ export const CombatResolver = {
     const results = emitCombatEvent(
       "afterDamageDealt",
       {
-        dmgSource,
-        dmgTarget,
+        attacker,
+        target,
         damage,
         mode,
         crit,
@@ -798,66 +792,42 @@ export const CombatResolver = {
       context,
     );
 
-    // =========================
-    //  HOOKS DE EFEITOS PASSIVOS
-    // =========================
+    const beforeDeal = this._applyBeforeDealingPassive({
+      mode,
+      skill,
+      damage,
+      crit,
+      user,
+      target,
+      context,
+      allChampions,
+    });
 
-    const HOOKS = {
-      BEFORE_DEAL: "beforeDamageDealt",
-      BEFORE_TAKE: "beforeDamageTaken",
-      AFTER_DEAL: "afterDamageDealt",
-      AFTER_TAKE: "afterDamageTaken",
-      LIFE_STEAL: "onLifeSteal",
-    };
-
-    // =========================
-    //   BEFORE HOOKS
-    // =========================
-
-    let beforeDeal;
-    // antes de causar o dano
-    if (this._hasAnyHook(allChampions, HOOKS.BEFORE_DEAL)) {
-      beforeDeal = this._applyBeforeDealingPassive({
-        mode,
-        skill,
-        damage,
-        crit,
-        dmgSource: user,
-        dmgTarget: target,
-        context,
-        allChampions,
-      });
-
-      if (beforeDeal?.crit !== undefined) {
-        crit = beforeDeal.crit;
-      }
-
-      if (beforeDeal?.damage !== undefined) {
-        damage = beforeDeal.damage;
-      }
+    if (beforeDeal.crit !== undefined) {
+      crit = beforeDeal.crit;
     }
 
-    let beforeTake;
-    // antes de receber o dano
-    if (this._hasAnyHook(allChampions, HOOKS.BEFORE_TAKE)) {
-      beforeTake = this._applyBeforeTakingPassive({
-        mode,
-        skill,
-        damage,
-        crit,
-        dmgSource: user,
-        dmgTarget: target,
-        context,
-        allChampions,
-      });
+    if (beforeDeal.damage !== undefined) {
+      damage = beforeDeal.damage;
+    }
 
-      if (beforeTake?.crit !== undefined) {
-        crit = beforeTake.crit;
-      }
+    const beforeTake = this._applyBeforeTakingPassive({
+      mode,
+      skill,
+      damage,
+      crit,
+      user,
+      target,
+      context,
+      allChampions,
+    });
 
-      if (beforeTake?.damage !== undefined) {
-        damage = beforeTake.damage;
-      }
+    if (beforeTake.crit !== undefined) {
+      crit = beforeTake.crit;
+    }
+
+    if (beforeTake.damage !== undefined) {
+      damage = beforeTake.damage;
     }
 
     const finalDamage = this._composeFinalDamage(
@@ -885,37 +855,38 @@ export const CombatResolver = {
     // 4️⃣ AFTER HOOKS
     // =========================
 
-    let afterTakeLogs = [];
+    /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
+    console.log({
+      attacker: user?.name,
+      target: target?.name,
+      damage: finalDamage,
+      mode,
+      crit,
+      depth: context.damageDepth,
+      allChampions,
+    }); */
 
-    if (this._hasAnyHook(allChampions, HOOKS.AFTER_TAKE)) {
-      afterTakeLogs =
-        this._applyAfterTakingPassive({
-          dmgSource: user,
-          skill,
-          dmgTarget: target,
-          damage: finalDamage,
-          mode,
-          crit,
-          context,
-          allChampions,
-        }) || [];
-    }
+    const afterTakeLogs = this._applyAfterTakingPassive({
+      attacker: user,
+      skill,
+      target,
+      damage: finalDamage,
+      mode,
+      crit,
+      context,
+      allChampions,
+    });
 
-    let afterDealLogs = [];
-
-    if (this._hasAnyHook(allChampions, HOOKS.AFTER_DEAL)) {
-      afterDealLogs =
-        this._applyAfterDealingPassive({
-          dmgSource: user,
-          skill,
-          dmgTarget: target,
-          damage: finalDamage,
-          mode,
-          crit,
-          context,
-          allChampions,
-        }) || [];
-    }
+    const afterDealLogs = this._applyAfterDealingPassive({
+      attacker: user,
+      skill,
+      target,
+      damage: finalDamage,
+      mode,
+      crit,
+      context,
+      allChampions,
+    });
 
     // =========================
     // 5️⃣ EFEITOS SECUNDÁRIOS

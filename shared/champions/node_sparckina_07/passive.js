@@ -26,8 +26,8 @@ export default {
     };
   },
 
-  afterDamageDealt({ dmgSource, dmgTarget, damage, context, owner }) {
-    if (owner !== dmgSource) return;
+  afterDamageDealt({ attacker, target, damage, context, self }) {
+    if (self !== attacker) return;
     if (damage <= 0) return;
 
     const roll = Math.random();
@@ -40,29 +40,24 @@ export default {
       return;
     }
 
-    const paralyzed = dmgTarget.applyKeyword(
-      "paralisado",
-      this.paralyzeDuration,
-      context,
-      {
-        sourceId: owner.id,
-        sourceName: owner.name,
-      },
-    );
+    const paralyzed = target.applyKeyword("paralisado", this.paralyzeDuration, context, {
+      sourceId: self.id,
+      sourceName: self.name,
+    });
 
     if (!paralyzed) {
       console.log(
-        `[PASSIVA — Energia Pulsante] ${formatChampionName(owner)} tentou aplicar "Paralisado" em ${formatChampionName(dmgTarget)}, mas falhou.`,
+        `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} tentou aplicar "Paralisado" em ${formatChampionName(target)}, mas falhou.`,
       );
       return;
     }
-
+    
     console.log(
-      `— [PASSIVA — Energia Pulsante] ${formatChampionName(owner)} aplicou "Paralisado" em ${formatChampionName(dmgTarget)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
+      `— [PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
     );
 
     return {
-      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(owner)} aplicou "Paralisado" em ${formatChampionName(dmgTarget)} por ${this.paralyzeDuration} turnos!`,
+      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(attacker)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos!`,
     };
   },
 };

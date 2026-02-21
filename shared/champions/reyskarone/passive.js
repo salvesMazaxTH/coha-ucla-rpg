@@ -24,12 +24,12 @@ export default {
     };
   },
 
-  beforeDamageDealt({ dmgSource, dmgTarget, damage, context, owner }) {
+  beforeDamageDealt({ attacker, target, damage, self, context }) {
     // alvo não tem tributo
-    if (!dmgTarget.hasKeyword?.("tributo")) return;
+    if (!target.hasKeyword?.("tributo")) return;
 
     // só aliados do Reyskarone
-    if (owner.team !== this.team) return;
+    if (attacker.team !== self.team) return;
 
     // não buffa inimigos nem neutros
     if (damage <= 0) return;
@@ -38,22 +38,22 @@ export default {
 
     return {
       damage: damage + bonus,
-      log: `🩸 Tributo amplificou o golpe de ${owner.name} (+${bonus} dano)`,
+      log: `🩸 Tributo amplificou o golpe de ${attacker.name} (+${bonus} dano)`,
     };
   },
 
-  afterDamageDealt({ dmgSource, dmgTarget, context, owner }) {
-    if (!dmgTarget.hasKeyword?.("tributo")) return;
+  afterDamageDealt({ attacker, target, context, self }) {
+    if (!target.hasKeyword?.("tributo")) return;
 
     // só aliados do Reyskarone
-    if (owner.team !== this.team) return;
+    if (attacker.team !== self.team) return;
 
     const heal = this.tributeHeal;
-    if (heal <= 0 || owner.HP >= owner.maxHP) return;
-    owner.heal(heal, context);
+    if (heal <= 0 || attacker.HP >= attacker.maxHP) return;
+    attacker.heal(heal, context);
 
     return {
-      log: `🩸 Tributo: ${owner.name} recuperou ${heal} HP.`,
+      log: `🩸 Tributo: ${attacker.name} recuperou ${heal} HP.`,
     };
   },
 };

@@ -10,10 +10,10 @@ export default {
 ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
 (Máx. +${this.maxHeal} por acerto)`;
   },
-  afterDamageTaken({ dmgSource, dmgTarget, damage, context, owner }) {
+  afterDamageTaken({ target, attacker, damage, self, context }) {
     if (damage <= 0) return;
 
-    if (owner !== dmgTarget) return;
+    if (self !== target) return;
 
     let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;
 
@@ -21,16 +21,16 @@ ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido 
 
     if (heal <= 0) return;
 
-    const before = owner.HP;
-    owner.heal(heal, context);
+    const before = self.HP;
+    self.heal(heal, context);
 
     console.log(
-      `[PASSIVA NAELTHOS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${owner.HP}`,
+      `[PASSIVA NAELTHOS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${self.HP}`,
     );
 
-    const ownerName = formatChampionName(owner);
+    const selfName = formatChampionName(self);
     return {
-      log: `[PASSIVA — Mar que Retorna] ${ownerName} recuperou ${heal} HP.`,
+      log: `[PASSIVA — Mar que Retorna] ${selfName} recuperou ${heal} HP.`,
     };
   },
 };

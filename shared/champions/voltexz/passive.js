@@ -9,51 +9,45 @@ export default {
     return `Sempre que Voltexz causar dano, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
 
-  afterDamageTaken({
-    dmgSource,
-    dmgTarget,
-    damage,
-    damageType,
-    context,
-    owner,
-  }) {
-    if (owner !== dmgTarget) return;
+  afterDamageTaken({ attacker, target, damage, damageType, context, self }) {
+    if (self !== attacker) return;
 
     let log = "";
+
     if (damage > 0) {
       const recoilDamage = editMode
         ? 999
         : Math.round((damage * (this.recoilPercent / 100)) / 5) * 5;
 
       if (recoilDamage > 0) {
-        owner.takeDamage(recoilDamage);
-        log += `⚡ ${owner.name} sofreu ${recoilDamage} de dano de recuo por Sobrecarga Instável!`;
+        self.takeDamage(recoilDamage);
+        log += `⚡ ${self.name} sofreu ${recoilDamage} de dano de recuo por Sobrecarga Instável!`;
       }
     }
 
-    const overloaded = dmgTarget.applyKeyword(
+    const overloaded = target.applyKeyword(
       "sobrecarga",
       this.sobrecargaDuration,
       context,
     );
 
     if (overloaded) {
-      log += `\n⚡ ${dmgTarget.name} foi marcado com "Sobrecarga"!`;
+      log += `\n⚡ ${target.name} foi marcado com "Sobrecarga"!`;
     }
 
     return { log };
   },
 
-  beforeDamageDealt({ dmgSource, crit, dmgTarget, damage, context, owner }) {
-    if (owner !== dmgSource) return;
+  beforeDamageDealt({ attacker, crit, target, damage, context, self }) {
+    if (self !== attacker) return;
 
-    if (!dmgTarget.hasKeyword?.("sobrecarga")) return;
+    if (!target.hasKeyword?.("sobrecarga")) return;
 
     const bonusDamage = Math.ceil((damage * this.sobrecargaBonusPercent) / 100);
 
-    dmgTarget.removeKeyword("sobrecarga");
+    target.removeKeyword("sobrecarga");
 
-    let log = `⚡ ACERTO ! ${dmgSource.name} explorou "Sobrecarga" de ${dmgTarget.name} (+${this.sobrecargaBonusPercent}% dano)!`;
+    let log = `⚡ ACERTO ! ${attacker.name} explorou "Sobrecarga" de ${target.name} (+${this.sobrecargaBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

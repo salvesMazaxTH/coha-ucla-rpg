@@ -12,10 +12,10 @@ export default {
         Se o alvo não tiver Afinidade: Terra, Água ou Fogo:
         → O alvo fica "Queimando".`;
   },
-  afterDamageDealt({ dmgSource, dmgTarget, damage, skill, context, owner }) {
+  afterDamageDealt({ attacker, target, damage, self, skill, context }) {
     console.log("Skill dentro da passiva:", skill);
 
-    if (owner.id !== dmgSource.id) return;
+    if (attacker.id !== self.id) return;
     if (!skill) return;
     if (skill.key !== "ataque_basico") return;
     if (damage <= 0) return;
@@ -25,8 +25,8 @@ export default {
     const result = CombatResolver.resolveDamage({
       mode: "direct",
       baseDamage: impactDamage,
-      user: dmgSource,
-      target: dmgTarget,
+      user: attacker,
+      target,
       skill: {
         key: "flaming_fists_bonus",
         name: this.name,
@@ -36,13 +36,13 @@ export default {
     });
 
     if (result.totalDamage > 0) {
-      dmgTarget.applyKeyword("queimando", owner.burnDuration, context, {
-        source: owner.name,
+      target.applyKeyword("queimando", self.burnDuration, context, {
+        source: self.name,
       });
     }
 
     return {
-      log: `${formatChampionName(owner)} aplica ${impactDamage} de dano térmico a ${formatChampionName(dmgTarget)} com ${owner.name}.`,
+      log: `${formatChampionName(attacker)} aplica ${impactDamage} de dano térmico a ${formatChampionName(target)} com ${self.name}.`,
     };
   },
 };

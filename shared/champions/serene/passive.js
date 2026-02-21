@@ -9,9 +9,9 @@ ela cura ${this.healPercent}% do seu HP máximo no início do próximo turno.`;
   },
 
   // Marca dano recebido no turno
-  afterDamageTaken({ dmgSource, dmgTarget, context, owner }) {
-    if (owner !== dmgTarget) return;
-    owner.runtime.sereneDamagedTurn = context.currentTurn;
+  afterDamageTaken({ target, attacker, context, self }) {
+    if (self !== target) return;
+    self.runtime.sereneDamagedTurn = context.currentTurn;
   },
 
   // Executa no início do turno

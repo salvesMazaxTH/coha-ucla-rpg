@@ -6,33 +6,31 @@ export default {
   description() {
     return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (aumenta a vida).`;
   },
-  afterDamageTaken({ dmgSource, dmgTarget, damage, context, owner }) {
-    if (owner !== dmgTarget) return;
+  afterDamageTaken({ target, damage, context, attacker, self }) {
+    if (self !== target) return;
     if (damage <= 0) return;
 
-    owner.runtime.tharoxInerciaStacks =
-      (owner.runtime.tharoxInerciaStacks || 0) + 1;
+    self.runtime.tharoxInerciaStacks =
+      (self.runtime.tharoxInerciaStacks || 0) + 1;
 
-    if (owner.runtime.tharoxInerciaStacks < this.stacksNeeded) {
+    if (self.runtime.tharoxInerciaStacks < this.stacksNeeded) {
       return {
-        log: `[Passiva - Massa Inamolgável] ${owner.name} acumulou Inércia (${owner.runtime.tharoxInerciaStacks}/${this.stacksNeeded}).`,
+        log: `[Passiva - Massa Inamolgável] ${self.name} acumulou Inércia (${self.runtime.tharoxInerciaStacks}/${this.stacksNeeded}).`,
       };
     }
 
-    owner.runtime.tharoxInerciaStacks = 0;
+    self.runtime.tharoxInerciaStacks = 0;
 
-    // Sempre que um campeão fortalece a si mesmo, SEMPRE passe sourceId: owner.id para context.registerBuff/modifyStat
-    context.buffSourceId = owner.id; // <- Garante que o buff é auto-originado
-    const statResult = owner.modifyStat({
+    const statResult = self.modifyStat({
       statName: "Defense",
       amount: this.defBonus,
       context,
       isPermanent: true,
     });
 
-    owner.modifyHP(this.hpBonus, { affectMax: true });
+    self.modifyHP(this.hpBonus, { affectMax: true });
 
-    let log = `[Passiva - Massa Inamolgável] ${owner.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${owner.Defense}, HP: ${owner.HP}/${owner.maxHP})`;
+    let log = `[Passiva - Massa Inamolgável] ${self.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${self.Defense}, HP: ${self.HP}/${self.maxHP})`;
 
     if (statResult?.log) {
       log += `\n${statResult.log}`;
