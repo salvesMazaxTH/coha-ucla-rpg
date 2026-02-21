@@ -19,17 +19,17 @@ export class Champion {
     this.Attack = stats.Attack;
     this.Defense = stats.Defense;
     this.Speed = stats.Speed;
-    this.Evasion = stats.Evasion;
-    this.Critical = stats.Critical;
-    this.LifeSteal = stats.LifeSteal;
+    this.Evasion = stats.Evasion ?? 0;
+    this.Critical = stats.Critical ?? 0;
+    this.LifeSteal = stats.LifeSteal ?? 0;
     // Base Stats (ESSENCIAL)
     this.baseHP = stats.HP;
     this.baseAttack = stats.Attack;
     this.baseDefense = stats.Defense;
     this.baseSpeed = stats.Speed;
-    this.baseEvasion = stats.Evasion;
-    this.baseCritical = stats.Critical;
-    this.baseLifeSteal = stats.LifeSteal;
+    this.baseEvasion = stats.Evasion ?? 0;
+    this.baseCritical = stats.Critical ?? 0;
+    this.baseLifeSteal = stats.LifeSteal ?? 0;
 
     this.resourceCap = 999;
 
@@ -826,12 +826,6 @@ export class Champion {
     // Função auxiliar: construir HTML do campeão
     const buildChampionHTML = ({ editMode = true } = {}) => {
       const resourceState = this.getResourceState();
-      const statRow = (label, className, value) => `
-        <div class="stat-row" data-stat="${className}" data-id="${this.id}">
-          <span class="stat-label">${label}:</span>
-          <span class="${className}">${value}</span>
-        </div>
-      `;
 
       const buildSkillsHTML = () => {
         return this.skills
@@ -885,13 +879,6 @@ export class Champion {
           <div class="mp-fill"></div>
           <div class="mp-segments"></div>
         </div>
-
-        ${statRow("Ataque", "Attack", this.Attack)}
-        ${statRow("Defesa", "Defense", this.Defense)}
-        ${statRow("Velocidade", "Speed", this.Speed)}
-        ${this.Evasion > 0 ? statRow("Evasão", "Evasion", this.Evasion + "%") : ""}
-        ${this.Critical > 0 ? statRow("Crítico", "Critical", this.Critical + "%") : ""}
-        ${statRow("Roubo&nbsp;de&nbsp;Vida", "LifeSteal", this.LifeSteal + "%")}
 
         <div class="skills-bar">
           ${skillsHTML}
@@ -988,40 +975,6 @@ export class Champion {
     }
 
     // =========================
-    // STATS
-    // =========================
-
-    const updateStat = (name) => {
-      const el = this.el.querySelector(`.${name}`);
-      if (!el) return;
-
-      const current = this[name];
-      const base = this[`base${name}`];
-
-      const formattedValue =
-        name === "Critical" || name === "Evasion" || name === "LifeSteal"
-          ? `${Number(current)}%`
-          : current;
-
-      el.textContent = formattedValue;
-
-      if (current > base) {
-        el.style.color = "#00ff66";
-      } else if (current < base) {
-        el.style.color = "#ff2a2a";
-      } else {
-        el.style.color = "#ffffff";
-      }
-    };
-
-    updateStat("Attack");
-    updateStat("Defense");
-    updateStat("Speed");
-    updateStat("Evasion");
-    updateStat("Critical");
-    updateStat("LifeSteal");
-
-    // =========================
     // RECURSO (MP)
     // =========================
 
@@ -1115,18 +1068,6 @@ export class Champion {
         }
       }
     });
-
-    // =========================
-    // LifeSteal visibility
-    // =========================
-
-    const lifeStealRow = this.el.querySelector(
-      `.stat-row[data-stat="LifeSteal"]`,
-    );
-
-    if (lifeStealRow) {
-      lifeStealRow.style.display = this.LifeSteal > 0 ? "" : "none";
-    }
 
     // =========================
     // Status indicators

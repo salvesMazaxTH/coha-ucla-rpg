@@ -19,12 +19,6 @@ import { formatChampionName } from "/shared/core/formatters.js";
 // ============================================================
 
 const TIMING = {
-  // Portrait animation class durations (from animations.css)
-  DAMAGE_ANIM: 950,
-  HEAL_ANIM: 975,
-  EVASION_ANIM: 550,
-  RESOURCE_ANIM: 850,
-
   // Float element lifetime (auto-removed after CSS animation)
   FLOAT_LIFETIME: 1900,
 
@@ -32,12 +26,12 @@ const TIMING = {
   DEATH_ANIM: 2000,
 
   // Combat dialog bubble
-  DIALOG_DISPLAY: 1500,
-  DIALOG_LEAVE: 250,
+  DIALOG_DISPLAY: 900, // Reduced from 1200
+  DIALOG_LEAVE: 120, // Reduced from 180
 
   // Sequencing gaps
-  BETWEEN_EFFECTS: 200,
-  BETWEEN_ACTIONS: 350,
+  BETWEEN_EFFECTS: 60, // Reduced from 120
+  BETWEEN_ACTIONS: 20, // Reduced from 60
 };
 
 // ============================================================
@@ -92,7 +86,7 @@ export function createCombatAnimationManager(deps) {
   const { onQueueEmpty } = deps;
   let processing = false;
   let lastLoggedTurn = null;
-  let currentPhase = "null"; 
+  let currentPhase = "null";
 
   // ============================================================
   //  QUEUE MANAGEMENT
@@ -155,7 +149,7 @@ export function createCombatAnimationManager(deps) {
   async function processCombatLog(text) {
     if (shouldShowLogDialog(text)) {
       const dialogText = stripHtmlTags(text);
-      await showDialog(dialogText);
+      await showBlockingDialog(dialogText);
     }
 
     appendToLog(text);
@@ -195,7 +189,7 @@ export function createCombatAnimationManager(deps) {
 
     // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
     if (action) {
-      currentPhase = "combat"
+      currentPhase = "combat";
       const userChampion = deps.activeChampions.get(action.userId);
       const userName = userChampion
         ? formatChampionName(userChampion)
@@ -218,14 +212,14 @@ export function createCombatAnimationManager(deps) {
         dialogText = `${userName} usou ${skillName}.`;
       }
 
-      await showDialog(dialogText, true);
+      await showBlockingDialog(dialogText, true);
+      await wait(TIMING.BETWEEN_ACTIONS); // Reduced gap after dialog
     }
 
     // 2. Animate each effect sequentially — deterministic order
     if (hasEffects) {
       for (let i = 0; i < effects.length; i++) {
         const effect = effects[i];
-
         await animateEffect(effect);
         if (i < effects.length - 1) {
           await wait(TIMING.BETWEEN_EFFECTS);
@@ -326,14 +320,14 @@ export function createCombatAnimationManager(deps) {
     if (isDot) {
       const champion = deps.activeChampions.get(targetId);
       const name = champion ? formatChampionName(champion) : "Alvo";
-      await showDialog(`${name} sofreu dano.`, true);
+      showNonBlockingDialog(`${name} sofreu dano.`, true);
     }
 
     // Show critical hit dialog if applicable
     if (isCritical) {
       const champion = deps.activeChampions.get(targetId);
       const name = champion ? formatChampionName(champion) : "Alvo";
-      await showDialog(
+      showNonBlockingDialog(
         `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
         true,
       );
@@ -358,9 +352,20 @@ export function createCombatAnimationManager(deps) {
     updateVisualHP(targetId, -amount);
 
     // Wait for the damage shake animation to complete
-    await wait(TIMING.DAMAGE_ANIM);
+    // 🔥 Espera a animação CSS terminar de verdade
+    await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.target === championEl) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      };
 
-    // Remove animation class (::after pseudo-element disappears)
+      championEl.addEventListener("animationend", handler);
+    });
+
+    await wait(TIMING.FLOAT_LIFETIME * 0.75);
+
     championEl.classList.remove("damage");
   }
 
@@ -380,7 +385,7 @@ export function createCombatAnimationManager(deps) {
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    await showDialog(`${name} recuperou vida.`, true);
+    showNonBlockingDialog(`${name} recuperou vida.`, true);
 
     // Apply .heal class to .champion element
     championEl.classList.add("heal");
@@ -393,8 +398,19 @@ export function createCombatAnimationManager(deps) {
     // Update HP bar incrementally
     updateVisualHP(targetId, amount);
 
-    // Wait for the heal glow animation to complete
-    await wait(TIMING.HEAL_ANIM);
+    // 🔥 Espera a animação CSS terminar de verdade
+    await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.target === championEl) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      };
+
+      championEl.addEventListener("animationend", handler);
+    });
+
+    await wait(TIMING.FLOAT_LIFETIME * 0.75);
 
     championEl.classList.remove("heal");
   }
@@ -413,15 +429,22 @@ export function createCombatAnimationManager(deps) {
 
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    await showDialog(
+    showNonBlockingDialog(
       `${name} tentou evadir o ataque... <b>E CONSEGUIU!</b>`,
       true,
     );
 
-    // Apply .evasion class to .champion element
-    championEl.classList.add("evasion");
+    // 🔥 Espera a animação CSS terminar de verdade
+    await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.target === championEl) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      };
 
-    await wait(TIMING.EVASION_ANIM);
+      championEl.addEventListener("animationend", handler);
+    });
 
     championEl.classList.remove("evasion");
   }
@@ -442,7 +465,7 @@ export function createCombatAnimationManager(deps) {
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    await showDialog(`${name} recebeu um escudo.`, true);
+    showNonBlockingDialog(`${name} recebeu um escudo.`, true);
 
     // Create floating shield number inside .portrait-wrapper
     if (portraitWrapper) {
@@ -479,8 +502,11 @@ export function createCombatAnimationManager(deps) {
       targetId,
       resourceType,
     );
+
     const label = resolvedType === "energy" ? "EN" : "MP";
     const sign = direction >= 0 ? "+" : "-";
+
+    let floatEl = null;
 
     if (portraitWrapper) {
       const floatClass =
@@ -490,7 +516,7 @@ export function createCombatAnimationManager(deps) {
             : "resource-float-mana"
           : "resource-float-spend";
 
-      createFloatElement(
+      floatEl = createFloatElement(
         portraitWrapper,
         `${sign}${normalizedAmount} ${label}`,
         "resource-float",
@@ -504,11 +530,10 @@ export function createCombatAnimationManager(deps) {
       resolvedType,
     );
 
-    console.log("START resource anim");
-
-    await wait(TIMING.RESOURCE_ANIM);
-
-    console.log("END resource anim");
+    // 🔥 Espera a animação do FLOAT terminar
+    if (floatEl) {
+      await wait(TIMING.FLOAT_LIFETIME * 0.75);
+    }
   }
 
   // ============================================================
@@ -519,7 +544,7 @@ export function createCombatAnimationManager(deps) {
     const { targetId } = effect;
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    await showDialog(`${name} está com <b>Imunidade Absoluta!</b>`, true);
+    showNonBlockingDialog(`${name} está com <b>Imunidade Absoluta!</b>`, true);
   }
 
   // ============================================================
@@ -530,7 +555,7 @@ export function createCombatAnimationManager(deps) {
     const { targetId } = effect;
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    await showDialog(`O escudo de ${name} bloqueou o ataque!`, true);
+    showNonBlockingDialog(`O escudo de ${name} bloqueou o ataque!`, true);
   }
 
   // ============================================================
@@ -550,13 +575,16 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
-    let text = `${resolvedTargetName} foi fortalecido.`;
-    if (sourceId && targetId && sourceId === targetId) {
+    // Universal: se não há sourceId, ou sourceId === targetId, é auto-buff
+    let text;
+    if (!sourceId || sourceId === targetId) {
       text = `${resolvedTargetName} fortaleceu-se.`;
     } else if (resolvedSourceName) {
       text = `${resolvedTargetName} foi fortalecido por ${resolvedSourceName}.`;
+    } else {
+      text = `${resolvedTargetName} foi fortalecido.`;
     }
-    await showDialog(text, true);
+    showNonBlockingDialog(text, true);
 
     if (championEl) {
       championEl.classList.add("buff");
@@ -566,11 +594,19 @@ export function createCombatAnimationManager(deps) {
       createFloatElement(portraitWrapper, "+BUFF", "buff-float");
     }
 
-    await wait(TIMING.HEAL_ANIM);
+    // 🔥 Espera a animação CSS terminar de verdade
+    await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.target === championEl) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      };
 
-    if (championEl) {
-      championEl.classList.remove("buff");
-    }
+      championEl.addEventListener("animationend", handler);
+    });
+
+    championEl.classList.remove("buff");
   }
 
   // ============================================================
@@ -585,7 +621,7 @@ export function createCombatAnimationManager(deps) {
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
     // Show taunt dialog
-    await showDialog(
+    showNonBlockingDialog(
       `${name} foi <b>provocado</b> e teve seu alvo redirecionado!`,
       true,
     );
@@ -597,11 +633,19 @@ export function createCombatAnimationManager(deps) {
       createFloatElement(portraitWrapper, "PROVOCAÇÃO", "taunt-float");
     }
 
-    await wait(TIMING.HEAL_ANIM);
+    // 🔥 Espera a animação CSS terminar de verdade
+    await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.target === championEl) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      };
 
-    if (championEl) {
-      championEl.classList.remove("taunt");
-    }
+      championEl.addEventListener("animationend", handler);
+    });
+
+    championEl.classList.remove("taunt");
   }
   // ============================================================
 
@@ -805,32 +849,51 @@ export function createCombatAnimationManager(deps) {
   //    .combat-dialog.leaving  → fading out (triggers dialogOut)
   // ============================================================
 
-  async function showDialog(text, isHtml = false) {
+  async function showBlockingDialog(text, isHtml = false) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
 
-    // Set text content (HTML or plain)
     if (isHtml) {
       dialogText.innerHTML = text;
     } else {
       dialogText.textContent = text;
     }
 
-    // Show dialog (triggers CSS dialogIn animation on .combat-dialog-bubble)
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");
 
-    // Display duration
     await wait(TIMING.DIALOG_DISPLAY);
 
-    // Fade out (triggers CSS dialogOut animation)
     dialog.classList.add("leaving");
     await wait(TIMING.DIALOG_LEAVE);
 
-    // Hide completely
     dialog.classList.remove("active", "leaving");
     dialog.classList.add("hidden");
+  }
+
+  function showNonBlockingDialog(text, isHtml = false) {
+    const dialog = deps.combatDialog;
+    const dialogText = deps.combatDialogText;
+    if (!dialog || !dialogText) return;
+
+    if (isHtml) {
+      dialogText.innerHTML = text;
+    } else {
+      dialogText.textContent = text;
+    }
+
+    dialog.classList.remove("hidden", "leaving");
+    dialog.classList.add("active");
+
+    setTimeout(() => {
+      dialog.classList.add("leaving");
+
+      setTimeout(() => {
+        dialog.classList.remove("active", "leaving");
+        dialog.classList.add("hidden");
+      }, TIMING.DIALOG_LEAVE);
+    }, TIMING.DIALOG_DISPLAY);
   }
 
   // ============================================================

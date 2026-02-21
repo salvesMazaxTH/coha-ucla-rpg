@@ -1,4 +1,123 @@
 // ============================================================
+//  OVERLAY DE SKILL (HOVER/TOUCH NOS BOTÕES DE SKILL)
+// ============================================================
+
+let skillOverlay = null;
+let skillOverlayTimeout = null;
+
+function showSkillOverlay(button, skill, champion) {
+  removeSkillOverlay();
+  if (!button || !skill) return;
+
+  // Overlay element
+  const overlay = document.createElement("div");
+  overlay.className = "skill-hover-overlay";
+
+  // Helper: escape HTML
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  // Helper: paragraphs
+  const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
+
+  // Cost/cooldown
+  let cost = champion?.getSkillCost ? champion.getSkillCost(skill) : skill.cost;
+  let costType =
+    skill.energyCost !== undefined
+      ? "EN"
+      : skill.manaCost !== undefined
+        ? "MP"
+        : "-";
+  if (cost === undefined) cost = "-";
+  let cooldown = skill.cooldown ?? "-";
+
+  overlay.innerHTML = `
+    <div class="skill-overlay-content">
+      <div class="skill-overlay-title">${escapeHtml(skill.name || "Habilidade")}</div>
+      <div class="skill-overlay-desc">${toParagraphs(typeof skill.description === "function" ? skill.description.call(skill) : skill.description || "")}</div>
+      <div class="skill-overlay-meta">
+        <span class="skill-overlay-cost"><b>Custo:</b> ${cost} ${costType}</span>
+        <span class="skill-overlay-cooldown"><b>CD:</b> ${cooldown}</span>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  skillOverlay = overlay;
+
+  // Position overlay near button (above or below depending on space)
+  const rect = button.getBoundingClientRect();
+  const overlayRect = overlay.getBoundingClientRect();
+  let top = rect.bottom + 8;
+  let left = rect.left + rect.width / 2 - overlayRect.width / 2;
+  // If not enough space below, show above
+  if (top + overlayRect.height > window.innerHeight) {
+    top = rect.top - overlayRect.height - 8;
+  }
+  // Clamp left
+  left = Math.max(8, Math.min(left, window.innerWidth - overlayRect.width - 8));
+  overlay.style.position = "fixed";
+  overlay.style.top = `${Math.max(8, top)}px`;
+  overlay.style.left = `${left}px`;
+  overlay.style.zIndex = 15000;
+
+  // Fade in
+  requestAnimationFrame(() => overlay.classList.add("active"));
+}
+
+function removeSkillOverlay() {
+  if (skillOverlay) {
+    skillOverlay.classList.remove("active");
+    const toRemove = skillOverlay;
+    skillOverlay = null;
+    setTimeout(() => toRemove.remove(), 150);
+  }
+  if (skillOverlayTimeout) {
+    clearTimeout(skillOverlayTimeout);
+    skillOverlayTimeout = null;
+  }
+}
+
+// Attach overlay events to all skill buttons (call after champions rendered)
+function bindSkillOverlayEvents() {
+  document.querySelectorAll(".skill-btn").forEach((button) => {
+    // Get context
+    const userId = button.dataset.championId;
+    const skillKey = button.dataset.skillKey;
+    const user = activeChampions.get(userId);
+    if (!user) return;
+    const skill = user.skills.find((s) => s.key === skillKey);
+    if (!skill) return;
+
+    // Desktop: mouseenter/mouseleave
+    button.addEventListener("mouseenter", (e) => {
+      showSkillOverlay(button, skill, user);
+    });
+    button.addEventListener("mouseleave", (e) => {
+      removeSkillOverlay();
+    });
+
+    // Mobile: touchstart shows, touchend/cancel removes
+    button.addEventListener("touchstart", (e) => {
+      showSkillOverlay(button, skill, user);
+      // Remove after 2.5s if not touched again
+      if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
+      skillOverlayTimeout = setTimeout(removeSkillOverlay, 2500);
+    });
+    button.addEventListener("touchend", removeSkillOverlay);
+    button.addEventListener("touchcancel", removeSkillOverlay);
+  });
+}
+// After rendering champions, bind skill overlay events
+// (Call this after all .skill-btn are in DOM)
+// Example: after updating champion UI or at end of turn
+setTimeout(bindSkillOverlayEvents, 500); // Initial bind (adjust as needed)
+// ============================================================
 //  IMPORTS
 // ============================================================
 
@@ -686,10 +805,170 @@ function createNewChampion(championData) {
     onSkillClick: handleSkillUsage,
     onDelete: deleteChampion,
     onPortraitClick: handlePortraitClick,
+    // Adiciona overlay de hover/touch no retrato
+    onPortraitHover: (champ) => showQuickStatsOverlay(champ),
+    onPortraitHoverOut: hideQuickStatsOverlay,
     editMode: editMode.enabled,
   });
 
+  // Adiciona listeners para hover/touch no retrato
+  setTimeout(() => {
+    const el = teamContainer.querySelector(
+      `.champion[data-champion-id='${champion.id}'] .portrait`,
+    );
+    if (el) {
+      // Desktop: hover
+      el.addEventListener("mouseenter", (e) => {
+        if (window.ontouchstart === undefined) showQuickStatsOverlay(champion);
+      });
+      el.addEventListener("mouseleave", (e) => {
+        if (window.ontouchstart === undefined) hideQuickStatsOverlay();
+      });
+      // Mobile: touch
+      el.addEventListener(
+        "touchstart",
+        (e) => {
+          showQuickStatsOverlay(champion);
+          e.stopPropagation();
+        },
+        { passive: true },
+      );
+      el.addEventListener(
+        "touchend",
+        (e) => {
+          hideQuickStatsOverlay();
+          e.stopPropagation();
+        },
+        { passive: true },
+      );
+    }
+  }, 0);
+
   return champion;
+}
+
+/*   */
+// Overlay de stats rápidos (hover/touch no retrato)
+let quickStatsOverlay = null;
+
+function showQuickStatsOverlay(champion) {
+  hideQuickStatsOverlay();
+  if (!champion) return;
+
+  quickStatsOverlay = document.createElement("div");
+  quickStatsOverlay.className = "quick-stats-overlay";
+  quickStatsOverlay.style.position = "fixed";
+  quickStatsOverlay.style.zIndex = 13000;
+  quickStatsOverlay.style.pointerEvents = "none";
+
+  const statRows = [];
+
+  // HP (texto)
+  statRows.push({
+    label: "HP",
+    value: `${champion.HP}/${champion.maxHP}`,
+  });
+
+  // Numéricos baseados em comparação
+  statRows.push({
+    label: "Ataque",
+    value: champion.Attack,
+    base: champion.baseAttack,
+  });
+
+  statRows.push({
+    label: "Defesa",
+    value: champion.Defense,
+    base: champion.baseDefense,
+  });
+
+  statRows.push({
+    label: "Velocidade",
+    value: champion.Speed,
+    base: champion.baseSpeed,
+  });
+
+  statRows.push({
+    label: "Evasão",
+    value: champion.Evasion ?? 0,
+    base: champion.baseEvasion,
+    percent: true,
+  });
+
+  statRows.push({
+    label: "Crítico",
+    value: champion.Critical ?? 0,
+    base: champion.baseCritical,
+    percent: true,
+  });
+
+  statRows.push({
+    label: "Roubo de Vida",
+    value: champion.LifeSteal ?? 0,
+    base: champion.baseLifeSteal,
+    percent: true,
+  });
+
+  let html = `<div class='quick-stats-content'>`;
+  html += `<div class='quick-stats-title'>${champion.name}</div>`;
+  html += `<div class='quick-stats-list'>`;
+
+  for (const row of statRows) {
+    let color = "#fff";
+    let displayValue = row.value;
+
+    if (typeof row.base === "number" && typeof row.value === "number") {
+      if (row.value > row.base) color = "#00ff66";
+      else if (row.value < row.base) color = "#ff2a2a";
+
+      if (row.percent) {
+        displayValue = `${row.value}%`;
+      }
+    }
+
+    html += `
+      <div class='quick-stat-row'>
+        <span class='quick-stat-label'>${row.label}:</span>
+        <span class='quick-stat-value' style='color:${color}'>
+          ${displayValue}
+        </span>
+      </div>
+    `;
+  }
+
+  html += `</div></div>`;
+
+  quickStatsOverlay.innerHTML = html;
+  document.body.appendChild(quickStatsOverlay);
+
+  const portrait = document.querySelector(
+    `.champion[data-champion-id='${champion.id}'] .portrait`,
+  );
+
+  if (portrait) {
+    const rect = portrait.getBoundingClientRect();
+    const overlayRect = quickStatsOverlay.getBoundingClientRect();
+
+    let top = rect.top - overlayRect.height - 8;
+    if (top < 0) top = rect.bottom + 8;
+
+    let left = rect.left + (rect.width - overlayRect.width) / 2;
+    if (left < 8) left = 8;
+
+    if (left + overlayRect.width > window.innerWidth) {
+      left = window.innerWidth - overlayRect.width - 8;
+    }
+
+    quickStatsOverlay.style.top = `${top}px`;
+    quickStatsOverlay.style.left = `${left}px`;
+  }
+}
+
+function hideQuickStatsOverlay() {
+  if (quickStatsOverlay) {
+    quickStatsOverlay.remove();
+    quickStatsOverlay = null;
+  }
 }
 
 /** Remove um campeão do time local (edit mode / debug). */

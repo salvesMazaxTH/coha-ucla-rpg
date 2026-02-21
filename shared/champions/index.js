@@ -9,9 +9,10 @@ import reyskarone from "./reyskarone/index.js";
 import gryskarchu from "./gryskarchu/index.js";
 import node_sparckina_07 from "./node_sparckina_07/index.js";
 import kai from "./kai/index.js";
-import laisaelis from "./laisaelis/index.js";
+import barao_estrondoso from "./barao_estrondoso/index.js";
+/* import laisaelis from "./laisaelis/index.js";
 import laiserisa from "./laiserisa/index.js";
-import laisaelis_laiserisa from "./laisaelis_laiserisa/index.js";
+import laisaelis_laiserisa from "./laisaelis_laiserisa/index.js"; */
 
 const championDB = {
   ralia,
@@ -25,9 +26,10 @@ const championDB = {
   gryskarchu,
   node_sparckina_07,
   kai,
-  laisaelis,
+  /* laisaelis,
   laiserisa,
-  laisaelis_laiserisa,
+  laisaelis_laiserisa, */
+  barao_estrondoso,
 };
 
 export default championDB;

@@ -1,3 +1,105 @@
+/* Overlay de skill (hover/touch nos botões de skill) */
+.skill-hover-overlay {
+  position: fixed;
+  background: linear-gradient(180deg, #181f1a 90%, #0a0a0a 100%);
+  border: 2px solid #00bfff;
+  border-radius: 12px;
+  box-shadow: 0 0 18px rgba(0, 191, 255, 0.22);
+  padding: 14px 20px 12px 20px;
+  min-width: 180px;
+  max-width: 320px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 15000;
+  color: #e6fff2;
+  font-size: 1em;
+}
+.skill-hover-overlay.active {
+  opacity: 0.98;
+  pointer-events: auto;
+}
+.skill-overlay-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skill-overlay-title {
+  font-size: 1.08em;
+  font-weight: bold;
+  color: #00bfff;
+  margin-bottom: 4px;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(0, 191, 255, 0.3);
+}
+.skill-overlay-desc {
+  font-size: 0.98em;
+  color: #e6fff2;
+  margin-bottom: 6px;
+}
+.skill-overlay-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95em;
+  color: #b3e6ff;
+  gap: 12px;
+}
+.skill-overlay-cost b,
+.skill-overlay-cooldown b {
+  color: #00bfff;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .skill-hover-overlay {
+    min-width: 120px;
+    max-width: 95vw;
+    font-size: 0.98em;
+    padding: 10px 8px 10px 8px;
+  }
+}
+/* Overlay de stats rápidos (hover/touch no retrato) */
+.quick-stats-overlay {
+  background: linear-gradient(180deg, #181f1a 90%, #0a0a0a 100%);
+  border: 2px solid #00ff99;
+  border-radius: 14px;
+  box-shadow: 0 0 18px rgba(0, 255, 150, 0.25);
+  padding: 14px 22px 12px 22px;
+  min-width: 180px;
+  max-width: 240px;
+  pointer-events: none;
+  opacity: 0.98;
+  transition: opacity 0.15s;
+}
+.quick-stats-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.quick-stats-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #00ff99;
+  margin-bottom: 6px;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(0, 255, 150, 0.3);
+}
+.quick-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.quick-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.98em;
+}
+.quick-stat-label {
+  color: #e6fff2;
+  font-weight: 500;
+}
+.quick-stat-value {
+  font-weight: bold;
+}
 /* Cores de time para nomes em balão de diálogo de combate */
 .combat-dialog-bubble .team-1 {
   color: #00bfff !important;
