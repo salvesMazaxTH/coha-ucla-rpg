@@ -13,7 +13,7 @@ const vaelSkills = [
   {
     key: "corte_instantaneo",
     name: "Corte Instantâneo",
-    bf: 75,
+    bf: 65,
     contact: true,
     energyCost: 120,
     priority: 0,
