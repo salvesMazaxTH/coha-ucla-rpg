@@ -4,7 +4,7 @@ export default {
   HP: 325,
   Attack: 230,
   Defense: 105,
-  Speed: 75,
+  Speed: 80,
 
   Evasion: 5,
   energy: 320,
