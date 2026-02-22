@@ -205,6 +205,8 @@ const sereneSkills = [
             };
           },
         };
+        // Remove quaisquer efeitos anteriores do mesmo grupo para evitar acúmulos indesejados
+        ally.runtime.hookEffects = ally.runtime.hookEffects.filter((e) => e.group !== "epifania");
 
         ally.runtime.hookEffects.push(effect);
       });
