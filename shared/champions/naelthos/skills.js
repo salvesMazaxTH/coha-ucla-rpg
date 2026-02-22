@@ -23,13 +23,13 @@ const naelthosSkills = [
          Contato: ${this.contact ? "✅" : "❌"}
          Inimigo alvo sofre:
          Dano Bruto = BF ${this.bf}
-         Aliado ativo recupera:
+         Aliado ativo mais ferido recupera:
          Cura = ${this.healAmount} de HP`;
     },
-    targetSpec: ["enemy", "ally"],
+    targetSpec: ["enemy"],
 
     execute({ user, targets, context = {} }) {
-      const { enemy, ally } = targets;
+      const { enemy } = targets;
 
       const baseDamage = (user.Attack * this.bf) / 100;
       const healAmount = this.healAmount;
@@ -51,10 +51,14 @@ const naelthosSkills = [
       let allyLog = "";
       let statLog = "";
 
+      const moreInjuredAlly = context.allChampions
+        .filter((champ) => champ.team === user.team && champ.HP > 0)
+        .sort((a, b) => a.HP / a.maxHP - b.HP / b.maxHP)[0];
+      const ally = moreInjuredAlly || null;
+
       // 💧 Cura no aliado (se existir)
       if (ally) {
         ally.heal(healAmount, context);
-        ally.updateUI();
         const userName = formatChampionName(user);
         const allyName = formatChampionName(ally);
         allyLog = `${userName} cura ${allyName} em ${healAmount} de HP. HP final de ${allyName}: ${ally.HP}/${ally.maxHP}`;
@@ -67,7 +71,7 @@ const naelthosSkills = [
         log: `${allyLog} ${statLog}`,
       });
 
-      return logs;
+      return { logs };
     },
   },
 

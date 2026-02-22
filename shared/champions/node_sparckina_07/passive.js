@@ -26,7 +26,7 @@ export default {
     };
   },
 
-  afterDamageDealt({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (owner?.id !== dmgSrc?.id) return;
     if (damage <= 0) return;
 

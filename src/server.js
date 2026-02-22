@@ -555,6 +555,10 @@ function resolveSkillTargets(user, skill, action) {
  * Retorna um array de efeitos que o cliente animará sequencialmente.
  */
 function extractEffectsFromResult(result) {
+  if (result?.extraEffects?.some((e) => e.type === "dialog")) {
+    console.log("🟡 EXTRACT → recebeu dialog:", result.extraEffects);
+  }
+
   const effects = [];
   if (!result || typeof result !== "object") return effects;
 
@@ -570,7 +574,6 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-    return effects;
   }
 
   // Imunidade absoluta — totalDamage 0, log menciona imunidade
@@ -586,7 +589,6 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-    return effects;
   }
 
   // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
@@ -602,7 +604,6 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-    return effects;
   }
 
   // Dano
@@ -628,6 +629,20 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.heal.targetId),
       sourceName: getNameById(result.heal.sourceId || result.userId),
     });
+  }
+
+  if (result.extraEffects?.length) {
+    const dialogEffects = result.extraEffects.filter(
+      (e) => e.type === "dialog",
+    );
+    if (dialogEffects.length) {
+      console.log("🟢 RD → dialog em extraEffects:", dialogEffects);
+    }
+    effects.push(...result.extraEffects);
+  }
+
+  if (effects.some((e) => e.type === "dialog")) {
+    console.log("🟡 EXTRACT → dialog entrou nos effects finais:", effects);
   }
 
   return effects;
@@ -841,6 +856,9 @@ function snapshotChampions(ids) {
  */
 function emitCombatAction(envelope) {
   if (!envelope) return;
+  if (envelope.effects?.some((e) => e.type === "dialog")) {
+    console.log("🔴 ENVELOPE → dialog presente:", envelope.effects);
+  }
   io.emit("combatAction", envelope);
 }
 
@@ -882,6 +900,15 @@ function performSkillExecution(
   // 🔹 6. Normalizar resultado
   const results = Array.isArray(result) ? result : result ? [result] : [];
 
+  for (const r of results) {
+    if (r?.extraEffects?.some((e) => e.type === "dialog")) {
+      console.log(
+        "🔵 SERVER → dialog recebido do resolveDamage:",
+        r.extraEffects,
+      );
+    }
+  }
+
   // 🔹 7. Emitir envelopes
   emitCombatEnvelopesFromResults({
     results,
@@ -912,7 +939,9 @@ function registerSkillUsageInTurn(user, skill, targets) {
     targetIds: Object.fromEntries(
       Object.entries(targets).map(([k, v]) => [k, v.id]),
     ),
-    targetNames: Object.values(targets).map((t) => t.name),
+    targetNames: Object.fromEntries(
+      Object.entries(targets).map(([k, v]) => [k, v.name]),
+    ),
   });
 
   const turnData = ensureTurnEntry();
@@ -1010,7 +1039,7 @@ function createBaseContext({ sourceId = null } = {}) {
       });
       // 🔥 Dispara hook de cura
       emitCombatEvent(
-        "onHeal",
+        "onAfterHealing",
         {
           healSrc: sourceChamp || null,
           healTarget: target,

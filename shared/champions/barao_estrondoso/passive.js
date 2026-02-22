@@ -22,7 +22,7 @@ export default {
   },
 
   // 🔴 Recebe 10% de dano adicional (mínimo +10)
-  beforeDamageTaken({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     const bonus = Math.max(10, Math.floor(damage * 0.1));
@@ -34,7 +34,7 @@ export default {
   },
 
   // 🔴 Armazena dano recebido (30% ou 40% se blindado)
-  afterDamageTaken({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (owner?.id !== dmgReceiver?.id) return;
     if (!damage || damage <= 0) return;
 
@@ -50,7 +50,7 @@ export default {
   },
 
   // 🔴 Após usar qualquer habilidade (exceto ataque básico), fica Atordoado
-  afterDamageDealt({ dmgSrc, dmgReceiver, owner, damage, context, skill }) {
+  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context, skill }) {
     if (!skill?.key) return;
 
     // Ataque básico não causa stun

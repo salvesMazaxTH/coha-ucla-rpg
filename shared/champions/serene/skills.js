@@ -151,7 +151,7 @@ const sereneSkills = [
           group: "epifania",
           ownerId,
 
-          beforeDamageTaken({ dmgSrc, dmgReceiver, self, damage, context }) {
+          onBeforeDmgTaking({ dmgSrc, dmgReceiver, self, damage, context }) {
             console.log("HOOK DE ANTES DE TOMAR DANO DA EPIFANIA DISPAROU!!");
 
             console.log("Damage recebido:", {
@@ -177,6 +177,14 @@ const sereneSkills = [
               damage: 0,
               ignoreMinimumFloor: true,
               log: `${formatChampionName(self)} recusou a morte e tornou-se imune, permanecendo com ${lockedHP} de HP!`,
+              effects: [
+                {
+                  type: "dialog",
+                  message: `${formatChampionName(self)} recusou a morte e tornou-se imune!`,
+                  blocking: true,
+                  html: true,
+                },
+              ],
             };
           },
 
@@ -206,7 +214,9 @@ const sereneSkills = [
           },
         };
         // Remove quaisquer efeitos anteriores do mesmo grupo para evitar acúmulos indesejados
-        ally.runtime.hookEffects = ally.runtime.hookEffects.filter((e) => e.group !== "epifania");
+        ally.runtime.hookEffects = ally.runtime.hookEffects.filter(
+          (e) => e.group !== "epifania",
+        );
 
         ally.runtime.hookEffects.push(effect);
       });

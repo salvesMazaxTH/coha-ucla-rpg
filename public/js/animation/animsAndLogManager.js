@@ -190,30 +190,49 @@ export function createCombatAnimationManager(deps) {
     // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
     if (action) {
       currentPhase = "combat";
-      const userChampion = deps.activeChampions.get(action.userId);
-      const userName = userChampion
-        ? formatChampionName(userChampion)
-        : action.userName || "Alguém";
-      const targetChampion = action.targetId
-        ? deps.activeChampions.get(action.targetId)
-        : null;
-      const targetName = targetChampion
-        ? formatChampionName(targetChampion)
-        : action.targetName || null;
-      const skillName = action.skillName
-        ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
-        : "<b>uma habilidade</b>";
 
-      // Se self, não mostra 'em X'
-      let dialogText;
-      if (targetName && action.userId !== action.targetId) {
-        dialogText = `${userName} usou ${skillName} em ${targetName}.`;
-      } else {
-        dialogText = `${userName} usou ${skillName}.`;
+      // 1. Se houver dialog customizado
+      if (action.customDialog?.message) {
+        const { message, html = false, blocking = true } = action.customDialog;
+
+        if (blocking) {
+          await showBlockingDialog(message, html);
+        } else {
+          showNonBlockingDialog(message, html);
+        }
+
+        await wait(TIMING.BETWEEN_ACTIONS);
       }
 
-      await showBlockingDialog(dialogText, true);
-      await wait(TIMING.BETWEEN_ACTIONS); // Reduced gap after dialog
+      // 2. Se NÃO suprimir o padrão
+      else if (!action.suppressDefaultDialog) {
+        const userChampion = deps.activeChampions.get(action.userId);
+        const userName = userChampion
+          ? formatChampionName(userChampion)
+          : action.userName || "Alguém";
+
+        const targetChampion = action.targetId
+          ? deps.activeChampions.get(action.targetId)
+          : null;
+
+        const targetName = targetChampion
+          ? formatChampionName(targetChampion)
+          : action.targetName || null;
+
+        const skillName = action.skillName
+          ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
+          : "<b>uma habilidade</b>";
+
+        let dialogText;
+        if (targetName && action.userId !== action.targetId) {
+          dialogText = `${userName} usou ${skillName} em ${targetName}.`;
+        } else {
+          dialogText = `${userName} usou ${skillName}.`;
+        }
+
+        await showBlockingDialog(dialogText, true);
+        await wait(TIMING.BETWEEN_ACTIONS);
+      }
     }
 
     // 2. Animate each effect sequentially — deterministic order
@@ -270,10 +289,6 @@ export function createCombatAnimationManager(deps) {
         await animateResourceSpend(effect);
         break;
 
-      case "gameOver":
-        await handleGameOver(effect);
-        break;
-
       case "immune":
         await animateImmune(effect);
         break;
@@ -288,6 +303,22 @@ export function createCombatAnimationManager(deps) {
 
       case "tauntRedirection":
         await animateTauntRedirection(effect);
+        break;
+
+      case "dialog": {
+        const { message, blocking = true, html = false } = effect;
+
+        if (blocking) {
+          await showBlockingDialog(message, html);
+        } else {
+          showNonBlockingDialog(message, html);
+        }
+
+        break;
+      }
+      
+      case "gameOver":
+        await handleGameOver(effect);
         break;
 
       default:

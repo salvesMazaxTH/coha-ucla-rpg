@@ -9,7 +9,7 @@ export default {
     return `Sempre que um aliado curar por Roubo de Vida, Reyskarone recupera ${this.lifeStealHealPercent}% desse valor.`;
   },
 
-  onLifeSteal({ source, amount, owner, context }) {
+  onAfterLifeSteal({ source, amount, owner, context }) {
     // ✔ Só aliados, ignorar o próprio Reyskarone
     if (source.team !== owner.team || source === owner) return;
 

@@ -61,7 +61,14 @@ const kaiSkills = [
         expiresAt: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE VIA QUEUE
-        afterDamageTaken({ dmgSrc, dmgReceiver, skill, damage, owner, context }) {
+        onAfterDmgTaking({
+          dmgSrc,
+          dmgReceiver,
+          skill,
+          damage,
+          owner,
+          context,
+        }) {
           if (dmgReceiver !== owner) return;
           if (!skill?.contact) return;
           if (damage <= 0) return;
@@ -96,7 +103,7 @@ const kaiSkills = [
         },
 
         // 🔥 ATIVA BRASA VIVA
-        afterDamageDealt({ dmgSrc, dmgReceiver, owner, damage, context }) {
+        onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
           if (dmgSrc !== owner) return;
           if (damage <= 0) return;
 
@@ -110,7 +117,7 @@ const kaiSkills = [
             key: "brasa_viva",
             expiresAt: context.currentTurn + 2,
 
-            beforeDamageDealt({ dmgSrc, owner }) {
+            onBeforeDmgDealing({ dmgSrc, owner }) {
               if (dmgSrc !== owner) return;
 
               return {
@@ -119,11 +126,13 @@ const kaiSkills = [
               };
             },
 
-            afterDamageDealt({ dmgSrc, dmgReceiver, owner, context }) {
+            onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, context }) {
               if (dmgSrc !== owner) return;
               if (!dmgReceiver?.applyKeyword) return;
 
-              dmgReceiver.applyKeyword("queimando", 2, context, { source: owner });
+              dmgReceiver.applyKeyword("queimando", 2, context, {
+                source: owner,
+              });
 
               return {
                 log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,

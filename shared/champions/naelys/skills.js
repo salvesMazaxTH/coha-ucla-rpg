@@ -82,7 +82,7 @@ Naelys assume uma postura marítima até o início do próximo turno:
         expiresAt: context.currentTurn + 2,
         lastTriggerTurn: null,
 
-        afterDamageTaken({ attacker, target, damage, skill, self, context }) {
+        onAfterDmgTaking({ attacker, target, damage, skill, self, context }) {
           if (target !== self) return;
           if (damage <= 0) return;
 

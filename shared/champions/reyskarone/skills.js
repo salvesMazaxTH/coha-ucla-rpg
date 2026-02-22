@@ -66,7 +66,7 @@ const reyskaroneSkills = [
         key: "tributo_de_sangue_effect",
         expiresAt: context.currentTurn + this.tributeDuration,
 
-        beforeDamageDealt({ dmgSrc, dmgReceiver, damage, owner, context }) {
+        onBeforeDmgDealing({ dmgSrc, dmgReceiver, damage, owner, context }) {
           if (dmgReceiver !== enemy) return;
           if (dmgSrc.team !== owner.team) return;
           if (damage <= 0) return;
@@ -82,7 +82,7 @@ const reyskaroneSkills = [
           };
         },
 
-        afterDamageDealt({ dmgSrc, dmgReceiver, context, owner }) {
+        onAfterDmgDealing({ dmgSrc, dmgReceiver, context, owner }) {
           if (dmgReceiver !== enemy) return;
           if (dmgSrc.team !== owner.team) return;
 
@@ -104,7 +104,7 @@ const reyskaroneSkills = [
           }
         },
       };
-      
+
       user.runtime.hookEffects.push(effect);
 
       return result;

@@ -414,7 +414,7 @@ export const CombatResolver = {
     allChampions,
   }) {
     const results = emitCombatEvent(
-      "beforeDamageTaken",
+      "onBeforeDmgTaking",
       {
         mode,
         damage,
@@ -429,20 +429,51 @@ export const CombatResolver = {
       allChampions,
     );
 
+    const effects = [];
     const logs = [];
 
     for (const r of results) {
-      if (r.damage !== undefined) damage = r.damage;
+      if (!r) continue;
 
-      if (r.crit !== undefined) crit = r.crit;
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
 
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
       if (r.log) {
         if (Array.isArray(r.log)) logs.push(...r.log);
         else logs.push(r.log);
       }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
     }
 
-    return { damage, crit, logs };
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
   },
 
   _applyBeforeDealingPassive({
@@ -456,7 +487,7 @@ export const CombatResolver = {
     allChampions,
   }) {
     const results = emitCombatEvent(
-      "beforeDamageDealt",
+      "onBeforeDmgDealing",
       {
         mode,
         damage,
@@ -472,19 +503,50 @@ export const CombatResolver = {
     );
 
     const logs = [];
+    const effects = [];
 
     for (const r of results) {
-      if (r.damage !== undefined) damage = r.damage;
+      if (!r) continue;
 
-      if (r.crit !== undefined) crit = r.crit;
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
 
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
       if (r.log) {
         if (Array.isArray(r.log)) logs.push(...r.log);
         else logs.push(r.log);
       }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
     }
 
-    return { damage, crit, logs };
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
   },
 
   _applyAfterTakingPassive({
@@ -510,7 +572,7 @@ export const CombatResolver = {
     });
 
     const results = emitCombatEvent(
-      "afterDamageTaken",
+      "onAfterDmgTaking",
       {
         attacker,
         target,
@@ -523,18 +585,51 @@ export const CombatResolver = {
       allChampions,
     );
 
+    const effects = [];
     const logs = [];
 
     for (const r of results) {
       if (!r) continue;
 
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
       if (r.log) {
         if (Array.isArray(r.log)) logs.push(...r.log);
         else logs.push(r.log);
       }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
     }
 
-    return logs;
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
   },
 
   _applyAfterDealingPassive({
@@ -550,7 +645,7 @@ export const CombatResolver = {
     if (context?.isDot) return [];
 
     const results = emitCombatEvent(
-      "afterDamageDealt",
+      "onAfterDmgDealing",
       {
         attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
         target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
@@ -565,18 +660,51 @@ export const CombatResolver = {
       allChampions,
     );
 
+    const effects = [];
     const logs = [];
 
     for (const r of results) {
       if (!r) continue;
 
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
       if (r.log) {
         if (Array.isArray(r.log)) logs.push(...r.log);
         else logs.push(r.log);
       }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
     }
 
-    return logs;
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
   },
 
   applyRegenFromDamage(attacker, damageDealt) {
@@ -663,7 +791,7 @@ export const CombatResolver = {
     // ================================
 
     const results = emitCombatEvent(
-      "onLifeSteal",
+      "onAfterLifeSteal",
       {
         source: user,
         amount: heal,
@@ -789,6 +917,8 @@ export const CombatResolver = {
     // 2️⃣ CÁLCULO DO DANO
     // =========================
 
+    let extraEffects = [];
+
     let crit = this.processCrit({
       baseDamage,
       user,
@@ -826,6 +956,10 @@ export const CombatResolver = {
       damage = beforeDeal.damage;
     }
 
+    if (beforeDeal?.effects?.length) {
+      extraEffects.push(...beforeDeal.effects);
+    }
+
     const beforeTake = this._applyBeforeTakingPassive({
       mode,
       skill,
@@ -848,6 +982,10 @@ export const CombatResolver = {
       if (beforeTake?.ignoreMinimumFloor) {
         context.ignoreMinimumFloor = true;
       }
+    }
+
+    if (beforeTake?.effects?.length) {
+      extraEffects.push(...beforeTake.effects);
     }
 
     const finalDamage = this._composeFinalDamage(
@@ -890,7 +1028,7 @@ export const CombatResolver = {
       allChampions,
     }); */
 
-    const afterTakeLogs = this._applyAfterTakingPassive({
+    const afterTakeResult = this._applyAfterTakingPassive({
       attacker: user,
       target,
       skill,
@@ -901,7 +1039,7 @@ export const CombatResolver = {
       allChampions,
     });
 
-    const afterDealLogs = this._applyAfterDealingPassive({
+    const afterDealResult = this._applyAfterDealingPassive({
       attacker: user,
       skill,
       target,
@@ -911,6 +1049,14 @@ export const CombatResolver = {
       context,
       allChampions,
     });
+
+    if (afterTakeResult?.effects?.length) {
+      extraEffects.push(...afterTakeResult.effects);
+    }
+
+    if (afterDealResult?.effects?.length) {
+      extraEffects.push(...afterDealResult.effects);
+    }
 
     // =========================
     // 5️⃣ EFEITOS SECUNDÁRIOS
@@ -962,7 +1108,11 @@ export const CombatResolver = {
           allChampions,
         });
 
-        if (result) extraResults.push(result);
+        if (Array.isArray(result)) {
+          extraResults.push(...result);
+        } else if (result) {
+          extraResults.push(result);
+        }
       }
     }
 
@@ -970,15 +1120,18 @@ export const CombatResolver = {
     // 6️⃣ CONSTRUÇÃO DO LOG
     // =========================
 
+    const afterTakeLogs = afterTakeResult?.logs || [];
+    const afterDealLogs = afterDealResult?.logs || [];
+
     let log = this._buildLog(user, target, skill, finalDamage, crit, hpAfter);
 
     if (beforeDeal.logs?.length) log += "\n" + beforeDeal.logs.join("\n");
 
     if (beforeTake.logs?.length) log += "\n" + beforeTake.logs.join("\n");
 
-    if (afterTakeLogs.length) log += "\n" + afterTakeLogs.join("\n");
+    if (afterTakeLogs?.length) log += "\n" + afterTakeLogs.join("\n");
 
-    if (afterDealLogs.length) log += "\n" + afterDealLogs.join("\n");
+    if (afterDealLogs?.length) log += "\n" + afterDealLogs.join("\n");
 
     if (regenLog) log += "\n" + regenLog;
 
@@ -1027,6 +1180,8 @@ export const CombatResolver = {
       // 🔥 ESSENCIAL
       damageDepth: context.damageDepth ?? 0,
       skill,
+
+      extraEffects,
     };
 
     if (extraResults.length > 0) {
