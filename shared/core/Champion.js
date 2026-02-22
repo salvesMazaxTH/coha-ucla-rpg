@@ -182,17 +182,35 @@ export class Champion {
     else this.energy = undefined;
   }
 
-  addResource(amount) {
-    const value = Math.max(0, Number(amount) || 0);
-    if (value === 0) return 0;
+  addResource(input) {
+  let amount;
+  let source = this;
+  let resourceType = "mana";
+  let context;
 
-    const result = this.applyResourceChange({
-      amount: value,
-      mode: "add",
-    });
-
-    return result.applied;
+  if (typeof input === "number") {
+    amount = input;
+  } else if (typeof input === "object") {
+    amount = input.amount;
+    source = input.source ?? this;
+    resourceType = input.resourceType ?? "mana";
+    context = input.context;
   }
+
+  const value = Math.max(0, Number(amount) || 0);
+  if (value === 0) return 0;
+
+  const result = this.applyResourceChange({
+    amount: value,
+    mode: "add",
+    resourceType,
+    source,
+    context,
+  });
+
+  return result.applied;
+}
+
 
   spendResource(cost) {
     const amount = Math.max(0, Number(cost) || 0);
