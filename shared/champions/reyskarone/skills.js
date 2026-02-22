@@ -104,6 +104,8 @@ const reyskaroneSkills = [
           }
         },
       };
+      
+      user.runtime.hookEffects.push(effect);
 
       return result;
     },
