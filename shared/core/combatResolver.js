@@ -132,8 +132,8 @@ export const CombatResolver = {
       emitCombatEvent(
         "onCriticalHit",
         {
-          user,
           attacker: user,
+          critSrc: user,
           target,
           context,
           forced: crit.forced,
@@ -412,8 +412,10 @@ export const CombatResolver = {
         damage,
         crit,
         skill,
-        attacker,
-        target,
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
         context,
       },
       allChampions,
@@ -452,8 +454,10 @@ export const CombatResolver = {
         damage,
         crit,
         skill,
-        attacker,
-        target,
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
         context,
       },
       allChampions,
@@ -487,8 +491,10 @@ export const CombatResolver = {
   }) {
     console.log("🔥 _applyAfterTakingPassive ENTER");
     console.log({
-      attacker: attacker?.name,
-      target: target?.name,
+      attacker: attacker?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      target: target?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      dmgSrc: attacker?.name,
+      dmgReceiver: target?.name,
       skill,
       damage,
       mode,
@@ -538,8 +544,10 @@ export const CombatResolver = {
     const results = emitCombatEvent(
       "afterDamageDealt",
       {
-        attacker,
-        target,
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
         damage,
         mode,
         crit,
@@ -816,7 +824,7 @@ export const CombatResolver = {
       skill,
       damage,
       crit,
-      user,
+      user, 
       target,
       context,
       allChampions,
@@ -867,9 +875,9 @@ export const CombatResolver = {
     }); */
 
     const afterTakeLogs = this._applyAfterTakingPassive({
-      attacker: user,
+      attacker: user, 
       skill,
-      target,
+      target, 
       damage: finalDamage,
       mode,
       crit,
@@ -878,9 +886,9 @@ export const CombatResolver = {
     });
 
     const afterDealLogs = this._applyAfterDealingPassive({
-      attacker: user,
+      attacker: user, 
       skill,
-      target,
+      target, 
       damage: finalDamage,
       mode,
       crit,

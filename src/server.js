@@ -999,12 +999,28 @@ function createBaseContext({ sourceId = null } = {}) {
       const value = Number(amount) || 0;
       if (!target?.id || value <= 0) return;
 
+      const sourceChamp =
+        activeChampions.get(sourceId) ||
+        activeChampions.get(this.healSourceId) ||
+        target;
+
       this.healEvents.push({
         type: "heal",
         targetId: target.id,
-        sourceId: sourceId || this.healSourceId || target.id,
+        sourceId: sourceChamp?.id || target.id,
         amount: value,
       });
+      // 🔥 Dispara hook de cura
+      emitCombatEvent(
+        "onHeal",
+        {
+          healSrc: sourceChamp || null,
+          healTarget: target,
+          amount: value,
+          context: this,
+        },
+        this.allChampions,
+      );
     },
 
     registerBuff({ target, amount, statName, sourceId } = {}) {

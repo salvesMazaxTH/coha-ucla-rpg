@@ -60,6 +60,51 @@ const reyskaroneSkills = [
         result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
       }
 
+      user.runtime.hookEffects ??= [];
+
+      const effect = {
+        key: "tributo_de_sangue_effect",
+        expiresAt: context.currentTurn + this.tributeDuration,
+
+        beforeDamageDealt({ dmgSrc, dmgReceiver, damage, owner, context }) {
+          if (dmgReceiver !== enemy) return;
+          if (dmgSrc.team !== owner.team) return;
+          if (damage <= 0) return;
+
+          // alvo não tem tributo
+          if (!dmgReceiver.hasKeyword?.("tributo")) return;
+
+          const bonus = 10; //this.tributeBonusDamage;
+
+          return {
+            damage: damage + bonus,
+            log: `🩸 Tributo amplificou o golpe de ${dmgSrc.name} (+${bonus} dano)`,
+          };
+        },
+
+        afterDamageDealt({ dmgSrc, dmgReceiver, context, owner }) {
+          if (dmgReceiver !== enemy) return;
+          if (dmgSrc.team !== owner.team) return;
+
+          const heal = 15;
+          if (heal <= 0) return;
+
+          dmgSrc.heal(heal, context);
+
+          return {
+            log: `🩸 Tributo: ${dmgSrc.name} recuperou ${heal} HP.`,
+          };
+        },
+
+        onTurnStart({ owner, context }) {
+          if (context.currentTurn >= this.expiresAt) {
+            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+              (e) => e !== this,
+            );
+          }
+        },
+      };
+
       return result;
     },
   },

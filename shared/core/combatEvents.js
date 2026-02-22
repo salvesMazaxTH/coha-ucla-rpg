@@ -46,7 +46,8 @@ export function emitCombatEvent(eventName, payload, champions) {
       try {
         const res = hook.call(source, {
           ...payload,
-          self: champ,
+          self: champ, // alias enquanto refatora e migra tudo para consistência com os outros hooks
+          owner: champ
         });
 
         if (res) {

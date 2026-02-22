@@ -61,8 +61,8 @@ const kaiSkills = [
         expiresAt: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE VIA QUEUE
-        afterDamageTaken({ attacker, target, skill, damage, self, context }) {
-          if (target !== self) return;
+        afterDamageTaken({ dmgSrc, dmgReceiver, skill, damage, owner, context }) {
+          if (dmgReceiver !== owner) return;
           if (!skill?.contact) return;
           if (damage <= 0) return;
 
@@ -79,8 +79,8 @@ const kaiSkills = [
             mode: "direct",
             baseDamage: counterAtkDmg,
             directDamage: counterAtkDmg,
-            user: self,
-            target: attacker,
+            user: owner,
+            target: dmgSrc,
             skill: {
               key: "postura_da_brasa_viva_counter",
               name: "Contra-ataque Brasa Viva",
@@ -88,30 +88,30 @@ const kaiSkills = [
             },
           });
 
-          attacker.applyKeyword("queimando", 2, context, { source: self });
+          dmgSrc.applyKeyword("queimando", 2, context, { source: owner });
 
           return {
-            log: `${formatChampionName(attacker)} é queimado ao atingir Kai em contato!`,
+            log: `${formatChampionName(dmgSrc)} é queimado ao atingir Kai em contato!`,
           };
         },
 
         // 🔥 ATIVA BRASA VIVA
-        afterDamageDealt({ attacker, damage, self, context }) {
-          if (attacker !== self) return;
+        afterDamageDealt({ dmgSrc, dmgReceiver, owner, damage, context }) {
+          if (dmgSrc !== owner) return;
           if (damage <= 0) return;
 
-          self.runtime.hookEffects ??= [];
+          owner.runtime.hookEffects ??= [];
 
           // evita empilhamento
-          if (self.runtime.hookEffects.some((e) => e.key === "brasa_viva"))
+          if (owner.runtime.hookEffects.some((e) => e.key === "brasa_viva"))
             return;
 
           const brasaVivaEffect = {
             key: "brasa_viva",
             expiresAt: context.currentTurn + 2,
 
-            beforeDamageDealt({ attacker, self }) {
-              if (attacker !== self) return;
+            beforeDamageDealt({ dmgSrc, owner }) {
+              if (dmgSrc !== owner) return;
 
               return {
                 directDamage: flamingFistsBonus,
@@ -119,14 +119,14 @@ const kaiSkills = [
               };
             },
 
-            afterDamageDealt({ attacker, target, self, context }) {
-              if (attacker !== self) return;
-              if (!target?.applyKeyword) return;
+            afterDamageDealt({ dmgSrc, dmgReceiver, owner, context }) {
+              if (dmgSrc !== owner) return;
+              if (!dmgReceiver?.applyKeyword) return;
 
-              target.applyKeyword("queimando", 2, context, { source: self });
+              dmgReceiver.applyKeyword("queimando", 2, context, { source: owner });
 
               return {
-                log: `${formatChampionName(target)} está Queimando (Brasa Viva)!`,
+                log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,
               };
             },
 

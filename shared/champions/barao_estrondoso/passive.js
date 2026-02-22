@@ -22,7 +22,7 @@ export default {
   },
 
   // 🔴 Recebe 10% de dano adicional (mínimo +10)
-  beforeDamageTaken({ damage, dmgSource, dmgTarget, context, owner }) {
+  beforeDamageTaken({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     const bonus = Math.max(10, Math.floor(damage * 0.1));
@@ -34,8 +34,8 @@ export default {
   },
 
   // 🔴 Armazena dano recebido (30% ou 40% se blindado)
-  afterDamageTaken({ dmgSource, dmgTarget, damage, context, owner }) {
-    if (owner !== dmgTarget) return;
+  afterDamageTaken({ dmgSrc, dmgReceiver, owner, damage, context }) {
+    if (owner?.id !== dmgReceiver?.id) return;
     if (!damage || damage <= 0) return;
 
     const storageRate = owner.hasKeyword?.("blindagem_reforcada") ? 0.4 : 0.3;
@@ -50,19 +50,19 @@ export default {
   },
 
   // 🔴 Após usar qualquer habilidade (exceto ataque básico), fica Atordoado
-  afterDamageDealt({ self, skill, context }) {
+  afterDamageDealt({ dmgSrc, dmgReceiver, owner, damage, context, skill }) {
     if (!skill?.key) return;
 
     // Ataque básico não causa stun
     if (skill.key === "basic_attack") return;
 
     // Evita loop se alguma skill futura aplicar stun interno
-    if (self.hasKeyword?.("atordoado")) return;
+    if (owner.hasKeyword?.("atordoado")) return;
 
-    self.applyKeyword?.("atordoado", 1, context);
+    owner.applyKeyword?.("atordoado", 1, context);
 
     return {
-      log: `${self.name} sofreu sobrecarga do núcleo e ficará Atordoado!`,
+      log: `${owner.name} sofreu sobrecarga do núcleo e ficará Atordoado!`,
     };
   },
 };
