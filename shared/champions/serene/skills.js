@@ -22,10 +22,10 @@ const sereneSkills = [
     priority: 0,
     description() {
       return `Custo: ${this.manaCost} MP
-Serene concede ${this.shieldFull} de escudo a si mesma ou a um aliado ativo. Caso ela esteja abaixo de ${this.hpThreshold}% do HP máximo, o valor do escudo concedido cai para ${this.shieldReduced}.
+        Serene concede ${this.shieldFull} de escudo a si mesma ou a um aliado ativo. Caso ela esteja abaixo de ${this.hpThreshold}% do HP máximo, o valor do escudo concedido cai para ${this.shieldReduced}.
 
-Escudo:
-- Mínimo: ${this.shieldReduced}`;
+        Escudo:
+        - Mínimo: ${this.shieldReduced}`;
     },
     targetSpec: ["select:ally"],
 
@@ -61,10 +61,10 @@ Escudo:
     priority: 1,
     description() {
       return `Custo: ${this.manaCost} MP
-Prioridade: +${this.priority}
-Contato: ${this.contact ? "✅" : "❌"}
-Dano:
-${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redução pela Defesa).`;
+      Prioridade: +${this.priority}
+      Contato: ${this.contact ? "✅" : "❌"}
+      Dano:
+      ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redução pela Defesa).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -113,20 +113,26 @@ ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redu
     priority: 4,
     description() {
       return `Custo: ${this.manaCost} MP
-Prioridade: +${this.priority}
-Ao ativar, até que a próxima ação de Serene seja resolvida:
-1️⃣ Proteção de Campo
-Aliados ativos recebem:
-−${this.damageReduction} de dano de todas as fontes (respeita o piso mínimo de 10)
-2️⃣ Limiar da Existência (Auto-Resgate)
-Se o HP de Serene cairia a 0 ou menos, em vez disso:
-Ela permanece com ${this.surviveHP} de HP travados (se não estivesse com menos de ${this.surviveHP} de HP)
-A partir desse momento, Serene ganha:
-'Imunidade Absoluta': Serene não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`;
+        Prioridade: +${this.priority}
+        Ao ativar, até que a próxima ação de Serene seja resolvida:
+        1️⃣ Proteção de Campo
+        Aliados ativos recebem:
+        −${this.damageReduction} de dano de todas as fontes (respeita o piso mínimo de 10)
+        2️⃣ Limiar da Existência (Auto-Resgate)
+        Se o HP do personagem cairia a 0 ou menos, em vez disso:
+        Ele permanece com ${this.surviveHP} de HP travados (se não estivesse com menos de ${this.surviveHP} de HP)
+        A partir desse momento, o personagem ganha:
+        'Imunidade Absoluta': o personagem não pode receber dano ou efeitos negativos de nenhuma fonte até que sua próxima ação seja resolvida.`;
     },
-    targetSpec: ["all:ally"],
+    targetSpec: ["self"],
     execute({ user, context = {} }) {
+      const activationSkillId = this.key;
+
+      // dona do efeito é a Serene, mas o efeito é aplicado em tds aliados.
+      const ownerId = user.id;
+
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
+
       // 1️⃣ Proteção de Campo
       allies.forEach((ally) => {
         ally.applyDamageReduction({
@@ -135,11 +141,72 @@ A partir desse momento, Serene ganha:
           source: "epifania",
           context,
         });
-        ally.applyKeyword("epifania_ativa", {
-          metadata: {
-            persistent: true,
+
+        ally.runtime.hookEffects ??= [];
+
+        const surviveHP = this.surviveHP;
+
+        const effect = {
+          key: "epifania_limiar",
+          group: "epifania",
+          ownerId,
+
+          beforeDamageTaken({ dmgSrc, dmgReceiver, self, damage, context }) {
+            console.log("HOOK DE ANTES DE TOMAR DANO DA EPIFANIA DISPAROU!!");
+
+            console.log("Damage recebido:", {
+              dmgSrc,
+              dmgReceiver,
+              self,
+              damage,
+            });
+
+            if (dmgReceiver?.id !== self.id) return;
+            if (self.HP - damage > 0) return;
+            if (self.hasKeyword("imunidade_absoluta")) return;
+
+            const lockedHP = self.HP >= surviveHP ? surviveHP : self.HP;
+
+            self.HP = lockedHP;
+
+            self.applyKeyword("imunidade_absoluta", 1, context, {
+              source: "epifania",
+            });
+
+            return {
+              damage: 0,
+              ignoreMinimumFloor: true,
+              log: `${formatChampionName(self)} recusou a morte e tornou-se imune, permanecendo com ${lockedHP} de HP!`,
+            };
           },
-        });
+
+          onActionResolved({ user, skill, context, self }) {
+            if (user.id !== this.ownerId) return;
+            // a ativação da própria skill não PODE remover o efeito
+            if (skill?.key === activationSkillId) {
+              return;
+            }
+
+            // remove o efeito de todos os aliados
+            context.aliveChampions.forEach((champ) => {
+              if (champ.team !== user.team) return;
+              champ.runtime.hookEffects = champ.runtime.hookEffects.filter(
+                (e) => e.key !== "epifania_limiar",
+              );
+
+              champ.damageReductionModifiers =
+                champ.damageReductionModifiers.filter(
+                  (mod) => mod.source !== "epifania",
+                );
+            });
+
+            return {
+              log: `${formatChampionName(user)} superou o Limiar da Existência e recuperou sua mortalidade...`,
+            };
+          },
+        };
+
+        ally.runtime.hookEffects.push(effect);
       });
 
       return {

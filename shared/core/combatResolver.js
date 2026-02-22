@@ -357,7 +357,11 @@ export const CombatResolver = {
     }
 
     // ---------- FINALIZAÇÃO ----------
-    finalDamage = Math.max(finalDamage, 10);
+    if (context?.ignoreMinimumFloor) {
+      finalDamage = Math.max(finalDamage, 0);
+    } else {
+      finalDamage = Math.max(finalDamage, 10);
+    }
     finalDamage = this.roundToFive(finalDamage);
 
     if (debugMode) {
@@ -380,6 +384,10 @@ export const CombatResolver = {
 
     target.takeDamage(val, context);
 
+    console.log(
+      `➡️ [applyDamage] Dano aplicado, após takeDamage: ${val}, HP de ${target.name}: ${target.HP}/${target.maxHP}`,
+    );
+
     const hpAfter = target.HP;
     const actualDmg = hpBefore - hpAfter;
 
@@ -395,7 +403,7 @@ export const CombatResolver = {
     return { hpAfter, actualDmg };
   },
 
-  _applyBeforeTakingPassive(
+  _applyBeforeTakingPassive({
     mode,
     damage,
     crit,
@@ -404,7 +412,7 @@ export const CombatResolver = {
     target,
     context,
     allChampions,
-  ) {
+  }) {
     const results = emitCombatEvent(
       "beforeDamageTaken",
       {
@@ -736,7 +744,6 @@ export const CombatResolver = {
     // =========================
     // 1️⃣ PRÉ-CHECAGENS
     // =========================
-
     const depth = context.damageDepth ?? 0;
 
     if (depth === 0) {
@@ -824,18 +831,23 @@ export const CombatResolver = {
       skill,
       damage,
       crit,
-      user, 
-      target,
+      user, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      dmgSrc: user,
+      dmgReceiver: target,
       context,
       allChampions,
     });
 
-    if (beforeTake.crit !== undefined) {
+    if (beforeTake?.crit !== undefined) {
       crit = beforeTake.crit;
     }
 
-    if (beforeTake.damage !== undefined) {
+    if (beforeTake?.damage !== undefined) {
       damage = beforeTake.damage;
+      if (beforeTake?.ignoreMinimumFloor) {
+        context.ignoreMinimumFloor = true;
+      }
     }
 
     const finalDamage = this._composeFinalDamage(
@@ -845,6 +857,10 @@ export const CombatResolver = {
       directDamage,
       target,
       context,
+    );
+
+    console.log(
+      `➡️ Dano final calculado (depois da "compose"): ${finalDamage}`,
     );
 
     // =========================
@@ -875,9 +891,9 @@ export const CombatResolver = {
     }); */
 
     const afterTakeLogs = this._applyAfterTakingPassive({
-      attacker: user, 
+      attacker: user,
+      target,
       skill,
-      target, 
       damage: finalDamage,
       mode,
       crit,
@@ -886,9 +902,9 @@ export const CombatResolver = {
     });
 
     const afterDealLogs = this._applyAfterDealingPassive({
-      attacker: user, 
+      attacker: user,
       skill,
-      target, 
+      target,
       damage: finalDamage,
       mode,
       crit,

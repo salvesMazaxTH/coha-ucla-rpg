@@ -892,17 +892,15 @@ function performSkillExecution(
     actionResourceCost,
   });
 
-  // 🔹 8. Limpeza de keyword especial
-  if (user.hasKeyword?.("epifania_ativa")) {
-    user.removeKeyword("epifania_ativa");
-    user.removeDamageReductionBySource?.("epifania");
-    user.removeKeyword("imunidade absoluta");
-
-    io.emit(
-      "combatLog",
-      `${formatChampionName(user)} deixou o Limiar da Existência.`,
-    );
-  }
+  emitCombatEvent(
+    "onActionResolved",
+    {
+      user,
+      skill,
+      context,
+    },
+    activeChampions,
+  );
 }
 
 function registerSkillUsageInTurn(user, skill, targets) {
