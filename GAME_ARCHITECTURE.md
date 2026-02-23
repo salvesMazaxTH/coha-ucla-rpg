@@ -225,7 +225,7 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
   },
   effects: [                // Lista de efeitos visuais, em ordem
     {
-      type: "damage" | "heal" | "shield" | "buff" | "evasion" | "resourceGain"
+      type: "damage" | "heal" | "shield" | "dialog" | buff" | "evasion" | "resourceGain"
             | "keywordApplied" | "keywordRemoved" | "immune" | "gameOver"
             | "shieldBlock" | "taunt" | "bonusAttack",
       targetId: string,     // Campeão afetado
@@ -392,43 +392,73 @@ params = {
   skill,          // objeto Skill
   context,        // contexto do turno (currentTurn, allChampions, etc.)
   options,        // { force: bool, disable: bool } para crítico
-  allChampions    // Map ou Array de todos os campeões
+  allChampions    // Map (ou Array, se convertido) de todos os campeões ativos naquela partida
 }
 ```
 
 **Etapas em ordem:**
 
-```
 1. PRÉ-CHECAGENS
    ├── Imunidade absoluta? → retorna resultado imune (sem dano)
    ├── Shield Block? → consome escudo do tipo "supremo"/"feitiço"; retorna bloqueio
    └── Evasão? → roll aleatório vs target.Evasion%; retorna evasion result
 
+
 2. CÁLCULO DO DANO
-   ├── processCrit()       → { didCrit, bonus, critExtra }
-   ├── _applyDamageModifiers()  → aplica mods do atacante (buffs de dano, etc.)
-   ├── _applyBeforeDealingPassive()  → hook onBeforeDealing do atacante
-   ├── _applyBeforeTakingPassive()   → hook onBeforeTaking do alvo
-   └── _composeFinalDamage()   → aplica defesa, crítico, dano direto, garante mínimo de 10, tudo sempre em múltiplos de 5
+   ├── processCrit()                   → { didCrit, bonus, critExtra }
+   ├── _applyDamageModifiers()         → aplica modificadores do atacante
+   ├── _applyBeforeDealingPassive()    → hook onBeforeDmgDealing (atacante)
+   └── _composeFinalDamage()           → aplica defesa, crítico, dano direto,
+                                         garante piso mínimo (10),
+                                         múltiplos de 5
 
-3. APLICAÇÃO DO DANO
-   └── _applyDamage() → debita HP, consome escudos regulares, tudo sempre em múltiplos de 5
 
-4. AFTER HOOKS
-   ├── _applyAfterTakingPassive()   → hook onAfterDmgTaking do alvo
-   └── _applyAfterDealingPassive()  → hook onAfterDmgDealing do atacante
+3. AJUSTE FINAL ANTES DA APLICAÇÃO
+   └── _applyBeforeTakingPassive()     → hook onBeforeDmgTaking (alvo)
+                                         pode sobrescrever o dano final
+                                         já composto
 
-5. EFEITOS SECUNDÁRIOS
+
+4. APLICAÇÃO DO DANO
+   └── _applyDamage()
+        ├── debita HP
+        ├── consome escudos regulares
+        └── mantém múltiplos de 5
+
+
+5. AFTER HOOKS
+   ├── _applyAfterTakingPassive()      → hook onAfterDmgTaking (alvo)
+   └── _applyAfterDealingPassive()     → hook onAfterDmgDealing (atacante)
+
+6. EFEITOS SECUNDÁRIOS
    ├── applyRegenFromDamage()  → regen de recurso por dano causado
    ├── _applyLifeSteal()       → roubo de vida
    └── extraDamageQueue        → processa contra-ataques e danos extras em cascata
 
-6. CONSTRUÇÃO DO LOG
+7. CONSTRUÇÃO DO LOG
    └── Monta string HTML com todos os resultados intermediários
 
-7. RETORNO
-   → { baseDamage, totalDamage, finalHP, totalHeal, heal, targetId, userId, evaded, log, crit, damageDepth, skill }
+8. RETORNO
+   → { baseDamage, totalDamage, finalHP, totalHeal, heal, targetId, userId, evaded, log, crit, damageDepth, skill, extraEffects }
    → Ou array [mainResult, ...extraResults] se houver dano extra
+```
+
+### Retorno de Hooks de Combate
+
+Hooks podem retornar um objeto estruturado com qualquer uma das seguintes propriedades:
+
+```ts
+{
+  damage?: number,        // Override do dano
+  crit?: object,          // Override do crítico
+  ignoreMinimumFloor?: boolean,
+  log?: string | string[],
+  logs?: string[],
+  effects?: Effect[]      // 🔥 Novo: efeitos estruturados para o client
+}
+
+Os effects retornados por hooks são agregados pelo CombatResolver e propagados para o envelope.effects, sendo processados pelo cliente via animateEffect().
+Isso permite que passivas e efeitos temporários gerem eventos visuais customizados (ex: dialogs, efeitos especiais, etc.).
 ```
 
 ### `damageDepth` e Cascata
