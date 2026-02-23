@@ -1,6 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
+import elementEmoji from "./elementEmoji.js";
 
 const naelysSkills = [
   // ========================
@@ -19,12 +20,7 @@ const naelysSkills = [
     priority: 1,
     element: "water",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Dano: BF ${this.bf}
-        Contato: ${this.contact ? "✅" : "❌"}
-        Efeitos:
-        - Cura 50 HP de Naelys.
-        - Cura 15 HP do aliado escolhido.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Dano: BF ${this.bf}\n        Contato: ${this.contact ? "✅" : "❌"}\n        Efeitos:\n        - Cura 50 HP de Naelys.\n        - Cura 15 HP do aliado escolhido.`;
     },
     targetSpec: ["self", "ally"],
     execute({ user, targets, context = {} }) {
@@ -32,7 +28,7 @@ const naelysSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       const healAmount = 50;
       const allyHealAmount = 15;
-      const damageResult = CombatResolver.resolveDamage({
+      const damageResult = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: ally,
@@ -64,12 +60,7 @@ const naelysSkills = [
     counterDamage: 20,
 
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ❌
-
-        Naelys assume uma postura marítima até o início do próximo turno:
-        - Recebe −${this.damageReduction}% de Dano Bruto Final.
-        - Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ❌\n\n        Naelys assume uma postura marítima até o início do próximo turno:\n        - Recebe −${this.damageReduction}% de Dano Bruto Final.\n        - Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
     },
 
     targetSpec: ["self"],
@@ -154,11 +145,7 @@ const naelysSkills = [
     element: "water",
 
     description() {
-      return `Custo: ${this.manaCost} MP
-
-      Por ${this.duration} turnos:
-      Naelys causa dano adicional baseado no HP perdido.
-      Limite máximo: +${this.maxBonus} de Dano Bruto.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n\n      Por ${this.duration} turnos:\n      Naelys causa dano adicional baseado no HP perdido.\n      Limite máximo: +${this.maxBonus} de Dano Bruto.`;
     },
 
     targetSpec: ["self"],

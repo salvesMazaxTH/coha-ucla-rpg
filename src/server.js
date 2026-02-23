@@ -747,7 +747,7 @@ function buildEffectsFromGroup({
   const effects = [];
   const affectedIds = new Set();
 
-  // 🔥 Effects vindos do resolveDamage
+  // 🔥 Effects vindos do processDamageEvent
   for (const entry of resultsGroup) {
     const extracted = extractEffectsFromResult(entry);
     effects.push(...extracted);
@@ -904,7 +904,7 @@ function performSkillExecution(
   for (const r of results) {
     if (r?.extraEffects?.some((e) => e.type === "dialog")) {
       console.log(
-        "🔵 SERVER → dialog recebido do resolveDamage:",
+        "🔵 SERVER → dialog recebido do processDamageEvent:",
         r.extraEffects,
       );
     }

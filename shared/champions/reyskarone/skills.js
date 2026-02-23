@@ -47,7 +47,7 @@ const reyskaroneSkills = [
         context,
       );
 
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,

@@ -1,6 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
+import elementEmoji from "./elementEmoji.js";
 
 const voltexzSkills = [
   // ========================
@@ -19,10 +20,7 @@ const voltexzSkills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf} (primario) / BF ${this.bf} (secundario).
-        (Pode escolher o mesmo alvo para ambos)`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf} (primario) / BF ${this.bf} (secundario).\n        (Pode escolher o mesmo alvo para ambos)`;
     },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
@@ -32,7 +30,7 @@ const voltexzSkills = [
       const results = [];
 
       if (primary) {
-        const primaryResult = CombatResolver.resolveDamage({
+        const primaryResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,
           target: primary,
@@ -45,7 +43,7 @@ const voltexzSkills = [
       }
 
       if (secondary) {
-        const secondaryResult = CombatResolver.resolveDamage({
+        const secondaryResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,
           target: secondary,
@@ -70,18 +68,14 @@ const voltexzSkills = [
     priority: 1,
     element: "lightning",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        Prioridade: +${this.priority}
-        BF ${this.bf} (Direto);
-        Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Prioridade: +${this.priority}\n        BF ${this.bf} (Direto);\n        Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = CombatResolver.resolveDamage({
+      const damageResult = CombatResolver.processDamageEvent({
         baseDamage,
         mode: "hybrid", // 'hybrid' para Dano Direto puro ou parte Bruto e parte Direto
         directDamage: baseDamage, // Dano Direto puro
@@ -125,16 +119,14 @@ const voltexzSkills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = CombatResolver.resolveDamage({
+      const damageResult = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,

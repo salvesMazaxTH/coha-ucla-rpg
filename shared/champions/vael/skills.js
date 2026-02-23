@@ -27,7 +27,7 @@ const vaelSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return CombatResolver.resolveDamage({
+      return CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,
@@ -65,7 +65,7 @@ const vaelSkills = [
       const results = [];
 
       if (primary) {
-        const primaryResult = CombatResolver.resolveDamage({
+        const primaryResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,
           target: primary,
@@ -78,7 +78,7 @@ const vaelSkills = [
       }
 
       if (secondary) {
-        const secondaryResult = CombatResolver.resolveDamage({
+        const secondaryResult = CombatResolver.processDamageEvent({
           baseDamage: (user.Attack * this.bfSecondary) / 100,
           user,
           target: secondary,
@@ -111,7 +111,7 @@ const vaelSkills = [
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      return CombatResolver.resolveDamage({
+      return CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,

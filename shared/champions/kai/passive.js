@@ -22,7 +22,7 @@ export default {
 
     const impactDamage = this.flamingFistsDamage;
 
-    const result = CombatResolver.resolveDamage({
+    const result = CombatResolver.processDamageEvent({
       mode: "direct",
       baseDamage: impactDamage,
       user: dmgSrc,

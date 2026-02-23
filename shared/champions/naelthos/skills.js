@@ -1,6 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
+import elementEmoji from "./elementEmoji.js";
 
 const naelthosSkills = [
   // ========================
@@ -20,12 +21,7 @@ const naelthosSkills = [
     priority: 0,
     element: "water",
     description() {
-      return `Custo: ${this.manaCost} MP
-         Contato: ${this.contact ? "✅" : "❌"}
-         Inimigo alvo sofre:
-         Dano Bruto = BF ${this.bf}
-         Aliado ativo mais ferido recupera:
-         Cura = ${this.healAmount} de HP`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n         Contato: ${this.contact ? "✅" : "❌"}\n         Inimigo alvo sofre:\n         Dano Bruto = BF ${this.bf}\n         Aliado ativo mais ferido recupera:\n         Cura = ${this.healAmount} de HP`;
     },
     targetSpec: ["enemy"],
 
@@ -39,7 +35,7 @@ const naelthosSkills = [
 
       // 🗡️ Dano no inimigo (se ainda vivo)
       if (enemy) {
-        const damageResult = CombatResolver.resolveDamage({
+        const damageResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,
           target: enemy,
@@ -85,10 +81,7 @@ const naelthosSkills = [
     priority: 1,
     element: "water",
     description() {
-      return `Custo: ${this.manaCost} MP
-             Transforma-se em uma massa de água pura.
-             Efeitos: Inerte + Imunidade Absoluta
-             Duração: ${this.effectDuration} turnos (pode ser interrompido se executar uma ação)`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n             Transforma-se em uma massa de água pura.\n             Efeitos: Inerte + Imunidade Absoluta\n             Duração: ${this.effectDuration} turnos (pode ser interrompido se executar uma ação)`;
     },
     targetSpec: ["self"],
 
@@ -122,15 +115,7 @@ const naelthosSkills = [
     manaCost: 380,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Naelthos aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:
-        +${this.healAmount} de HP
-        Por ${this.effectDuration} turnos (inclui o atual):
-        Naelthos ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:
-        Todos os Ataques que causem dano recebem:
-        ➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver
-        (Arredondado para múltiplo de 5)
-        Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano Bruto por ação.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Naelthos aumenta seu HP em ${this.hpFactor}% do HP base. Além disso, ele recupera:\n        +${this.healAmount} de HP\n        Por ${this.effectDuration} turnos (inclui o atual):\n        Naelthos ganha o efeito: Mar em Ascensão, que enquanto estiver ativo:\n        Todos os Ataques que causem dano recebem:\n        ➡️ +${this.bonusPerStack} de Dano Bruto para cada ${this.hpPerStack} de HP ATUAL que ele tiver\n        (Arredondado para múltiplo de 5)\n        Limite de Escala: O bônus de dano não pode exceder +${this.maxBonus} de Dano Bruto por ação.`;
     },
     targetSpec: ["self"],
 

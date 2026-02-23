@@ -63,7 +63,7 @@ const raliaSkills = [
         return { log: selfLog };
       }
 
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
@@ -98,7 +98,7 @@ const raliaSkills = [
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,
@@ -158,7 +158,7 @@ const raliaSkills = [
 
       // Aplicar dano em cada inimigo
       enemies.forEach((enemy) => {
-        const damageResult = CombatResolver.resolveDamage({
+        const damageResult = CombatResolver.processDamageEvent({
           baseDamage,
           mode: "hybrid", // 'hybrid' para Dano Direto puro ou Direto + bruto
           directDamage: baseDamage, // Dano Direto puro

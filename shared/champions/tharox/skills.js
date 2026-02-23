@@ -73,7 +73,7 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
       const { enemy } = targets;
       const baseDamage =
         (user.Attack * this.bf) / 100 + user.Defense * (this.defScaling / 100);
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         user,
         baseDamage,
         target: enemy,

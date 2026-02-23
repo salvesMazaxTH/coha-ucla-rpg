@@ -38,7 +38,7 @@ Aplica "Enraizado" por ${this.rootDuration} turnos.`;
         context,
       );
 
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,

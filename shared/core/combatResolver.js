@@ -926,7 +926,7 @@ export const CombatResolver = {
     };
   },
 
-  resolveDamage(params) {
+  processDamageEvent(params) {
     const {
       mode = "raw",
       baseDamage,
@@ -1178,7 +1178,7 @@ export const CombatResolver = {
 
       for (const extra of queue) {
         const originSkillKey = extra.skill?.key;
-        const result = this.resolveDamage({
+        const result = this.processDamageEvent({
           ...extra,
           context: {
             ...context,

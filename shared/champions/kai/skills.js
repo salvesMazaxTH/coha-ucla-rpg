@@ -1,6 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
+import elementEmoji from "./elementEmoji.js";
 
 const kaiSkills = [
   basicAttack,
@@ -12,15 +13,13 @@ const kaiSkills = [
     manaCost: 120,
     priority: 1,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return CombatResolver.resolveDamage({
+      return CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,
@@ -42,13 +41,7 @@ const kaiSkills = [
     priority: 2,
     element: "fire",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        Kai assume uma postura incandescente até o início do próximo turno, recebendo −${this.damageReduction} de Dano Bruto Final (mín. 10).
-        Se sofrer um ataque de Contato, o atacante recebe ${this.counterAtkDmg} de Dano Direto e fica Queimando.
-
-        Se Kai causar dano durante esse período, ativa Brasa Viva por 2 turnos:
-        Punhos em Combustão causa +${this.flamingFistsBonus} de Dano Direto adicional (total +35), todos os alvos atingidos ficam "Queimando". independentemente de Afinidade, e o Queimando aplicado por Kai dura +1 turno.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Kai assume uma postura incandescente até o início do próximo turno, recebendo −${this.damageReduction} de Dano Bruto Final (mín. 10).\n        Se sofrer um ataque de Contato, o atacante recebe ${this.counterAtkDmg} de Dano Direto e fica Queimando.\n\n        Se Kai causar dano durante esse período, ativa Brasa Viva por 2 turnos:\n        Punhos em Combustão causa +${this.flamingFistsBonus} de Dano Direto adicional (total +35), todos os alvos atingidos ficam "Queimando". independentemente de Afinidade, e o Queimando aplicado por Kai dura +1 turno.`;
     },
     targetSpec: ["self"],
     execute({ user, context }) {
@@ -192,11 +185,7 @@ const kaiSkills = [
     priority: 0,
     element: "fire",
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        Kai desfere uma série de ${this.hits} socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Essa habilidade também ativa "Punhos em Combustão" Regra Especial — Chamas Persistentes
-        Se um alvo já estiver Queimando:
-        → Esse soco causa +10 de Dano Direto adicional.`;
+      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Kai desfere uma série de ${this.hits} socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Essa habilidade também ativa "Punhos em Combustão" Regra Especial — Chamas Persistentes\n        Se um alvo já estiver Queimando:\n        → Esse soco causa +10 de Dano Direto adicional.`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, targets, context = {} }) {
@@ -216,7 +205,7 @@ const kaiSkills = [
         const target = enemies[Math.floor(Math.random() * enemies.length)];
         const isBurning = target.hasKeyword("queimando");
         const directBonus = isBurning ? 10 : 0;
-        const result = CombatResolver.resolveDamage({
+        const result = CombatResolver.processDamageEvent({
           baseDamage: this.damagePerHit,
           user,
           target,

@@ -28,7 +28,7 @@ const baraoEstrondosoSkills = [
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const result = CombatResolver.resolveDamage({
+      const result = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,
@@ -82,7 +82,7 @@ const baraoEstrondosoSkills = [
       const { enemy } = targets;
       const storedDamage = user.runtime?.storedDamage || 0;
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;
-      return CombatResolver.resolveDamage({
+      return CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,

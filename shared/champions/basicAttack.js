@@ -16,7 +16,7 @@ const basicAttack = {
   execute({ user, targets, context = {} }) {
     const { enemy } = targets;
     const baseDamage = (user.Attack * this.bf) / 100 + this.bonusFlat;
-    return CombatResolver.resolveDamage({
+    return CombatResolver.processDamageEvent({
       baseDamage,
       user,
       target: enemy,
