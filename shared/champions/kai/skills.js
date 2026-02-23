@@ -40,6 +40,7 @@ const kaiSkills = [
     counterAtkDmg: 15,
     flamingFistsBonus: 15,
     priority: 2,
+    element: "fire",
     description() {
       return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}
@@ -189,6 +190,7 @@ const kaiSkills = [
     contact: true,
     manaCost: 380,
     priority: 0,
+    element: "fire",
     description() {
       return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}

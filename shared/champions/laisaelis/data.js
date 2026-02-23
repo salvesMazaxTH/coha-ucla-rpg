@@ -1,6 +1,6 @@
 export default {
   name: "Laisaelis",
-  portrait: "/assets/portraits/laisaelis.png",
+  portrait: "/assets/portraits/laisaelis.webp",
   unreleased: true,
   HP: 100,
   Attack: 100,

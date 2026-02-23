@@ -6,1042 +6,1098 @@ const debugMode = false;
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
 
+const ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
+
 export const CombatResolver = {
-    roundToFive(x) {
-        return Math.round(x / 5) * 5;
-    },
+  roundToFive(x) {
+    return Math.round(x / 5) * 5;
+  },
 
-    // ------------------------
+  // ------------------------
 
-    _rollEvasion({ attacker, target, context }) {
-        if (target.Evasion <= 0) return false;
-        const chance = target.Evasion || 0;
+  _rollEvasion({ attacker, target, context }) {
+    if (target.Evasion <= 0) return false;
+    const chance = target.Evasion || 0;
 
-        if (!chance) return false;
+    if (!chance) return false;
 
-        const roll = Math.random() * 100;
+    const roll = Math.random() * 100;
 
-        const evaded = roll < chance;
+    const evaded = roll < chance;
 
-        if (debugMode) {
-            console.log(`🎯 Roll de Evasão: ${roll.toFixed(2)}`);
-            console.log(`🎲 Chance de Evasão: ${chance}%`);
-            console.log(evaded ? "✅ Ataque EVADIDO!" : "❌ Ataque ACERTADO");
-        }
+    if (debugMode) {
+      console.log(`🎯 Roll de Evasão: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance de Evasão: ${chance}%`);
+      console.log(evaded ? "✅ Ataque EVADIDO!" : "❌ Ataque ACERTADO");
+    }
 
-        const finalLog = evaded
-            ? `\n${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
-            : `\n${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
+    const finalLog = evaded
+      ? `\n${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
+      : `\n${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
 
-        return evaded ? { evaded: true, log: finalLog } : false;
-    },
+    return evaded ? { evaded: true, log: finalLog } : false;
+  },
 
-    // -------------------------
-    // Crit. related
+  // -------------------------
+  // Crit. related
 
-    rollCrit(user, context, options = {}) {
-        const { force = false, disable = false } = options;
+  rollCrit(user, context, options = {}) {
+    const { force = false, disable = false } = options;
 
-        const chance = Math.min(user.Critical || 0, MAX_CRIT_CHANCE);
-        const bonus = user.critBonusOverride || DEFAULT_CRIT_BONUS;
+    const chance = Math.min(user.Critical || 0, MAX_CRIT_CHANCE);
+    const bonus = user.critBonusOverride || DEFAULT_CRIT_BONUS;
 
-        let didCrit = false;
-        let roll = null;
+    let didCrit = false;
+    let roll = null;
 
-        if (disable) {
-            if (debugMode) {
-                console.log(`🚫 CRÍTICO BLOQUEADO`);
-            }
+    if (disable) {
+      if (debugMode) {
+        console.log(`🚫 CRÍTICO BLOQUEADO`);
+      }
 
-            return {
-                didCrit: false,
-                bonus: 0,
-                roll: null,
-                forced: false,
-                disabled: true
-            };
-        }
+      return {
+        didCrit: false,
+        bonus: 0,
+        roll: null,
+        forced: false,
+        disabled: true,
+      };
+    }
 
-        if (force) {
-            if (debugMode) {
-                console.log(`✅ CRÍTICO FORÇADO`);
-            }
+    if (force) {
+      if (debugMode) {
+        console.log(`✅ CRÍTICO FORÇADO`);
+      }
 
-            return {
-                didCrit: true,
-                bonus,
-                roll: null,
-                forced: true,
-                disabled: false
-            };
-        }
+      return {
+        didCrit: true,
+        bonus,
+        roll: null,
+        forced: true,
+        disabled: false,
+      };
+    }
 
-        roll = Math.random() * 100;
-        didCrit = context?.editMode?.alwaysCrit ? true : roll < chance;
+    roll = Math.random() * 100;
+    didCrit = context?.editMode?.alwaysCrit ? true : roll < chance;
 
-        if (debugMode) {
-            console.log(`🎯 Roll: ${roll.toFixed(2)}`);
-            console.log(`🎲 Chance necessária: ${chance}%`);
-            console.log(`${didCrit ? "✅ CRÍTICO!" : "❌ Sem crítico"}`);
-        }
+    if (debugMode) {
+      console.log(`🎯 Roll: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance necessária: ${chance}%`);
+      console.log(`${didCrit ? "✅ CRÍTICO!" : "❌ Sem crítico"}`);
+    }
 
-        return {
-            didCrit,
-            bonus: didCrit ? bonus : 0,
-            roll,
-            forced: false,
-            disabled: false
-        };
-    },
+    return {
+      didCrit,
+      bonus: didCrit ? bonus : 0,
+      roll,
+      forced: false,
+      disabled: false,
+    };
+  },
 
-    processCrit({ baseDamage, user, target, context, options = {} }) {
-        if (debugMode)
-            console.group(
-                `⚔️ [CRÍTICO PROCESSING] - Damage Base: ${baseDamage}`
-            );
+  processCrit({ baseDamage, user, target, context, options = {} }) {
+    if (debugMode)
+      console.group(`⚔️ [CRÍTICO PROCESSING] - Damage Base: ${baseDamage}`);
 
-        let crit = {
-            chance: Math.min(user?.Critical || 0, MAX_CRIT_CHANCE),
-            didCrit: false,
-            bonus: 0,
-            roll: null,
-            forced: false
-        };
+    let crit = {
+      chance: Math.min(user?.Critical || 0, MAX_CRIT_CHANCE),
+      didCrit: false,
+      bonus: 0,
+      roll: null,
+      forced: false,
+    };
 
-        if (debugMode) {
-            console.log(`👤 Critical Chance: ${crit.chance}%`);
+    if (debugMode) {
+      console.log(`👤 Critical Chance: ${crit.chance}%`);
+      console.log(
+        `🎯 Options: Force=${options.force}, Disable=${options.disable}`,
+      );
+    }
+
+    if (crit.chance > 0 || options.force || options.disable) {
+      crit = this.rollCrit(user, context, options);
+      if (debugMode) console.log(`🎲 Roll Result:`, crit);
+    }
+
+    const critBonusFactor = crit.bonus / 100;
+    const critExtra = baseDamage * critBonusFactor;
+
+    if (debugMode) {
+      console.log(`📊 Crit Bonus Factor: ${critBonusFactor} (${crit.bonus}%)`);
+      console.log(`💥 Extra Damage from Crit: ${critExtra}`);
+      console.log(`✅ Did Crit: ${crit.didCrit}`);
+    }
+
+    if (crit.didCrit) {
+      if (debugMode) console.log(`🔥 Executando passiva onCriticalHit`);
+      emitCombatEvent(
+        "onCriticalHit",
+        {
+          attacker: user,
+          critSrc: user,
+          target,
+          context,
+          forced: crit.forced,
+        },
+        context?.allChampions || context?.aliveChampions,
+      );
+    }
+
+    crit.critBonusFactor = critBonusFactor;
+    crit.critExtra = critExtra;
+
+    if (debugMode) console.groupEnd();
+
+    return crit;
+  },
+
+  // -------------------------------------------------
+
+  // -----------------------------------
+  // Cálculo e aplicação de dano e seus métodos auxiliares
+
+  // Modificadores
+  _applyDamageModifiers(damage, user, target, skill, context) {
+    if (!user?.getDamageModifiers) {
+      if (debugMode)
+        console.log(`⚠️ [MODIFIERS] Nenhum modificador de dano disponível`);
+      return damage;
+    }
+
+    if (debugMode) console.group(`🔧 [DAMAGE MODIFIERS]`);
+    if (debugMode) console.log(`📍 Damage Inicial: ${damage}`);
+
+    user.purgeExpiredModifiers(context.currentTurn);
+
+    const modifiers = user.getDamageModifiers();
+    if (debugMode)
+      console.log(`🎯 Total de modificadores: ${modifiers.length}`);
+
+    for (let i = 0; i < modifiers.length; i++) {
+      const mod = modifiers[i];
+      if (debugMode) {
+        console.log(
+          `  └─ Modifier ${i + 1}: name='${mod.name || "Unknown"}' | damage=${damage}`,
+        );
+      }
+
+      if (mod.apply) {
+        const oldDamage = damage;
+        const out = mod.apply({
+          baseDamage: damage,
+          user,
+          target,
+          skill,
+        });
+        if (typeof out === "number") {
+          damage = out;
+          if (debugMode) {
             console.log(
-                `🎯 Options: Force=${options.force}, Disable=${options.disable}`
+              `     ✏️ Aplicado: ${oldDamage} → ${damage} (Δ ${damage - oldDamage})`,
             );
+          }
         }
+      }
+    }
 
-        if (crit.chance > 0 || options.force || options.disable) {
-            crit = this.rollCrit(user, context, options);
-            if (debugMode) console.log(`🎲 Roll Result:`, crit);
-        }
+    if (debugMode) {
+      console.log(`📊 Damage Final: ${damage}`);
+      console.groupEnd();
+    }
 
-        const critBonusFactor = crit.bonus / 100;
-        const critExtra = baseDamage * critBonusFactor;
+    return damage;
+  },
 
-        if (debugMode) {
-            console.log(
-                `📊 Crit Bonus Factor: ${critBonusFactor} (${crit.bonus}%)`
-            );
-            console.log(`💥 Extra Damage from Crit: ${critExtra}`);
-            console.log(`✅ Did Crit: ${crit.didCrit}`);
-        }
+  // ================================
 
-        if (crit.didCrit) {
-            if (debugMode) console.log(`🔥 Executando passiva onCriticalHit`);
-            emitCombatEvent(
-                "onCriticalHit",
-                {
-                    attacker: user,
-                    critSrc: user,
-                    target,
-                    context,
-                    forced: crit.forced
-                },
-                context?.allChampions || context?.aliveChampions
-            );
-        }
+  defenseToPercent(defense) {
+    if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
-        crit.critBonusFactor = critBonusFactor;
-        crit.critExtra = critExtra;
+    if (!defense) {
+      if (debugMode) {
+        console.log(`Defense: ${defense} (ou 0)`);
+        console.log(`Redução percentual: 0%`);
+        console.groupEnd();
+      }
+      return 0;
+    }
 
-        if (debugMode) console.groupEnd();
+    // --- Constantes globais do modelo ---
+    const BASE_DEF = 220;
+    const BASE_REDUCTION = 0.75;
+    const MAX_REDUCTION = 0.95;
+    const K = 0.0045;
 
-        return crit;
-    },
+    // --- Curva base (até 150) ---
+    const curve = {
+      0: 0.0,
+      35: 0.25,
+      60: 0.4,
+      85: 0.53,
+      110: 0.6,
+      150: 0.65,
+      200: 0.72,
+      220: 0.78,
+    };
 
-    // -------------------------------------------------
+    const keys = Object.keys(curve)
+      .map(Number)
+      .sort((a, b) => a - b);
 
-    // -----------------------------------
-    // Cálculo e aplicação de dano e seus métodos auxiliares
-
-    // Modificadores
-    _applyDamageModifiers(damage, user, target, skill, context) {
-        if (!user?.getDamageModifiers) {
-            if (debugMode)
-                console.log(
-                    `⚠️ [MODIFIERS] Nenhum modificador de dano disponível`
-                );
-            return damage;
-        }
-
-        if (debugMode) console.group(`🔧 [DAMAGE MODIFIERS]`);
-        if (debugMode) console.log(`📍 Damage Inicial: ${damage}`);
-
-        user.purgeExpiredModifiers(context.currentTurn);
-
-        const modifiers = user.getDamageModifiers();
-        if (debugMode)
-            console.log(`🎯 Total de modificadores: ${modifiers.length}`);
-
-        for (let i = 0; i < modifiers.length; i++) {
-            const mod = modifiers[i];
-            if (debugMode) {
-                console.log(
-                    `  └─ Modifier ${i + 1}: name='${mod.name || "Unknown"}' | damage=${damage}`
-                );
-            }
-
-            if (mod.apply) {
-                const oldDamage = damage;
-                const out = mod.apply({
-                    baseDamage: damage,
-                    user,
-                    target,
-                    skill
-                });
-                if (typeof out === "number") {
-                    damage = out;
-                    if (debugMode) {
-                        console.log(
-                            `     ✏️ Aplicado: ${oldDamage} → ${damage} (Δ ${damage - oldDamage})`
-                        );
-                    }
-                }
-            }
-        }
-
-        if (debugMode) {
-            console.log(`📊 Damage Final: ${damage}`);
-            console.groupEnd();
-        }
-
-        return damage;
-    },
+    let effective = 0;
 
     // ================================
+    // Segmento 1 — interpolado
+    // ================================
+    if (defense <= BASE_DEF) {
+      if (defense <= keys[0]) {
+        effective = curve[keys[0]];
+      } else {
+        for (let i = 0; i < keys.length - 1; i++) {
+          const a = keys[i];
+          const b = keys[i + 1];
 
-    defenseToPercent(defense) {
-        if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
-
-        if (!defense) {
-            if (debugMode) {
-                console.log(`Defense: ${defense} (ou 0)`);
-                console.log(`Redução percentual: 0%`);
-                console.groupEnd();
-            }
-            return 0;
+          if (defense >= a && defense <= b) {
+            const t = (defense - a) / (b - a);
+            effective = curve[a] + t * (curve[b] - curve[a]);
+            break;
+          }
         }
+      }
+    }
+    // ================================
+    // Segmento 2 — cauda assintótica
+    // ================================
+    else {
+      effective =
+        BASE_REDUCTION +
+        (MAX_REDUCTION - BASE_REDUCTION) *
+          (1 - Math.exp(-K * (defense - BASE_DEF)));
+    }
 
-        // --- Constantes globais do modelo ---
-        const BASE_DEF = 220;
-        const BASE_REDUCTION = 0.75;
-        const MAX_REDUCTION = 0.95;
-        const K = 0.0045;
+    // Segurança numérica
+    effective = Math.min(effective, MAX_REDUCTION);
 
-        // --- Curva base (até 150) ---
-        const curve = {
-            0: 0.0,
-            35: 0.25,
-            60: 0.4,
-            85: 0.53,
-            110: 0.6,
-            150: 0.65,
-            200: 0.72,
-            220: 0.78
-        };
+    if (debugMode) {
+      console.log(`Defense original: ${defense}`);
+      console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
+      console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
+      console.groupEnd();
+    }
 
-        const keys = Object.keys(curve)
-            .map(Number)
-            .sort((a, b) => a - b);
+    return effective;
+  },
 
-        let effective = 0;
+  // ------------------
 
-        // ================================
-        // Segmento 1 — interpolado
-        // ================================
-        if (defense <= BASE_DEF) {
-            if (defense <= keys[0]) {
-                effective = curve[keys[0]];
-            } else {
-                for (let i = 0; i < keys.length - 1; i++) {
-                    const a = keys[i];
-                    const b = keys[i + 1];
+  _getAffinityDamage(damage, skillElement, target, context) {
+    console.log("🔥 _getAffinityDamage chamado:", {
+      skillElement,
+      target: target.name,
+      affinities: target.elementalAffinities,
+      damage,
+    });
 
-                    if (defense >= a && defense <= b) {
-                        const t = (defense - a) / (b - a);
-                        effective = curve[a] + t * (curve[b] - curve[a]);
-                        break;
-                    }
-                }
-            }
-        }
-        // ================================
-        // Segmento 2 — cauda assintótica
-        // ================================
-        else {
-            effective =
-                BASE_REDUCTION +
-                (MAX_REDUCTION - BASE_REDUCTION) *
-                    (1 - Math.exp(-K * (defense - BASE_DEF)));
-        }
+    if (!skillElement) return damage;
+    if (!target?.elementalAffinities?.length) return damage;
 
-        // Segurança numérica
-        effective = Math.min(effective, MAX_REDUCTION);
+    let finalDamage = damage;
+    let strongestRelation = "neutral";
 
-        if (debugMode) {
-            console.log(`Defense original: ${defense}`);
-            console.log(
-                `Redução interpolada: ${(effective * 100).toFixed(2)}%`
-            );
-            console.log(
-                `Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`
-            );
-            console.groupEnd();
-        }
+    for (const affinity of target.elementalAffinities) {
+      const relation = this._getElementalRelation(skillElement, affinity);
 
-        return effective;
-    },
+      if (relation === "weak") {
+        finalDamage = Math.floor(damage * 1.2 + 25);
+        strongestRelation = "weak";
+        break;
+      }
 
-    // ------------------
+      if (relation === "resist" && strongestRelation !== "weak") {
+        finalDamage = Math.max(damage - 40, 0);
+        strongestRelation = "resist";
+        break;
+      }
+    }
 
-    _composeFinalDamage(mode, damage, crit, direct, target, context) {
-        if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
+    if (strongestRelation !== "neutral") {
+      const message =
+        strongestRelation === "weak"
+          ? "✨ É SUPER-EFETIVO!"
+          : strongestRelation === "resist"
+            ? "🛡️ Não é muito efetivo..."
+            : null;
+      if (message) {
+        context?.extraEffects.push({
+          type: "dialog",
+          message,
+          blocking: false,
+        });
+      }
+    }
 
-        const baseDefense = target.baseDefense ?? target.Defense;
-        const currentDefense = target.Defense;
+    context.ignoreMinimumFloor = true;
+    return finalDamage;
+  },
 
-        // ⭐ crítico ignora buffs de defesa
-        crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
-        const defenseUsed = crit.didCrit
-            ? Math.min(baseDefense, currentDefense)
-            : currentDefense;
+  _getElementalRelation(attackingElement, defendingElement) {
+    const index = ELEMENT_CYCLE.indexOf(attackingElement);
 
-        if (debugMode) {
-            console.log(`📍 Damage Base: ${damage}`);
-            console.log(`🎯 Mode: ${mode}`);
-            console.log(`🛡️ Defesa base: ${baseDefense}`);
-            console.log(`🛡️ Defesa atual: ${currentDefense}`);
-            console.log(`➡️ Defesa usada: ${defenseUsed}`);
+    if (index === -1) return "neutral";
 
-            if (crit.didCrit) {
-                console.log(`💥 Crítico ativo`);
-                console.log(`➡️ Buffs de defesa ignorados`);
-                console.log(`   Crit Extra: ${crit.critExtra}`);
-                console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
-            }
+    const strongAgainst = ELEMENT_CYCLE[(index + 1) % ELEMENT_CYCLE.length];
+    const weakAgainst =
+      ELEMENT_CYCLE[(index - 1 + ELEMENT_CYCLE.length) % ELEMENT_CYCLE.length];
 
-            console.log(`📦 Direct Damage solicitado: ${direct}`);
-        }
+    if (defendingElement === strongAgainst) return "weak";
 
-        // --- aplica crítico ---
-        let finalDamage = crit.didCrit ? damage + crit.critExtra : damage;
+    if (defendingElement === weakAgainst) return "resist";
 
-        // damageOutput: override de dano para testes, injetado via context pelo server
-        const damageOverride = context?.editMode?.damageOutput;
-        if (damageOverride != null) {
-            if (debugMode) {
-                console.log(`🔴 EDIT MODE → damageOutput: ${damageOverride}`);
-                console.groupEnd();
-            }
-            return damageOverride;
-        }
+    return "neutral";
+  },
 
-        const defensePercent = this.defenseToPercent(defenseUsed);
-        const flatReduction = target.getTotalDamageReduction?.() || 0;
+  _composeFinalDamage(mode, damage, crit, direct, target, context) {
+    if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
 
-        // ---------- RAW ----------
-        if (mode === "raw") {
-            finalDamage = Math.max(
-                finalDamage - finalDamage * defensePercent - flatReduction,
-                0
-            );
-        }
-        // ---------- HYBRID ----------
-        else {
-            const directPortion = Math.min(direct, finalDamage);
-            const rawPortion = finalDamage - directPortion;
+    const baseDefense = target.baseDefense ?? target.Defense;
+    const currentDefense = target.Defense;
 
-            const directAfterReduction = Math.max(
-                directPortion - flatReduction,
-                0
-            );
+    // ⭐ crítico ignora buffs de defesa
+    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
+    const defenseUsed = crit.didCrit
+      ? Math.min(baseDefense, currentDefense)
+      : currentDefense;
 
-            const rawAfterReduction = Math.max(
-                rawPortion - rawPortion * defensePercent - flatReduction,
-                0
-            );
+    if (debugMode) {
+      console.log(`📍 Damage Base: ${damage}`);
+      console.log(`🎯 Mode: ${mode}`);
+      console.log(`🛡️ Defesa base: ${baseDefense}`);
+      console.log(`🛡️ Defesa atual: ${currentDefense}`);
+      console.log(`➡️ Defesa usada: ${defenseUsed}`);
 
-            finalDamage = directAfterReduction + rawAfterReduction;
-        }
+      if (crit.didCrit) {
+        console.log(`💥 Crítico ativo`);
+        console.log(`➡️ Buffs de defesa ignorados`);
+        console.log(`   Crit Extra: ${crit.critExtra}`);
+        console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
+      }
 
-        // ---------- FINALIZAÇÃO ----------
-        if (context?.ignoreMinimumFloor) {
-            finalDamage = Math.max(finalDamage, 0);
-        } else {
-            finalDamage = Math.max(finalDamage, 10);
-        }
-        finalDamage = this.roundToFive(finalDamage);
+      console.log(`📦 Direct Damage solicitado: ${direct}`);
+    }
 
-        if (debugMode) {
-            console.log(`📈 Final: ${finalDamage}`);
-            console.groupEnd();
-        }
+    // --- aplica crítico ---
+    let finalDamage = crit.didCrit ? damage + crit.critExtra : damage;
 
-        return finalDamage;
-    },
+    // damageOutput: override de dano para testes, injetado via context pelo server
+    const damageOverride = context?.editMode?.damageOutput;
+    if (damageOverride != null) {
+      if (debugMode) {
+        console.log(`🔴 EDIT MODE → damageOutput: ${damageOverride}`);
+        console.groupEnd();
+      }
+      return damageOverride;
+    }
 
-    _applyDamage(target, val, context) {
-        if (debugMode) console.group(`❤️ [APLICANDO DANO]`);
-        if (debugMode) {
-            console.log(`👤 Target: ${target.name}`);
-            console.log(`📍 HP Antes: ${target.HP}/${target.maxHP}`);
-            console.log(`💥 Dano: ${val}`);
-        }
+    const defensePercent = this.defenseToPercent(defenseUsed);
+    const flatReduction = target.getTotalDamageReduction?.() || 0;
 
-        const hpBefore = target.HP;
+    // ---------- RAW ----------
+    if (mode === "raw") {
+      finalDamage = Math.max(
+        finalDamage - finalDamage * defensePercent - flatReduction,
+        0,
+      );
+    }
+    // ---------- HYBRID ----------
+    else {
+      const directPortion = Math.min(direct, finalDamage);
+      const rawPortion = finalDamage - directPortion;
 
-        target.takeDamage(val, context);
+      const directAfterReduction = Math.max(directPortion - flatReduction, 0);
 
-        console.log(
-            `➡️ [applyDamage] Dano aplicado, após takeDamage: ${val}, HP de ${target.name}: ${target.HP}/${target.maxHP}`
-        );
+      const rawAfterReduction = Math.max(
+        rawPortion - rawPortion * defensePercent - flatReduction,
+        0,
+      );
 
-        const hpAfter = target.HP;
-        const actualDmg = hpBefore - hpAfter;
+      finalDamage = directAfterReduction + rawAfterReduction;
+    }
 
-        if (debugMode) {
-            console.log(`📍 HP Depois: ${hpAfter}/${target.maxHP}`);
-            console.log(`✅ Dano efetivo: ${actualDmg}`);
-            if (hpAfter <= target.maxHP * 0.2)
-                console.log(`🚨 ALERTA: Target em perigo! (<20% HP)`);
-            if (hpAfter <= 0) console.log(`💀 Target DERROTADO!`);
-            console.groupEnd();
-        }
+    // ---------- FINALIZAÇÃO ----------
+    if (context?.ignoreMinimumFloor) {
+      finalDamage = Math.max(finalDamage, 0);
+    } else {
+      finalDamage = Math.max(finalDamage, 10);
+    }
+    finalDamage = this.roundToFive(finalDamage);
 
-        return { hpAfter, actualDmg };
-    },
+    if (debugMode) {
+      console.log(`📈 Final: ${finalDamage}`);
+      console.groupEnd();
+    }
 
-    _applyBeforeTakingPassive({
+    return finalDamage;
+  },
+
+  _applyDamage(target, val, context) {
+    if (debugMode) console.group(`❤️ [APLICANDO DANO]`);
+    if (debugMode) {
+      console.log(`👤 Target: ${target.name}`);
+      console.log(`📍 HP Antes: ${target.HP}/${target.maxHP}`);
+      console.log(`💥 Dano: ${val}`);
+    }
+
+    const hpBefore = target.HP;
+
+    val = context.ignoreMinimumFloor ? Math.max(val, 0) : Math.max(val, 10);
+
+    target.takeDamage(val, context);
+
+    console.log(
+      `➡️ [applyDamage] Dano aplicado, após takeDamage: ${val}, HP de ${target.name}: ${target.HP}/${target.maxHP}`,
+    );
+
+    const hpAfter = target.HP;
+    const actualDmg = hpBefore - hpAfter;
+
+    if (debugMode) {
+      console.log(`📍 HP Depois: ${hpAfter}/${target.maxHP}`);
+      console.log(`✅ Dano efetivo: ${actualDmg}`);
+      if (hpAfter <= target.maxHP * 0.2)
+        console.log(`🚨 ALERTA: Target em perigo! (<20% HP)`);
+      if (hpAfter <= 0) console.log(`💀 Target DERROTADO!`);
+      console.groupEnd();
+    }
+
+    return { hpAfter, actualDmg };
+  },
+
+  _applyBeforeTakingPassive({
+    mode,
+    damage,
+    crit,
+    skill,
+    attacker,
+    target,
+    context,
+    allChampions,
+  }) {
+    const results = emitCombatEvent(
+      "onBeforeDmgTaking",
+      {
         mode,
         damage,
         crit,
         skill,
-        attacker,
-        target,
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
         context,
-        allChampions
-    }) {
-        const results = emitCombatEvent(
-            "onBeforeDmgTaking",
-            {
-                mode,
-                damage,
-                crit,
-                skill,
-                attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                dmgSrc: attacker,
-                dmgReceiver: target,
-                context
-            },
-            allChampions
-        );
+      },
+      allChampions,
+    );
 
-        const effects = [];
-        const logs = [];
+    const effects = [];
+    const logs = [];
 
-        for (const r of results) {
-            if (!r) continue;
+    for (const r of results) {
+      if (!r) continue;
 
-            // Caso antigo: hook retornava array direto
-            if (Array.isArray(r)) {
-                logs.push(...r);
-                continue;
-            }
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
 
-            // Override de dano
-            if (r.damage !== undefined) {
-                damage = r.damage;
-            }
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
 
-            // Override de crit
-            if (r.crit !== undefined) {
-                crit = r.crit;
-            }
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
 
-            // Logs (aceita log OU logs)
-            if (r.log) {
-                if (Array.isArray(r.log)) logs.push(...r.log);
-                else logs.push(r.log);
-            }
+      // Logs (aceita log OU logs)
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
 
-            if (r.logs) {
-                if (Array.isArray(r.logs)) logs.push(...r.logs);
-                else logs.push(r.logs);
-            }
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
 
-            // 🔥 Effects
-            if (r.effects?.length) {
-                effects.push(...r.effects);
-            }
-        }
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
 
-        return {
-            damage,
-            crit,
-            logs,
-            effects
-        };
-    },
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
+  },
 
-    _applyBeforeDealingPassive({
+  _applyBeforeDealingPassive({
+    mode,
+    skill,
+    damage,
+    crit,
+    attacker,
+    target,
+    context,
+    allChampions,
+  }) {
+    const results = emitCombatEvent(
+      "onBeforeDmgDealing",
+      {
         mode,
-        skill,
         damage,
         crit,
-        attacker,
-        target,
+        skill,
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
         context,
-        allChampions
-    }) {
-        const results = emitCombatEvent(
-            "onBeforeDmgDealing",
-            {
-                mode,
-                damage,
-                crit,
-                skill,
-                attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                dmgSrc: attacker,
-                dmgReceiver: target,
-                context
-            },
-            allChampions
-        );
+      },
+      allChampions,
+    );
 
-        const logs = [];
-        const effects = [];
+    const logs = [];
+    const effects = [];
 
-        for (const r of results) {
-            if (!r) continue;
+    for (const r of results) {
+      if (!r) continue;
 
-            // Caso antigo: hook retornava array direto
-            if (Array.isArray(r)) {
-                logs.push(...r);
-                continue;
-            }
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
 
-            // Override de dano
-            if (r.damage !== undefined) {
-                damage = r.damage;
-            }
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
 
-            // Override de crit
-            if (r.crit !== undefined) {
-                crit = r.crit;
-            }
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
 
-            // Logs (aceita log OU logs)
-            if (r.log) {
-                if (Array.isArray(r.log)) logs.push(...r.log);
-                else logs.push(r.log);
-            }
+      // Logs (aceita log OU logs)
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
 
-            if (r.logs) {
-                if (Array.isArray(r.logs)) logs.push(...r.logs);
-                else logs.push(r.logs);
-            }
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
 
-            // 🔥 Effects
-            if (r.effects?.length) {
-                effects.push(...r.effects);
-            }
-        }
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
 
-        return {
-            damage,
-            crit,
-            logs,
-            effects
-        };
-    },
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
+  },
 
-    _applyAfterTakingPassive({
+  _applyAfterTakingPassive({
+    attacker,
+    target,
+    skill,
+    damage,
+    mode,
+    crit,
+    context,
+    allChampions,
+  }) {
+    console.log("🔥 _applyAfterTakingPassive ENTER");
+    console.log({
+      attacker: attacker?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      target: target?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      dmgSrc: attacker?.name,
+      dmgReceiver: target?.name,
+      skill,
+      damage,
+      mode,
+      crit,
+    });
+
+    const results = emitCombatEvent(
+      "onAfterDmgTaking",
+      {
         attacker,
         target,
         skill,
-        damage,
-        mode,
-        crit,
-        context,
-        allChampions
-    }) {
-        console.log("🔥 _applyAfterTakingPassive ENTER");
-        console.log({
-            attacker: attacker?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-            target: target?.name, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-            dmgSrc: attacker?.name,
-            dmgReceiver: target?.name,
-            skill,
-            damage,
-            mode,
-            crit
-        });
-
-        const results = emitCombatEvent(
-            "onAfterDmgTaking",
-            {
-                attacker,
-                target,
-                skill,
-                damage,
-                mode,
-                crit,
-                context
-            },
-            allChampions
-        );
-
-        const effects = [];
-        const logs = [];
-
-        for (const r of results) {
-            if (!r) continue;
-
-            // Caso antigo: hook retornava array direto
-            if (Array.isArray(r)) {
-                logs.push(...r);
-                continue;
-            }
-
-            // Override de dano
-            if (r.damage !== undefined) {
-                damage = r.damage;
-            }
-
-            // Override de crit
-            if (r.crit !== undefined) {
-                crit = r.crit;
-            }
-
-            // Logs (aceita log OU logs)
-            if (r.log) {
-                if (Array.isArray(r.log)) logs.push(...r.log);
-                else logs.push(r.log);
-            }
-
-            if (r.logs) {
-                if (Array.isArray(r.logs)) logs.push(...r.logs);
-                else logs.push(r.logs);
-            }
-
-            // 🔥 Effects
-            if (r.effects?.length) {
-                effects.push(...r.effects);
-            }
-        }
-
-        return {
-            damage,
-            crit,
-            logs,
-            effects
-        };
-    },
-
-    _applyAfterDealingPassive({
-        attacker,
-        target,
         damage,
         mode,
         crit,
+        context,
+      },
+      allChampions,
+    );
+
+    const effects = [];
+    const logs = [];
+
+    for (const r of results) {
+      if (!r) continue;
+
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
+
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
+  },
+
+  _applyAfterDealingPassive({
+    attacker,
+    target,
+    damage,
+    mode,
+    crit,
+    skill,
+    context,
+    allChampions,
+  }) {
+    if (context?.isDot) return [];
+
+    const results = emitCombatEvent(
+      "onAfterDmgDealing",
+      {
+        attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+        dmgSrc: attacker,
+        dmgReceiver: target,
+        damage,
+        mode,
+        crit,
         skill,
         context,
-        allChampions
-    }) {
-        if (context?.isDot) return [];
-
-        const results = emitCombatEvent(
-            "onAfterDmgDealing",
-            {
-                attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-                dmgSrc: attacker,
-                dmgReceiver: target,
-                damage,
-                mode,
-                crit,
-                skill,
-                context
-            },
-            allChampions
-        );
-
-        const effects = [];
-        const logs = [];
-
-        for (const r of results) {
-            if (!r) continue;
-
-            // Caso antigo: hook retornava array direto
-            if (Array.isArray(r)) {
-                logs.push(...r);
-                continue;
-            }
-
-            // Override de dano
-            if (r.damage !== undefined) {
-                damage = r.damage;
-            }
-
-            // Override de crit
-            if (r.crit !== undefined) {
-                crit = r.crit;
-            }
-
-            // Logs (aceita log OU logs)
-            if (r.log) {
-                if (Array.isArray(r.log)) logs.push(...r.log);
-                else logs.push(r.log);
-            }
-
-            if (r.logs) {
-                if (Array.isArray(r.logs)) logs.push(...r.logs);
-                else logs.push(r.logs);
-            }
-
-            // 🔥 Effects
-            if (r.effects?.length) {
-                effects.push(...r.effects);
-            }
-        }
-
-        return {
-            damage,
-            crit,
-            logs,
-            effects
-        };
-    },
-
-    applyRegenFromDamage(attacker, damageDealt) {
-        if (!attacker || damageDealt <= 0) return 0;
-
-        const isEnergy = attacker.energy !== undefined;
-        const current = isEnergy
-            ? Number(attacker.energy ?? 0)
-            : Number(attacker.mana ?? 0);
-
-        const base = attacker.baseMana ?? attacker.baseEnergy ?? 0;
-
-        if (current >= 999) return 0;
-
-        // 5% base + 5% atual
-        const regenAmount = Math.floor(base * 0.05 + current * 0.05);
-
-        const result = attacker.applyResourceChange({
-            amount: regenAmount,
-            mode: "add"
-        });
-
-        console.log(
-            "[REGEN FROM DAMAGE]",
-            attacker.name,
-            "Damage:",
-            damageDealt,
-            "Regen:",
-            result.applied
-        );
-
-        return result.applied;
-    },
-
-    // -----------------------------------
-
-    _buildLog(user, target, skill, dmg, crit, hpAfter) {
-        const userName = formatChampionName(user);
-        const targetName = formatChampionName(target);
-
-        // skill pode ser objeto ou string
-        const skillName =
-            skill && typeof skill === "object" ? skill.name : skill;
-        let log = `${userName} usou ${skillName} e causou ${dmg} de dano a ${targetName}`;
-
-        if (crit.didCrit)
-            log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;
-
-        log += `\nHP final de ${targetName}: ${hpAfter}/${target.maxHP}`;
-
-        return log;
-    },
-
-    _applyLifeSteal(user, dmg, allChampions = []) {
-        if (debugMode) console.group(`💉 [LIFESTEAL]`);
-
-        if (user.LifeSteal <= 0 || dmg <= 0) {
-            if (debugMode) {
-                console.log(
-                    `⚠️ Sem lifesteal: LS=${user.LifeSteal}%, DMG=${dmg}`
-                );
-                console.groupEnd();
-            }
-            return { amount: 0, text: null, passiveLogs: [] };
-        }
-
-        const heal = Math.max(
-            5,
-            this.roundToFive((dmg * user.LifeSteal) / 100)
-        );
-
-        if (debugMode) {
-            console.log(`👤 Attacker: ${user.name}`);
-            console.log(`📊 Damage causado: ${dmg}`);
-            console.log(`💚 Heal final: ${heal}`);
-        }
-
-        const hpBefore = user.HP;
-
-        const effectiveHeal = Math.min(heal, user.maxHP - hpBefore);
-
-        if (effectiveHeal <= 0) {
-            return { amount: 0, text: null, passiveLogs: [] };
-        }
-
-        user.heal(effectiveHeal, { suppressHealEvents: true });
-
-        // ================================
-        // 🔥 EVENT PIPELINE (CORRIGIDO)
-        // ================================
-
-        const results = emitCombatEvent(
-            "onAfterLifeSteal",
-            {
-                source: user,
-                amount: heal
-            },
-            allChampions
-        );
-
-        const passiveLogs = [];
-
-        for (const r of results) {
-            if (!r) continue;
-
-            if (r.log) {
-                if (Array.isArray(r.log)) passiveLogs.push(...r.log);
-                else passiveLogs.push(r.log);
-            }
-        }
-
-        if (debugMode) {
-            console.log(`📍 HP Attacker: ${user.HP}/${user.maxHP}`);
-            console.groupEnd();
-        }
-
-        return {
-            amount: effectiveHeal,
-            text: `Roubo de vida: ${effectiveHeal} | HP: ${user.HP}/${user.maxHP}`,
-            passiveLogs
-        };
-    },
-
-    _isImmune(target) {
-        return target.hasKeyword?.("imunidade absoluta");
-    },
-
-    _buildImmuneResult(baseDamage, user, target, skill) {
-        const targetName = formatChampionName(target);
-        const username = formatChampionName(user);
-        return {
-            baseDamage,
-            totalDamage: 0,
-            finalHP: target.HP,
-            targetId: target.id,
-            userId: user.id,
-            evaded: false,
-            log: `${username} tentou usar ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
-            crit: { chance: 0, didCrit: false, bonus: 0, roll: null }
-        };
-    },
-
-    _buildShieldBlockResult(baseDamage, user, target, skill) {
-        const targetName = formatChampionName(target);
-        const username = formatChampionName(user);
-        return {
-            baseDamage,
-            totalDamage: 0,
-            finalHP: target.HP,
-            targetId: target.id,
-            userId: user.id,
-            evaded: false,
-            log: `${username} usou ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
-            crit: { chance: 0, didCrit: false, bonus: 0, roll: null }
-        };
-    },
-
-    resolveDamage(params) {
-        const {
-            mode = "raw",
-            baseDamage,
-            directDamage = 0,
-            user,
-            target,
-            skill,
-            context,
-            options = {},
-            allChampions = []
-        } = params;
-
-        // =========================
-        // 1️⃣ PRÉ-CHECAGENS
-        // =========================
-        const depth = context.damageDepth ?? 0;
-
-        if (depth === 0) {
-            console.group(`⚔️ AÇÃO PRINCIPAL: ${user.name} → ${target.name}`);
-        } else {
-            console.group(
-                `↪️ REAÇÃO (${context.origin || "extra"}): ${user.name} → ${target.name}`
-            );
-        }
-
-        if (!Number.isFinite(baseDamage)) {
-            console.error("❌ baseDamage inválido:", baseDamage);
-            baseDamage = 0;
-        }
-
-        if (this._isImmune(target)) {
-            return this._buildImmuneResult(baseDamage, user, target, skill);
-        }
-
-        if (target._checkAndConsumeShieldBlock?.(context)) {
-            if (!context.shieldBlockedTargets)
-                context.shieldBlockedTargets = new Set();
-            context.shieldBlockedTargets.add(target.id);
-
-            return this._buildShieldBlockResult(
-                baseDamage,
-                user,
-                target,
-                skill
-            );
-        }
-
-        const evasion = this._rollEvasion({ attacker: user, target, context });
-        if (evasion?.evaded) {
-            return {
-                baseDamage,
-                totalDamage: 0,
-                finalHP: target.HP,
-                targetId: target.id,
-                userId: user.id,
-                evaded: true,
-                log: evasion.log,
-                crit: { chance: 0, didCrit: false, bonus: 0, roll: null }
-            };
-        }
-
-        // =========================
-        // 2️⃣ CÁLCULO DO DANO
-        // =========================
-
-        let extraEffects = [];
-
-        let crit = this.processCrit({
-            baseDamage,
-            user,
-            target,
-            context,
-            options
-        }) || { didCrit: false, bonus: 0 };
-
-        crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
-
-        let damage = this._applyDamageModifiers(
-            baseDamage,
-            user,
-            target,
-            skill,
-            context
-        );
-
-        const beforeDeal = this._applyBeforeDealingPassive({
-            mode,
-            skill,
-            damage,
-            crit,
-            user,
-            target,
-            context,
-            allChampions
-        });
-
-        if (beforeDeal.crit !== undefined) {
-            crit = beforeDeal.crit;
-        }
-
-        if (beforeDeal.damage !== undefined) {
-            damage = beforeDeal.damage;
-        }
-
-        if (beforeDeal?.effects?.length) {
-            extraEffects.push(...beforeDeal.effects);
-        }
-
-        const finalDamage = this._composeFinalDamage(
-            mode,
-            damage,
-            crit,
-            directDamage,
-            target,
-            context
-        );
-
-        console.log(
-            `➡️ Dano final calculado (depois da "compose"): ${finalDamage}`
-        );
-
-        // =========================
-        // 3️⃣ APLICAR DANO
-        // =========================
-
-        context.extraLogs = [];
-
-        const beforeTake = this._applyBeforeTakingPassive({
-            mode,
-            skill,
-            damage: finalDamage,
-            crit,
-            user, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-            target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-            dmgSrc: user,
-            dmgReceiver: target,
-            context,
-            allChampions
-        });
-
-        if (beforeTake?.crit !== undefined) {
-            crit = beforeTake.crit;
-        }
-
-        if (beforeTake?.damage !== undefined) {
-            finalDamage = beforeTake.damage;
-            if (beforeTake?.ignoreMinimumFloor) {
-                context.ignoreMinimumFloor = true;
-            }
-        }
-
-        if (beforeTake?.effects?.length) {
-            extraEffects.push(...beforeTake.effects);
-        }
-
-        const { hpAfter, actualDmg } = this._applyDamage(
-            target,
-            finalDamage,
-            context
-        );
-
-        // =========================
-        // 4️⃣ AFTER HOOKS
-        // =========================
-
-        /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
+      },
+      allChampions,
+    );
+
+    const effects = [];
+    const logs = [];
+
+    for (const r of results) {
+      if (!r) continue;
+
+      // Caso antigo: hook retornava array direto
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      // Override de dano
+      if (r.damage !== undefined) {
+        damage = r.damage;
+      }
+
+      // Override de crit
+      if (r.crit !== undefined) {
+        crit = r.crit;
+      }
+
+      // Logs (aceita log OU logs)
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // 🔥 Effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
+
+    return {
+      damage,
+      crit,
+      logs,
+      effects,
+    };
+  },
+
+  applyRegenFromDamage(attacker, damageDealt) {
+    if (!attacker || damageDealt <= 0) return 0;
+
+    const isEnergy = attacker.energy !== undefined;
+    const current = isEnergy
+      ? Number(attacker.energy ?? 0)
+      : Number(attacker.mana ?? 0);
+
+    const base = attacker.baseMana ?? attacker.baseEnergy ?? 0;
+
+    if (current >= 999) return 0;
+
+    // 5% base + 5% atual
+    const regenAmount = Math.floor(base * 0.05 + current * 0.05);
+
+    const result = attacker.applyResourceChange({
+      amount: regenAmount,
+      mode: "add",
+    });
+
+    console.log(
+      "[REGEN FROM DAMAGE]",
+      attacker.name,
+      "Damage:",
+      damageDealt,
+      "Regen:",
+      result.applied,
+    );
+
+    return result.applied;
+  },
+
+  // -----------------------------------
+
+  _buildLog(user, target, skill, dmg, crit, hpAfter) {
+    const userName = formatChampionName(user);
+    const targetName = formatChampionName(target);
+
+    // skill pode ser objeto ou string
+    const skillName = skill && typeof skill === "object" ? skill.name : skill;
+    let log = `${userName} usou ${skillName} e causou ${dmg} de dano a ${targetName}`;
+
+    if (crit.didCrit)
+      log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;
+
+    log += `\nHP final de ${targetName}: ${hpAfter}/${target.maxHP}`;
+
+    return log;
+  },
+
+  _applyLifeSteal(user, dmg, allChampions = []) {
+    if (debugMode) console.group(`💉 [LIFESTEAL]`);
+
+    if (user.LifeSteal <= 0 || dmg <= 0) {
+      if (debugMode) {
+        console.log(`⚠️ Sem lifesteal: LS=${user.LifeSteal}%, DMG=${dmg}`);
+        console.groupEnd();
+      }
+      return { amount: 0, text: null, passiveLogs: [] };
+    }
+
+    const heal = Math.max(5, this.roundToFive((dmg * user.LifeSteal) / 100));
+
+    if (debugMode) {
+      console.log(`👤 Attacker: ${user.name}`);
+      console.log(`📊 Damage causado: ${dmg}`);
+      console.log(`💚 Heal final: ${heal}`);
+    }
+
+    const hpBefore = user.HP;
+
+    const effectiveHeal = Math.min(heal, user.maxHP - hpBefore);
+
+    if (effectiveHeal <= 0) {
+      return { amount: 0, text: null, passiveLogs: [] };
+    }
+
+    user.heal(effectiveHeal, { suppressHealEvents: true });
+
+    // ================================
+    // 🔥 EVENT PIPELINE (CORRIGIDO)
+    // ================================
+
+    const results = emitCombatEvent(
+      "onAfterLifeSteal",
+      {
+        source: user,
+        amount: heal,
+      },
+      allChampions,
+    );
+
+    const passiveLogs = [];
+
+    for (const r of results) {
+      if (!r) continue;
+
+      if (r.log) {
+        if (Array.isArray(r.log)) passiveLogs.push(...r.log);
+        else passiveLogs.push(r.log);
+      }
+    }
+
+    if (debugMode) {
+      console.log(`📍 HP Attacker: ${user.HP}/${user.maxHP}`);
+      console.groupEnd();
+    }
+
+    return {
+      amount: effectiveHeal,
+      text: `Roubo de vida: ${effectiveHeal} | HP: ${user.HP}/${user.maxHP}`,
+      passiveLogs,
+    };
+  },
+
+  _isImmune(target) {
+    return target.hasKeyword?.("imunidade absoluta");
+  },
+
+  _buildImmuneResult(baseDamage, user, target, skill) {
+    const targetName = formatChampionName(target);
+    const username = formatChampionName(user);
+    return {
+      baseDamage,
+      totalDamage: 0,
+      finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
+      log: `${username} tentou usar ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas ${targetName} está com Imunidade Absoluta!`,
+      crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+    };
+  },
+
+  _buildShieldBlockResult(baseDamage, user, target, skill) {
+    const targetName = formatChampionName(target);
+    const username = formatChampionName(user);
+    return {
+      baseDamage,
+      totalDamage: 0,
+      finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
+      log: `${username} usou ${skill && typeof skill === "object" ? skill.name : skill} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
+      crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+    };
+  },
+
+  resolveDamage(params) {
+    const {
+      mode = "raw",
+      baseDamage,
+      directDamage = 0,
+      user,
+      target,
+      skill,
+      context,
+      options = {},
+      allChampions = [],
+    } = params;
+
+    // =========================
+    // 1️⃣ PRÉ-CHECAGENS
+    // =========================
+    const depth = context.damageDepth ?? 0;
+
+    if (depth === 0) {
+      console.group(`⚔️ AÇÃO PRINCIPAL: ${user.name} → ${target.name}`);
+    } else {
+      console.group(
+        `↪️ REAÇÃO (${context.origin || "extra"}): ${user.name} → ${target.name}`,
+      );
+    }
+
+    if (!Number.isFinite(baseDamage)) {
+      console.error("❌ baseDamage inválido:", baseDamage);
+      baseDamage = 0;
+    }
+
+    if (this._isImmune(target)) {
+      return this._buildImmuneResult(baseDamage, user, target, skill);
+    }
+
+    if (target._checkAndConsumeShieldBlock?.(context)) {
+      if (!context.shieldBlockedTargets)
+        context.shieldBlockedTargets = new Set();
+      context.shieldBlockedTargets.add(target.id);
+
+      return this._buildShieldBlockResult(baseDamage, user, target, skill);
+    }
+
+    const evasion = this._rollEvasion({ attacker: user, target, context });
+    if (evasion?.evaded) {
+      return {
+        baseDamage,
+        totalDamage: 0,
+        finalHP: target.HP,
+        targetId: target.id,
+        userId: user.id,
+        evaded: true,
+        log: evasion.log,
+        crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+      };
+    }
+
+    // =========================
+    // 2️⃣ CÁLCULO DO DANO
+    // =========================
+
+    context.extraEffects = context.extraEffects || [];
+    let extraEffects = [];
+
+    let crit = this.processCrit({
+      baseDamage,
+      user,
+      target,
+      context,
+      options,
+    }) || { didCrit: false, bonus: 0 };
+
+    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
+
+    let damage = this._applyDamageModifiers(
+      baseDamage,
+      user,
+      target,
+      skill,
+      context,
+    );
+
+    const beforeDeal = this._applyBeforeDealingPassive({
+      mode,
+      skill,
+      damage,
+      crit,
+      user,
+      target,
+      context,
+      allChampions,
+    });
+
+    if (beforeDeal.crit !== undefined) {
+      crit = beforeDeal.crit;
+    }
+
+    if (beforeDeal.damage !== undefined) {
+      damage = beforeDeal.damage;
+    }
+
+    if (beforeDeal?.effects?.length) {
+      extraEffects.push(...beforeDeal.effects);
+    }
+
+    let finalDamage = this._composeFinalDamage(
+      mode,
+      damage,
+      crit,
+      directDamage,
+      target,
+      context,
+    );
+
+    console.log(
+      `➡️ Dano final calculado (depois da "compose"): ${finalDamage}`,
+    );
+
+    // =========================
+    // 3️⃣ APLICAR DANO
+    // =========================
+
+    context.extraLogs = [];
+
+    const beforeTake = this._applyBeforeTakingPassive({
+      mode,
+      skill,
+      damage: finalDamage,
+      crit,
+      user, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+      dmgSrc: user,
+      dmgReceiver: target,
+      context,
+      allChampions,
+    });
+
+    if (beforeTake?.crit !== undefined) {
+      crit = beforeTake.crit;
+    }
+
+    if (beforeTake?.damage !== undefined) {
+      finalDamage = beforeTake.damage;
+      if (beforeTake?.ignoreMinimumFloor) {
+        context.ignoreMinimumFloor = true;
+      }
+    }
+
+    if (beforeTake?.effects?.length) {
+      extraEffects.push(...beforeTake.effects);
+    }
+
+    //console.log("⚡ skill.element =", skill?.element);
+
+    finalDamage = this._getAffinityDamage(
+      finalDamage,
+      skill?.element,
+      target,
+      context,
+    );
+
+    const { hpAfter, actualDmg } = this._applyDamage(
+      target,
+      finalDamage,
+      context,
+    );
+
+    // =========================
+    // 4️⃣ AFTER HOOKS
+    // =========================
+
+    /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
     console.log({
       attacker: user?.name,
       target: target?.name,
@@ -1052,175 +1108,171 @@ export const CombatResolver = {
       allChampions,
     }); */
 
-        const afterTakeResult = this._applyAfterTakingPassive({
-            attacker: user,
-            target,
-            skill,
-            damage: finalDamage,
-            mode,
-            crit,
-            context,
-            allChampions
-        });
+    const afterTakeResult = this._applyAfterTakingPassive({
+      attacker: user,
+      target,
+      skill,
+      damage: finalDamage,
+      mode,
+      crit,
+      context,
+      allChampions,
+    });
 
-        const afterDealResult = this._applyAfterDealingPassive({
-            attacker: user,
-            skill,
-            target,
-            damage: finalDamage,
-            mode,
-            crit,
-            context,
-            allChampions
-        });
+    const afterDealResult = this._applyAfterDealingPassive({
+      attacker: user,
+      skill,
+      target,
+      damage: finalDamage,
+      mode,
+      crit,
+      context,
+      allChampions,
+    });
 
-        if (afterTakeResult?.effects?.length) {
-            extraEffects.push(...afterTakeResult.effects);
-        }
-
-        if (afterDealResult?.effects?.length) {
-            extraEffects.push(...afterDealResult.effects);
-        }
-
-        // =========================
-        // 5️⃣ EFEITOS SECUNDÁRIOS
-        // =========================
-
-        let regenLog = "";
-        let regenApplied = 0;
-
-        if (actualDmg > 0) {
-            regenApplied = this.applyRegenFromDamage(user, actualDmg);
-
-            if (regenApplied > 0) {
-                const isEnergy = user.energy !== undefined;
-                const resourceType = isEnergy ? "energy" : "mana";
-                const label = isEnergy ? "energia" : "mana";
-
-                regenLog = `${formatChampionName(user)} regenerou ${regenApplied} de ${label} ao causar dano!`;
-
-                context.resourceEvents = context.resourceEvents || [];
-                context.resourceEvents.push({
-                    type: "resourceGain",
-                    targetId: user.id,
-                    sourceId: user.id,
-                    amount: regenApplied,
-                    resourceType
-                });
-            }
-        }
-
-        const ls = this._applyLifeSteal(user, finalDamage, allChampions);
-        const lsAmount = Number(ls?.amount) || 0;
-
-        // 🔥 Processa fila de danos extras (ex: contra-ataques)
-        let extraResults = [];
-
-        if (context.extraDamageQueue?.length) {
-            const queue = [...context.extraDamageQueue];
-            context.extraDamageQueue = [];
-
-            for (const extra of queue) {
-                const originSkillKey = extra.skill?.key;
-                const result = this.resolveDamage({
-                    ...extra,
-                    context: {
-                        ...context,
-                        damageDepth: (context.damageDepth ?? 0) + 1,
-                        origin: originSkillKey || "reaction"
-                    },
-                    allChampions
-                });
-
-                if (Array.isArray(result)) {
-                    extraResults.push(...result);
-                } else if (result) {
-                    extraResults.push(result);
-                }
-            }
-        }
-
-        // =========================
-        // 6️⃣ CONSTRUÇÃO DO LOG
-        // =========================
-
-        const afterTakeLogs = afterTakeResult?.logs || [];
-        const afterDealLogs = afterDealResult?.logs || [];
-
-        let log = this._buildLog(
-            user,
-            target,
-            skill,
-            finalDamage,
-            crit,
-            hpAfter
-        );
-
-        if (beforeDeal.logs?.length) log += "\n" + beforeDeal.logs.join("\n");
-
-        if (beforeTake.logs?.length) log += "\n" + beforeTake.logs.join("\n");
-
-        if (afterTakeLogs?.length) log += "\n" + afterTakeLogs.join("\n");
-
-        if (afterDealLogs?.length) log += "\n" + afterDealLogs.join("\n");
-
-        if (regenLog) log += "\n" + regenLog;
-
-        if (ls.text) {
-            log += "\n" + ls.text;
-            if (ls.passiveLogs.length)
-                log += "\n   " + ls.passiveLogs.join("\n");
-        }
-
-        for (const r of extraResults) {
-            if (r.log) log += "\n" + r.log;
-        }
-
-        if (context.extraLogs.length)
-            log += "\n" + context.extraLogs.join("\n");
-
-        // =========================
-        // 7️⃣ RETORNO FINAL
-        // =========================
-
-        console.groupEnd();
-
-        const mainResult = {
-            baseDamage,
-            totalDamage: finalDamage,
-            finalHP: target.HP,
-            totalHeal: lsAmount,
-            heal:
-                lsAmount > 0
-                    ? {
-                          amount: lsAmount,
-                          lifesteal: lsAmount,
-                          targetId: user.id,
-                          sourceId: user.id
-                      }
-                    : null,
-            targetId: target.id,
-            userId: user.id,
-            evaded: false,
-            log,
-            crit: {
-                chance: user.Critical || 0,
-                didCrit: crit.didCrit,
-                bonus: crit.bonus,
-                roll: crit.roll
-            },
-
-            // 🔥 ESSENCIAL
-            damageDepth: context.damageDepth ?? 0,
-            skill,
-
-            extraEffects
-        };
-
-        if (extraResults.length > 0) {
-            return [mainResult, ...extraResults];
-        }
-
-        return mainResult;
+    if (afterTakeResult?.effects?.length) {
+      extraEffects.push(...afterTakeResult.effects);
     }
+
+    if (afterDealResult?.effects?.length) {
+      extraEffects.push(...afterDealResult.effects);
+    }
+
+    // =========================
+    // 5️⃣ EFEITOS SECUNDÁRIOS
+    // =========================
+
+    let regenLog = "";
+    let regenApplied = 0;
+
+    if (actualDmg > 0) {
+      regenApplied = this.applyRegenFromDamage(user, actualDmg);
+
+      if (regenApplied > 0) {
+        const isEnergy = user.energy !== undefined;
+        const resourceType = isEnergy ? "energy" : "mana";
+        const label = isEnergy ? "energia" : "mana";
+
+        regenLog = `${formatChampionName(user)} regenerou ${regenApplied} de ${label} ao causar dano!`;
+
+        context.resourceEvents = context.resourceEvents || [];
+        context.resourceEvents.push({
+          type: "resourceGain",
+          targetId: user.id,
+          sourceId: user.id,
+          amount: regenApplied,
+          resourceType,
+        });
+      }
+    }
+
+    const ls = this._applyLifeSteal(user, finalDamage, allChampions);
+    const lsAmount = Number(ls?.amount) || 0;
+
+    // 🔥 Processa fila de danos extras (ex: contra-ataques)
+    let extraResults = [];
+
+    if (context.extraDamageQueue?.length) {
+      const queue = [...context.extraDamageQueue];
+      context.extraDamageQueue = [];
+
+      for (const extra of queue) {
+        const originSkillKey = extra.skill?.key;
+        const result = this.resolveDamage({
+          ...extra,
+          context: {
+            ...context,
+            damageDepth: (context.damageDepth ?? 0) + 1,
+            origin: originSkillKey || "reaction",
+          },
+          allChampions,
+        });
+
+        if (Array.isArray(result)) {
+          extraResults.push(...result);
+        } else if (result) {
+          extraResults.push(result);
+        }
+      }
+    }
+
+    // =========================
+    // 6️⃣ CONSTRUÇÃO DO LOG
+    // =========================
+
+    const afterTakeLogs = afterTakeResult?.logs || [];
+    const afterDealLogs = afterDealResult?.logs || [];
+
+    let log = this._buildLog(user, target, skill, finalDamage, crit, hpAfter);
+
+    if (beforeDeal.logs?.length) log += "\n" + beforeDeal.logs.join("\n");
+
+    if (beforeTake.logs?.length) log += "\n" + beforeTake.logs.join("\n");
+
+    if (afterTakeLogs?.length) log += "\n" + afterTakeLogs.join("\n");
+
+    if (afterDealLogs?.length) log += "\n" + afterDealLogs.join("\n");
+
+    if (regenLog) log += "\n" + regenLog;
+
+    if (ls.text) {
+      log += "\n" + ls.text;
+      if (ls.passiveLogs.length) log += "\n   " + ls.passiveLogs.join("\n");
+    }
+
+    for (const r of extraResults) {
+      if (r.log) log += "\n" + r.log;
+    }
+
+    if (context.extraLogs.length) log += "\n" + context.extraLogs.join("\n");
+
+    // =========================
+    // 7️⃣ RETORNO FINAL
+    // =========================
+
+    console.groupEnd();
+
+    if (context.extraEffects?.length) {
+      extraEffects.push(...context.extraEffects);
+      context.extraEffects = [];
+    }
+
+    const mainResult = {
+      baseDamage,
+      totalDamage: finalDamage,
+      finalHP: target.HP,
+      totalHeal: lsAmount,
+      heal:
+        lsAmount > 0
+          ? {
+              amount: lsAmount,
+              lifesteal: lsAmount,
+              targetId: user.id,
+              sourceId: user.id,
+            }
+          : null,
+      targetId: target.id,
+      userId: user.id,
+      evaded: false,
+      log,
+      crit: {
+        chance: user.Critical || 0,
+        didCrit: crit.didCrit,
+        bonus: crit.bonus,
+        roll: crit.roll,
+      },
+
+      // 🔥 ESSENCIAL
+      damageDepth: context.damageDepth ?? 0,
+      skill,
+
+      extraEffects,
+    };
+
+    if (extraResults.length > 0) {
+      return [mainResult, ...extraResults];
+    }
+
+    return mainResult;
+  },
 };

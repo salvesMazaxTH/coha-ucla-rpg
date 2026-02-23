@@ -16,11 +16,11 @@ export function emitCombatEvent(eventName, payload, champions) {
     ? champions
     : Array.from(champions.values());
 
-  console.log("📡 EMIT:", eventName);
-  console.log(
+  //console.log("📡 EMIT:", eventName);
+  /* console.log(
     "🎯 Champions recebidos:",
     champArray.map((c) => c.name),
-  );
+  ); */
 
   for (const champ of champArray) {
     const hookSources = [];

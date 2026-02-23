@@ -1,6 +1,6 @@
 export default {
   name: "Laiserisa",
-  portrait: "/assets/portraits/laiserisa.png",
+  portrait: "/assets/portraits/laiserisa.webp",
   HP: 100,
   Attack: 100,
   Defense: 100,

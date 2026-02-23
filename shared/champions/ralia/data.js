@@ -1,6 +1,6 @@
 export default {
   name: "Rália",
-  portrait: "/assets/portraits/ralia.png",
+  portrait: "/assets/portraits/ralia.webp",
   unreleased: true,
   HP: 380,
   Attack: 150,

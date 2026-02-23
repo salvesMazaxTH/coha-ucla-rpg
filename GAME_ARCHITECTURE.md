@@ -1,5 +1,4 @@
 # GAME_ARCHITECTURE.md — Champion Arena (UCLA RPG)
-
 > Documentação mestre da arquitetura do sistema. Referência técnica completa para desenvolvimento, manutenção e extensão do jogo.
 
 ---
@@ -15,22 +14,23 @@
 7. [Sistema de Recursos (Mana / Energia)](#7-sistema-de-recursos-mana--energia)
 8. [Pipeline de Combate — CombatResolver](#8-pipeline-de-combate--combatresolver)
 9. [Fórmulas de Dano e Defesa](#9-fórmulas-de-dano-e-defesa)
-10. [Sistema de Hooks — CombatEvents](#10-sistema-de-hooks--combatevents)
-11. [Sistema de Keywords](#11-sistema-de-keywords)
-12. [Sistema de Escudos (Shields)](#12-sistema-de-escudos-shields)
-13. [Sistema de Modificadores de Dano](#13-sistema-de-modificadores-de-dano)
-14. [Gerenciador de Animações — AnimsAndLogManager](#14-gerenciador-de-animações--animsandlogmanager)
-15. [Indicadores de Status — StatusIndicator](#15-indicadores-de-status--statusindicator)
-16. [Histórico de Turnos](#16-histórico-de-turnos)
-17. [Modo de Edição / Debug](#17-modo-de-edição--debug)
-18. [Como Criar um Novo Campeão](#18-como-criar-um-novo-campeão)
-19. [Decisões de Design e Convenções](#19-decisões-de-design-e-convenções)
+10. [Sistema de Afinidades Elementais](#10-sistema-de-afinidades-elementais)
+11. [Sistema de Hooks — CombatEvents](#11-sistema-de-hooks--combatevents)
+12. [Sistema de Keywords](#12-sistema-de-keywords)
+13. [Sistema de Escudos (Shields)](#13-sistema-de-escudos-shields)
+14. [Sistema de Modificadores de Dano](#14-sistema-de-modificadores-de-dano)
+15. [Gerenciador de Animações — AnimsAndLogManager](#15-gerenciador-de-animações--animsandlogmanager)
+16. [Indicadores de Status — StatusIndicator](#16-indicadores-de-status--statusindicator)
+17. [Histórico de Turnos](#17-histórico-de-turnos)
+18. [Modo de Edição / Debug](#18-modo-de-edição--debug)
+19. [Como Criar um Novo Campeão](#19-como-criar-um-novo-campeão)
+20. [Decisões de Design e Convenções](#20-decisões-de-design-e-convenções)
 
 ---
 
 ## 1. Visão Geral
 
-**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de 3 campeões cada, e alternam turnos usando habilidades até que um time seja eliminado. O formato é melhor-de-3 (primeiro a 2 pontos vence, pontua-se quando um campeão do jogador adversário é derrotado).
+**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de 3 campeões cada, e alternam turnos usando habilidades até que um time seja eliminado. O formato é melhor-de-3 rodadas (primeiro a 2 pontos vence).
 
 ### Princípios Arquiteturais
 
@@ -43,14 +43,14 @@
 
 ## 2. Stack Tecnológica
 
-| Camada       | Tecnologia                           |
-| ------------ | ------------------------------------ |
-| Servidor     | Node.js + Express (ES Modules)       |
-| Comunicação  | Socket.IO (WebSocket)                |
-| Cliente      | Vanilla JS (ES Modules, `import`)    |
-| UI/Estilo    | HTML5 + CSS3 (sem framework)         |
-| Fontes       | Google Fonts (Montserrat) + Boxicons |
-| Debug mobile | Eruda (injetado em `index.html`)     |
+| Camada | Tecnologia |
+|---|---|
+| Servidor | Node.js + Express (ES Modules) |
+| Comunicação | Socket.IO (WebSocket) |
+| Cliente | Vanilla JS (ES Modules, `import`) |
+| UI/Estilo | HTML5 + CSS3 (sem framework) |
+| Fontes | Google Fonts (Montserrat) + Boxicons |
+| Debug mobile | Eruda (injetado em `index.html`) |
 
 ---
 
@@ -114,7 +114,7 @@
 ### 4.2 Seleção de Campeões
 
 1. Servidor emite `championSelectionStarted` com a lista de campeões disponíveis (filtrado por `unreleased` se necessário).
-2. Cliente exibe grade de campeões. Jogador arrasta/clica para montar uma equipe de 3, definindo a **ordem** (relevante para lógica de habilidades que afetam "adjacentes").
+2. Cliente exibe grade de campeões. Jogador arrasta/clica para montar uma equipe de 3, definindo a **ordem** (primeiro = frontline, segundo e terceiro = reservas).
 3. Ao confirmar, cliente emite `selectTeam` com `{ championKeys: string[] }`.
 4. Servidor valida, instancia os campeões via `Champion.fromBaseData()`, registra em `activeChampions`.
 5. Quando **ambos** confirmam, servidor emite `allTeamsSelected` + `gameStateUpdate` com o estado completo.
@@ -130,7 +130,6 @@ Um turno segue o ciclo:
 ```
 
 **Fase de Ação:**
-
 - Cada jogador clica nos botões de skill de seus campeões.
 - Cliente emite `requestSkillUse` → servidor valida pré-condições → responde `skillApproved` ou `skillDenied`.
 - Após aprovação, cliente pergunta o alvo (overlay de seleção) → emite `useSkill` com `{ userId, skillKey, targetIds }`.
@@ -138,7 +137,6 @@ Um turno segue o ciclo:
 
 **Fase de Resolução (handleEndTurn):**
 Ambos os jogadores confirmam o fim do turno. O servidor então:
-
 1. Ordena `pendingActions` por `priority DESC`, depois `speed DESC` (Speed do campeão desempata).
 2. Processa cada ação em ordem:
    - Verifica se o campeão usuário ainda está vivo.
@@ -158,9 +156,10 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
 - `removeChampionFromGame()`:
   1. Emite `championRemoved` com delay de 2500ms (para animação no cliente).
   2. Remove do `activeChampions`.
-  3. O time que ficou sem campeões, o time adversário marca 1 ponto (`playerScores`).
-  4. Se algum time atingiu `MAX_SCORE = 2`, emite `gameOver`.
-  5. Caso contrário, emite `???` + `gameStateUpdate` + reinicia para nova rodada.
+  3. Se o time ainda tem campeões de reserva, instancia o próximo.
+  4. Se o time ficou sem campeões, o time adversário marca 1 ponto (`playerScores`).
+  5. Se algum time atingiu `MAX_SCORE = 2`, emite `gameOver`.
+  6. Caso contrário, emite `roundOver` + `gameStateUpdate` + reinicia para nova rodada.
 
 ### 4.5 Fim de Jogo
 
@@ -174,42 +173,42 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
 
 ### Eventos Cliente → Servidor
 
-| Evento               | Payload                           | Descrição                                      |
-| -------------------- | --------------------------------- | ---------------------------------------------- |
-| `joinArena`          | `{ username }`                    | Solicita entrada no jogo                       |
-| `selectTeam`         | `{ championKeys: string[] }`      | Confirma seleção de equipe                     |
-| `requestSkillUse`    | `{ userId, skillKey }`            | Pré-validação antes de mostrar overlay de alvo |
-| `useSkill`           | `{ userId, skillKey, targetIds }` | Enfileira ação com alvos confirmados           |
-| `endTurn`            | —                                 | Confirma fim de turno                          |
-| `surrender`          | —                                 | Rendição imediata                              |
-| `removeChampion`     | `{ championId }`                  | Remove campeão (edit mode)                     |
-| `changeChampionHp`   | `{ championId, amount }`          | Altera HP (edit mode)                          |
-| `changeChampionStat` | `{ championId, stat, action }`    | Altera stat (edit mode)                        |
+| Evento | Payload | Descrição |
+|---|---|---|
+| `joinArena` | `{ username }` | Solicita entrada no jogo |
+| `selectTeam` | `{ championKeys: string[] }` | Confirma seleção de equipe |
+| `requestSkillUse` | `{ userId, skillKey }` | Pré-validação antes de mostrar overlay de alvo |
+| `useSkill` | `{ userId, skillKey, targetIds }` | Enfileira ação com alvos confirmados |
+| `endTurn` | — | Confirma fim de turno |
+| `surrender` | — | Rendição imediata |
+| `removeChampion` | `{ championId }` | Remove campeão (edit mode) |
+| `changeChampionHp` | `{ championId, amount }` | Altera HP (edit mode) |
+| `changeChampionStat` | `{ championId, stat, action }` | Altera stat (edit mode) |
 
 ### Eventos Servidor → Cliente
 
-| Evento                      | Payload                                  | Descrição                         |
-| --------------------------- | ---------------------------------------- | --------------------------------- |
-| `joinedArena`               | `{ playerId, team, username, editMode }` | Confirmação de login              |
-| `arenaFull`                 | —                                        | Sala lotada                       |
-| `championSelectionStarted`  | `{ availableChampions, timeLimit }`      | Inicia seleção                    |
-| `allTeamsSelected`          | —                                        | Ambos confirmaram equipes         |
-| `gameStateUpdate`           | `{ champions[], currentTurn }`           | Estado completo do jogo           |
-| `combatAction`              | `{ action, effects[], log, state[] }`    | Envelope de ação de combate       |
-| `combatLog`                 | `string`                                 | Mensagem de log avulsa            |
-| `championRemoved`           | `{ championId }`                         | Campeão morreu                    |
-| `turnUpdate`                | `number`                                 | Número do novo turno              |
-| `playerConfirmedEndTurn`    | `playerSlot`                             | Um jogador confirmou fim de turno |
-| `waitingForOpponentEndTurn` | `string`                                 | Aguardando adversário             |
-| `scoreUpdate`               | `{ player1, player2 }`                   | Placar atualizado                 |
-| `gameOver`                  | `{ winnerTeam, winnerName }`             | Fim de jogo                       |
-| `roundOver`                 | `{ winnerTeam }`                         | Fim de rodada                     |
-| `skillApproved`             | `{ userId, skillKey }`                   | Skill pré-validada                |
-| `skillDenied`               | `string`                                 | Motivo da negação                 |
-| `actionFailed`              | `string`                                 | Ação rejeitada                    |
-| `playerDisconnected`        | `{ slot, name, timeout }`                | Oponente desconectou              |
-| `playerReconnected`         | `{ slot, name }`                         | Oponente reconectou               |
-| `editModeUpdate`            | `object`                                 | Configurações de edit mode        |
+| Evento | Payload | Descrição |
+|---|---|---|
+| `joinedArena` | `{ playerId, team, username, editMode }` | Confirmação de login |
+| `arenaFull` | — | Sala lotada |
+| `championSelectionStarted` | `{ availableChampions, timeLimit }` | Inicia seleção |
+| `allTeamsSelected` | — | Ambos confirmaram equipes |
+| `gameStateUpdate` | `{ champions[], currentTurn }` | Estado completo do jogo |
+| `combatAction` | `{ action, effects[], log, state[] }` | Envelope de ação de combate |
+| `combatLog` | `string` | Mensagem de log avulsa |
+| `championRemoved` | `{ championId }` | Campeão morreu |
+| `turnUpdate` | `number` | Número do novo turno |
+| `playerConfirmedEndTurn` | `playerSlot` | Um jogador confirmou fim de turno |
+| `waitingForOpponentEndTurn` | `string` | Aguardando adversário |
+| `scoreUpdate` | `{ player1, player2 }` | Placar atualizado |
+| `gameOver` | `{ winnerTeam, winnerName }` | Fim de jogo |
+| `roundOver` | `{ winnerTeam }` | Fim de rodada |
+| `skillApproved` | `{ userId, skillKey }` | Skill pré-validada |
+| `skillDenied` | `string` | Motivo da negação |
+| `actionFailed` | `string` | Ação rejeitada |
+| `playerDisconnected` | `{ slot, name, timeout }` | Oponente desconectou |
+| `playerReconnected` | `{ slot, name }` | Oponente reconectou |
+| `editModeUpdate` | `object` | Configurações de edit mode |
 
 ### Envelopes de Ação (`combatAction`)
 
@@ -225,13 +224,17 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
   },
   effects: [                // Lista de efeitos visuais, em ordem
     {
-      type: "damage" | "heal" | "shield" | "dialog" | buff" | "evasion" | "resourceGain"
+      type: "damage" | "heal" | "shield" | "buff" | "evasion" | "resourceGain"
             | "keywordApplied" | "keywordRemoved" | "immune" | "gameOver"
-            | "shieldBlock" | "taunt" | "bonusAttack",
-      targetId: string,     // Campeão afetado
+            | "shieldBlock" | "taunt" | "bonusAttack"
+            | "dialog",     // 🔥 diálogo customizado vindo de hook/passiva
+      targetId: string,     // Campeão afetado (não usado em "dialog")
       amount?: number,      // Quantidade (dano, cura, escudo…)
       crit?: boolean,       // Se foi crítico
-      // ... campos específicos por tipo
+      // Campos específicos do tipo "dialog":
+      message?: string,     // Texto do diálogo
+      blocking?: boolean,   // true = aguarda exibição (padrão); false = não bloqueante
+      html?: boolean,       // true = renderiza innerHTML em vez de textContent
     }
   ],
   log: string,              // Texto completo HTML do log de combate
@@ -283,6 +286,7 @@ champion.passive     // objeto passivo com hooks, ou null
 champion.keywords    // Map<string, { duration?, stacks?, ... }>
 champion.alive       // boolean
 champion.hasActedThisTurn  // boolean (reset a cada turno)
+champion.elementalAffinities // string[] — elementos do campeão (ex: ["lightning"])
 
 // Modificadores
 champion.damageModifiers       // DamageMod[]
@@ -306,34 +310,34 @@ champion.el          // HTMLElement | null
 
 ```js
 // Criação
-Champion.fromBaseData(baseData, id, team); // Factory static — forma canônica de instanciar
+Champion.fromBaseData(baseData, id, team)  // Factory static — forma canônica de instanciar
 
 // Serialização (para envio via socket)
-champion.serialize(); // → plain object seguro para JSON
+champion.serialize()  // → plain object seguro para JSON
 
 // HP
-champion.takeDamage(amount, context); // Aplica dano, consome escudos primeiro
-champion.heal(amount, context); // → healed (quantidade real curada)
+champion.takeDamage(amount, context)  // Aplica dano, consome escudos primeiro
+champion.heal(amount, context)        // → healed (quantidade real curada)
 
 // Recurso
-champion.addResource(input); // → applied
-champion.spendResource(cost); // → boolean (falhou se insuficiente)
-champion.applyResourceChange({ amount, type, mode }); // → { applied, value, isCappedMax }
-champion.getResourceState(); // → { type, current, currentKey }
+champion.addResource(input)           // → applied
+champion.spendResource(cost)          // → boolean (falhou se insuficiente)
+champion.applyResourceChange({amount, type, mode}) // → { applied, value, isCappedMax }
+champion.getResourceState()           // → { type, current, currentKey }
 
 // Modificadores
-champion.addDamageModifier(mod);
-champion.getDamageModifiers();
-champion.purgeExpiredModifiers(currentTurn);
+champion.addDamageModifier(mod)
+champion.getDamageModifiers()
+champion.purgeExpiredModifiers(currentTurn)
 
 // UI (apenas client)
-champion.render(container, handlers); // Cria e insere o elemento DOM
-champion.updateUI(currentTurn); // Atualiza HP/MP/skills/escudos/indicadores
-champion.destroy(); // Remove o elemento do DOM
+champion.render(container, handlers)  // Cria e insere o elemento DOM
+champion.updateUI(currentTurn)        // Atualiza HP/MP/skills/escudos/indicadores
+champion.destroy()                    // Remove o elemento do DOM
 
 // Utilitário
-champion.roundToFive(x); // Arredonda para múltiplo de 5
-champion.getSkillCost(skill); // Lida com manaCost/energyCost/cost
+champion.roundToFive(x)     // Arredonda para múltiplo de 5
+champion.getSkillCost(skill) // Lida com manaCost/energyCost/cost
 ```
 
 ### Arredondamento para 5
@@ -346,12 +350,10 @@ Todos os valores de HP e de recurso são arredondados para múltiplos de 5 via `
 
 Cada campeão usa **exatamente um** tipo de recurso. Declarar ambos no `baseData` lança um erro.
 
-| Tipo               | Cor               | Uso típico                                     |
-| ------------------ | ----------------- | ---------------------------------------------- |
-| Mana (`mana`)      | Azul (#4aa3ff)    | Casters, suportes — regen lenta, pools grandes |
-| Energia (`energy`) | Amarelo (#f4d03f) | Fighters, assassinos                           |
-
-Em ambos os casos, geração percentual baixa por ação de dano executada.
+| Tipo | Cor | Uso típico |
+|---|---|---|
+| Mana (`mana`) | Azul (#4aa3ff) | Casters, suportes — regen lenta, pools grandes |
+| Energia (`energy`) | Amarelo (#f4d03f) | Fighters, assassinos — geração por ação |
 
 ### Regen Global
 
@@ -392,74 +394,55 @@ params = {
   skill,          // objeto Skill
   context,        // contexto do turno (currentTurn, allChampions, etc.)
   options,        // { force: bool, disable: bool } para crítico
-  allChampions    // Map (ou Array, se convertido) de todos os campeões ativos naquela partida
+  allChampions    // Map ou Array de todos os campeões
 }
 ```
 
 **Etapas em ordem:**
 
+```
 1. PRÉ-CHECAGENS
    ├── Imunidade absoluta? → retorna resultado imune (sem dano)
    ├── Shield Block? → consome escudo do tipo "supremo"/"feitiço"; retorna bloqueio
    └── Evasão? → roll aleatório vs target.Evasion%; retorna evasion result
 
-
 2. CÁLCULO DO DANO
-   ├── processCrit()                   → { didCrit, bonus, critExtra }
-   ├── _applyDamageModifiers()         → aplica modificadores do atacante
-   ├── _applyBeforeDealingPassive()    → hook onBeforeDmgDealing (atacante)
-   └── _composeFinalDamage()           → aplica defesa, crítico, dano direto,
-                                         garante piso mínimo (10),
-                                         múltiplos de 5
+   ├── processCrit()                  → { didCrit, bonus, critExtra }
+   ├── _applyDamageModifiers()        → aplica mods do atacante (buffs de dano, etc.)
+   ├── _applyBeforeDealingPassive()   → hook onBeforeDmgDealing do atacante
+   │     pode retornar: { damage?, crit?, logs?, effects? }
+   └── _composeFinalDamage()          → aplica defesa e crítico sobre o damage atual
 
+3. APLICAÇÃO DO DANO  ← ⚠️ beforeTake opera sobre o finalDamage já composto
+   ├── _applyBeforeTakingPassive()    → hook onBeforeDmgTaking do alvo
+   │     pode retornar: { damage?, crit?, ignoreMinimumFloor?, logs?, effects? }
+   ├── _getAffinityDamage()           → ajuste elemental (weak +20%+25 | resist -40)
+   └── _applyDamage()                 → debita HP, consome escudos, garante mínimo
 
-3. AJUSTE FINAL ANTES DA APLICAÇÃO
-   └── _applyBeforeTakingPassive()     → hook onBeforeDmgTaking (alvo)
-                                         pode sobrescrever o dano final
-                                         já composto
+4. AFTER HOOKS
+   ├── _applyAfterTakingPassive()    → hook onAfterDmgTaking do alvo
+   │     pode retornar: { damage?, crit?, logs?, effects? }
+   └── _applyAfterDealingPassive()   → hook onAfterDmgDealing do atacante
+         pode retornar: { damage?, crit?, logs?, effects? }
 
-
-4. APLICAÇÃO DO DANO
-   └── _applyDamage()
-        ├── debita HP
-        ├── consome escudos regulares
-        └── mantém múltiplos de 5
-
-
-5. AFTER HOOKS
-   ├── _applyAfterTakingPassive()      → hook onAfterDmgTaking (alvo)
-   └── _applyAfterDealingPassive()     → hook onAfterDmgDealing (atacante)
-
-6. EFEITOS SECUNDÁRIOS
+5. EFEITOS SECUNDÁRIOS
    ├── applyRegenFromDamage()  → regen de recurso por dano causado
    ├── _applyLifeSteal()       → roubo de vida
    └── extraDamageQueue        → processa contra-ataques e danos extras em cascata
 
-7. CONSTRUÇÃO DO LOG
+6. CONSTRUÇÃO DO LOG
    └── Monta string HTML com todos os resultados intermediários
 
-8. RETORNO
-   → { baseDamage, totalDamage, finalHP, totalHeal, heal, targetId, userId, evaded, log, crit, damageDepth, skill, extraEffects }
+7. RETORNO
+   → {
+       baseDamage, totalDamage, finalHP, totalHeal, heal,
+       targetId, userId, evaded, log, crit, damageDepth, skill,
+       extraEffects?: Effect[]  // effects[] agregados de todos os hooks da pipeline
+     }
    → Ou array [mainResult, ...extraResults] se houver dano extra
 ```
 
-### Retorno de Hooks de Combate
-
-Hooks podem retornar um objeto estruturado com qualquer uma das seguintes propriedades:
-
-```ts
-{
-  damage?: number,        // Override do dano
-  crit?: object,          // Override do crítico
-  ignoreMinimumFloor?: boolean,
-  log?: string | string[],
-  logs?: string[],
-  effects?: Effect[]      // 🔥 Novo: efeitos estruturados para o client
-}
-
-Os effects retornados por hooks são agregados pelo CombatResolver e propagados para o envelope.effects, sendo processados pelo cliente via animateEffect().
-Isso permite que passivas e efeitos temporários gerem eventos visuais customizados (ex: dialogs, efeitos especiais, etc.).
-```
+> **⚠️ Atenção: ordem do pipeline** — `_applyBeforeTakingPassive` é chamado **depois** de `_composeFinalDamage`, ou seja, o hook do alvo recebe e pode modificar o `finalDamage` já calculado com defesa e crítico, não o `baseDamage` bruto. Isso é diferente do que o nome pode sugerir e deve ser considerado ao escrever passivas.
 
 ### `damageDepth` e Cascata
 
@@ -467,11 +450,11 @@ Para evitar loops infinitos em passivas que causam dano (ex: contra-ataques), o 
 
 ### Damage Modes
 
-| Mode       | Comportamento                              |
-| ---------- | ------------------------------------------ |
-| `"raw"`    | Dano base passando pela defesa normalmente |
-| `"direct"` | Ignora defesa inteiramente                 |
-| `"magic"`  | Pode ter tratamento especial por passivas  |
+| Mode | Comportamento |
+|---|---|
+| `"raw"` | Dano base passando pela defesa normalmente |
+| `"direct"` | Ignora defesa inteiramente |
+| `"magic"` | Pode ter tratamento especial por passivas |
 
 ---
 
@@ -492,15 +475,15 @@ A função implementa uma curva **não linear** em dois segmentos:
 **Segmento 1 — Interpolação linear por intervalo (Defense 0–220):**
 
 | Defense | Redução |
-| ------- | ------- |
-| 0       | 0%      |
-| 35      | 25%     |
-| 60      | 40%     |
-| 85      | 53%     |
-| 110     | 60%     |
-| 150     | 65%     |
-| 200     | 72%     |
-| 220     | 78%     |
+|---|---|
+| 0 | 0% |
+| 35 | 25% |
+| 60 | 40% |
+| 85 | 53% |
+| 110 | 60% |
+| 150 | 65% |
+| 200 | 72% |
+| 220 | 78% |
 
 Entre os pontos, a redução é interpolada linearmente.
 
@@ -529,36 +512,122 @@ Antes de o HP ser debitado, escudos do tipo `"regular"` absorvem dano na ordem e
 
 ---
 
-## 10. Sistema de Hooks — CombatEvents
+## 10. Sistema de Afinidades Elementais
+
+O sistema elemental é uma camada adicional de modificação de dano aplicada **após** `_composeFinalDamage` e **após** `_applyBeforeTakingPassive`, imediatamente antes de `_applyDamage`.
+
+### Ciclo Elemental
+
+Os elementos seguem um ciclo de força/fraqueza circular:
+
+```
+fire → ice → earth → lightning → water → fire → ...
+```
+
+Cada elemento é **forte** contra o próximo no ciclo e **fraco** contra o anterior:
+
+```
+fire     é forte contra ice,       fraco contra water
+ice      é forte contra earth,     fraco contra fire
+earth    é forte contra lightning, fraco contra ice
+lightning é forte contra water,    fraco contra earth
+water    é forte contra fire,      fraco contra lightning
+```
+
+### Como Declarar Afinidade em um Campeão
+
+```js
+const voltexz = {
+  name: "Voltexz",
+  // ...stats...
+  elementalAffinities: ["lightning"], // array — pode ter múltiplas afinidades
+};
+```
+
+### Como Declarar Elemento em uma Skill
+
+```js
+{
+  key: "minha_skill",
+  name: "Relâmpago",
+  element: "lightning",   // elemento do dano desta skill
+  execute({ user, targets, context }) { ... }
+}
+```
+
+### Cálculo de Afinidade (`_getAffinityDamage`)
+
+```
+Relação         → Efeito no dano final
+─────────────────────────────────────────────────────
+weak (fraqueza) → Math.floor(damage * 1.2 + 25)   (+20% + 25 flat)
+resist          → Math.max(damage - 40, 0)         (-40 flat)
+neutral         → sem modificação
+```
+
+Quando a relação é `weak` ou `resist`, o sistema automaticamente seta `context.ignoreMinimumFloor = true`, permitindo que dano resistido chegue a 0 sem o piso mínimo de 5/10.
+
+### Múltiplas Afinidades
+
+Se um campeão tiver mais de uma afinidade (`elementalAffinities: ["fire", "lightning"]`), o sistema itera até encontrar a primeira relação não-neutra (`weak` tem prioridade sobre `resist`). Apenas a primeira relação relevante é aplicada.
+
+### Skills sem Elemento
+
+Se a skill não tiver `skill.element` definido, `_getAffinityDamage` retorna o dano sem modificação. Isso é o comportamento esperado para skills físicas ou mágicas genéricas.
+
+---
+
+## 11. Sistema de Hooks — CombatEvents
 
 **Arquivo**: `shared/core/combatEvents.js`
 
 O sistema de hooks permite que passivas e efeitos temporários reajam a eventos de combate sem acoplamento direto com o `CombatResolver`.
 
-### `emitCombatEvent(eventName, payload, champions)`
+Todos os hooks seguem o padrão `on<EventName><Phase>`. O prefixo `on` é obrigatório.
 
-Itera sobre todos os campeões e dispara o hook `eventName` em duas fontes:
+| Hook canônico | Fase | Quem recebe |
+|---|---|---|
+| `onBeforeDmgDealing` | Antes de causar dano | Atacante |
+| `onBeforeDmgTaking` | Antes de receber dano | Alvo |
+| `onAfterDmgDealing` | Após causar dano | Atacante |
+| `onAfterDmgTaking` | Após receber dano | Alvo |
+| `onCriticalHit` | Quando acerta crítico | Atacante |
+| `onActionResolved` | Após resolução completa | Todos |
+| `onTurnStart` | Início de turno | Todos |
+| `onChampionDeath` | Morte de um campeão | Todos |
 
-1. **`champion.passive`** — A passiva fixa do campeão
-2. **`champion.runtime.hookEffects`** — Efeitos temporários com hooks (adicionados dinamicamente por skills)
+> **Legado**: Nomes anteriores `onBeforeDealing`, `onBeforeTaking`, `onAfterDealing`, `onAfterTaking` podem ainda existir em campeões não migrados. A migração é incremental — ambas as formas são suportadas enquanto o refactor avança.
 
-Se o hook retornar um valor, este é coletado em um array de resultados e retornado pelo `emitCombatEvent`.
+### Contrato de Retorno de Hooks
 
-### Hooks Disponíveis (usados em `combatResolver.js` e `server.js`)
+Hooks podem retornar um objeto estruturado com qualquer combinação das seguintes propriedades:
 
-| Hook                | Quando dispara                | Payload principal                                                   |
-| ------------------- | ----------------------------- | ------------------------------------------------------------------- |
-| `onBeforeDealing`   | Antes do atacante causar dano | `{ attacker/user, target, damage, crit, skill, context }`           |
-| `onBeforeTaking`    | Antes do alvo receber dano    | `{ dmgSrc/user, dmgReceiver/target, damage, crit, skill, context }` |
-| `onAfterDmgDealing` | Após o atacante causar dano   | `{ attacker, target, damage, crit, skill, context }`                |
-| `onAfterTaking`     | Após o alvo receber dano      | `{ attacker, target, damage, crit, skill, context }`                |
-| `onCriticalHit`     | Quando um crítico ocorre      | `{ attacker, critSrc, target, context }`                            |
-| `onTurnStart`       | Início de cada turno          | `{ champion/self/owner, context, allChampions }`                    |
-| `onChampionDeath`   | Quando um campeão morre       | `{ deadChampion, killer, context }`                                 |
-| `onAfterHealing`    | Quando uma cura ocorre        | depende da passiva                                                  |
-| `onKeywordApplied`  | Quando keyword é adicionada   | depende da passiva                                                  |
+```ts
+{
+  damage?: number,              // Override do dano calculado até aqui
+  crit?: object,                // Override do resultado de crítico
+  ignoreMinimumFloor?: boolean, // Remove o piso mínimo de 5 de dano
+  log?: string | string[],      // Texto(s) para o log de combate
+  logs?: string[],              // Alias de log[] (compatibilidade)
+  effects?: Effect[]            // 🔥 Efeitos visuais estruturados para o client
+}
+```
 
-> **Nota de Consistência**: Os aliases `self` e `owner` ambos apontam para o `champion` no payload do `onTurnStart`, enquanto `attacker`/`user` e `target`/`dmgSrc`/`dmgReceiver` existem por razão histórica de migração. Novos hooks devem usar os nomes canônicos.
+Os `effects[]` retornados por hooks são **agregados pelo `CombatResolver`** ao longo de toda a pipeline e propagados no campo `extraEffects` do resultado de `resolveDamage()`. O servidor então os mescla com os demais effects do envelope `combatAction` antes de emitir ao cliente. O cliente os processa sequencialmente via `animateEffect()`, exatamente como effects gerados diretamente pelo servidor.
+
+Isso permite que passivas e efeitos temporários gerem eventos visuais completamente customizados — incluindo diálogos, buffs, keywords, ou qualquer outro tipo de effect — sem necessitar de lógica especial fora do próprio hook.
+
+### Hooks Disponíveis — Payloads
+
+| Hook | Quando dispara | Payload principal |
+|---|---|---|
+| `onBeforeDmgDealing` | Antes do atacante causar dano | `{ attacker/user, target, damage, crit, skill, context }` |
+| `onBeforeDmgTaking` | Antes do alvo receber dano | `{ dmgSrc/user, dmgReceiver/target, damage, crit, skill, context }` |
+| `onAfterDmgDealing` | Após o atacante causar dano | `{ attacker, target, damage, crit, skill, context }` |
+| `onAfterDmgTaking` | Após o alvo receber dano | `{ attacker, target, damage, crit, skill, context }` |
+| `onCriticalHit` | Quando um crítico ocorre | `{ attacker, critSrc, target, context }` |
+| `onTurnStart` | Início de cada turno | `{ champion/self/owner, context, allChampions }` |
+| `onChampionDeath` | Quando um campeão morre | `{ deadChampion, killer, context }` |
 
 ### Hook Effects Temporários (`runtime.hookEffects`)
 
@@ -579,7 +648,7 @@ Estes são avaliados junto às passivas permanentes em cada `emitCombatEvent`.
 
 ---
 
-## 11. Sistema de Keywords
+## 12. Sistema de Keywords
 
 Keywords são **status de combate** aplicados aos campeões, armazenados em `champion.keywords` como um `Map<string, object>`.
 
@@ -611,22 +680,22 @@ Cada keyword registrada em `KeywordTurnEffects` tem um hook `onTurnStart` que re
 
 Apenas keywords com entrada em `StatusIndicator.keywordIcons` terão ícone exibido:
 
-| Keyword              | Ícone         | Cor de fundo     |
-| -------------------- | ------------- | ---------------- |
-| `paralisado`         | ⚡🚫⚡        | Laranja          |
-| `atordoado`          | 💫            | Branco           |
-| `inerte`             | 🔒            | Cinza            |
-| `sobrecarga`         | ⚡            | Amarelo          |
-| `imunidade absoluta` | (imagem)      | Ciano            |
-| `tributo`            | TRIB. (texto) | Vermelho         |
-| `queimando`          | 🔥            | Laranja-vermelho |
-| `enraizado`          | 🌱            | Verde            |
+| Keyword | Ícone | Cor de fundo |
+|---|---|---|
+| `paralisado` | ⚡🚫⚡ | Laranja |
+| `atordoado` | 💫 | Branco |
+| `inerte` | 🔒 | Cinza |
+| `sobrecarga` | ⚡ | Amarelo |
+| `imunidade absoluta` | (imagem) | Ciano |
+| `tributo` | TRIB. (texto) | Vermelho |
+| `queimando` | 🔥 | Laranja-vermelho |
+| `enraizado` | 🌱 | Verde |
 
 Para adicionar uma nova keyword com ícone, basta adicionar entrada em `StatusIndicator.keywordIcons`.
 
 ---
 
-## 12. Sistema de Escudos (Shields)
+## 13. Sistema de Escudos (Shields)
 
 Escudos são armazenados em `champion.runtime.shields` como array de objetos:
 
@@ -641,9 +710,9 @@ Escudos são armazenados em `champion.runtime.shields` como array de objetos:
 
 ### Tipos de Escudo
 
-| Tipo                      | Comportamento                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| `"regular"`               | Absorve HP de dano antes de chegar ao HP do campeão                                     |
+| Tipo | Comportamento |
+|---|---|
+| `"regular"` | Absorve HP de dano antes de chegar ao HP do campeão |
 | `"supremo"` / `"feitiço"` | Bloqueia a **ação inteiramente** (verificado antes da pipeline de dano); não absorve HP |
 
 Escudos regulares são consumidos em ordem (FIFO) dentro de `Champion.takeDamage()`. Escudos com `amount <= 0` são automaticamente removidos em `updateUI()`.
@@ -652,7 +721,7 @@ O efeito visual de escudo ativo é a classe CSS `.has-shield` no elemento do cam
 
 ---
 
-## 13. Sistema de Modificadores de Dano
+## 14. Sistema de Modificadores de Dano
 
 `champion.damageModifiers` é um array de objetos que modificam o dano de saída do campeão:
 
@@ -671,7 +740,7 @@ Existe também `champion.damageReductionModifiers` para redução de dano recebi
 
 ---
 
-## 14. Gerenciador de Animações — AnimsAndLogManager
+## 15. Gerenciador de Animações — AnimsAndLogManager
 
 **Arquivo**: `public/js/animation/animsAndLogManager.js`
 
@@ -687,13 +756,13 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 
 ### Tipos na Fila
 
-| Tipo              | Processado por             |
-| ----------------- | -------------------------- |
-| `combatAction`    | `processCombatAction()`    |
+| Tipo | Processado por |
+|---|---|
+| `combatAction` | `processCombatAction()` |
 | `gameStateUpdate` | `processGameStateUpdate()` |
-| `turnUpdate`      | `processTurnUpdate()`      |
+| `turnUpdate` | `processTurnUpdate()` |
 | `championRemoved` | `processChampionRemoved()` |
-| `combatLog`       | `processCombatLog()`       |
+| `combatLog` | `processCombatLog()` |
 
 ### Processamento de `combatAction`
 
@@ -707,19 +776,36 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 
 ### Efeitos Animados
 
-| Tipo de Effect   | Animação CSS               | Float                                     |
-| ---------------- | -------------------------- | ----------------------------------------- |
-| `damage`         | `.damage` + shake          | `.damage-float` + tier 1-6 por quantidade |
-| `heal`           | `.heal` + brilho verde     | `.heal-float`                             |
-| `shield`         | `.has-shield` + bolha      | `.shield-float`                           |
-| `buff`           | `.buff` + brilho dourado   | `.buff-float`                             |
-| `evasion`        | `.evasion` + slide         | "EVASÃO!" como float                      |
-| `resourceGain`   | —                          | `.resource-float-mana` ou `-energy`       |
-| `keywordApplied` | `animateIndicatorAdd()`    | `.taunt-float` se taunt                   |
-| `keywordRemoved` | `animateIndicatorRemove()` | —                                         |
-| `immune`         | —                          | "IMUNE!" como float                       |
-| `shieldBlock`    | —                          | "BLOQUEADO!" como float                   |
-| `gameOver`       | overlay de vitória         | —                                         |
+| Tipo de Effect | Animação CSS | Float |
+|---|---|---|
+| `damage` | `.damage` + shake | `.damage-float` + tier 1-6 por quantidade |
+| `heal` | `.heal` + brilho verde | `.heal-float` |
+| `shield` | `.has-shield` + bolha | `.shield-float` |
+| `buff` | `.buff` + brilho dourado | `.buff-float` |
+| `evasion` | `.evasion` + slide | "EVASÃO!" como float |
+| `resourceGain` | — | `.resource-float-mana` ou `-energy` |
+| `keywordApplied` | `animateIndicatorAdd()` | `.taunt-float` se taunt |
+| `keywordRemoved` | `animateIndicatorRemove()` | — |
+| `immune` | — | "IMUNE!" como float |
+| `shieldBlock` | — | "BLOQUEADO!" como float |
+| `gameOver` | overlay de vitória | — |
+| `dialog` | `showBlockingDialog()` ou `showNonBlockingDialog()` | — |
+
+### Tipo `dialog` — Diálogos Customizados de Hooks
+
+O cliente suporta o tipo `"dialog"` nativamente em `animateEffect()`:
+
+```js
+case "dialog":
+  if (effect.blocking === false) {
+    showNonBlockingDialog(effect.message, effect.html ?? false);
+  } else {
+    await showBlockingDialog(effect.message, effect.html ?? false);
+  }
+  break;
+```
+
+Isso permite que o servidor (via retorno de hooks de passiva) envie diálogos excepcionais que não se enquadram nos padrões de dano, cura, escudo ou recurso — como narração de passivas, avisos de efeito especial, ou flavor text contextual. Por padrão o diálogo é **blocking** (aguarda exibição completa antes de continuar a fila).
 
 ### Damage Tier (Tamanho do Float)
 
@@ -749,7 +835,7 @@ Após todas as animações de uma ação, os snapshots do servidor são aplicado
 
 ---
 
-## 15. Indicadores de Status — StatusIndicator
+## 16. Indicadores de Status — StatusIndicator
 
 **Arquivo**: `shared/core/statusIndicator.js`
 
@@ -758,20 +844,20 @@ Singleton responsável por criar, atualizar, animar e remover os ícones de stat
 ### API Principal
 
 ```js
-StatusIndicator.updateChampionIndicators(champion);
+StatusIndicator.updateChampionIndicators(champion)
 // Remove todos e recria com base em champion.keywords
 
-StatusIndicator.animateIndicatorAdd(champion, keywordName);
+StatusIndicator.animateIndicatorAdd(champion, keywordName)
 // Atualiza indicators + pulsa o novo ícone
 
-StatusIndicator.animateIndicatorRemove(champion, keywordName);
+StatusIndicator.animateIndicatorRemove(champion, keywordName)
 // Fade out + remoção após VISUAL_DELAY (1500ms)
 
-StatusIndicator.startRotationLoop(champions);
+StatusIndicator.startRotationLoop(champions)
 // Quando um campeão tem múltiplos status, alterna visibilidade a cada 1750ms
 // Deve ser chamado uma vez após gameStateUpdate
 
-StatusIndicator.clearIndicators(champion);
+StatusIndicator.clearIndicators(champion)
 // Remove todos os ícones sem animação
 ```
 
@@ -788,7 +874,7 @@ keywordIcons["nome"] = {
 
 ---
 
-## 16. Histórico de Turnos
+## 17. Histórico de Turnos
 
 O servidor mantém `turnHistory: Map<number, TurnData>` com o seguinte formato por turno:
 
@@ -804,26 +890,25 @@ O servidor mantém `turnHistory: Map<number, TurnData>` com o seguinte formato p
 ```
 
 Isso é útil para:
-
 - Rastrear quais skills foram usadas (para skills com "não pode usar duas vezes por turno").
 - Debug e replay de partidas.
 - Validações de passivas que dependem de histórico do turno.
 
 ---
 
-## 17. Modo de Edição / Debug
+## 18. Modo de Edição / Debug
 
 O `editMode` é um objeto de configuração no servidor:
 
 ```js
 const editMode = {
-  enabled: true, // Ativa botões de edição na UI
-  autoLogin: true, // Loga automaticamente ao conectar
-  autoSelection: false, // Seleciona equipe aleatória automaticamente
+  enabled: true,               // Ativa botões de edição na UI
+  autoLogin: true,             // Loga automaticamente ao conectar
+  autoSelection: false,        // Seleciona equipe aleatória automaticamente
   actMultipleTimesPerTurn: false, // Permite que o mesmo campeão aja várias vezes
-  unreleasedChampions: true, // Exibe campeões marcados com `unreleased: true`
-  damageOutput: null, // Força dano fixo (ex: 999). null = desativado
-  alwaysCrit: false, // Força crítico em todos os ataques
+  unreleasedChampions: true,   // Exibe campeões marcados com `unreleased: true`
+  damageOutput: null,          // Força dano fixo (ex: 999). null = desativado
+  alwaysCrit: false,           // Força crítico em todos os ataques
 };
 ```
 
@@ -831,7 +916,7 @@ O servidor filtra `damageOutput` e `alwaysCrit` antes de enviar `editModeUpdate`
 
 ---
 
-## 18. Como Criar um Novo Campeão
+## 19. Como Criar um Novo Campeão
 
 ### 1. Criar a pasta e o `index.js`
 
@@ -847,33 +932,39 @@ const meu_campeao = {
   // === IDENTIDADE ===
   name: "Meu Campeão",
   portrait: "/assets/champions/meu_campeao.png",
-  entityType: "champion", // opcional, padrão "champion"
-  unreleased: false, // true = só aparece em editMode
+  entityType: "champion",   // opcional, padrão "champion"
+  unreleased: false,        // true = só aparece em editMode
 
   // === STATS BASE ===
   HP: 500,
   Attack: 80,
   Defense: 40,
   Speed: 70,
-  Evasion: 0, // % chance de evadir
-  Critical: 10, // % chance de crítico
+  Evasion: 0,     // % chance de evadir
+  Critical: 10,   // % chance de crítico
 
   // === RECURSO (escolha um) ===
-  mana: 150, // OU energy: 100 (NUNCA os dois)
+  mana: 150,      // OU energy: 100 (NUNCA os dois)
   // resourceCap: 300,  // opcional (padrão 999)
+
+  // === AFINIDADES ELEMENTAIS (opcional) ===
+  elementalAffinities: ["lightning"], // elementos que este campeão possui
+  // Elementos disponíveis: "fire" | "ice" | "earth" | "lightning" | "water"
+  // Determina fraqueza/resistência ao receber dano elemental de skills com `element`
 
   // === SKILLS ===
   skills: [
     {
       key: "minha_skill_1",
       name: "Nome da Skill",
-      manaCost: 50, // ou energyCost: 30
-      priority: 0, // maior = age primeiro no turno
-      contact: true, // ataque físico (relevante para passivas)
+      manaCost: 50,          // ou energyCost: 30
+      priority: 0,           // maior = age primeiro no turno
+      contact: true,         // ataque físico (relevante para passivas)
+      element: "fire",       // opcional — ativa sistema de afinidade elemental
       description() {
         return `Custo: ${this.manaCost} MP\nDescrição da skill.`;
       },
-      targetSpec: ["enemy"], // ["enemy"], ["ally"], ["self"], ["any"], etc.
+      targetSpec: ["enemy"],  // ["enemy"], ["ally"], ["self"], ["any"], etc.
       execute({ user, targets, context }) {
         const { enemy } = targets;
         const baseDamage = (user.Attack * 80) / 100 + 30;
@@ -897,7 +988,7 @@ const meu_campeao = {
     description: "Descrição da passiva.",
 
     // Hooks opcionais — implemente apenas os necessários:
-    onAfterDmgDealing({ attacker, target, damage, crit, skill, context }) {
+    onAfterDealing({ attacker, target, damage, crit, skill, context }) {
       // chamado após o campeão causar dano
     },
     onAfterTaking({ attacker, target, damage, context }) {
@@ -941,7 +1032,7 @@ export default championDB;
 
 ---
 
-## 19. Decisões de Design e Convenções
+## 20. Decisões de Design e Convenções
 
 ### Por que Server Authoritative?
 
@@ -959,9 +1050,20 @@ A classe `Champion` precisa existir no servidor (para gerenciar estado real) e n
 
 Todos os valores de HP, dano, cura e recurso são arredondados para múltiplos de 5. Isso facilita a leitura visual (os segmentos das barras se encaixam), reduz "números feios" e simplifica o balanceamento.
 
-### Aliases de hooks (legado)
+### Aliases de hooks e migração de nomes
 
-Alguns hooks passam `self` E `owner`, outros passam `user` E `attacker`. Isso é resquício de refatorações incrementais. A direção futura é padronizar: `owner` para o dono do hook, `user`/`attacker` para o atacante, `target`/`receiver` para o alvo.
+Os hooks passaram por uma padronização de nomenclatura:
+
+| Nome antigo (legado) | Nome canônico atual |
+|---|---|
+| `onBeforeDealing` | `onBeforeDmgDealing` |
+| `onBeforeTaking` | `onBeforeDmgTaking` |
+| `onAfterDealing` | `onAfterDmgDealing` |
+| `onAfterTaking` | `onAfterDmgTaking` |
+
+A migração é **incremental**: o `emitCombatEvent` suporta ambos os nomes enquanto os campeões são atualizados individualmente. Ao criar um campeão novo ou atualizar um existente, use sempre os nomes canônicos com prefixo `on`.
+
+Os aliases de payload (`self` / `owner` no `onTurnStart`, `user` / `attacker` no before/after) existem pelo mesmo motivo histórico e serão unificados gradualmente.
 
 ### `editMode` separado entre server e client
 

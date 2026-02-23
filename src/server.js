@@ -228,6 +228,7 @@ function assignChampionsToTeam(team, championKeys) {
     if (!baseData) return;
 
     const id = generateId(championKey);
+
     const newChampion = Champion.fromBaseData(baseData, id, team);
 
     activeChampions.set(id, newChampion);

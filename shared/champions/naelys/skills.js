@@ -17,6 +17,7 @@ const naelysSkills = [
     bf: 80,
     manaCost: 80,
     priority: 1,
+    element: "water",
     description() {
       return `Custo: ${this.manaCost} MP
         Dano: BF ${this.bf}
@@ -58,16 +59,17 @@ const naelysSkills = [
     contact: false,
     manaCost: 90,
     priority: 2,
+    element: "water",
     damageReduction: 20,
     counterDamage: 20,
 
     description() {
       return `Custo: ${this.manaCost} MP
-Contato: ❌
+        Contato: ❌
 
-Naelys assume uma postura marítima até o início do próximo turno:
-- Recebe −${this.damageReduction}% de Dano Bruto Final.
-- Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
+        Naelys assume uma postura marítima até o início do próximo turno:
+        - Recebe −${this.damageReduction}% de Dano Bruto Final.
+        - Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
     },
 
     targetSpec: ["self"],
@@ -149,6 +151,7 @@ Naelys assume uma postura marítima até o início do próximo turno:
     priority: 3,
     duration: 3,
     maxBonus: 120,
+    element: "water",
 
     description() {
       return `Custo: ${this.manaCost} MP

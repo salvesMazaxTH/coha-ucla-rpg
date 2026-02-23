@@ -13,7 +13,7 @@ export default {
         → O alvo fica "Queimando".`;
   },
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, skill, context }) {
-    console.log("Skill dentro da passiva:", skill);
+    //console.log("Skill dentro da passiva:", skill);
 
     if (dmgSrc?.id !== owner.id) return;
     if (!skill) return;

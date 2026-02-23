@@ -15,6 +15,7 @@ const nodeSparckina07Skills = [
         contact: true,
         energyCost: 140,
         priority: 0,
+        element: "lightning",
         description() {
             return `Custo: ${this.energyCost} MP
             Contato: ${this.contact ? "✅" : "❌"}
@@ -44,6 +45,7 @@ const nodeSparckina07Skills = [
         contact: false,
         energyCost: 100,
         priority: 0,
+        element: "lightning",
         description() {
             return `Custo: ${this.energyCost} MP
             Efeitos:
@@ -85,6 +87,7 @@ const nodeSparckina07Skills = [
         contact: true,
         energyCost: 420,
         priority: 0,
+        element: "lightning",
         description() {
             return `Custo: ${this.energyCost} MP
         Contato: ${this.contact ? "✅" : "❌"}

@@ -1,6 +1,6 @@
 export default {
   name: "Gryskarchu",
-  portrait: "/assets/portraits/gryskarchu.png",
+  portrait: "/assets/portraits/gryskarchu.webp",
   HP: 510,
   Attack: 95,
   Defense: 180,

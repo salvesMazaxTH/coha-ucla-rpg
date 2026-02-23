@@ -1,6 +1,6 @@
 export default {
   name: "Serene",
-  portrait: "/assets/portraits/serene.png",
+  portrait: "/assets/portraits/serene.webp",
   unreleased: true,
   HP: 365,
   Attack: 132,

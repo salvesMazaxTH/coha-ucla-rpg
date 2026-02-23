@@ -18,6 +18,7 @@ const naelthosSkills = [
     contact: false,
     manaCost: 80,
     priority: 0,
+    element: "water",
     description() {
       return `Custo: ${this.manaCost} MP
          Contato: ${this.contact ? "✅" : "❌"}
@@ -82,6 +83,7 @@ const naelthosSkills = [
     contact: false,
     manaCost: 140,
     priority: 1,
+    element: "water",
     description() {
       return `Custo: ${this.manaCost} MP
              Transforma-se em uma massa de água pura.
@@ -116,6 +118,7 @@ const naelthosSkills = [
     bonusPerStack: 20,
     maxBonus: 160,
     contact: false,
+    element: "water",
     manaCost: 380,
     priority: 0,
     description() {

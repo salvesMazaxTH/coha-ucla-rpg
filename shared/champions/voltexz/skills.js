@@ -13,10 +13,11 @@ const voltexzSkills = [
   {
     key: "relampagos_gemeos",
     name: "Relâmpagos Gêmeos",
-    bf: 40,
+    bf: 45,
     contact: false,
     manaCost: 200,
     priority: 0,
+    element: "lightning",
     description() {
       return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}
@@ -39,6 +40,7 @@ const voltexzSkills = [
           context,
           allChampions: context?.allChampions,
         });
+        console.log("🌊 Target affinities:", primary.elementalAffinities);
         results.push(primaryResult);
       }
 
@@ -51,6 +53,7 @@ const voltexzSkills = [
           context,
           allChampions: context?.allChampions,
         });
+        console.log("🌊 Target affinities:", secondary.elementalAffinities);
         results.push(secondaryResult);
       }
 
@@ -65,6 +68,7 @@ const voltexzSkills = [
     contact: false,
     manaCost: 60,
     priority: 1,
+    element: "lightning",
     description() {
       return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}
@@ -101,10 +105,10 @@ const voltexzSkills = [
 
       if (paralyzed) {
         console.log(
-          `${enemy.name} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
+          `${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
         );
         if (damageResult?.log) {
-          damageResult.log += `\n${enemy.name} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
+          damageResult.log += `\n${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
         }
       }
 
@@ -119,6 +123,7 @@ const voltexzSkills = [
     contact: false,
     manaCost: 400,
     priority: 0,
+    element: "lightning",
     description() {
       return `Custo: ${this.manaCost} MP
         Contato: ${this.contact ? "✅" : "❌"}

@@ -1,6 +1,6 @@
 export default {
   name: "Reyskarone",
-  portrait: "/assets/portraits/reyskarone.png",
+  portrait: "/assets/portraits/reyskarone.webp",
   HP: 335,
   Attack: 165,
   Defense: 100,

@@ -10,6 +10,7 @@ export class Champion {
     this.name = identity.name;
     this.portrait = identity.portrait;
     this.team = identity.team;
+    this.elementalAffinities = Array.from(identity.elementalAffinities) || [];
     this.entityType = identity.entityType ?? "champion";
 
     // STATS
@@ -58,6 +59,7 @@ export class Champion {
         portrait: baseData.portrait,
         team,
         entityType: baseData.entityType,
+        elementalAffinities: baseData.elementalAffinities || [],
       },
 
       stats: {
@@ -148,7 +150,7 @@ export class Champion {
   }
 
   initializeResources(stats = {}) {
-    console.log("INITIALIZANDO RECURSO:", this.name);
+    //console.log("INITIALIZANDO RECURSO:", this.name);
 
     const hasEnergy = Number.isFinite(stats.energy);
     const hasMana = Number.isFinite(stats.mana);
