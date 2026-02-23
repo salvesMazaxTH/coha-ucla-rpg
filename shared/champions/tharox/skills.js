@@ -21,14 +21,7 @@ const tharoxSkills = [
     manaCost: 180,
     priority: 2,
     description() {
-      return `Custo: ${this.manaCost} MP
-      Tharox solta um bramido bestial.
-      Efeitos neste turno:
-      Todos os inimigos ativos são Provocados
-      → Devem mirar Tharox se causarem dano
-      Tharox recebe:
-      −${this.damageReductionAmount} de Dano Bruto Final recebido
-      (respeita o Piso de 10)`;
+      return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano bruto final de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
     },
     targetSpec: ["self"],
     execute({ user, targets, context = {} }) {
@@ -63,10 +56,7 @@ const tharoxSkills = [
     manaCost: 60,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-Dano:
-BF ${this.bf} + ${this.defScaling}% DEF`;
+      return `Causa dano bruto ao inimigo (BF ${this.bf}) somado a ${this.defScaling}% da Defesa.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -98,15 +88,7 @@ BF ${this.bf} + ${this.defScaling}% DEF`;
     manaCost: 300,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-      Tharox libera sua forma de guerra.
-      Ao ativar:
-      Ganha +${this.hpGain} HP
-      Ganha +${this.defGain} DEF
-      Cura a si mesmo em:
-      5 HP para cada +5 DEF adicional que ele tiver acima da DEF base (${this.baseDef})
-      Enquanto estiver ativo:
-      Ataques que causam dano passam a causar um bônus de dano igual a ${this.defDamagePercent}% da DEF atual de Tharox (com um teto de ${this.maxDamageBonus} de dano adicional).`;
+      return `Ganha +${this.hpGain} HP, +${this.defGain} DEF, cura proporcional à DEF acima de ${this.baseDef}, e ataques causam bônus de dano igual a ${this.defDamagePercent}% da DEF (máx. ${this.maxDamageBonus}) por ${this.modifierDuration} turnos.`;
     },
     targetSpec: ["self"],
     execute({ user, context = {} }) {

@@ -6,7 +6,7 @@ export default {
   Defense: 40,
   Speed: 95,
 
-  mana: 335,
+  mana: 360,
 
   elementalAffinities: ["lightning"],
 };

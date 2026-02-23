@@ -1,7 +1,6 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "../elementEmoji.js";
 
 const kaiSkills = [
   basicAttack,
@@ -13,7 +12,7 @@ const kaiSkills = [
     manaCost: 120,
     priority: 1,
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf}.`;
+      return `Ataque rápido de contato. Causa dano físico ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -40,10 +39,15 @@ const kaiSkills = [
     flamingFistsBonus: 15,
     priority: 2,
     element: "fire",
+
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Kai assume uma postura incandescente até o início do próximo turno, recebendo −${this.damageReduction} de Dano Bruto Final (mín. 10).\n        Se sofrer um ataque de Contato, o atacante recebe ${this.counterAtkDmg} de Dano Direto e fica Queimando.\n\n        Se Kai causar dano durante esse período, ativa Brasa Viva por 2 turnos:\n        Punhos em Combustão causa +${this.flamingFistsBonus} de Dano Direto adicional (total +35), todos os alvos atingidos ficam "Queimando". independentemente de Afinidade, e o Queimando aplicado por Kai dura +1 turno.`;
+      return `Kai assume uma postura incandescente até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. 
+      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano e aplica queimadura. 
+      Se causar dano, ativa Brasa Viva por 2 turnos: seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada.`;
     },
+
     targetSpec: ["self"],
+
     execute({ user, context }) {
       user.runtime.hookEffects ??= [];
 
@@ -52,9 +56,10 @@ const kaiSkills = [
 
       const effect = {
         key: "postura_da_brasa_viva",
-        expiresAt: context.currentTurn + 2,
+        state: "postura", // "postura" → "brasa_viva"
+        expiresAt: context.currentTurn + 1,
 
-        // 🔥 CONTRA-ATAQUE VIA QUEUE
+        // 🔥 CONTRA-ATAQUE
         onAfterDmgTaking({
           dmgSrc,
           dmgReceiver,
@@ -66,14 +71,8 @@ const kaiSkills = [
           if (dmgReceiver !== owner) return;
           if (!skill?.contact) return;
           if (damage <= 0) return;
-
-          // evita loop
           if (skill?.key === "postura_da_brasa_viva_counter") return;
-          if (context.brasaVivaCounterTriggered) return;
 
-          context.brasaVivaCounterTriggered = true;
-
-          // cria fila se não existir
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
@@ -96,59 +95,47 @@ const kaiSkills = [
           };
         },
 
-        // 🔥 ATIVA BRASA VIVA
-        onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
+        // 🔥 TRANSIÇÃO PARA BRASA VIVA
+        onAfterDmgDealing({ dmgSrc, owner, damage, context }) {
           if (dmgSrc !== owner) return;
           if (damage <= 0) return;
 
-          owner.runtime.hookEffects ??= [];
+          if (this.state === "postura") {
+            this.state = "brasa_viva";
+            this.expiresAt = context.currentTurn + 2;
 
-          // evita empilhamento
-          if (owner.runtime.hookEffects.some((e) => e.key === "brasa_viva"))
-            return;
+            return {
+              log: "🔥 Brasa Viva é ativada!",
+            };
+          }
+        },
 
-          const brasaVivaEffect = {
-            key: "brasa_viva",
-            expiresAt: context.currentTurn + 2,
-
-            onBeforeDmgDealing({ dmgSrc, owner }) {
-              if (dmgSrc !== owner) return;
-
-              return {
-                directDamage: flamingFistsBonus,
-                log: `🔥 Brasa Viva: +${flamingFistsBonus} Dano Direto!`,
-              };
-            },
-
-            onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, context }) {
-              if (dmgSrc !== owner) return;
-              if (!dmgReceiver?.applyKeyword) return;
-
-              dmgReceiver.applyKeyword("queimando", 2, context, {
-                source: owner,
-              });
-
-              return {
-                log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,
-              };
-            },
-
-            onTurnStart({ self, context }) {
-              if (context.currentTurn >= this.expiresAt) {
-                self.runtime.hookEffects = self.runtime.hookEffects.filter(
-                  (e) => e !== this,
-                );
-              }
-            },
-          };
-
-          self.runtime.hookEffects.push(brasaVivaEffect);
+        // 🔥 BÔNUS ENQUANTO BRASA VIVA
+        onBeforeDmgDealing({ dmgSrc, owner, damage, context }) {
+          if (this.state !== "brasa_viva") return;
+          if (dmgSrc !== owner) return;
 
           return {
-            log: `🔥 Brasa Viva é ativada!`,
+            damage: damage + flamingFistsBonus,
+            log: `🔥 Brasa Viva: +${flamingFistsBonus} Dano Direto!`,
           };
         },
 
+        onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, context }) {
+          if (this.state !== "brasa_viva") return;
+          if (dmgSrc !== owner) return;
+          if (!dmgReceiver?.applyKeyword) return;
+
+          dmgReceiver.applyKeyword("queimando", 2, context, {
+            source: owner,
+          });
+
+          return {
+            log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,
+          };
+        },
+
+        // 🔥 REMOÇÃO AUTOMÁTICA
         onTurnStart({ self, context }) {
           if (context.currentTurn >= this.expiresAt) {
             self.runtime.hookEffects = self.runtime.hookEffects.filter(
@@ -158,9 +145,9 @@ const kaiSkills = [
         },
       };
 
-      user.runtime.posturaDaBrasaViva = effect;
       user.runtime.hookEffects.push(effect);
 
+      // Redução de dano da postura
       user.applyDamageReduction({
         amount: this.damageReduction,
         duration: 1,
@@ -169,11 +156,9 @@ const kaiSkills = [
 
       return {
         log: `${formatChampionName(user)} assume a Postura da Brasa Viva!`,
-        crit: { didCrit: false, bonus: 0 },
       };
     },
   },
-
   {
     key: "barragem_de_socos_incandescentes",
     name: "Barragem de Socos Incandescentes",
@@ -185,7 +170,7 @@ const kaiSkills = [
     priority: 0,
     element: "fire",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Kai desfere uma série de ${this.hits} socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Essa habilidade também ativa "Punhos em Combustão" Regra Especial — Chamas Persistentes\n        Se um alvo já estiver Queimando:\n        → Esse soco causa +10 de Dano Direto adicional.`;
+      return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando dano bruto de ${this.damagePerHit}. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, targets, context = {} }) {

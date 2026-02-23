@@ -21,11 +21,7 @@ const gryskarchuSkills = [
     manaCost: 60,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-Contato: ${this.contact ? "✅" : "❌"}
-Efeitos:
-Dano Bruto = BF ${this.bf}
-Aplica "Enraizado" por ${this.rootDuration} turnos.`;
+      return `Causa dano bruto ao inimigoe aplica "Enraizado" por ${this.rootDuration} turnos.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {
@@ -61,10 +57,7 @@ Aplica "Enraizado" por ${this.rootDuration} turnos.`;
     manaCost: 100,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-Efeitos:
-Gryskarchu cura a si e a todos os aliados ativos.
-Cura = ${this.healAmount} HP`;
+      return `Gryskarchu cura a si e todos os aliados ativos em ${this.healAmount} HP.`;
     },
     targetSpec: ["all:ally"],
     execute({ user, targets, context }) {
@@ -107,10 +100,7 @@ Cura = ${this.healAmount} HP`;
     manaCost: 280,
     priority: 5,
     description() {
-      return `Custo: ${this.manaCost} MP
-Prioridade: +${this.priority}
-Efeitos:
-Gryskarchu concede +${this.defBuff}% de DEF a si ou a um aliado ativo por ${this.buffDuration} turnos e o cura em ${this.healPercent}% do HP máximo. Além disso, o aliado recebe um bônus de +${this.defDamageBonus}% da DEF no dano causado por ${this.buffDuration} turnos.`;
+      return `Concede +${this.defBuff}% de DEF a si ou a um aliado por ${this.buffDuration} turnos, cura em ${this.healPercent}% do HP máximo e dá bônus de dano (+${this.defDamageBonus}% da DEF) por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context }) {

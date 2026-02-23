@@ -18,7 +18,7 @@ const vaelSkills = [
     energyCost: 120,
     priority: 0,
     description() {
-      return `Ataque rápido com chance de crítico.`;
+      return `Causa dano bruto ao inimigo com chance de crítico.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -43,7 +43,7 @@ const vaelSkills = [
     energyCost: 200,
     priority: 0,
     description() {
-      return `Ataque duplo: primário sem crítico, secundário crítico garantido.`;
+      return `Causa dano bruto ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
     },
     targetSpec: [
       { type: "enemy", unique: true },
@@ -94,7 +94,7 @@ const vaelSkills = [
     energyCost: 420,
     priority: 0,
     description() {
-      return `Ataque final devastador.`;
+      return `Causa dano bruto devastador ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

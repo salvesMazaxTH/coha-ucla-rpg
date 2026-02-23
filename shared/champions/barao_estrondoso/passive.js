@@ -53,6 +53,8 @@ export default {
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context, skill }) {
     if (!skill?.key) return;
 
+    if (dmgSrc !== owner) return;
+
     // Ataque básico não causa stun
     if (skill.key === "basic_attack") return;
 

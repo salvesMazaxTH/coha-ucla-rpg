@@ -1,7 +1,6 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "../elementEmoji.js";
 
 const naelysSkills = [
   // ========================
@@ -19,33 +18,53 @@ const naelysSkills = [
     manaCost: 80,
     priority: 1,
     element: "water",
+    selfHealAmount: 50,
+    allyHealAmount: 20,
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Dano: BF ${this.bf}\n        Contato: ${this.contact ? "✅" : "❌"}\n        Efeitos:\n        - Cura 50 HP de Naelys.\n        - Cura 15 HP do aliado escolhido.`;
+      return `Naelys cura a si mesma em ${this.selfHealAmount} HP e um aliado em ${this.allyHealAmount} HP, causando dano bruto ao inimigo (BF ${this.bf}).`;
     },
-    targetSpec: ["self", "ally"],
+    targetSpec: ["enemy", "self", { type: "select:ally", excludesSelf: true }],
     execute({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const { ally, enemy } = targets;
+
       const baseDamage = (user.Attack * this.bf) / 100;
-      const healAmount = 50;
-      const allyHealAmount = 15;
-      const damageResult = CombatResolver.processDamageEvent({
-        baseDamage,
-        user,
-        target: ally,
-        skill: this,
-        context,
-        allChampions: context?.allChampions,
+      const results = [];
+
+      // DANO
+      if (enemy) {
+        const damageResult = CombatResolver.processDamageEvent({
+          baseDamage,
+          user,
+          target: enemy,
+          skill: this,
+          context,
+          allChampions: context?.allChampions,
+        });
+
+        results.push(damageResult);
+      }
+
+      // CURA (cria evento no formato esperado)
+      user.heal(this.selfHealAmount);
+      ally.heal(this.allyHealAmount);
+
+      results.push({
+        type: "heal",
+        userId: user.id,
+        targetId: user.id,
+        amount: this.selfHealAmount,
+        log: `${formatChampionName(user)} recupera ${this.selfHealAmount} HP.`,
       });
-      // Aplica a cura em Naelys
-      user.heal(healAmount);
-      // Aplica a cura no aliado
-      ally.heal(allyHealAmount);
-      return (
-        damageResult,
-        {
-          log: `${formatChampionName(user.name)} cura a si mesmo em ${healAmount} HP e ${formatChampionName(ally.name)} em ${allyHealAmount} HP.`,
-        }
-      );
+
+      results.push({
+        type: "heal",
+        userId: user.id,
+        targetId: ally.id,
+        amount: this.allyHealAmount,
+        log: `${formatChampionName(ally)} recupera ${this.allyHealAmount} HP.`,
+      });
+
+      return results;
     },
   },
 
@@ -57,18 +76,15 @@ const naelysSkills = [
     priority: 2,
     element: "water",
     damageReduction: 20,
-    counterDamage: 20,
 
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ❌\n\n        Naelys assume uma postura marítima até o início do próximo turno:\n        - Recebe −${this.damageReduction}% de Dano Bruto Final.\n        - Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
+      return `Naelys assume uma postura marítima até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. Primeira vez que for atingida por turno, contra-ataca o agressor com Ataque Básico.`;
     },
 
     targetSpec: ["self"],
 
     execute({ user, context }) {
       user.runtime.hookEffects ??= [];
-
-      const counterDamage = this.counterDamage;
 
       const effect = {
         key: "massa_do_mar_revolto",
@@ -119,7 +135,7 @@ const naelysSkills = [
         },
       };
 
-      user.runtime.hookEffects.push(effect);
+      user.runtime?.hookEffects.push(effect);
 
       // usa seu método real de redução
       user.applyDamageReduction({
@@ -138,14 +154,14 @@ const naelysSkills = [
     key: "sobrefluxo",
     name: "Sobrefluxo",
     contact: false,
-    manaCost: 400,
+    manaCost: 380,
     priority: 3,
     duration: 3,
     maxBonus: 120,
     element: "water",
 
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n\n      Por ${this.duration} turnos:\n      Naelys causa dano adicional baseado no HP perdido.\n      Limite máximo: +${this.maxBonus} de Dano Bruto.`;
+      return `Por ${this.duration} turnos, Naelys causa dano adicional baseado no HP perdido (até +${this.maxBonus} de dano bruto).`;
     },
 
     targetSpec: ["self"],

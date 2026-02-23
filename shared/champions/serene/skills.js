@@ -21,11 +21,7 @@ const sereneSkills = [
     manaCost: 20,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Serene concede ${this.shieldFull} de escudo a si mesma ou a um aliado ativo. Caso ela esteja abaixo de ${this.hpThreshold}% do HP máximo, o valor do escudo concedido cai para ${this.shieldReduced}.
-
-        Escudo:
-        - Mínimo: ${this.shieldReduced}`;
+      return `Concede ${this.shieldFull} de escudo a si mesma ou a um aliado. Se estiver abaixo de ${this.hpThreshold}% do HP máximo, concede ${this.shieldReduced}.`;
     },
     targetSpec: ["select:ally"],
 
@@ -60,11 +56,7 @@ const sereneSkills = [
     manaCost: 26,
     priority: 1,
     description() {
-      return `Custo: ${this.manaCost} MP
-      Prioridade: +${this.priority}
-      Contato: ${this.contact ? "✅" : "❌"}
-      Dano:
-      ${this.hpDamagePercent}% do HP máximo do alvo como Dano Direto (NÃO sofre redução pela Defesa).`;
+      return `Causa dano direto igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -112,16 +104,7 @@ const sereneSkills = [
     manaCost: 35,
     priority: 4,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Prioridade: +${this.priority}
-        Ao ativar, até que a próxima ação de Serene seja resolvida:
-        1️⃣ Proteção de Campo
-        Aliados ativos recebem:
-        −${this.damageReduction} de dano de todas as fontes (respeita o piso mínimo de 10)
-        2️⃣ Limiar da Existência (Auto-Resgate)
-        Se o personagem fosse receber dano letal, em vez disso:
-          O dano é completamente anulado;
-          caso estivesse com menos de ${this.surviveHP} de HP, seu HP é elevado para ${this.surviveHP}. Após isso, ele se torna Imune (ganha "Imunidade Absoluta") até que a próxima ação de Serene seja resolvida.`;
+      return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com pelo menos ${this.surviveHP} de HP e tornam-se imunes até a próxima ação de Serene.`;
     },
     targetSpec: ["self"],
     execute({ user, context = {} }) {

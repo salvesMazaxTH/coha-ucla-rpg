@@ -6,8 +6,8 @@ export const StatusIndicator = {
   // Mapeamento de keywords -> ícones e cores
   keywordIcons: {
     paralisado: {
-      type: "emoji",
-      value: "⚡🚫⚡",
+      type: "image",
+      value: "/assets/paralisado_indicator.png",
       background: "rgba(226, 109, 31, 0.8)",
     },
     atordoado: {

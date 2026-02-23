@@ -20,7 +20,7 @@ const baraoEstrondosoSkills = [
     priority: -999,
     targetSpec: ["enemy"],
     description() {
-      return `Ataque físico direto.`;
+      return `Causa dano bruto ao inimigo.`;
     },
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
@@ -48,7 +48,7 @@ const baraoEstrondosoSkills = [
     energyCost: 65,
     priority: -999,
     description() {
-      return `Aumenta a defesa temporariamente.`;
+      return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em 15 por 2 turnose passa a armazenar 40% do dano na Passiva em vez de 30%.`;
     },
     targetSpec: [""],
     execute({ user, context }) {
@@ -70,7 +70,7 @@ const baraoEstrondosoSkills = [
     energyCost: 470,
     priority: -999,
     description() {
-      return `Descarrega todo o dano armazenado em um ataque massivo.`;
+      return `Causa dano massivo ao inimigo somado ao dano armazenado. Após o ataque, o dano armazenado é zerado.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

@@ -36,9 +36,13 @@ export default {
     });
 
     if (result.totalDamage > 0) {
-      dmgReceiver.applyKeyword("queimando", owner.burnDuration, context, {
-        source: owner.name,
-      });
+      dmgReceiver.elementalAffinity ??= "neutral";
+      // Aplica queimando se não tiver afinidade com terra, água ou fogo
+      if (!["terra", "agua", "fogo"].includes(dmgReceiver.elementalAffinity)) {
+        dmgReceiver.applyKeyword("queimando", owner.burnDuration, context, {
+          source: owner.name,
+        });
+      }
     }
 
     return {

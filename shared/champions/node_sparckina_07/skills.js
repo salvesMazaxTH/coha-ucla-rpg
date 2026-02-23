@@ -1,7 +1,6 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "../elementEmoji.js";
 
 const nodeSparckina07Skills = [
   basicAttack,
@@ -12,13 +11,13 @@ const nodeSparckina07Skills = [
   {
     key: "sparkling_slash",
     name: "Sparkling Slash",
-    bf: 75,
+    bf: 70,
     contact: true,
     energyCost: 140,
     priority: 0,
     element: "lightning",
     description() {
-      return `Ataque elemental relâmpago.`;
+      return `Causa dano bruto ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -46,7 +45,7 @@ const nodeSparckina07Skills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Aumenta velocidade e esquiva temporariamente.`;
+      return `Aumenta a Velocidade em ${this.speedBuff} e a Esquiva em ${this.evasionPercent}% da Velocidade por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["self"],
     execute({ user, context = {} }) {
@@ -84,7 +83,7 @@ const nodeSparckina07Skills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Ataque que paralisa o inimigo.`;
+      return `Causa alto dano bruto ao inimigo (BF ${this.bf}) e aplica paralisia por ${this.paralyzeDuration} turnos.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

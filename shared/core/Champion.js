@@ -331,7 +331,10 @@ export class Champion {
    */
   applyKeyword(keywordName, duration, context, metadata = {}) {
     const normalizedName = this.normalizeKeywordName(keywordName);
+
     const { currentTurn } = context || {};
+
+    const isStackable = normalizedName === "poison";
 
     if (!normalizedName) {
       return false;
@@ -347,6 +350,13 @@ export class Champion {
       return false;
     }
 
+    if (this.hasKeyword(normalizedName)) {
+      // sobrescrever a antiga com a nova (reseta duração e metadata)
+      if (!isStackable) {
+        this.keywords.delete(normalizedName);
+      }
+    }
+
     // 🛡️ Ação já foi bloqueada por Escudo Supremo/Feitiço nesta execução
     if (context?.shieldBlockedTargets?.has(this.id)) {
       console.log(
@@ -358,7 +368,7 @@ export class Champion {
     duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
 
     const persistent = metadata?.persistent || false;
-    persistent ? (duration = Infinity) : null; // Se for persistente, ignora a duração
+    if (persistent) duration = Infinity; // Se for persistente, ignora a duração
 
     this.keywords.set(normalizedName, {
       expiresAtTurn: Number.isFinite(currentTurn)

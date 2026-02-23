@@ -11,7 +11,7 @@ const blyskartriSkills = [
     contact: false,
     manaRestored: 50,
     description() {
-      return `Restaura mana de um aliado.`;
+      return `Concede ${this.manaGiven} de mana a si ou a um aliado selecionado.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {

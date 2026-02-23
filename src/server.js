@@ -1177,6 +1177,12 @@ function processChampionsDeaths() {
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
+  // Limpar expirados
+  activeChampions.forEach((champion) => {
+    champion.purgeExpiredStatModifiers(currentTurn);
+    champion.purgeExpiredKeywords(currentTurn);
+  });
+
   currentTurn++;
   playersReadyToEndTurn.clear();
 
@@ -1245,12 +1251,6 @@ function handleStartTurn() {
   processTurnStartKeywords({
     activeChampions: Array.from(activeChampions.values()),
     context: turnStartContext,
-  });
-
-  // Limpar expirados
-  activeChampions.forEach((champion) => {
-    champion.purgeExpiredStatModifiers(currentTurn);
-    champion.purgeExpiredKeywords(currentTurn);
   });
 
   io.emit("turnUpdate", currentTurn);

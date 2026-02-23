@@ -1,7 +1,6 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "../elementEmoji.js";
 
 const voltexzSkills = [
   // ========================
@@ -16,11 +15,11 @@ const voltexzSkills = [
     name: "Relâmpagos Gêmeos",
     bf: 45,
     contact: false,
-    manaCost: 200,
+    manaCost: 220,
     priority: 0,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf} (primario) / BF ${this.bf} (secundario).\n        (Pode escolher o mesmo alvo para ambos)`;
+      return `Causa dano bruto em até dois inimigos (pode escolher o mesmo alvo para ambos).`;
     },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
@@ -68,7 +67,7 @@ const voltexzSkills = [
     priority: 1,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Prioridade: +${this.priority}\n        BF ${this.bf} (Direto);\n        Efeito: Alvo é paralisado por ${this.paralyzeDuration} turno (perde a próxima ação neste turno).`;
+      return `Causa dano bruto (BF ${this.bf}) e paralisa o alvo por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -119,7 +118,7 @@ const voltexzSkills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.manaCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        BF ${this.bf}.`;
+      return `Causa dano bruto massivo ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

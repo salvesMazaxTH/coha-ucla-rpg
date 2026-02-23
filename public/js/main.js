@@ -1236,7 +1236,7 @@ async function collectClientTargets(user, skill) {
 
   for (const spec of normalizedSpec) {
     const target = await selectTargetForRole(
-      spec.type,
+      spec,
       user,
       championsInField,
       enemyCounter,
@@ -1255,7 +1255,7 @@ async function collectClientTargets(user, skill) {
 }
 
 async function selectTargetForRole(
-  role,
+  spec,
   user,
   championsInField,
   enemyCounter,
@@ -1265,6 +1265,8 @@ async function selectTargetForRole(
   // Helper: filtra alvos já escolhidos quando unicidade é exigida
   const filterUnique = (list) =>
     enforceUnique ? list.filter((c) => !chosenTargets.has(c.id)) : list;
+
+  const role = spec.type;
 
   // SELF
   if (role === "self") {
@@ -1286,11 +1288,16 @@ async function selectTargetForRole(
   // SELECT ALLY (seleção manual)
   if (role === "select:ally") {
     let candidates = championsInField.filter((c) => c.team === user.team);
+
+    if (spec.excludesSelf) {
+      candidates = candidates.filter((c) => c.id !== user.id);
+    }
+
     candidates = filterUnique(candidates);
     if (candidates.length === 0) return null;
     const target = await createTargetSelectionOverlay(
       candidates,
-      "Escolha um Aliado (ou você)",
+      "Escolha um Aliado",
     );
     if (!target) return undefined;
     chosenTargets.add(target.id);
