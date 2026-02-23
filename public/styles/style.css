@@ -1,53 +1,89 @@
 /* Overlay de skill (hover/touch nos botões de skill) */
 .skill-hover-overlay {
   position: fixed;
+  z-index: 15000;
+
   background: linear-gradient(180deg, #181f1a 90%, #0a0a0a 100%);
   border: 2px solid #00bfff;
   border-radius: 12px;
   box-shadow: 0 0 18px rgba(0, 191, 255, 0.22);
-  padding: 14px 20px 12px 20px;
+
+  padding: 14px 20px 12px;
   min-width: 180px;
   max-width: 320px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 15000;
+
   color: #e6fff2;
   font-size: 1em;
+
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
+
 .skill-hover-overlay.active {
   opacity: 0.98;
   pointer-events: auto;
 }
+
+/* ===================== */
+/* Estrutura interna     */
+/* ===================== */
+
 .skill-overlay-content {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 .skill-overlay-title {
-  font-size: 1.08em;
-  font-weight: bold;
-  color: #00bfff;
-  margin-bottom: 4px;
   text-align: center;
+  font-size: 1.08em;
+  font-weight: 700;
+  color: #00bfff;
   text-shadow: 0 0 8px rgba(0, 191, 255, 0.3);
 }
-.skill-overlay-desc {
-  font-size: 0.98em;
-  color: #e6fff2;
-  margin-bottom: 6px;
-}
-.skill-overlay-meta {
+
+/* ===================== */
+/* Meta Info             */
+/* ===================== */
+
+.skill-overlay-meta-primary {
   display: flex;
   justify-content: space-between;
-  font-size: 0.95em;
-  color: #b3e6ff;
-  gap: 12px;
+  gap: 20px;
+  margin-top: 6px;
 }
-.skill-overlay-cost b,
-.skill-overlay-cooldown b {
-  color: #00bfff;
+
+.skill-meta-item,
+.skill-overlay-element-row,
+.skill-overlay-contact-row {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.skill-overlay-element-row,
+.skill-overlay-contact-row {
+  margin-top: 4px;
+}
+
+.meta-label {
+  opacity: 0.65;
+}
+
+.meta-value {
   font-weight: 600;
+  color: #b3e6ff;
+}
+
+/* ===================== */
+/* Descrição             */
+/* ===================== */
+
+.skill-overlay-desc {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 @media (max-width: 600px) {
   .skill-hover-overlay {
@@ -1514,6 +1550,26 @@ i {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.portrait-overlay-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 4px;
+  padding: 2px;
+  border-top: 1px solid rgba(0, 255, 150, 0.3);
+}
+
+portrait-overlay-stat {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.portrait-overlay-skill-desc {
+  margin: 4px;
+  padding: 2px;
 }
 
 @media (max-width: 900px) {

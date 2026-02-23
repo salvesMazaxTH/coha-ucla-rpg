@@ -18,10 +18,7 @@ const vaelSkills = [
     energyCost: 120,
     priority: 0,
     description() {
-      return `Custo: ${this.energyCost} EN
-      Contato: ${this.contact ? "✅" : "❌"}
-      BF ${this.bf}.
-      📌 Pode critar normalmente`;
+      return `Ataque rápido com chance de crítico.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -46,12 +43,7 @@ const vaelSkills = [
     energyCost: 200,
     priority: 0,
     description() {
-      return `Custo: ${this.energyCost} EN
-       Contato: ${this.contact ? "✅" : "❌"}
-       BF ${this.bfPrimary} (primario) / BF ${this.bfSecondary} (secundario).
-      ❌ O alvo primário NUNCA pode ser atingido por Acerto Crítico
-      (Esta habilidade ignora todos os modificadores de Crítico no alvo principal)
-      ✅ O alvo secundário SEMPRE sofre Acerto Crítico`;
+      return `Ataque duplo: primário sem crítico, secundário crítico garantido.`;
     },
     targetSpec: [
       { type: "enemy", unique: true },
@@ -102,9 +94,7 @@ const vaelSkills = [
     energyCost: 420,
     priority: 0,
     description() {
-      return `Custo: ${this.energyCost} EN
-       Contato: ${this.contact ? "✅" : "❌"}
-       BF ${this.bf}.`;
+      return `Ataque final devastador.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

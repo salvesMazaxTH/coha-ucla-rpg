@@ -2,6 +2,8 @@
 //  OVERLAY DE SKILL (HOVER/TOUCH NOS BOTÕES DE SKILL)
 // ============================================================
 
+import elementEmoji from "../../shared/champions/elementEmoji.js";
+
 let skillOverlay = null;
 let skillOverlayTimeout = null;
 
@@ -25,7 +27,7 @@ function showSkillOverlay(button, skill, champion) {
   // Helper: paragraphs
   const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
-  // Cost/cooldown
+  // Cost
   let cost = champion?.getSkillCost ? champion.getSkillCost(skill) : skill.cost;
   let costType =
     skill.energyCost !== undefined
@@ -34,18 +36,60 @@ function showSkillOverlay(button, skill, champion) {
         ? "MP"
         : "-";
   if (cost === undefined) cost = "-";
-  let cooldown = skill.cooldown ?? "-";
 
   overlay.innerHTML = `
-    <div class="skill-overlay-content">
-      <div class="skill-overlay-title">${escapeHtml(skill.name || "Habilidade")}</div>
-      <div class="skill-overlay-desc">${toParagraphs(typeof skill.description === "function" ? skill.description.call(skill) : skill.description || "")}</div>
-      <div class="skill-overlay-meta">
-        <span class="skill-overlay-cost"><b>Custo:</b> ${cost} ${costType}</span>
-        <span class="skill-overlay-cooldown"><b>CD:</b> ${cooldown}</span>
-      </div>
+  <div class="skill-overlay-content">
+
+    <div class="skill-overlay-title">
+      ${escapeHtml(skill.name || "Habilidade")}
     </div>
-  `;
+
+    <div class="skill-overlay-meta-primary">
+      <div class="skill-meta-item">
+        <span class="meta-label">Custo: </span>
+        <span class="meta-value">${cost} ${costType}</span>
+      </div>
+
+      ${
+        skill.bf
+          ? `
+        <div class="skill-meta-item">
+          <span class="meta-label">BF: </span>
+          <span class="meta-value">${skill.bf}%</span>
+        </div>
+      `
+          : ""
+      }
+    </div>
+
+    ${
+      skill.element
+        ? `
+      <div class="skill-overlay-element-row">
+        <span class="meta-label">Elemento</span>
+        <span class="meta-value">
+          ${elementEmoji[skill.element] || skill.element}
+        </span>
+      </div>
+    `
+        : ""
+    }
+
+    <div class="skill-overlay-contact-row">
+      <span class="meta-label">Contato</span>
+      <span class="meta-value">${skill.contact ? "✅" : "❌"}</span>
+    </div>
+
+    <div class="skill-overlay-desc">
+      ${toParagraphs(
+        typeof skill.description === "function"
+          ? skill.description.call(skill)
+          : skill.description || "",
+      )}
+    </div>
+
+  </div>
+`;
 
   document.body.appendChild(overlay);
   skillOverlay = overlay;
@@ -83,40 +127,6 @@ function removeSkillOverlay() {
   }
 }
 
-// Attach overlay events to all skill buttons (call after champions rendered)
-function bindSkillOverlayEvents() {
-  document.querySelectorAll(".skill-btn").forEach((button) => {
-    // Get context
-    const userId = button.dataset.championId;
-    const skillKey = button.dataset.skillKey;
-    const user = activeChampions.get(userId);
-    if (!user) return;
-    const skill = user.skills.find((s) => s.key === skillKey);
-    if (!skill) return;
-
-    // Desktop: mouseenter/mouseleave
-    button.addEventListener("mouseenter", (e) => {
-      showSkillOverlay(button, skill, user);
-    });
-    button.addEventListener("mouseleave", (e) => {
-      removeSkillOverlay();
-    });
-
-    // Mobile: touchstart shows, touchend/cancel removes
-    button.addEventListener("touchstart", (e) => {
-      showSkillOverlay(button, skill, user);
-      // Remove after 2.5s if not touched again
-      if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
-      skillOverlayTimeout = setTimeout(removeSkillOverlay, 2500);
-    });
-    button.addEventListener("touchend", removeSkillOverlay);
-    button.addEventListener("touchcancel", removeSkillOverlay);
-  });
-}
-// After rendering champions, bind skill overlay events
-// (Call this after all .skill-btn are in DOM)
-// Example: after updating champion UI or at end of turn
-setTimeout(bindSkillOverlayEvents, 500); // Initial bind (adjust as needed)
 // ============================================================
 //  IMPORTS
 // ============================================================
@@ -808,6 +818,9 @@ function createNewChampion(championData) {
     // Adiciona overlay de hover/touch no retrato
     onPortraitHover: (champ) => showQuickStatsOverlay(champ),
     onPortraitHoverOut: hideQuickStatsOverlay,
+    // Adiciona overlay de hover/touch nas skills
+    showSkillOverlay: showSkillOverlay,
+    removeSkillOverlay: removeSkillOverlay,
     editMode: editMode.enabled,
   });
 
@@ -1004,13 +1017,6 @@ function createOverlay(champion) {
   const overlay = document.createElement("div");
   overlay.classList.add("portrait-overlay");
 
-  overlay.innerHTML = `
-    <div class="portrait-overlay-content" role="dialog" aria-modal="true">
-      <img class="portrait-overlay-img" src="${champion.portrait}" alt="${champion.name}">
-      <h3 class="portrait-overlay-name">${champion.name}</h3>
-    </div>
-  `;
-
   // --- Helpers de sanitização ---
   const escapeHtml = (value) =>
     String(value ?? "")
@@ -1019,6 +1025,18 @@ function createOverlay(champion) {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+
+  overlay.innerHTML = `
+    <div class="portrait-overlay-content" role="dialog" aria-modal="true">
+      <img class="portrait-overlay-img"
+          src="${escapeHtml(champion.portrait)}"
+          alt="${escapeHtml(champion.name)}">
+
+      <h3 class="portrait-overlay-name">
+        ${escapeHtml(champion.name)}
+      </h3>
+    </div>
+  `;
 
   const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
@@ -1032,36 +1050,36 @@ function createOverlay(champion) {
         ? passive.description
         : "";
 
-  const skills = Array.isArray(champion?.skills) ? champion.skills : [];
+  let passiveItemHtml = "";
 
-  const skillItemsHtml = [
-    { name: passiveName, description: passiveDesc },
-    ...skills.map((s, index) => {
-      const baseName = s?.name || "Hab.1";
-      let label = "";
-      if (index === 3) {
-        label = "ULT";
-      } else if (index > 0) {
-        label = `Hab.${index}`;
-      }
-      const desc =
-        typeof s?.description === "function"
-          ? s.description()
-          : typeof s?.description === "string"
-            ? s.description
-            : "";
-      return {
-        name: label ? `${label} — ${baseName}` : baseName,
-        description: desc,
-      };
-    }),
+  if (passiveDesc) {
+    passiveItemHtml = `
+    <div class="portrait-overlay-skill">
+      <h4 class="portrait-overlay-skill-name">
+        ${escapeHtml(passiveName)}
+      </h4>
+      <p class="portrait-overlay-skill-desc">
+        ${toParagraphs(passiveDesc)}
+      </p>
+    </div>
+  `;
+  }
+
+  // atributos do campeão (p.Ex: ATQ, DEF ,etc...)
+  const statsItemHtml = [
+    { name: "Ataque", value: champion.Attack },
+    { name: "Defesa", value: champion.Defense },
+    { name: "Velocidade", value: champion.Speed },
+    { name: "Evasão", value: champion.Evasion ?? 0 },
+    { name: "Crítico", value: champion.Critical ?? 0 },
+    { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
   ]
-    .filter((s) => s.description || s.name)
+    .filter((item) => item.value !== undefined)
     .map(
-      (s) => `
-        <div class="skill-detail">
-          <div class="skill-name">${escapeHtml(s.name)}</div>
-          <div class="skill-description">${toParagraphs(typeof s.description === "function" ? s.description.call(s) : s.description)}</div>
+      (item) => `
+        <div class="portrait-overlay-stat">
+          <h4 class="portrait-overlay-stat-name">${escapeHtml(item.name)}: </h4>
+          <p class="portrait-overlay-stat-value">${escapeHtml(item.value)}</p>
         </div>
       `,
     )
@@ -1071,9 +1089,12 @@ function createOverlay(champion) {
   details.classList.add("portrait-overlay-details");
   details.innerHTML = `
     <div class="portrait-overlay-details-content">
-      <h3 class="portrait-overlay-details-title">Habilidades</h3>
-      <div class="portrait-overlay-skill-list">
-        ${skillItemsHtml}
+      <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
+      <div class="portrait-overlay-skills-list">
+        ${passiveItemHtml}
+      </div>
+      <div class="portrait-overlay-stats-list">
+        ${statsItemHtml}
       </div>
     </div>
   `;

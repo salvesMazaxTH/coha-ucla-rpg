@@ -936,6 +936,53 @@ export class Champion {
       div.querySelector(".portrait")?.addEventListener("click", (e) => {
         handlers.onPortraitClick?.(this);
       });
+
+      div.querySelectorAll(".skill-btn").forEach((button) => {
+        const skillKey = button.dataset.skillKey;
+
+        const champion = this;
+        if (!champion) return;
+
+        const skill = champion.skills.find((s) => s.key === skillKey);
+        if (!skill) return;
+
+        // =========================
+        // DESKTOP (hover)
+        // =========================
+        button.addEventListener("mouseenter", (e) => {
+          e.preventDefault();
+          handlers.showSkillOverlay?.(button, skill, champion);
+        });
+
+        button.addEventListener("mouseout", (e) => {
+          e.preventDefault();
+          handlers.removeSkillOverlay?.();
+        });
+
+        // =========================
+        // MOBILE (touch)
+        // =========================
+        button.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+
+          handlers.showSkillOverlay?.(button, skill, champion);
+
+          if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
+
+          // Fecha sozinho após 2.5s
+          skillOverlayTimeout = setTimeout(() => {
+            handlers.removeSkillOverlay?.();
+          }, 2500);
+        });
+
+        button.addEventListener("touchend", () => {
+          handlers.removeSkillOverlay?.();
+        });
+
+        button.addEventListener("touchcancel", () => {
+          handlers.removeSkillOverlay?.();
+        });
+      });
       // 🔥 bloquear menu padrão da imagem
       const img = div.querySelector(".portrait img");
       if (img) {

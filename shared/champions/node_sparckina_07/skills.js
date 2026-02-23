@@ -1,7 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "./elementEmoji.js";
+import elementEmoji from "../elementEmoji.js";
 
 const nodeSparckina07Skills = [
   basicAttack,
@@ -18,7 +18,7 @@ const nodeSparckina07Skills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.energyCost} MP\n            Contato: ${this.contact ? "✅" : "❌"}\n            Dano = BF ${this.bf}`;
+      return `Ataque elemental relâmpago.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -46,7 +46,7 @@ const nodeSparckina07Skills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.energyCost} MP\n            Efeitos:\n            Ganha +${this.speedBuff} VEL e ${this.evasionPercent}% da VEL como ESQ.`;
+      return `Aumenta velocidade e esquiva temporariamente.`;
     },
     targetSpec: ["self"],
     execute({ user, context = {} }) {
@@ -84,7 +84,7 @@ const nodeSparckina07Skills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elemento: ${elementEmoji[this.element] || "❔"}\nCusto: ${this.energyCost} MP\n        Contato: ${this.contact ? "✅" : "❌"}\n        Efeitos:\n        Dano Bruto = BF ${this.bf}\n        100% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos no alvo inimigo.`;
+      return `Ataque que paralisa o inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

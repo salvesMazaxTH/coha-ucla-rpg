@@ -1,7 +1,7 @@
 import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
-import elementEmoji from "./elementEmoji.js";
+import elementEmoji from "../elementEmoji.js";
 
 const naelthosSkills = [
   // ========================

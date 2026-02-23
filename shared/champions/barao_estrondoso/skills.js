@@ -20,9 +20,7 @@ const baraoEstrondosoSkills = [
     priority: -999,
     targetSpec: ["enemy"],
     description() {
-      return `Custo: ${this.energyCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.`;
+      return `Ataque físico direto.`;
     },
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
@@ -50,8 +48,7 @@ const baraoEstrondosoSkills = [
     energyCost: 65,
     priority: -999,
     description() {
-      return `Custo: ${this.energyCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}`;
+      return `Aumenta a defesa temporariamente.`;
     },
     targetSpec: [""],
     execute({ user, context }) {
@@ -73,9 +70,7 @@ const baraoEstrondosoSkills = [
     energyCost: 470,
     priority: -999,
     description() {
-      return `Custo: ${this.energyCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-       `;
+      return `Descarrega todo o dano armazenado em um ataque massivo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
