@@ -89,7 +89,7 @@ function refundActionResource(user, action) {
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import path from "path";
+import path, { format } from "path";
 import { fileURLToPath } from "url";
 
 import { championDB } from "../shared/data/championDB.js";
@@ -659,6 +659,10 @@ function emitCombatEnvelopesFromResults({
 }) {
   const primaryTarget = Object.values(targets || {})[0] || null;
 
+  const primaryResults = results.filter((r) => (r.damageDepth ?? 0) === 0);
+
+  const reactionResults = results.filter((r) => (r.damageDepth ?? 0) > 0);
+
   const hasSideEffects =
     actionResourceCost > 0 ||
     context.healEvents.length > 0 ||
@@ -667,7 +671,7 @@ function emitCombatEnvelopesFromResults({
     context.resourceEvents.length > 0;
 
   // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais
-  if ((!results || results.length === 0) && hasSideEffects) {
+  if (primaryResults.length === 0 && hasSideEffects) {
     const { effects, affectedIds } = buildEffectsFromGroup({
       resultsGroup: [],
       context,
@@ -675,8 +679,6 @@ function emitCombatEnvelopesFromResults({
       actionResourceCost,
       user,
     });
-
-    const state = snapshotChampions([...affectedIds]);
 
     emitCombatAction({
       action: {
@@ -688,51 +690,86 @@ function emitCombatEnvelopesFromResults({
         targetName: primaryTarget?.name || null,
       },
       effects,
-      log: null,
-      state,
+      state: snapshotChampions([...affectedIds]),
     });
 
     return;
   }
 
-  // 🔹 CASO 2: Itera cada resultado individualmente (principal + reações)
-  for (let i = 0; i < results.length; i++) {
-    const entry = results[i];
-    if (!entry || typeof entry !== "object") continue;
-
-    const isPrimary = (entry.damageDepth ?? 0) === 0;
-
+  // 🔹 CASO 2: Houve results (com ou sem efeitos colaterais) EMITIR AÇÃO PRINCIPAL AGRUPADA
+  if (primaryResults.length > 0) {
     const { effects, affectedIds } = buildEffectsFromGroup({
-      resultsGroup: [entry],
+      resultsGroup: primaryResults,
       context,
-      includeContextEvents: isPrimary,
-      actionResourceCost: isPrimary ? actionResourceCost : 0,
+      includeContextEvents: true,
+      actionResourceCost,
       user,
     });
 
-    const state = snapshotChampions([...affectedIds]);
+    // 🔥 IDs únicos dos alvos inimigos
+    const enemyTargetIds = [
+      ...new Set(
+        primaryResults
+          .map((r) => r.targetId)
+          .filter((id) => {
+            if (!id) return false;
+            if (id === user.id) return false;
+
+            const champ = activeChampions.get(id);
+            return champ && champ.team !== user.team;
+          }),
+      ),
+    ];
+
+    let targetName = null;
+
+    if (enemyTargetIds.length > 0) {
+      const aliveEnemies = Array.from(activeChampions.values()).filter(
+        (c) => c.team !== user.team && c.alive,
+      );
+
+      // 🔥 Todos os inimigos vivos
+      if (enemyTargetIds.length === aliveEnemies.length) {
+        targetName = "todos os inimigos";
+      }
+      // 🔥 1 alvo
+      else if (enemyTargetIds.length === 1) {
+        const champ = activeChampions.get(enemyTargetIds[0]);
+        targetName = champ ? formatChampionName(champ) : "Desconhecido";
+      }
+      // 🔥 2+ alvos
+      else {
+        const names = enemyTargetIds.map((id) => {
+          const champ = activeChampions.get(id);
+          return champ ? formatChampionName(champ) : "Desconhecido";
+        });
+
+        const last = names.pop();
+        targetName = `${names.join(", ")} e ${last}`;
+      }
+    }
+
+    console.log("🧪 PRIMARY RESULTS:", primaryResults);
+    console.log("🧪 EFFECTS FINAL:", effects);
+
+    const action = {
+      userId: user.id,
+      userName: user.name,
+      skillKey: skill.key,
+      skillName: skill.name,
+      targetId: enemyTargetIds.length === 1 ? enemyTargetIds[0] : null,
+      targetName,
+    };
+
+    console.log("EMIT ACTION:", {
+      action,
+      effectsLength: effects.length,
+    });
 
     emitCombatAction({
-      action: isPrimary
-        ? {
-            userId: user.id,
-            userName: user.name,
-            skillKey: skill.key,
-            skillName: skill.name,
-            targetId: primaryTarget?.id || null,
-            targetName: primaryTarget?.name || null,
-          }
-        : {
-            userId: entry.userId,
-            userName: activeChampions.get(entry.userId)?.name || null,
-            skillKey: entry.skill?.key || "reaction",
-            skillName: entry.skill?.name || "Reação",
-            targetId: entry.targetId || null,
-            targetName: activeChampions.get(entry.targetId)?.name || null,
-          },
+      action,
       effects,
-      log: entry.log || null,
-      state,
+      state: snapshotChampions(affectedIds),
     });
   }
 }

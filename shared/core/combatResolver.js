@@ -1,7 +1,7 @@
 import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
-const debugMode = true;
+const debugMode = false;
 
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
@@ -41,8 +41,8 @@ export const CombatResolver = {
   // -------------------------
   // Crit. related
 
-  rollCrit(user, context, options = {}) {
-    const { force = false, disable = false } = options;
+  rollCrit(user, context, critOptions = {}) {
+    const { force = false, disable = false } = critOptions;
 
     const chance = Math.min(user.Critical || 0, MAX_CRIT_CHANCE);
     const bonus = user.critBonusOverride || DEFAULT_CRIT_BONUS;
@@ -96,7 +96,7 @@ export const CombatResolver = {
     };
   },
 
-  processCrit({ baseDamage, user, target, context, options = {} }) {
+  processCrit({ baseDamage, user, target, context, critOptions = {} }) {
     if (debugMode)
       console.group(`⚔️ [CRÍTICO PROCESSING] - Damage Base: ${baseDamage}`);
 
@@ -111,12 +111,12 @@ export const CombatResolver = {
     if (debugMode) {
       console.log(`👤 Critical Chance: ${crit.chance}%`);
       console.log(
-        `🎯 Options: Force=${options.force}, Disable=${options.disable}`,
+        `🎯 critOptions: Force=${critOptions.force}, Disable=${critOptions.disable}`,
       );
     }
 
-    if (crit.chance > 0 || options.force || options.disable) {
-      crit = this.rollCrit(user, context, options);
+    if (crit.chance > 0 || critOptions.force || critOptions.disable) {
+      crit = this.rollCrit(user, context, critOptions);
       if (debugMode) console.log(`🎲 Roll Result:`, crit);
     }
 
@@ -935,7 +935,7 @@ export const CombatResolver = {
       target,
       skill,
       context,
-      options = {},
+      critOptions = {},
       allChampions = [],
     } = params;
 
@@ -995,7 +995,7 @@ export const CombatResolver = {
       user,
       target,
       context,
-      options,
+      critOptions,
     }) || { didCrit: false, bonus: 0 };
 
     crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };

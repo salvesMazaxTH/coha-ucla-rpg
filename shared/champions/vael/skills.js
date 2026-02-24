@@ -63,7 +63,7 @@ const vaelSkills = [
           target: primary,
           skill: this,
           context,
-          options: { disable: true }, // sem crítico
+          critOptions: { disable: true }, // sem crítico
           allChampions: context?.allChampions,
         });
         results.push(primaryResult);
@@ -76,7 +76,7 @@ const vaelSkills = [
           target: secondary,
           skill: this,
           context,
-          options: { force: true }, // crítico garantido
+          critOptions: { force: true }, // crítico garantido
           allChampions: context?.allChampions,
         });
         results.push(secondaryResult);

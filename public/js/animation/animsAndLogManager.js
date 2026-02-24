@@ -208,24 +208,39 @@ export function createCombatAnimationManager(deps) {
       // 2. Se NÃO suprimir o padrão
       else if (!action.suppressDefaultDialog) {
         const userChampion = deps.activeChampions.get(action.userId);
+
         const userName = userChampion
           ? formatChampionName(userChampion)
           : action.userName || "Alguém";
 
-        const targetChampion = action.targetId
-          ? deps.activeChampions.get(action.targetId)
-          : null;
+        // 🔥 PRIORIDADE 1: usar action.targetName (multi-target agregado)
+        let targetName = action.targetName || null;
 
-        const targetName = targetChampion
-          ? formatChampionName(targetChampion)
-          : action.targetName || null;
+        if (!targetName && hasEffects) {
+          const firstEffectWithTarget = effects.find((e) => e.targetId);
+          if (firstEffectWithTarget) {
+            const targetChampion = deps.activeChampions.get(
+              firstEffectWithTarget.targetId,
+            );
+            if (targetChampion) {
+              targetName = formatChampionName(targetChampion);
+            }
+          }
+        }
 
         const skillName = action.skillName
           ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
           : "<b>uma habilidade</b>";
 
         let dialogText;
-        if (targetName && action.userId !== action.targetId) {
+
+        const onlySelfTarget =
+          hasEffects &&
+          effects
+            .filter((e) => e.targetId)
+            .every((e) => e.targetId === action.userId);
+
+        if (targetName && !onlySelfTarget) {
           dialogText = `${userName} usou ${skillName} em ${targetName}.`;
         } else {
           dialogText = `${userName} usou ${skillName}.`;

@@ -1458,6 +1458,7 @@ socket.on("waitingForOpponentEndTurn", (message) => {
 // ============================================================
 
 socket.on("combatAction", (envelope) => {
+  console.log("RECEBIDO NO CLIENT:", envelope);
   combatAnimations.handleCombatAction(envelope);
 });
 

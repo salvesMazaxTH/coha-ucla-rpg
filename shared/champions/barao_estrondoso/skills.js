@@ -50,11 +50,11 @@ const baraoEstrondosoSkills = [
     description() {
       return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em 15 por 2 turnose passa a armazenar 40% do dano na Passiva em vez de 30%.`;
     },
-    targetSpec: [""],
+    targetSpec: ["self"],
     execute({ user, context }) {
       user.applyKeyword("blindagem_reforcada", 2, context);
 
-      user.modifyStat("Defense", 15, 2, context);
+      user.modifyStat({ stat: "Defense", amount: 15, duration: 2, context });
 
       return {
         log: `${formatChampionName(user)} reforçou sua blindagem!`,
@@ -65,30 +65,30 @@ const baraoEstrondosoSkills = [
   {
     key: "super_hiper_ultra_mega_blaster_atomico",
     name: "Super Hiper Ultra Mega Blaster Atômico",
-    bf: 850,
+    bf: 475,
     contact: false,
     energyCost: 470,
     priority: -999,
     description() {
-      return `Causa dano massivo ao inimigo somado ao dano armazenado. Após o ataque, o dano armazenado é zerado.`;
+      return `Causa dano ABSURDO ao inimigo somado ao dano armazenado. Este ataque é sempre um acerto Crítico. Após o ataque, o dano armazenado é zerado.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
       const storedDamage = user.runtime?.storedDamage || 0;
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;
-      return CombatResolver.processDamageEvent({
+      const damageResult = CombatResolver.processDamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
+        critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,
-      }).then((result) => {
-        // Zera o dano armazenado após o ataque
-        user.runtime.storedDamage = 0;
-        return result;
       });
+      // Zera o dano armazenado após o ataque
+      user.runtime.storedDamage = 0;
+      return damageResult;
     },
   },
 ];
