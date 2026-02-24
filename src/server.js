@@ -47,6 +47,20 @@ function applyGlobalTurnRegen(champion, context) {
 
     const BASE_REGEN = 50;
 
+    const isEnergy = champion.energy !== undefined;
+    const current = isEnergy ? champion.energy : champion.mana;
+
+    const base = isEnergy ? champion.baseEnergy : champion.baseMana;
+
+    let totalRegen = BASE_REGEN;
+
+    const threshold = base * 0.7;
+
+    if (current < threshold) {
+        const bonus = base * 0.1; // 10%
+        totalRegen += bonus;
+    }
+
     const applied = champion.addResource(BASE_REGEN);
 
     if (applied > 0) {
