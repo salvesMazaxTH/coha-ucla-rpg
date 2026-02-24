@@ -717,7 +717,7 @@ function emitCombatEnvelopesFromResults({
                 skillKey: skill.key,
                 skillName: skill.name,
                 targetId: firstRealTargetId,
-                targetName: firstRealTarget?.name || null,
+                targetName: firstRealTarget?.name || null
             },
             effects,
             state: snapshotChampions([...affectedIds])
@@ -1350,7 +1350,7 @@ function processTurnStartKeywords({ activeChampions, context }) {
                 const before = champion.HP;
                 const damage = Math.max(0, Number(result.amount) || 0);
 
-                champion.HP = Math.max(0, champion.HP - damage);
+                champion.takeDamage(damage, context);
 
                 dotResults.push({
                     targetId: champion.id,
