@@ -7,5 +7,5 @@ export default {
   Defense: 135,
   Speed: 65,
   Evasion: 10,
-  mana: 560,
+  mana: 850,
 };

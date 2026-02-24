@@ -1110,7 +1110,7 @@ export class Champion {
       console.log("resourceMaxSeen:", this.resourceMaxSeen);
 
       const mpBase = this.resourceMaxSeen || 0;
-      const mpPerSegment = 75;
+      const mpPerSegment = 100;
 
       const mpSegmentCount = Math.floor(mpBase / mpPerSegment);
       const currentMpCount = Number(mpSegments.dataset.segmentCount) || 0;
