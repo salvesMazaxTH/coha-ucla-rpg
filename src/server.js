@@ -684,9 +684,12 @@ function emitCombatEnvelopesFromResults({
     context,
     actionResourceCost
 }) {
-    const primaryTarget = Object.values(targets || {})[0] || null;
-
     const primaryResults = results.filter(r => (r.damageDepth ?? 0) === 0);
+
+    const firstRealTargetId = primaryResults[0]?.targetId || null;
+    const firstRealTarget = firstRealTargetId
+        ? activeChampions.get(firstRealTargetId)
+        : null;
 
     const reactionResults = results.filter(r => (r.damageDepth ?? 0) > 0);
 
@@ -713,8 +716,8 @@ function emitCombatEnvelopesFromResults({
                 userName: user.name,
                 skillKey: skill.key,
                 skillName: skill.name,
-                targetId: primaryTarget?.id || null,
-                targetName: primaryTarget?.name || null
+                targetId: firstRealTargetId,
+                targetName: firstRealTarget?.name || null,
             },
             effects,
             state: snapshotChampions([...affectedIds])
