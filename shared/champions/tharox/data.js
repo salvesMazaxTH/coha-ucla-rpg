@@ -1,6 +1,7 @@
 export default {
   name: "Tharox",
   portrait: "/assets/portraits/tharox.webp",
+  disabled: true,
   HP: 400,
   Attack: 135,
   Defense: 205,

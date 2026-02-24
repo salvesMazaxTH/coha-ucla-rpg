@@ -1044,7 +1044,7 @@ export class Champion {
     }
 
     // 🔄 Atualiza UI sem buscar no DOM toda vez
-    updateUI(currentTurn) {
+    updateUI(context) {
         if (!this.el) return;
 
         // =========================
@@ -1175,7 +1175,7 @@ export class Champion {
             const skillKey = button.dataset.skillKey;
             const skill = this.skills.find(s => s.key === skillKey);
             const cost = this.getSkillCost(skill);
-            const hasResource = resourceState.current >= cost;
+            const hasResource = context?.freeCostSkills ? true : resourceState.current >= cost;
 
             if (!hasResource) {
                 if (!button.disabled) {

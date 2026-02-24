@@ -1561,7 +1561,7 @@ i {
   border-top: 1px solid rgba(0, 255, 150, 0.3);
 }
 
-portrait-overlay-stat {
+.portrait-overlay-stat {
   display: flex;
   gap: 3px;
   align-items: center;

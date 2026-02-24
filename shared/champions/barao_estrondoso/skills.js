@@ -73,7 +73,7 @@ const baraoEstrondosoSkills = [
     {
         key: "super_hiper_ultra_mega_blaster_atomico",
         name: "Super Hiper Ultra Mega Blaster Atômico",
-        bf: 475,
+        bf: 600,
         contact: false,
         energyCost: 350,
         priority: -999,

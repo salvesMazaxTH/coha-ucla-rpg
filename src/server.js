@@ -6,96 +6,96 @@
  * Retorna info do recurso do campeão: { isEnergy, current, type, key }
  */
 function getChampionResourceInfo(champion) {
-    const isEnergy = champion.energy !== undefined;
-    return {
-        isEnergy,
-        current: isEnergy
-            ? Number(champion.energy ?? 0)
-            : Number(champion.mana ?? 0),
-        type: isEnergy ? "energy" : "mana",
-        key: isEnergy ? "energy" : "mana"
-    };
+  const isEnergy = champion.energy !== undefined;
+  return {
+    isEnergy,
+    current: isEnergy
+      ? Number(champion.energy ?? 0)
+      : Number(champion.mana ?? 0),
+    type: isEnergy ? "energy" : "mana",
+    key: isEnergy ? "energy" : "mana",
+  };
 }
 
 /**
  * Calcula o custo de uma skill para o campeão
  */
 function getSkillCost(champion, skill) {
-    const { isEnergy } = getChampionResourceInfo(champion);
-    if (!skill) return 0;
-    if (Number.isFinite(Number(skill.cost)))
-        return Math.max(0, Number(skill.cost));
-    if (isEnergy && Number.isFinite(skill.energyCost))
-        return Math.max(0, skill.energyCost);
-    if (!isEnergy && Number.isFinite(skill.manaCost))
-        return Math.max(0, skill.manaCost);
-    return 0;
+  const { isEnergy } = getChampionResourceInfo(champion);
+  if (!skill) return 0;
+  if (Number.isFinite(Number(skill.cost)))
+    return Math.max(0, Number(skill.cost));
+  if (isEnergy && Number.isFinite(skill.energyCost))
+    return Math.max(0, skill.energyCost);
+  if (!isEnergy && Number.isFinite(skill.manaCost))
+    return Math.max(0, skill.manaCost);
+  return 0;
 }
 
 /**
  * Restaura recurso do campeão.
  */
 function restoreChampionResource(champion, amount) {
-    return champion.addResource(amount);
+  return champion.addResource(amount);
 }
 
 /**
  * Aplica regeneração de recurso (com multiplicadores/flat) e retorna quanto regenerou.
  */
 function applyGlobalTurnRegen(champion, context) {
-    if (!champion) return 0;
+  if (!champion) return 0;
 
-    const BASE_REGEN = 50;
+  const BASE_REGEN = 50;
 
+  const isEnergy = champion.energy !== undefined;
+  const current = isEnergy ? champion.energy : champion.mana;
+
+  const base = isEnergy ? champion.baseEnergy : champion.baseMana;
+
+  let totalRegen = BASE_REGEN;
+
+  const threshold = base * 0.7;
+
+  if (current < threshold) {
+    const missingRes = base - current;
+    const bonus = base * 0.1 + missingRes * 0.1; // 10% da base e da perdida
+    totalRegen += bonus;
+  }
+
+  const applied = champion.addResource(BASE_REGEN);
+
+  if (applied > 0) {
     const isEnergy = champion.energy !== undefined;
-    const current = isEnergy ? champion.energy : champion.mana;
+    const resourceType = isEnergy ? "energy" : "mana";
 
-    const base = isEnergy ? champion.baseEnergy : champion.baseMana;
+    context.resourceEvents = context.resourceEvents || [];
+    context.resourceEvents.push({
+      type: "resourceGain",
+      targetId: champion.id,
+      amount: applied,
+      resourceType,
+    });
+  }
 
-    let totalRegen = BASE_REGEN;
-
-    const threshold = base * 0.7;
-
-    if (current < threshold) {
-        const missingRes = base - current;
-        const bonus = base * 0.1 + missingRes * 0.1; // 10% da base e da perdida
-        totalRegen += bonus;
-    }
-
-    const applied = champion.addResource(BASE_REGEN);
-
-    if (applied > 0) {
-        const isEnergy = champion.energy !== undefined;
-        const resourceType = isEnergy ? "energy" : "mana";
-
-        context.resourceEvents = context.resourceEvents || [];
-        context.resourceEvents.push({
-            type: "resourceGain",
-            targetId: champion.id,
-            amount: applied,
-            resourceType
-        });
-    }
-
-    return applied;
+  return applied;
 }
 
 /**
  * Helper para snapshot do recurso
  */
 function getChampionResourceSnapshot(champion) {
-    return getChampionResourceInfo(champion).current;
+  return getChampionResourceInfo(champion).current;
 }
 
 /**
  * Reembolso de recurso (ex: ação negada)
  */
 function refundActionResource(user, action) {
-    if (!user || !action) return;
-    const amount = Number(action.resourceCost) || 0;
-    if (amount > 0) {
-        restoreChampionResource(user, amount);
-    }
+  if (!user || !action) return;
+  const amount = Number(action.resourceCost) || 0;
+  if (amount > 0) {
+    restoreChampionResource(user, amount);
+  }
 }
 // ============================================================
 //  IMPORTS
@@ -111,8 +111,8 @@ import { championDB } from "../shared/data/championDB.js";
 import { Champion } from "../shared/core/Champion.js";
 import { generateId } from "../shared/core/id.js";
 import {
-    formatChampionName,
-    formatPlayerName
+  formatChampionName,
+  formatPlayerName,
 } from "../shared/core/formatters.js";
 import { emitCombatEvent } from "../shared/core/combatEvents.js";
 
@@ -123,13 +123,14 @@ import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
 // ============================================================
 
 const editMode = {
-    enabled: true,
-    autoLogin: true,
-    autoSelection: false,
-    actMultipleTimesPerTurn: false,
-    unreleasedChampions: true,
-    damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
-    alwaysCrit: false // Força crítico em todo ataque. (SERVER-ONLY)
+  enabled: true,
+  autoLogin: true,
+  autoSelection: false,
+  actMultipleTimesPerTurn: false,
+  unavailableChampions: true,
+  damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
+  alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -152,7 +153,7 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 app.use("/shared", express.static(path.join(__dirname, "..", "shared")));
 
 app.get("/", (_req, res) => {
-    res.sendFile(path.join(__dirname, "..", "public", "index.html"));
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
 
 // ============================================================
@@ -186,25 +187,25 @@ let turnHistory = new Map();
 
 /** Garante que a entrada do turno atual existe no histórico. */
 function ensureTurnEntry() {
-    if (!turnHistory.has(currentTurn)) {
-        turnHistory.set(currentTurn, {
-            events: [],
-            championsDeadThisTurn: [],
-            skillsUsedThisTurn: {},
-            damageDealtThisTurn: {}
-        });
-    }
-    return turnHistory.get(currentTurn);
+  if (!turnHistory.has(currentTurn)) {
+    turnHistory.set(currentTurn, {
+      events: [],
+      championsDeadThisTurn: [],
+      skillsUsedThisTurn: {},
+      damageDealtThisTurn: {},
+    });
+  }
+  return turnHistory.get(currentTurn);
 }
 
 /** Registra um evento no histórico do turno atual. */
 function logTurnEvent(eventType, eventData) {
-    const turnData = ensureTurnEntry();
-    turnData.events.push({
-        type: eventType,
-        ...eventData,
-        timestamp: Date.now()
-    });
+  const turnData = ensureTurnEntry();
+  turnData.events.push({
+    type: eventType,
+    ...eventData,
+    timestamp: Date.now(),
+  });
 }
 
 // ============================================================
@@ -212,10 +213,10 @@ function logTurnEvent(eventType, eventData) {
 // ============================================================
 
 function getGameState() {
-    return {
-        champions: Array.from(activeChampions.values()).map(c => c.serialize()),
-        currentTurn
-    };
+  return {
+    champions: Array.from(activeChampions.values()).map((c) => c.serialize()),
+    currentTurn,
+  };
 }
 
 // ============================================================
@@ -224,43 +225,40 @@ function getGameState() {
 
 /** Retorna uma chave aleatória de campeão, excluindo as fornecidas. */
 function getRandomChampionKey(excludeKeys = []) {
-    const availableKeys = Object.keys(championDB).filter(key => {
-        if (excludeKeys.includes(key)) return false;
-        if (
-            championDB[key]?.unreleased === true &&
-            !editMode.unreleasedChampions
-        )
-            return false;
-        return true;
-    });
-    if (availableKeys.length === 0) return null;
-    return availableKeys[Math.floor(Math.random() * availableKeys.length)];
+  const availableKeys = Object.keys(championDB).filter((key) => {
+    if (excludeKeys.includes(key)) return false;
+    if (championDB[key]?.unreleased === true && !editMode.unreleasedChampions)
+      return false;
+    return true;
+  });
+  if (availableKeys.length === 0) return null;
+  return availableKeys[Math.floor(Math.random() * availableKeys.length)];
 }
 
 /** Instancia e registra campeões de uma lista de keys em um time. */
 function assignChampionsToTeam(team, championKeys) {
-    championKeys.forEach(championKey => {
-        if (!championKey) return;
+  championKeys.forEach((championKey) => {
+    if (!championKey) return;
 
-        const baseData = championDB[championKey];
-        if (!baseData) return;
+    const baseData = championDB[championKey];
+    if (!baseData) return;
 
-        const id = generateId(championKey);
+    const id = generateId(championKey);
 
-        const newChampion = Champion.fromBaseData(baseData, id, team);
+    const newChampion = Champion.fromBaseData(baseData, id, team);
 
-        activeChampions.set(id, newChampion);
-    });
+    activeChampions.set(id, newChampion);
+  });
 }
 
 /** Verifica se ambos os jogadores selecionaram seus times e notifica os clientes. */
 function checkAllTeamsSelected() {
-    if (playerTeamsSelected[0] && playerTeamsSelected[1]) {
-        io.emit("allTeamsSelected");
-        io.emit("gameStateUpdate", getGameState());
-        return true;
-    }
-    return false;
+  if (playerTeamsSelected[0] && playerTeamsSelected[1]) {
+    io.emit("allTeamsSelected");
+    io.emit("gameStateUpdate", getGameState());
+    return true;
+  }
+  return false;
 }
 
 // --- Animação de morte: atraso para o client reproduzir a animação ---
@@ -269,64 +267,64 @@ const SERVER_DELAY_AFTER_ANIMATION = 500;
 
 /** Remove um campeão do jogo, atualiza placar e traz reserva se necessário. */
 function removeChampionFromGame(championId, playerTeam) {
-    const championToRemove = activeChampions.get(championId);
-    if (!championToRemove) {
-        console.error(`[Server] Campeão ${championId} não encontrado.`);
-        return;
-    }
+  const championToRemove = activeChampions.get(championId);
+  if (!championToRemove) {
+    console.error(`[Server] Campeão ${championId} não encontrado.`);
+    return;
+  }
 
-    // Registra morte no histórico
-    logTurnEvent("championDied", {
-        championId,
-        championName: championToRemove.name,
-        team: championToRemove.team
+  // Registra morte no histórico
+  logTurnEvent("championDied", {
+    championId,
+    championName: championToRemove.name,
+    team: championToRemove.team,
+  });
+  ensureTurnEntry().championsDeadThisTurn.push(championId);
+
+  // Atualiza placar
+  const scoringTeam = championToRemove.team === 1 ? 2 : 1;
+  const scoringPlayerSlot = scoringTeam - 1;
+
+  if (!gameEnded) {
+    playerScores[scoringPlayerSlot]++;
+    io.emit("scoreUpdate", {
+      player1: playerScores[0],
+      player2: playerScores[1],
     });
-    ensureTurnEntry().championsDeadThisTurn.push(championId);
 
-    // Atualiza placar
-    const scoringTeam = championToRemove.team === 1 ? 2 : 1;
-    const scoringPlayerSlot = scoringTeam - 1;
+    io.emit(
+      "combatLog",
+      `${formatPlayerName(playerNames.get(scoringPlayerSlot), scoringTeam)} marcou um ponto!`,
+    );
 
-    if (!gameEnded) {
-        playerScores[scoringPlayerSlot]++;
-        io.emit("scoreUpdate", {
-            player1: playerScores[0],
-            player2: playerScores[1]
-        });
+    if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
+      gameEnded = true;
+    }
+  }
 
-        io.emit(
-            "combatLog",
-            `${formatPlayerName(playerNames.get(scoringPlayerSlot), scoringTeam)} marcou um ponto!`
-        );
+  activeChampions.delete(championId);
+  io.emit("championRemoved", championId);
 
-        if (playerScores[scoringPlayerSlot] >= MAX_SCORE) {
-            gameEnded = true;
-        }
+  // Aguarda animação de morte e traz reserva
+  setTimeout(() => {
+    const activeInTeam = Array.from(activeChampions.values()).filter(
+      (c) => c.team === playerTeam,
+    ).length;
+
+    const slot = playerTeam - 1;
+    const player = players[slot];
+
+    if (activeInTeam < 2 && player?.backChampion) {
+      assignChampionsToTeam(playerTeam, [player.backChampion]);
+      player.backChampion = null;
+      io.emit("backChampionUpdate", {
+        team: playerTeam,
+        championKey: null,
+      });
     }
 
-    activeChampions.delete(championId);
-    io.emit("championRemoved", championId);
-
-    // Aguarda animação de morte e traz reserva
-    setTimeout(() => {
-        const activeInTeam = Array.from(activeChampions.values()).filter(
-            c => c.team === playerTeam
-        ).length;
-
-        const slot = playerTeam - 1;
-        const player = players[slot];
-
-        if (activeInTeam < 2 && player?.backChampion) {
-            assignChampionsToTeam(playerTeam, [player.backChampion]);
-            player.backChampion = null;
-            io.emit("backChampionUpdate", {
-                team: playerTeam,
-                championKey: null
-            });
-        }
-
-        io.emit("gameStateUpdate", getGameState());
-    }, SERVER_DELAY_AFTER_ANIMATION + CLIENT_DEATH_ANIMATION_DURATION);
+    io.emit("gameStateUpdate", getGameState());
+  }, SERVER_DELAY_AFTER_ANIMATION + CLIENT_DEATH_ANIMATION_DURATION);
 }
 
 // ============================================================
@@ -338,62 +336,55 @@ function removeChampionFromGame(championId, playerTeam) {
  * Chamada em "requestSkillUse" — rejeita imediatamente via socket.
  */
 function validateActionIntent(user, skill, socket) {
-    if (!user.alive) {
-        socket.emit("skillDenied", "Campeão morto.");
-        return false;
+  if (!user.alive) {
+    socket.emit("skillDenied", "Campeão morto.");
+    return false;
+  }
+
+  if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
+    socket.emit("skillDenied", "Já agiu neste turno.");
+    return false;
+  }
+
+  // Keywords bloqueantes completas
+  if (user.hasKeyword?.("paralisado")) {
+    socket.emit("skillDenied", `${user.name} está Paralisado e não pode agir!`);
+    return false;
+  }
+
+  if (user.hasKeyword?.("atordoado")) {
+    socket.emit("skillDenied", `${user.name} está Atordoado e não pode agir!`);
+    return false;
+  }
+
+  // Inerte — pode ser interrompido por ação se permitido
+  if (user.hasKeyword?.("inerte")) {
+    const k = user.getKeyword("inerte");
+
+    if (k?.canBeInterruptedByAction) {
+      user.removeKeyword("inerte");
+      io.emit(
+        "combatLog",
+        `O efeito "Inerte" de ${formatChampionName(user)} foi interrompido!`,
+      );
+      return true;
     }
 
-    if (!editMode.actMultipleTimesPerTurn && user.hasActedThisTurn) {
-        socket.emit("skillDenied", "Já agiu neste turno.");
-        return false;
-    }
+    socket.emit("skillDenied", `${user.name} está Inerte e não pode agir!`);
+    return false;
+  }
 
-    // Keywords bloqueantes completas
-    if (user.hasKeyword?.("paralisado")) {
-        socket.emit(
-            "skillDenied",
-            `${user.name} está Paralisado e não pode agir!`
-        );
-        return false;
-    }
+  // Enraizado bloqueia apenas habilidades de contato
+  if (user.hasKeyword?.("enraizado") && skill.contact) {
+    const skillName = skill && typeof skill === "object" ? skill.name : skill;
+    socket.emit(
+      "skillDenied",
+      `${user.name} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
+    );
+    return false;
+  }
 
-    if (user.hasKeyword?.("atordoado")) {
-        socket.emit(
-            "skillDenied",
-            `${user.name} está Atordoado e não pode agir!`
-        );
-        return false;
-    }
-
-    // Inerte — pode ser interrompido por ação se permitido
-    if (user.hasKeyword?.("inerte")) {
-        const k = user.getKeyword("inerte");
-
-        if (k?.canBeInterruptedByAction) {
-            user.removeKeyword("inerte");
-            io.emit(
-                "combatLog",
-                `O efeito "Inerte" de ${formatChampionName(user)} foi interrompido!`
-            );
-            return true;
-        }
-
-        socket.emit("skillDenied", `${user.name} está Inerte e não pode agir!`);
-        return false;
-    }
-
-    // Enraizado bloqueia apenas habilidades de contato
-    if (user.hasKeyword?.("enraizado") && skill.contact) {
-        const skillName =
-            skill && typeof skill === "object" ? skill.name : skill;
-        socket.emit(
-            "skillDenied",
-            `${user.name} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`
-        );
-        return false;
-    }
-
-    return true;
+  return true;
 }
 
 /**
@@ -401,48 +392,45 @@ function validateActionIntent(user, skill, socket) {
  * Diferente de validateActionIntent — aqui o estado pode ter mudado.
  */
 function canExecuteAction(user, action) {
-    const userName = formatChampionName(user);
-    if (!user || !user.alive) {
-        return false;
+  const userName = formatChampionName(user);
+  if (!user || !user.alive) {
+    return false;
+  }
+
+  // Keywords bloqueantes
+  const blockingKeywords = [
+    ["paralisado", "Paralisado"],
+    ["atordoado", "Atordoado"],
+    ["congelado", "Congelado"],
+  ];
+
+  for (const [key, label] of blockingKeywords) {
+    if (user.hasKeyword?.(key)) {
+      io.emit(
+        "combatLog",
+        `${userName} tentou agir mas estava ${label}! Ação cancelada.`,
+      );
+      return false;
+    }
+  }
+
+  // Inerte — tratamento especial
+  if (user.hasKeyword?.("inerte")) {
+    const k = user.getKeyword("inerte");
+
+    if (!k?.canBeInterruptedByAction) {
+      io.emit(
+        "combatLog",
+        `${userName} tentou agir mas estava Inerte! Ação cancelada.`,
+      );
+      return false;
     }
 
-    // Keywords bloqueantes
-    const blockingKeywords = [
-        ["paralisado", "Paralisado"],
-        ["atordoado", "Atordoado"],
-        ["congelado", "Congelado"]
-    ];
+    user.removeKeyword("inerte");
+    io.emit("combatLog", `O efeito "Inerte" de ${userName} foi interrompido!`);
+  }
 
-    for (const [key, label] of blockingKeywords) {
-        if (user.hasKeyword?.(key)) {
-            io.emit(
-                "combatLog",
-                `${userName} tentou agir mas estava ${label}! Ação cancelada.`
-            );
-            return false;
-        }
-    }
-
-    // Inerte — tratamento especial
-    if (user.hasKeyword?.("inerte")) {
-        const k = user.getKeyword("inerte");
-
-        if (!k?.canBeInterruptedByAction) {
-            io.emit(
-                "combatLog",
-                `${userName} tentou agir mas estava Inerte! Ação cancelada.`
-            );
-            return false;
-        }
-
-        user.removeKeyword("inerte");
-        io.emit(
-            "combatLog",
-            `O efeito "Inerte" de ${userName} foi interrompido!`
-        );
-    }
-
-    return true;
+  return true;
 }
 
 // ============================================================
@@ -451,128 +439,128 @@ function canExecuteAction(user, action) {
 
 /** Resolve os alvos de uma ação, respeitando Taunt e validando existência. */
 function resolveSkillTargets(user, skill, action) {
-    const currentTargets = {};
-    let redirected = false;
+  const currentTargets = {};
+  let redirected = false;
 
-    // --- TAUNT ---
-    const hasTaunt = user.tauntEffects?.some(
-        effect => effect.expiresAtTurn > currentTurn
-    );
+  // --- TAUNT ---
+  const hasTaunt = user.tauntEffects?.some(
+    (effect) => effect.expiresAtTurn > currentTurn,
+  );
 
+  const normalizedSpec = Array.isArray(skill.targetSpec)
+    ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
+    : [];
+
+  const isOffensiveSkill = normalizedSpec.some((spec) =>
+    spec.includes("enemy"),
+  );
+
+  if (hasTaunt && isOffensiveSkill) {
+    const taunterId = user.tauntEffects[0].taunterId;
+    const taunter = activeChampions.get(taunterId);
+
+    if (taunter && taunter.alive) {
+      for (const role in action.targetIds) {
+        const original = activeChampions.get(action.targetIds[role]);
+        if (original && original.alive && original.team !== user.team) {
+          currentTargets[role] = taunter;
+          redirected = true;
+        } else if (role === "self") {
+          currentTargets[role] = user;
+        } else if (original && original.alive) {
+          currentTargets[role] = original;
+        }
+        // Alvo morto → não entra, a porção da skill correspondente é ignorada
+      }
+
+      if (redirected) {
+        io.emit(
+          "combatLog",
+          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
+        );
+        emitCombatAction({
+          action: null,
+          effects: [
+            {
+              type: "tauntRedirection",
+              attackerId: user.id,
+              newTargetId: taunter.id,
+              taunterId: taunter.id,
+            },
+          ],
+          log: `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
+          state: null,
+        });
+      }
+    } else {
+      io.emit(
+        "combatLog",
+        `O provocador de ${formatChampionName(user)} não está ativo. A provocação é ignorada.`,
+      );
+    }
+  }
+
+  // --- Resolução normal ---
+  if (!redirected) {
+    // Verifica se a skill possui alvos globais (all-enemies, all-allies, all)
     const normalizedSpec = Array.isArray(skill.targetSpec)
-        ? skill.targetSpec.map(s => (typeof s === "string" ? s : s.type))
-        : [];
+      ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
+      : [];
 
-    const isOffensiveSkill = normalizedSpec.some(spec =>
-        spec.includes("enemy")
-    );
+    const hasAllEnemies = normalizedSpec.includes("all-enemies");
+    const hasAllAllies = normalizedSpec.includes("all-allies");
+    const hasAll = normalizedSpec.includes("all");
 
-    if (hasTaunt && isOffensiveSkill) {
-        const taunterId = user.tauntEffects[0].taunterId;
-        const taunter = activeChampions.get(taunterId);
+    if (hasAllEnemies || hasAllAllies || hasAll) {
+      // Alvos globais — resolvidos automaticamente pelo servidor
+      if (hasAllEnemies || hasAll) {
+        const enemies = Array.from(activeChampions.values()).filter(
+          (c) => c.team !== user.team && c.alive,
+        );
+        enemies.forEach((e, i) => {
+          const key = i === 0 ? "enemy" : `enemy${i + 1}`;
+          currentTargets[key] = e;
+        });
+      }
+      if (hasAllAllies || hasAll) {
+        const allies = Array.from(activeChampions.values()).filter(
+          (c) => c.team === user.team && c.alive,
+        );
+        allies.forEach((a, i) => {
+          const key = i === 0 ? "ally" : `ally${i + 1}`;
+          currentTargets[key] = a;
+        });
+      }
+    } else {
+      // Alvos manuais — enviados pelo client via targetIds
+      for (const role in action.targetIds) {
+        const target = activeChampions.get(action.targetIds[role]);
 
-        if (taunter && taunter.alive) {
-            for (const role in action.targetIds) {
-                const original = activeChampions.get(action.targetIds[role]);
-                if (original && original.alive && original.team !== user.team) {
-                    currentTargets[role] = taunter;
-                    redirected = true;
-                } else if (role === "self") {
-                    currentTargets[role] = user;
-                } else if (original && original.alive) {
-                    currentTargets[role] = original;
-                }
-                // Alvo morto → não entra, a porção da skill correspondente é ignorada
-            }
-
-            if (redirected) {
-                io.emit(
-                    "combatLog",
-                    `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`
-                );
-                emitCombatAction({
-                    action: null,
-                    effects: [
-                        {
-                            type: "tauntRedirection",
-                            attackerId: user.id,
-                            newTargetId: taunter.id,
-                            taunterId: taunter.id
-                        }
-                    ],
-                    log: `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
-                    state: null
-                });
-            }
-        } else {
-            io.emit(
-                "combatLog",
-                `O provocador de ${formatChampionName(user)} não está ativo. A provocação é ignorada.`
-            );
+        if (target && target.alive) {
+          currentTargets[role] = target;
+        } else if (role === "self") {
+          // "self" sempre resolve para o próprio user
+          currentTargets[role] = user;
         }
+        // Alvo morto/inválido → simplesmente não entra em currentTargets.
+        // A porção da skill referente a esse alvo não será executada,
+        // mas as demais porções continuam normalmente.
+      }
     }
 
-    // --- Resolução normal ---
-    if (!redirected) {
-        // Verifica se a skill possui alvos globais (all-enemies, all-allies, all)
-        const normalizedSpec = Array.isArray(skill.targetSpec)
-            ? skill.targetSpec.map(s => (typeof s === "string" ? s : s.type))
-            : [];
-
-        const hasAllEnemies = normalizedSpec.includes("all-enemies");
-        const hasAllAllies = normalizedSpec.includes("all-allies");
-        const hasAll = normalizedSpec.includes("all");
-
-        if (hasAllEnemies || hasAllAllies || hasAll) {
-            // Alvos globais — resolvidos automaticamente pelo servidor
-            if (hasAllEnemies || hasAll) {
-                const enemies = Array.from(activeChampions.values()).filter(
-                    c => c.team !== user.team && c.alive
-                );
-                enemies.forEach((e, i) => {
-                    const key = i === 0 ? "enemy" : `enemy${i + 1}`;
-                    currentTargets[key] = e;
-                });
-            }
-            if (hasAllAllies || hasAll) {
-                const allies = Array.from(activeChampions.values()).filter(
-                    c => c.team === user.team && c.alive
-                );
-                allies.forEach((a, i) => {
-                    const key = i === 0 ? "ally" : `ally${i + 1}`;
-                    currentTargets[key] = a;
-                });
-            }
-        } else {
-            // Alvos manuais — enviados pelo client via targetIds
-            for (const role in action.targetIds) {
-                const target = activeChampions.get(action.targetIds[role]);
-
-                if (target && target.alive) {
-                    currentTargets[role] = target;
-                } else if (role === "self") {
-                    // "self" sempre resolve para o próprio user
-                    currentTargets[role] = user;
-                }
-                // Alvo morto/inválido → simplesmente não entra em currentTargets.
-                // A porção da skill referente a esse alvo não será executada,
-                // mas as demais porções continuam normalmente.
-            }
-        }
-
-        // Se nenhum alvo restou, aí sim cancela a ação
-        if (Object.keys(currentTargets).length === 0) {
-            io.emit(
-                "combatLog",
-                `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`
-            );
-            return null;
-        }
+    // Se nenhum alvo restou, aí sim cancela a ação
+    if (Object.keys(currentTargets).length === 0) {
+      io.emit(
+        "combatLog",
+        `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
+      );
+      return null;
     }
+  }
 
-    console.log("FINAL TARGETS:", Object.keys(currentTargets));
+  console.log("FINAL TARGETS:", Object.keys(currentTargets));
 
-    return currentTargets;
+  return currentTargets;
 }
 
 // ============================================================
@@ -584,317 +572,399 @@ function resolveSkillTargets(user, skill, action) {
  * Retorna um array de efeitos que o cliente animará sequencialmente.
  */
 function extractEffectsFromResult(result) {
-    if (result?.extraEffects?.some(e => e.type === "dialog")) {
-        console.log("🟡 EXTRACT → recebeu dialog:", result.extraEffects);
+  if (result?.extraEffects?.some((e) => e.type === "dialog")) {
+    console.log("🟡 EXTRACT → recebeu dialog:", result.extraEffects);
+  }
+
+  const effects = [];
+  if (!result || typeof result !== "object") return effects;
+
+  const getNameById = (id) =>
+    id ? activeChampions.get(id)?.name || null : null;
+
+  // Evasão — se evadiu, não há dano nem heal
+  if (result.evaded && result.targetId) {
+    effects.push({
+      type: "evasion",
+      targetId: result.targetId,
+      sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
+    });
+  }
+
+  // Imunidade absoluta — totalDamage 0, log menciona imunidade
+  if (
+    result.totalDamage === 0 &&
+    !result.evaded &&
+    result.log?.includes("Imunidade Absoluta")
+  ) {
+    effects.push({
+      type: "immune",
+      targetId: result.targetId,
+      sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
+    });
+  }
+
+  // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
+  if (
+    result.totalDamage === 0 &&
+    !result.evaded &&
+    result.log?.includes("bloqueou completamente")
+  ) {
+    effects.push({
+      type: "shieldBlock",
+      targetId: result.targetId,
+      sourceId: result.userId,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
+    });
+  }
+
+  // Dano
+  if (result.totalDamage === 0) {
+    effects.push({
+      type: "damage",
+      targetId: result.targetId,
+      amount: 0,
+      isCritical: false,
+      isBlocked: true,
+    });
+  }
+
+  if (result.totalDamage > 0 && result.targetId) {
+    effects.push({
+      type: "damage",
+      targetId: result.targetId,
+      sourceId: result.userId,
+      amount: result.totalDamage,
+      isCritical: result.crit?.didCrit || false,
+      targetName: getNameById(result.targetId),
+      sourceName: getNameById(result.userId),
+    });
+  }
+
+  // Heal direto do resultado (lifesteal)
+  if (result.heal && result.heal.amount > 0 && result.heal.targetId) {
+    effects.push({
+      type: "heal",
+      targetId: result.heal.targetId,
+      sourceId: result.heal.sourceId || result.userId,
+      amount: result.heal.amount,
+      targetName: getNameById(result.heal.targetId),
+      sourceName: getNameById(result.heal.sourceId || result.userId),
+    });
+  }
+
+  if (result.extraEffects?.length) {
+    const dialogEffects = result.extraEffects.filter(
+      (e) => e.type === "dialog",
+    );
+    if (dialogEffects.length) {
+      console.log("🟢 RD → dialog em extraEffects:", dialogEffects);
     }
+    effects.push(...result.extraEffects);
+  }
 
-    const effects = [];
-    if (!result || typeof result !== "object") return effects;
+  if (effects.some((e) => e.type === "dialog")) {
+    console.log("🟡 EXTRACT → dialog entrou nos effects finais:", effects);
+  }
 
-    const getNameById = id =>
-        id ? activeChampions.get(id)?.name || null : null;
-
-    // Evasão — se evadiu, não há dano nem heal
-    if (result.evaded && result.targetId) {
-        effects.push({
-            type: "evasion",
-            targetId: result.targetId,
-            sourceId: result.userId,
-            targetName: getNameById(result.targetId),
-            sourceName: getNameById(result.userId)
-        });
-    }
-
-    // Imunidade absoluta — totalDamage 0, log menciona imunidade
-    if (
-        result.totalDamage === 0 &&
-        !result.evaded &&
-        result.log?.includes("Imunidade Absoluta")
-    ) {
-        effects.push({
-            type: "immune",
-            targetId: result.targetId,
-            sourceId: result.userId,
-            targetName: getNameById(result.targetId),
-            sourceName: getNameById(result.userId)
-        });
-    }
-
-    // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
-    if (
-        result.totalDamage === 0 &&
-        !result.evaded &&
-        result.log?.includes("bloqueou completamente")
-    ) {
-        effects.push({
-            type: "shieldBlock",
-            targetId: result.targetId,
-            sourceId: result.userId,
-            targetName: getNameById(result.targetId),
-            sourceName: getNameById(result.userId)
-        });
-    }
-
-    // Dano
-    if (result.totalDamage > 0 && result.targetId) {
-        effects.push({
-            type: "damage",
-            targetId: result.targetId,
-            sourceId: result.userId,
-            amount: result.totalDamage,
-            isCritical: result.crit?.didCrit || false,
-            targetName: getNameById(result.targetId),
-            sourceName: getNameById(result.userId)
-        });
-    }
-
-    // Heal direto do resultado (lifesteal)
-    if (result.heal && result.heal.amount > 0 && result.heal.targetId) {
-        effects.push({
-            type: "heal",
-            targetId: result.heal.targetId,
-            sourceId: result.heal.sourceId || result.userId,
-            amount: result.heal.amount,
-            targetName: getNameById(result.heal.targetId),
-            sourceName: getNameById(result.heal.sourceId || result.userId)
-        });
-    }
-
-    if (result.extraEffects?.length) {
-        const dialogEffects = result.extraEffects.filter(
-            e => e.type === "dialog"
-        );
-        if (dialogEffects.length) {
-            console.log("🟢 RD → dialog em extraEffects:", dialogEffects);
-        }
-        effects.push(...result.extraEffects);
-    }
-
-    if (effects.some(e => e.type === "dialog")) {
-        console.log("🟡 EXTRACT → dialog entrou nos effects finais:", effects);
-    }
-
-    return effects;
+  return effects;
 }
 
 function emitCombatEnvelopesFromResults({
-    results,
-    user,
-    skill,
-    targets,
-    context,
-    actionResourceCost
+  results,
+  user,
+  skill,
+  targets,
+  context,
+  actionResourceCost,
 }) {
-    const primaryResults = results.filter(r => (r.damageDepth ?? 0) === 0);
+  const primaryResults = results.filter(
+    (r) =>
+      (r.damageDepth ?? 0) === 0 &&
+      (r.totalDamage !== undefined ||
+        r.heal !== (undefined || null) ||
+        r.targetId),
+  );
 
-    const firstRealTargetId = primaryResults[0]?.targetId || null;
-    const firstRealTarget = firstRealTargetId
-        ? activeChampions.get(firstRealTargetId)
-        : null;
+  const firstRealTargetId = primaryResults[0]?.targetId || null;
+  const firstRealTarget = firstRealTargetId
+    ? activeChampions.get(firstRealTargetId)
+    : null;
 
-    const reactionResults = results.filter(r => (r.damageDepth ?? 0) > 0);
+  const reactionResults = results.filter((r) => (r.damageDepth ?? 0) > 0);
 
-    const hasSideEffects =
-        actionResourceCost > 0 ||
-        context.healEvents.length > 0 ||
-        context.buffEvents.length > 0 ||
-        context.shieldEvents.length > 0 ||
-        context.resourceEvents.length > 0;
+  const logicalResults = results.filter(
+    (r) =>
+      (r.damageDepth ?? 0) === 0 && r.totalDamage === undefined && !r.targetId,
+  );
 
-    // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais
-    if (primaryResults.length === 0 && hasSideEffects) {
-        const { effects, affectedIds } = buildEffectsFromGroup({
-            resultsGroup: [],
-            context,
-            includeContextEvents: true,
-            actionResourceCost,
-            user
+  const hasSideEffects =
+    actionResourceCost > 0 ||
+    context.healEvents.length > 0 ||
+    context.buffEvents.length > 0 ||
+    context.shieldEvents.length > 0 ||
+    context.resourceEvents.length > 0;
+
+  // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais
+  if (primaryResults.length === 0 && hasSideEffects) {
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: [],
+      context,
+      includeContextEvents: true,
+      actionResourceCost,
+      user,
+    });
+
+    console.log(
+      "🧪 PRIMARY RESULTS TARGETS:",
+      primaryResults.map((r) => ({
+        targetId: r.targetId,
+        userId: r.userId,
+      })),
+    );
+
+    console.log(
+      "🧪 EFFECT TARGET IDS:",
+      effects.filter((e) => e.type === "damage").map((e) => e.targetId),
+    );
+
+    emitCombatAction({
+      action: {
+        userId: user.id,
+        userName: user.name,
+        skillKey: skill.key,
+        skillName: skill.name,
+        targetId: firstRealTargetId,
+        targetName: firstRealTarget?.name || null,
+      },
+      effects,
+      state: snapshotChampions([...affectedIds]),
+    });
+
+    return;
+  }
+
+  // 🔹 CASO 2: ... 
+  if (primaryResults.length === 0 && logicalResults.length > 0) {
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: logicalResults,
+      context,
+      includeContextEvents: true,
+      actionResourceCost,
+      user,
+    });
+
+    emitCombatAction({
+      action: {
+        userId: user.id,
+        userName: user.name,
+        skillKey: skill.key,
+        skillName: skill.name,
+        targetId: null,
+        targetName: null,
+      },
+      effects,
+      state: snapshotChampions(affectedIds),
+    });
+    return;
+  }
+
+  // 🔹 CASO 3: Houve results (com ou sem efeitos colaterais) EMITIR AÇÃO PRINCIPAL AGRUPADA
+  if (primaryResults.length > 0) {
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: primaryResults,
+      context,
+      includeContextEvents: true,
+      actionResourceCost,
+      user,
+    });
+
+    // 🔥 IDs únicos dos alvos inimigos
+    const enemyTargetIds = [
+      ...new Set(
+        primaryResults
+          .map((r) => r.targetId)
+          .filter((id) => {
+            if (!id) return false;
+            if (id === user.id) return false;
+
+            const champ = activeChampions.get(id);
+            return champ && champ.team !== user.team;
+          }),
+      ),
+    ];
+
+    let targetName = null;
+
+    if (enemyTargetIds.length > 0) {
+      const aliveEnemies = Array.from(activeChampions.values()).filter(
+        (c) => c.team !== user.team && c.alive,
+      );
+
+      // 🔥 Todos os inimigos vivos
+      if (enemyTargetIds.length === aliveEnemies.length) {
+        targetName = "todos os inimigos";
+      }
+      // 🔥 1 alvo
+      else if (enemyTargetIds.length === 1) {
+        const champ = activeChampions.get(enemyTargetIds[0]);
+        targetName = champ ? formatChampionName(champ) : "Desconhecido";
+      }
+      // 🔥 2+ alvos
+      else {
+        const names = enemyTargetIds.map((id) => {
+          const champ = activeChampions.get(id);
+          return champ ? formatChampionName(champ) : "Desconhecido";
         });
 
-        emitCombatAction({
-            action: {
-                userId: user.id,
-                userName: user.name,
-                skillKey: skill.key,
-                skillName: skill.name,
-                targetId: firstRealTargetId,
-                targetName: firstRealTarget?.name || null
-            },
-            effects,
-            state: snapshotChampions([...affectedIds])
-        });
-
-        return;
+        const last = names.pop();
+        targetName = `${names.join(", ")} e ${last}`;
+      }
     }
 
-    // 🔹 CASO 2: Houve results (com ou sem efeitos colaterais) EMITIR AÇÃO PRINCIPAL AGRUPADA
-    if (primaryResults.length > 0) {
-        const { effects, affectedIds } = buildEffectsFromGroup({
-            resultsGroup: primaryResults,
-            context,
-            includeContextEvents: true,
-            actionResourceCost,
-            user
-        });
+    console.log("🧪 PRIMARY RESULTS:", primaryResults);
+    console.log("🧪 EFFECTS FINAL:", effects);
 
-        // 🔥 IDs únicos dos alvos inimigos
-        const enemyTargetIds = [
-            ...new Set(
-                primaryResults
-                    .map(r => r.targetId)
-                    .filter(id => {
-                        if (!id) return false;
-                        if (id === user.id) return false;
+    const action = {
+      userId: user.id,
+      userName: user.name,
+      skillKey: skill.key,
+      skillName: skill.name,
+      targetId: enemyTargetIds.length === 1 ? enemyTargetIds[0] : null,
+      targetName,
+    };
 
-                        const champ = activeChampions.get(id);
-                        return champ && champ.team !== user.team;
-                    })
-            )
-        ];
+    console.log("EMIT ACTION:", {
+      action,
+      effectsLength: effects.length,
+    });
 
-        let targetName = null;
+    emitCombatAction({
+      action,
+      effects,
+      state: snapshotChampions(affectedIds),
+    });
+  }
+  // 🔹 CASO 4: EMITIR REAÇÕES SEPARADAS
+  for (const entry of reactionResults) {
+    const { effects, affectedIds } = buildEffectsFromGroup({
+      resultsGroup: [entry],
+      context,
+      includeContextEvents: false,
+      actionResourceCost: 0,
+      user,
+    });
 
-        if (enemyTargetIds.length > 0) {
-            const aliveEnemies = Array.from(activeChampions.values()).filter(
-                c => c.team !== user.team && c.alive
-            );
-
-            // 🔥 Todos os inimigos vivos
-            if (enemyTargetIds.length === aliveEnemies.length) {
-                targetName = "todos os inimigos";
-            }
-            // 🔥 1 alvo
-            else if (enemyTargetIds.length === 1) {
-                const champ = activeChampions.get(enemyTargetIds[0]);
-                targetName = champ ? formatChampionName(champ) : "Desconhecido";
-            }
-            // 🔥 2+ alvos
-            else {
-                const names = enemyTargetIds.map(id => {
-                    const champ = activeChampions.get(id);
-                    return champ ? formatChampionName(champ) : "Desconhecido";
-                });
-
-                const last = names.pop();
-                targetName = `${names.join(", ")} e ${last}`;
-            }
-        }
-
-        console.log("🧪 PRIMARY RESULTS:", primaryResults);
-        console.log("🧪 EFFECTS FINAL:", effects);
-
-        const action = {
-            userId: user.id,
-            userName: user.name,
-            skillKey: skill.key,
-            skillName: skill.name,
-            targetId: enemyTargetIds.length === 1 ? enemyTargetIds[0] : null,
-            targetName
-        };
-
-        console.log("EMIT ACTION:", {
-            action,
-            effectsLength: effects.length
-        });
-
-        emitCombatAction({
-            action,
-            effects,
-            state: snapshotChampions(affectedIds)
-        });
-    }
+    emitCombatAction({
+      action: {
+        userId: entry.userId,
+        userName: activeChampions.get(entry.userId)?.name || null,
+        skillKey: entry.skill?.key || "reaction",
+        skillName: entry.skill?.name || "Reação",
+        targetId: entry.targetId || null,
+        targetName: activeChampions.get(entry.targetId)?.name || null,
+      },
+      effects,
+      state: snapshotChampions(affectedIds),
+    });
+  }
 }
 
 function buildEffectsFromGroup({
-    resultsGroup,
-    context,
-    includeContextEvents,
-    actionResourceCost,
-    user
+  resultsGroup,
+  context,
+  includeContextEvents,
+  actionResourceCost,
+  user,
 }) {
-    const effects = [];
-    const affectedIds = new Set();
+  const effects = [];
+  const affectedIds = new Set();
 
-    // 🔥 Effects vindos do processDamageEvent
-    for (const entry of resultsGroup) {
-        const extracted = extractEffectsFromResult(entry);
-        effects.push(...extracted);
+  // 🔥 Effects vindos do processDamageEvent
+  for (const entry of resultsGroup) {
+    const extracted = extractEffectsFromResult(entry);
+    effects.push(...extracted);
 
-        if (entry.targetId) affectedIds.add(entry.targetId);
-        if (entry.userId) affectedIds.add(entry.userId);
-        if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
+    if (entry.targetId) affectedIds.add(entry.targetId);
+    if (entry.userId) affectedIds.add(entry.userId);
+    if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
+  }
+
+  // 🔥 Gasto de recurso da skill principal
+  if (includeContextEvents && actionResourceCost > 0) {
+    const isEnergy = user.energy !== undefined;
+
+    effects.push({
+      type: "resourceSpend",
+      targetId: user.id,
+      sourceId: user.id,
+      amount: actionResourceCost,
+      resourceType: isEnergy ? "energy" : "mana",
+      targetName: user.name,
+      sourceName: user.name,
+    });
+
+    affectedIds.add(user.id);
+  }
+
+  if (includeContextEvents) {
+    for (const h of context.healEvents) {
+      effects.push({
+        type: "heal",
+        targetId: h.targetId,
+        sourceId: h.sourceId,
+        amount: h.amount,
+        targetName: activeChampions.get(h.targetId)?.name || null,
+        sourceName: activeChampions.get(h.sourceId)?.name || null,
+      });
+      affectedIds.add(h.targetId);
     }
 
-    // 🔥 Gasto de recurso da skill principal
-    if (includeContextEvents && actionResourceCost > 0) {
-        const isEnergy = user.energy !== undefined;
-
-        effects.push({
-            type: "resourceSpend",
-            targetId: user.id,
-            sourceId: user.id,
-            amount: actionResourceCost,
-            resourceType: isEnergy ? "energy" : "mana",
-            targetName: user.name,
-            sourceName: user.name
-        });
-
-        affectedIds.add(user.id);
+    for (const s of context.shieldEvents) {
+      effects.push({
+        type: "shield",
+        targetId: s.targetId,
+        sourceId: s.sourceId,
+        amount: s.amount,
+        targetName: activeChampions.get(s.targetId)?.name || null,
+        sourceName: activeChampions.get(s.sourceId)?.name || null,
+      });
+      affectedIds.add(s.targetId);
     }
 
-    if (includeContextEvents) {
-        for (const h of context.healEvents) {
-            effects.push({
-                type: "heal",
-                targetId: h.targetId,
-                sourceId: h.sourceId,
-                amount: h.amount,
-                targetName: activeChampions.get(h.targetId)?.name || null,
-                sourceName: activeChampions.get(h.sourceId)?.name || null
-            });
-            affectedIds.add(h.targetId);
-        }
-
-        for (const s of context.shieldEvents) {
-            effects.push({
-                type: "shield",
-                targetId: s.targetId,
-                sourceId: s.sourceId,
-                amount: s.amount,
-                targetName: activeChampions.get(s.targetId)?.name || null,
-                sourceName: activeChampions.get(s.sourceId)?.name || null
-            });
-            affectedIds.add(s.targetId);
-        }
-
-        for (const b of context.buffEvents) {
-            effects.push({
-                type: "buff",
-                targetId: b.targetId,
-                sourceId: b.sourceId,
-                amount: b.amount,
-                statName: b.statName,
-                targetName: activeChampions.get(b.targetId)?.name || null,
-                sourceName: activeChampions.get(b.sourceId)?.name || null
-            });
-            affectedIds.add(b.targetId);
-        }
-
-        for (const r of context.resourceEvents) {
-            effects.push({
-                type: r.type,
-                targetId: r.targetId,
-                sourceId: r.sourceId,
-                amount: r.amount,
-                resourceType: r.resourceType,
-                targetName: activeChampions.get(r.targetId)?.name || null,
-                sourceName: activeChampions.get(r.sourceId)?.name || null
-            });
-            affectedIds.add(r.targetId);
-        }
+    for (const b of context.buffEvents) {
+      effects.push({
+        type: "buff",
+        targetId: b.targetId,
+        sourceId: b.sourceId,
+        amount: b.amount,
+        statName: b.statName,
+        targetName: activeChampions.get(b.targetId)?.name || null,
+        sourceName: activeChampions.get(b.sourceId)?.name || null,
+      });
+      affectedIds.add(b.targetId);
     }
 
-    return { effects, affectedIds };
+    for (const r of context.resourceEvents) {
+      effects.push({
+        type: r.type,
+        targetId: r.targetId,
+        sourceId: r.sourceId,
+        amount: r.amount,
+        resourceType: r.resourceType,
+        targetName: activeChampions.get(r.targetId)?.name || null,
+        sourceName: activeChampions.get(r.sourceId)?.name || null,
+      });
+      affectedIds.add(r.targetId);
+    }
+  }
+
+  return { effects, affectedIds };
 }
 
 /**
@@ -902,17 +972,17 @@ function buildEffectsFromGroup({
  * Usado para enviar o estado final pós-ação ao cliente.
  */
 function snapshotChampions(ids) {
-    if (!ids || ids.length === 0) return null;
+  if (!ids || ids.length === 0) return null;
 
-    const uniqueIds = [...new Set(ids)];
-    const snapshots = [];
+  const uniqueIds = [...new Set(ids)];
+  const snapshots = [];
 
-    for (const id of uniqueIds) {
-        const champion = activeChampions.get(id);
-        if (champion?.serialize) snapshots.push(champion.serialize());
-    }
+  for (const id of uniqueIds) {
+    const champion = activeChampions.get(id);
+    if (champion?.serialize) snapshots.push(champion.serialize());
+  }
 
-    return snapshots.length > 0 ? snapshots : null;
+  return snapshots.length > 0 ? snapshots : null;
 }
 
 /**
@@ -924,11 +994,11 @@ function snapshotChampions(ids) {
  *   state   — snapshots do estado final dos campeões afetados
  */
 function emitCombatAction(envelope) {
-    if (!envelope) return;
-    if (envelope.effects?.some(e => e.type === "dialog")) {
-        console.log("🔴 ENVELOPE → dialog presente:", envelope.effects);
-    }
-    io.emit("combatAction", envelope);
+  if (!envelope) return;
+  if (envelope.effects?.some((e) => e.type === "dialog")) {
+    console.log("🔴 ENVELOPE → dialog presente:", envelope.effects);
+  }
+  io.emit("combatAction", envelope);
 }
 
 // ============================================================
@@ -937,259 +1007,257 @@ function emitCombatAction(envelope) {
 
 /** Executa a habilidade, emite payloads e registra no histórico. */
 function performSkillExecution(
+  user,
+  skill,
+  targets,
+  actionResourceCost = 0,
+  actionResourceSnapshot = null,
+) {
+  // 🔹 1. Criar contexto
+  const context = createBaseContext({ sourceId: user.id });
+  context.currentSkill = skill;
+
+  // 🔹 2. Injetar contexto nos campeões
+  activeChampions.forEach((champion) => {
+    champion.runtime = champion.runtime || {};
+    champion.runtime.currentContext = context;
+  });
+
+  context.currentSkill = skill;
+
+  // 🔹 3. Executar skill
+  const result = skill.execute({ user, targets, context });
+
+  // 🔹 4. Limpar contexto
+  activeChampions.forEach((champion) => {
+    if (champion.runtime) delete champion.runtime.currentContext;
+  });
+
+  // 🔹 5. Registrar no histórico do turno
+  registerSkillUsageInTurn(user, skill, targets);
+
+  // 🔹 6. Normalizar resultado
+  const results = Array.isArray(result) ? result : result ? [result] : [];
+
+  for (const r of results) {
+    if (r?.extraEffects?.some((e) => e.type === "dialog")) {
+      console.log(
+        "🔵 SERVER → dialog recebido do processDamageEvent:",
+        r.extraEffects,
+      );
+    }
+  }
+
+  // 🔹 7. Emitir envelopes
+  emitCombatEnvelopesFromResults({
+    results,
     user,
     skill,
     targets,
-    actionResourceCost = 0,
-    actionResourceSnapshot = null
-) {
-    // 🔹 1. Criar contexto
-    const context = createBaseContext({ sourceId: user.id });
-    context.currentSkill = skill;
+    context,
+    actionResourceCost,
+  });
 
-    // 🔹 2. Injetar contexto nos campeões
-    activeChampions.forEach(champion => {
-        champion.runtime = champion.runtime || {};
-        champion.runtime.currentContext = context;
-    });
-
-    context.currentSkill = skill;
-
-    // 🔹 3. Executar skill
-    const result = skill.execute({ user, targets, context });
-
-    // 🔹 4. Limpar contexto
-    activeChampions.forEach(champion => {
-        if (champion.runtime) delete champion.runtime.currentContext;
-    });
-
-    // 🔹 5. Registrar no histórico do turno
-    registerSkillUsageInTurn(user, skill, targets);
-
-    // 🔹 6. Normalizar resultado
-    const results = Array.isArray(result) ? result : result ? [result] : [];
-
-    for (const r of results) {
-        if (r?.extraEffects?.some(e => e.type === "dialog")) {
-            console.log(
-                "🔵 SERVER → dialog recebido do processDamageEvent:",
-                r.extraEffects
-            );
-        }
-    }
-
-    // 🔹 7. Emitir envelopes
-    emitCombatEnvelopesFromResults({
-        results,
-        user,
-        skill,
-        targets,
-        context,
-        actionResourceCost
-    });
-
-    emitCombatEvent(
-        "onActionResolved",
-        {
-            user,
-            skill,
-            context
-        },
-        activeChampions
-    );
+  emitCombatEvent(
+    "onActionResolved",
+    {
+      user,
+      skill,
+      context,
+    },
+    activeChampions,
+  );
 }
 
 function registerSkillUsageInTurn(user, skill, targets) {
-    logTurnEvent("skillUsed", {
-        championId: user.id,
-        championName: user.name,
-        skillKey: skill.key,
-        skillName: skill.name,
-        targetIds: Object.fromEntries(
-            Object.entries(targets).map(([k, v]) => [k, v.id])
-        ),
-        targetNames: Object.fromEntries(
-            Object.entries(targets).map(([k, v]) => [k, v.name])
-        )
-    });
+  logTurnEvent("skillUsed", {
+    championId: user.id,
+    championName: user.name,
+    skillKey: skill.key,
+    skillName: skill.name,
+    targetIds: Object.fromEntries(
+      Object.entries(targets).map(([k, v]) => [k, v.id]),
+    ),
+    targetNames: Object.fromEntries(
+      Object.entries(targets).map(([k, v]) => [k, v.name]),
+    ),
+  });
 
-    const turnData = ensureTurnEntry();
+  const turnData = ensureTurnEntry();
 
-    if (!turnData.skillsUsedThisTurn[user.id]) {
-        turnData.skillsUsedThisTurn[user.id] = [];
-    }
+  if (!turnData.skillsUsedThisTurn[user.id]) {
+    turnData.skillsUsedThisTurn[user.id] = [];
+  }
 
-    turnData.skillsUsedThisTurn[user.id].push(skill.key);
+  turnData.skillsUsedThisTurn[user.id].push(skill.key);
 }
 
 /** Executa uma ação individual pendente. */
 function executeSkillAction(action) {
-    const user = activeChampions.get(action.championId);
+  const user = activeChampions.get(action.championId);
 
-    if (!user || !user.alive) {
-        const userName = user
-            ? formatChampionName(user)
-            : "campeão desconhecido";
-        io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
-        refundActionResource(user, action);
-        return false;
-    }
+  if (!user || !user.alive) {
+    const userName = user ? formatChampionName(user) : "campeão desconhecido";
+    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
+    refundActionResource(user, action);
+    return false;
+  }
 
-    if (!canExecuteAction(user, action)) {
-        refundActionResource(user, action);
-        return false;
-    }
+  if (!canExecuteAction(user, action)) {
+    refundActionResource(user, action);
+    return false;
+  }
 
-    const skill = user.skills.find(s => s.key === action.skillKey);
-    if (!skill) {
-        io.emit(
-            "combatLog",
-            `Erro: Habilidade ${action.skillKey} não encontrada para ${formatChampionName(user)}.`
-        );
-        refundActionResource(user, action);
-        return false;
-    }
-
-    const targets = resolveSkillTargets(user, skill, action);
-    if (!targets) {
-        refundActionResource(user, action);
-        return false;
-    }
-
-    performSkillExecution(
-        user,
-        skill,
-        targets,
-        action.resourceCost,
-        action.resourceSnapshot
+  const skill = user.skills.find((s) => s.key === action.skillKey);
+  if (!skill) {
+    io.emit(
+      "combatLog",
+      `Erro: Habilidade ${action.skillKey} não encontrada para ${formatChampionName(user)}.`,
     );
-    return true;
+    refundActionResource(user, action);
+    return false;
+  }
+
+  const targets = resolveSkillTargets(user, skill, action);
+  if (!targets) {
+    refundActionResource(user, action);
+    return false;
+  }
+
+  performSkillExecution(
+    user,
+    skill,
+    targets,
+    action.resourceCost,
+    action.resourceSnapshot,
+  );
+  return true;
 }
 
 function createBaseContext({ sourceId = null } = {}) {
-    const aliveChampionsArray = [...activeChampions.values()].filter(
-        c => c.alive
-    );
+  const aliveChampionsArray = [...activeChampions.values()].filter(
+    (c) => c.alive,
+  );
 
-    return {
-        currentTurn,
-        editMode,
-        allChampions: activeChampions,
-        aliveChampions: aliveChampionsArray,
+  return {
+    currentTurn,
+    editMode,
+    allChampions: activeChampions,
+    aliveChampions: aliveChampionsArray,
 
-        // ========================
-        // EVENT BUFFERS
-        // ========================
+    // ========================
+    // EVENT BUFFERS
+    // ========================
 
-        healEvents: [],
-        buffEvents: [],
-        resourceEvents: [],
-        shieldEvents: [],
+    healEvents: [],
+    buffEvents: [],
+    resourceEvents: [],
+    shieldEvents: [],
 
-        healSourceId: sourceId,
-        buffSourceId: sourceId,
+    healSourceId: sourceId,
+    buffSourceId: sourceId,
 
-        // ========================
-        // REGISTRIES
-        // ========================
+    // ========================
+    // REGISTRIES
+    // ========================
 
-        registerHeal({ target, amount, sourceId } = {}) {
-            const value = Number(amount) || 0;
-            if (!target?.id || value <= 0) return;
+    registerHeal({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value <= 0) return;
 
-            const sourceChamp =
-                activeChampions.get(sourceId) ||
-                activeChampions.get(this.healSourceId) ||
-                target;
+      const sourceChamp =
+        activeChampions.get(sourceId) ||
+        activeChampions.get(this.healSourceId) ||
+        target;
 
-            this.healEvents.push({
-                type: "heal",
-                targetId: target.id,
-                sourceId: sourceChamp?.id || target.id,
-                amount: value
-            });
-            // 🔥 Dispara hook de cura
-            emitCombatEvent(
-                "onAfterHealing",
-                {
-                    healSrc: sourceChamp || null,
-                    healTarget: target,
-                    amount: value,
-                    context: this
-                },
-                this.allChampions
-            );
+      this.healEvents.push({
+        type: "heal",
+        targetId: target.id,
+        sourceId: sourceChamp?.id || target.id,
+        amount: value,
+      });
+      // 🔥 Dispara hook de cura
+      emitCombatEvent(
+        "onAfterHealing",
+        {
+          healSrc: sourceChamp || null,
+          healTarget: target,
+          amount: value,
+          context: this,
         },
+        this.allChampions,
+      );
+    },
 
-        registerBuff({ target, amount, statName, sourceId } = {}) {
-            const value = Number(amount) || 0;
-            if (!target?.id || value === 0) return;
+    registerBuff({ target, amount, statName, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value === 0) return;
 
-            this.buffEvents.push({
-                type: "buff",
-                targetId: target.id,
-                sourceId: sourceId || this.buffSourceId || target.id,
-                amount: value,
-                statName
-            });
+      this.buffEvents.push({
+        type: "buff",
+        targetId: target.id,
+        sourceId: sourceId || this.buffSourceId || target.id,
+        amount: value,
+        statName,
+      });
+    },
+
+    registerShield({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value <= 0) return;
+
+      this.shieldEvents.push({
+        type: "shield",
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: value,
+      });
+    },
+
+    registerResourceChange({ target, amount, sourceId } = {}) {
+      const value = Number(amount) || 0;
+      if (!target?.id || value === 0) return 0;
+
+      const isEnergy = target.energy !== undefined;
+      let applied = 0;
+
+      if (value > 0) {
+        applied = target.addResource(value);
+      } else {
+        const spend = Math.abs(value);
+        if (!target.spendResource(spend)) return 0;
+        applied = -spend;
+      }
+
+      if (applied === 0) return 0;
+
+      const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
+
+      this.resourceEvents.push({
+        type: eventType,
+        targetId: target.id,
+        sourceId: sourceId || this.healSourceId || target.id,
+        amount: Math.abs(applied),
+        resourceType: isEnergy ? "energy" : "mana",
+      });
+
+      // 🔥 Agora dispara hook corretamente
+      emitCombatEvent(
+        applied > 0 ? "onResourceGain" : "onResourceSpend",
+        {
+          target: target,
+          amount: Math.abs(applied),
+          context: this,
+          type: eventType,
+          resourceType: isEnergy ? "energy" : "mana",
+          source: activeChampions.get(sourceId) || null,
         },
+        this.allChampions,
+      );
 
-        registerShield({ target, amount, sourceId } = {}) {
-            const value = Number(amount) || 0;
-            if (!target?.id || value <= 0) return;
-
-            this.shieldEvents.push({
-                type: "shield",
-                targetId: target.id,
-                sourceId: sourceId || this.healSourceId || target.id,
-                amount: value
-            });
-        },
-
-        registerResourceChange({ target, amount, sourceId } = {}) {
-            const value = Number(amount) || 0;
-            if (!target?.id || value === 0) return 0;
-
-            const isEnergy = target.energy !== undefined;
-            let applied = 0;
-
-            if (value > 0) {
-                applied = target.addResource(value);
-            } else {
-                const spend = Math.abs(value);
-                if (!target.spendResource(spend)) return 0;
-                applied = -spend;
-            }
-
-            if (applied === 0) return 0;
-
-            const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
-
-            this.resourceEvents.push({
-                type: eventType,
-                targetId: target.id,
-                sourceId: sourceId || this.healSourceId || target.id,
-                amount: Math.abs(applied),
-                resourceType: isEnergy ? "energy" : "mana"
-            });
-
-            // 🔥 Agora dispara hook corretamente
-            emitCombatEvent(
-                applied > 0 ? "onResourceGain" : "onResourceSpend",
-                {
-                    target: target,
-                    amount: Math.abs(applied),
-                    context: this,
-                    type: eventType,
-                    resourceType: isEnergy ? "energy" : "mana",
-                    source: activeChampions.get(sourceId) || null
-                },
-                this.allChampions
-            );
-
-            return applied;
-        }
-    };
+      return applied;
+    },
+  };
 }
 
 // ============================================================
@@ -1198,196 +1266,195 @@ function createBaseContext({ sourceId = null } = {}) {
 
 /** Ordena e executa todas as ações pendentes (prioridade > velocidade > desempate). */
 function resolveSkillActions() {
-    pendingActions.forEach(a => {
-        a._tieBreaker = Math.random();
-    });
+  pendingActions.forEach((a) => {
+    a._tieBreaker = Math.random();
+  });
 
-    pendingActions.sort((a, b) => {
-        if (b.priority !== a.priority) return b.priority - a.priority;
-        if (b.speed !== a.speed) return b.speed - a.speed;
-        return b._tieBreaker - a._tieBreaker;
-    });
+  pendingActions.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    if (b.speed !== a.speed) return b.speed - a.speed;
+    return b._tieBreaker - a._tieBreaker;
+  });
 
-    for (const action of pendingActions) {
-        executeSkillAction(action);
-    }
+  for (const action of pendingActions) {
+    executeSkillAction(action);
+  }
 
-    pendingActions = [];
+  pendingActions = [];
 }
 
 function handleEndTurn() {
-    resolveSkillActions();
-    processChampionsDeaths();
+  resolveSkillActions();
+  processChampionsDeaths();
 
-    // NÃO chama início de turno aqui.
-    // Espera confirmação do client.
+  // NÃO chama início de turno aqui.
+  // Espera confirmação do client.
 }
 
 /** Remove campeões mortos do jogo e verifica fim de partida. */
 function processChampionsDeaths() {
-    for (const champ of activeChampions.values()) {
-        if (!champ.alive) {
-            removeChampionFromGame(champ.id, champ.team);
-        }
+  for (const champ of activeChampions.values()) {
+    if (!champ.alive) {
+      removeChampionFromGame(champ.id, champ.team);
     }
+  }
 
-    if (gameEnded) {
-        const winnerSlot = playerScores[0] >= MAX_SCORE ? 0 : 1;
-        const winnerTeam = winnerSlot + 1;
-        const winnerName = playerNames.get(winnerSlot);
+  if (gameEnded) {
+    const winnerSlot = playerScores[0] >= MAX_SCORE ? 0 : 1;
+    const winnerTeam = winnerSlot + 1;
+    const winnerName = playerNames.get(winnerSlot);
 
-        emitCombatAction({
-            action: null,
-            effects: [{ type: "gameOver", winnerTeam, winnerName }],
-            log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-            state: null
-        });
-    }
+    emitCombatAction({
+      action: null,
+      effects: [{ type: "gameOver", winnerTeam, winnerName }],
+      log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
+      state: null,
+    });
+  }
 }
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
-    // Limpar expirados
-    activeChampions.forEach(champion => {
-        champion.purgeExpiredStatModifiers(currentTurn);
-        champion.purgeExpiredKeywords(currentTurn);
-    });
+  // Limpar expirados
+  activeChampions.forEach((champion) => {
+    champion.purgeExpiredStatModifiers(currentTurn);
+    champion.purgeExpiredKeywords(currentTurn);
+  });
 
-    currentTurn++;
-    playersReadyToEndTurn.clear();
+  currentTurn++;
+  playersReadyToEndTurn.clear();
 
-    const turnStartContext = createBaseContext({ sourceId: null });
+  const turnStartContext = createBaseContext({ sourceId: null });
 
-    // Regen global
-    activeChampions.forEach(champion => {
-        applyGlobalTurnRegen(champion, turnStartContext);
-    });
+  // Regen global
+  activeChampions.forEach((champion) => {
+    applyGlobalTurnRegen(champion, turnStartContext);
+  });
 
-    // Injetar contexto temporário
-    activeChampions.forEach(champ => {
-        if (!champ.alive) return;
-        champ.runtime = champ.runtime || {};
-        champ.runtime.currentContext = turnStartContext;
-    });
+  // Injetar contexto temporário
+  activeChampions.forEach((champ) => {
+    if (!champ.alive) return;
+    champ.runtime = champ.runtime || {};
+    champ.runtime.currentContext = turnStartContext;
+  });
 
-    const turnStartResults = emitCombatEvent(
-        "onTurnStart",
-        { context: turnStartContext },
-        activeChampions
-    );
+  const turnStartResults = emitCombatEvent(
+    "onTurnStart",
+    { context: turnStartContext },
+    activeChampions,
+  );
 
-    activeChampions.forEach(champ => {
-        if (champ.runtime) delete champ.runtime.currentContext;
-    });
+  activeChampions.forEach((champ) => {
+    if (champ.runtime) delete champ.runtime.currentContext;
+  });
 
-    const turnStartLogs =
-        turnStartResults?.map(r => r?.log).filter(Boolean) || [];
+  const turnStartLogs =
+    turnStartResults?.map((r) => r?.log).filter(Boolean) || [];
 
-    const turnStartHealEffects = turnStartContext.healEvents.map(h => ({
-        type: "heal",
-        targetId: h.targetId,
-        sourceId: h.sourceId,
-        amount: h.amount
-    }));
+  const turnStartHealEffects = turnStartContext.healEvents.map((h) => ({
+    type: "heal",
+    targetId: h.targetId,
+    sourceId: h.sourceId,
+    amount: h.amount,
+  }));
 
-    const turnStartBuffEffects = turnStartContext.buffEvents.map(b => ({
-        type: "buff",
-        targetId: b.targetId,
-        sourceId: b.sourceId,
-        amount: b.amount,
-        statName: b.statName
-    }));
+  const turnStartBuffEffects = turnStartContext.buffEvents.map((b) => ({
+    type: "buff",
+    targetId: b.targetId,
+    sourceId: b.sourceId,
+    amount: b.amount,
+    statName: b.statName,
+  }));
 
-    const allTurnStartEffects = [
-        ...turnStartHealEffects,
-        ...turnStartBuffEffects,
-        ...turnStartContext.resourceEvents
+  const allTurnStartEffects = [
+    ...turnStartHealEffects,
+    ...turnStartBuffEffects,
+    ...turnStartContext.resourceEvents,
+  ];
+
+  if (turnStartLogs.length > 0 || allTurnStartEffects.length > 0) {
+    const affectedIds = [
+      ...new Set(allTurnStartEffects.map((e) => e.targetId)),
     ];
 
-    if (turnStartLogs.length > 0 || allTurnStartEffects.length > 0) {
-        const affectedIds = [
-            ...new Set(allTurnStartEffects.map(e => e.targetId))
-        ];
-
-        emitCombatAction({
-            action: null,
-            effects: allTurnStartEffects,
-            log: turnStartLogs.join("\n") || null,
-            state:
-                affectedIds.length > 0 ? snapshotChampions(affectedIds) : null
-        });
-    }
-
-    // Agora DoTs
-    processTurnStartKeywords({
-        activeChampions: Array.from(activeChampions.values()),
-        context: turnStartContext
+    emitCombatAction({
+      action: null,
+      effects: allTurnStartEffects,
+      log: turnStartLogs.join("\n") || null,
+      state: affectedIds.length > 0 ? snapshotChampions(affectedIds) : null,
     });
+  }
 
-    io.emit("turnUpdate", currentTurn);
-    io.emit("gameStateUpdate", getGameState());
+  // Agora DoTs
+  processTurnStartKeywords({
+    activeChampions: Array.from(activeChampions.values()),
+    context: turnStartContext,
+  });
+
+  io.emit("turnUpdate", currentTurn);
+  io.emit("gameStateUpdate", getGameState());
 }
 
 /** Processa keywords que disparam no início do turno (DoTs, etc). */
 function processTurnStartKeywords({ activeChampions, context }) {
-    const dotResults = [];
+  const dotResults = [];
 
-    activeChampions.forEach(champion => {
-        if (!champion.alive) return;
+  activeChampions.forEach((champion) => {
+    if (!champion.alive) return;
 
-        for (const [keywordName] of champion.keywords) {
-            const effect = KeywordTurnEffects?.[keywordName];
-            if (!effect?.onTurnStart) continue;
+    for (const [keywordName] of champion.keywords) {
+      const effect = KeywordTurnEffects?.[keywordName];
+      if (!effect?.onTurnStart) continue;
 
-            const result = effect.onTurnStart({
-                champion,
-                context,
-                allChampions: activeChampions
-            });
+      const result = effect.onTurnStart({
+        champion,
+        context,
+        allChampions: activeChampions,
+      });
 
-            if (!result) continue;
+      if (!result) continue;
 
-            if (result.type === "damage") {
-                const before = champion.HP;
-                const damage = Math.max(0, Number(result.amount) || 0);
+      if (result.type === "damage") {
+        const before = champion.HP;
+        const damage = Math.max(0, Number(result.amount) || 0);
 
-                champion.takeDamage(damage, context);
+        champion.takeDamage(damage, context);
 
-                dotResults.push({
-                    targetId: champion.id,
-                    userId: champion.id,
-                    totalDamage: damage,
-                    log: `${formatChampionName(champion)} sofreu ${damage} de ${result.skill?.name || "efeito"} (${before} → ${champion.HP}).`
-                });
-            }
-        }
-    });
-
-    if (dotResults.length === 0) return;
-
-    const effects = [];
-    const logs = [];
-    const affectedIds = new Set();
-
-    dotResults.forEach(r => {
-        effects.push({
-            type: "damage",
-            targetId: r.targetId,
-            sourceId: r.userId,
-            amount: r.totalDamage,
-            isDot: true
+        dotResults.push({
+          targetId: champion.id,
+          userId: champion.id,
+          totalDamage: damage,
+          log: `${formatChampionName(champion)} sofreu ${damage} de ${result.skill?.name || "efeito"} (${before} → ${champion.HP}).`,
         });
+      }
+    }
+  });
 
-        affectedIds.add(r.targetId);
-        if (r.log) logs.push(r.log);
+  if (dotResults.length === 0) return;
+
+  const effects = [];
+  const logs = [];
+  const affectedIds = new Set();
+
+  dotResults.forEach((r) => {
+    effects.push({
+      type: "damage",
+      targetId: r.targetId,
+      sourceId: r.userId,
+      amount: r.totalDamage,
+      isDot: true,
     });
 
-    emitCombatAction({
-        action: null,
-        effects,
-        log: logs.join("\n") || null,
-        state: snapshotChampions([...affectedIds])
-    });
+    affectedIds.add(r.targetId);
+    if (r.log) logs.push(r.log);
+  });
+
+  emitCombatAction({
+    action: null,
+    effects,
+    log: logs.join("\n") || null,
+    state: snapshotChampions([...affectedIds]),
+  });
 }
 
 // ============================================================
@@ -1396,12 +1463,12 @@ function processTurnStartKeywords({ activeChampions, context }) {
 
 /** Reseta completamente o estado do jogo (todos desconectados ou timeout). */
 function resetGameState() {
-    activeChampions.clear();
-    currentTurn = 1;
-    turnHistory.clear();
-    playerScores = [0, 0];
-    gameEnded = false;
-    playerTeamsSelected = [false, false];
+  activeChampions.clear();
+  currentTurn = 1;
+  turnHistory.clear();
+  playerScores = [0, 0];
+  gameEnded = false;
+  playerTeamsSelected = [false, false];
 }
 
 // ============================================================
@@ -1410,605 +1477,595 @@ function resetGameState() {
 
 const playersFinishedAnimations = new Set();
 
-io.on("connection", socket => {
-    console.log("Um usuário conectado:", socket.id);
+io.on("connection", (socket) => {
+  console.log("Um usuário conectado:", socket.id);
 
-    // --- Socket handler para início de turno após animações ---
-    socket.on("combatAnimationsFinished", () => {
-        playersFinishedAnimations.add(socket.id);
+  // Envia editMode IMEDIATAMENTE ao client SEM propriedades server-only (damageOutput, alwaysCrit, etc.)
+  const { damageOutput, alwaysCrit, ...clientEditMode } = editMode;
+  socket.emit("editModeUpdate", clientEditMode);
 
-        const totalPlayers = io.engine.clientsCount;
+  // --- Socket handler para início de turno após animações ---
+  socket.on("combatAnimationsFinished", () => {
+    playersFinishedAnimations.add(socket.id);
 
-        if (playersFinishedAnimations.size === totalPlayers) {
-            playersFinishedAnimations.clear();
-            handleStartTurn();
-        }
-    });
+    const totalPlayers = io.engine.clientsCount;
 
-    // --- Helpers internos à conexão ---
+    if (playersFinishedAnimations.size === totalPlayers) {
+      playersFinishedAnimations.clear();
+      handleStartTurn();
+    }
+  });
 
-    /** Atribui um slot de jogador e notifica o cliente. */
-    function assignPlayerSlot(username) {
-        let slot = -1;
-        if (players[0] === null) slot = 0;
-        else if (players[1] === null) slot = 1;
+  // --- Helpers internos à conexão ---
 
-        if (slot === -1) {
-            socket.emit(
-                "serverFull",
-                "O servidor está cheio. Tente novamente mais tarde."
-            );
-            socket.disconnect();
-            return null;
-        }
+  /** Atribui um slot de jogador e notifica o cliente. */
+  function assignPlayerSlot(username) {
+    let slot = -1;
+    if (players[0] === null) slot = 0;
+    else if (players[1] === null) slot = 1;
 
-        const playerId = `player${slot + 1}`;
-        const team = slot + 1;
-        const finalUsername = editMode.enabled ? `Player${slot + 1}` : username;
-
-        players[slot] = {
-            id: playerId,
-            team,
-            socketId: socket.id,
-            username: finalUsername,
-            selectedTeam: []
-        };
-
-        connectedSockets.set(socket.id, slot);
-        playerNames.set(slot, finalUsername);
-
-        socket.emit("playerAssigned", {
-            playerId,
-            team,
-            username: finalUsername
-        });
-        io.emit("playerCountUpdate", players.filter(p => p !== null).length);
-        io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
-        socket.emit("gameStateUpdate", getGameState());
-
-        return { playerSlot: slot, finalUsername };
+    if (slot === -1) {
+      socket.emit(
+        "serverFull",
+        "O servidor está cheio. Tente novamente mais tarde.",
+      );
+      socket.disconnect();
+      return null;
     }
 
-    /** Inicia a seleção de campeões para jogadores pendentes. */
-    function handleChampionSelection() {
-        for (let i = 0; i < players.length; i++) {
-            if (!players[i] || playerTeamsSelected[i]) continue;
+    const playerId = `player${slot + 1}`;
+    const team = slot + 1;
+    const finalUsername =
+      editMode.enabled && editMode.autoLogin ? `Player${slot + 1}` : username;
 
-            io.to(players[i].socketId).emit("startChampionSelection", {
-                timeLeft: CHAMPION_SELECTION_TIME
-            });
+    players[slot] = {
+      id: playerId,
+      team,
+      socketId: socket.id,
+      username: finalUsername,
+      selectedTeam: [],
+    };
 
-            championSelectionTimers[i] = setTimeout(() => {
-                if (playerTeamsSelected[i]) return;
+    connectedSockets.set(socket.id, slot);
+    playerNames.set(slot, finalUsername);
 
-                let currentSelection = players[i].selectedTeam.filter(
-                    c => c !== null
-                );
-                while (currentSelection.length < TEAM_SIZE) {
-                    const champ = getRandomChampionKey(currentSelection);
-                    if (!champ) break;
-                    currentSelection.push(champ);
-                }
-
-                players[i].selectedTeam = currentSelection;
-                playerTeamsSelected[i] = true;
-                checkAllTeamsSelected();
-            }, CHAMPION_SELECTION_TIME * 1000);
-        }
-    }
-
-    /** Seleção automática (editMode) ou delega para seleção manual. */
-    function handleEditModeSelection() {
-        if (!editMode.autoSelection) {
-            handleChampionSelection();
-            return;
-        }
-
-        for (let i = 0; i < players.length; i++) {
-            if (!players[i] || playerTeamsSelected[i]) continue;
-
-            let currentSelection = [];
-            while (currentSelection.length < TEAM_SIZE) {
-                const champ =
-                    getRandomChampionKey(currentSelection) ||
-                    Object.keys(championDB)[0];
-                currentSelection.push(champ);
-            }
-
-            players[i].selectedTeam = currentSelection;
-            playerTeamsSelected[i] = true;
-        }
-
-        if (checkAllTeamsSelected()) {
-            activeChampions.clear();
-            assignChampionsToTeam(
-                players[0].team,
-                players[0].selectedTeam.slice(0, 2)
-            );
-            assignChampionsToTeam(
-                players[1].team,
-                players[1].selectedTeam.slice(0, 2)
-            );
-            io.emit("gameStateUpdate", getGameState());
-        }
-    }
-
-    // =============================
-    //  requestPlayerSlot
-    // =============================
-
-    socket.on("requestPlayerSlot", username => {
-        const assignResult = assignPlayerSlot(username);
-        if (!assignResult) return;
-
-        const { playerSlot, finalUsername } = assignResult;
-        // Envia editMode ao client SEM propriedades server-only (damageOutput, alwaysCrit, etc.)
-        const { damageOutput, alwaysCrit, ...clientEditMode } = editMode;
-        socket.emit("editModeUpdate", clientEditMode);
-
-        // Aguarda segundo jogador
-        if (!(players[0] && players[1])) {
-            socket.emit(
-                "waitingForOpponent",
-                `Olá, ${finalUsername}, aguardando outro jogador...`
-            );
-            return;
-        }
-
-        io.emit("allPlayersConnected");
-
-        // Seleção de campeões
-        if (editMode.enabled) {
-            handleEditModeSelection();
-        } else {
-            handleChampionSelection();
-        }
-
-        // Reconexão — cancela timer e notifica oponente
-        if (disconnectionTimers.has(playerSlot)) {
-            clearTimeout(disconnectionTimers.get(playerSlot));
-            disconnectionTimers.delete(playerSlot);
-
-            const other = playerSlot === 0 ? 1 : 0;
-            if (players[other]) {
-                io.to(players[other].socketId).emit("opponentReconnected");
-            }
-        }
+    socket.emit("playerAssigned", {
+      playerId,
+      team,
+      username: finalUsername,
     });
+    io.emit("playerCountUpdate", players.filter((p) => p !== null).length);
+    io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
+    socket.emit("gameStateUpdate", getGameState());
 
-    // =============================
-    //  disconnect
-    // =============================
+    return { playerSlot: slot, finalUsername };
+  }
 
-    socket.on("disconnect", () => {
-        const disconnectedSlot = connectedSockets.get(socket.id);
-        if (disconnectedSlot === undefined) return;
+  /** Inicia a seleção de campeões para jogadores pendentes. */
+  function handleChampionSelection() {
+    for (let i = 0; i < players.length; i++) {
+      if (!players[i] || playerTeamsSelected[i]) continue;
 
-        const wasGameActive = players[0] !== null && players[1] !== null;
+      io.to(players[i].socketId).emit("startChampionSelection", {
+        timeLeft: CHAMPION_SELECTION_TIME,
+      });
 
-        // Limpa timers pendentes
-        if (disconnectionTimers.has(disconnectedSlot)) {
-            clearTimeout(disconnectionTimers.get(disconnectedSlot));
-            disconnectionTimers.delete(disconnectedSlot);
-        }
-        if (championSelectionTimers[disconnectedSlot]) {
-            clearTimeout(championSelectionTimers[disconnectedSlot]);
-            championSelectionTimers[disconnectedSlot] = null;
-        }
+      championSelectionTimers[i] = setTimeout(() => {
+        if (playerTeamsSelected[i]) return;
 
-        // Libera slot
-        players[disconnectedSlot] = null;
-        connectedSockets.delete(socket.id);
-        playerNames.delete(disconnectedSlot);
-        playerTeamsSelected[disconnectedSlot] = false;
-        playersReadyToEndTurn.delete(disconnectedSlot);
-        pendingActions = [];
-
-        const connectedCount = players.filter(p => p !== null).length;
-        io.emit("playerCountUpdate", connectedCount);
-        io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
-
-        // Nenhum jogador restante — reset total
-        if (connectedCount === 0) {
-            resetGameState();
-            io.emit("gameStateUpdate", getGameState());
-            disconnectionTimers.forEach(timer => clearTimeout(timer));
-            disconnectionTimers.clear();
-            return;
-        }
-
-        // Um jogador restante com jogo ativo — inicia contagem regressiva
-        if (wasGameActive && connectedCount === 1) {
-            const remainingSlot = players[0] ? 0 : 1;
-            const remainingSocketId = players[remainingSlot].socketId;
-
-            io.to(remainingSocketId).emit("opponentDisconnected", {
-                timeout: DISCONNECT_TIMEOUT
-            });
-
-            const timer = setTimeout(() => {
-                io.to(remainingSocketId).emit(
-                    "forceLogout",
-                    "Seu oponente se desconectou e não reconectou a tempo."
-                );
-
-                players[remainingSlot] = null;
-                connectedSockets.delete(remainingSocketId);
-                playerNames.delete(remainingSlot);
-                resetGameState();
-                io.emit(
-                    "playerCountUpdate",
-                    players.filter(p => p !== null).length
-                );
-                io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
-                io.emit("gameStateUpdate", getGameState());
-                disconnectionTimers.delete(disconnectedSlot);
-            }, DISCONNECT_TIMEOUT);
-
-            disconnectionTimers.set(disconnectedSlot, timer);
-        }
-    });
-
-    // =============================
-    //  selectTeam
-    // =============================
-
-    socket.on(
-        "selectTeam",
-        ({ team: clientTeam, champions: selectedChampionKeys }) => {
-            const playerSlot = connectedSockets.get(socket.id);
-            const player = players[playerSlot];
-
-            if (!player || player.team !== clientTeam) {
-                socket.emit(
-                    "actionFailed",
-                    "Você não tem permissão para selecionar campeões para este time."
-                );
-                return;
-            }
-            if (playerTeamsSelected[playerSlot]) {
-                socket.emit("actionFailed", "Você já confirmou sua equipe.");
-                return;
-            }
-
-            // Valida e preenche slots vazios com campeões aleatórios
-            let finalTeam = [...selectedChampionKeys];
-            const allChampionKeys = Object.keys(championDB);
-
-            for (let i = 0; i < TEAM_SIZE; i++) {
-                if (finalTeam[i] && allChampionKeys.includes(finalTeam[i]))
-                    continue;
-
-                let randomChamp;
-                do {
-                    randomChamp = getRandomChampionKey();
-                } while (randomChamp && finalTeam.includes(randomChamp));
-
-                finalTeam[i] = randomChamp || Object.keys(championDB)[0];
-            }
-
-            player.selectedTeam = finalTeam;
-            playerTeamsSelected[playerSlot] = true;
-
-            if (championSelectionTimers[playerSlot]) {
-                clearTimeout(championSelectionTimers[playerSlot]);
-                championSelectionTimers[playerSlot] = null;
-            }
-
-            // Ambos selecionaram — iniciar jogo
-            if (checkAllTeamsSelected()) {
-                activeChampions.clear();
-                currentTurn = 1;
-                turnHistory.clear();
-                playerScores = [0, 0];
-                gameEnded = false;
-                io.emit("scoreUpdate", {
-                    player1: playerScores[0],
-                    player2: playerScores[1]
-                });
-
-                // Implanta campeões na arena
-                assignChampionsToTeam(
-                    players[0].team,
-                    players[0].selectedTeam.slice(0, 2)
-                );
-                assignChampionsToTeam(
-                    players[1].team,
-                    players[1].selectedTeam.slice(0, 2)
-                );
-                assignChampionsToTeam(
-                    players[0].team,
-                    players[0].selectedTeam.slice(2, 3)
-                );
-                assignChampionsToTeam(
-                    players[1].team,
-                    players[1].selectedTeam.slice(2, 3)
-                );
-
-                io.emit("gameStateUpdate", getGameState());
-                io.emit("backChampionUpdate", {
-                    team: players[0].team,
-                    championKey: players[0].backChampion
-                });
-                io.emit("backChampionUpdate", {
-                    team: players[1].team,
-                    championKey: players[1].backChampion
-                });
-            } else {
-                socket.emit(
-                    "teamSelectionConfirmed",
-                    "Equipe confirmada! Aguardando o outro jogador..."
-                );
-            }
-        }
-    );
-
-    // =============================
-    //  removeChampion (edit mode / debug)
-    // =============================
-
-    socket.on("removeChampion", ({ championId }) => {
-        const playerSlot = connectedSockets.get(socket.id);
-        const player = players[playerSlot];
-        const championToRemove = activeChampions.get(championId);
-
-        if (
-            !player ||
-            !championToRemove ||
-            championToRemove.team !== player.team
-        ) {
-            socket.emit(
-                "actionFailed",
-                "Você não tem permissão para remover este campeão."
-            );
-            return;
-        }
-
-        removeChampionFromGame(championId, player.team);
-    });
-
-    // =============================
-    //  changeChampionHp (edit mode / debug)
-    // =============================
-
-    socket.on("changeChampionHp", ({ championId, amount }) => {
-        const playerSlot = connectedSockets.get(socket.id);
-        const player = players[playerSlot];
-        const champion = activeChampions.get(championId);
-
-        if (!player || !champion || champion.team !== player.team) {
-            socket.emit(
-                "actionFailed",
-                "Você não tem permissão para alterar o HP deste campeão."
-            );
-            return;
-        }
-
-        const oldHP = champion.HP;
-        champion.HP += amount;
-
-        logTurnEvent("hpChanged", {
-            championId,
-            championName: champion.name,
-            oldHP,
-            newHP: champion.HP,
-            amount
-        });
-
-        if (champion.HP <= 0) {
-            removeChampionFromGame(championId, champion.team);
-        } else if (amount > 0 && champion.HP > champion.maxHP) {
-            champion.maxHP += amount;
-        }
-
-        io.emit("gameStateUpdate", getGameState());
-    });
-
-    // =============================
-    //  changeChampionStat (edit mode / debug)
-    // =============================
-
-    socket.on("changeChampionStat", ({ championId, stat, action }) => {
-        const playerSlot = connectedSockets.get(socket.id);
-        const player = players[playerSlot];
-        const champion = activeChampions.get(championId);
-
-        if (!player || !champion || champion.team !== player.team) {
-            socket.emit(
-                "actionFailed",
-                "Você não tem permissão para alterar os stats deste campeão."
-            );
-            return;
-        }
-
-        const statSteps = { Attack: 5, Defense: 5, Speed: 5, Critical: 1 };
-        const step = statSteps[stat] || 5;
-        const delta = action === "up" ? step : -step;
-        const oldValue = champion[stat];
-
-        if (stat in champion) {
-            champion[stat] += delta;
-            if (champion[stat] < 0) champion[stat] = 0;
-
-            logTurnEvent("statChanged", {
-                championId,
-                championName: champion.name,
-                stat,
-                oldValue,
-                newValue: champion[stat],
-                delta
-            });
-        }
-
-        io.emit("gameStateUpdate", getGameState());
-    });
-
-    // =============================
-    //  requestSkillUse → skillApproved / skillDenied
-    // =============================
-
-    socket.on("requestSkillUse", ({ userId, skillKey }) => {
-        const playerSlot = connectedSockets.get(socket.id);
-        const player = players[playerSlot];
-        const user = activeChampions.get(userId);
-
-        if (!player || !user || user.team !== player.team) {
-            return socket.emit("skillDenied", "Sem permissão.");
-        }
-
-        const skill = user.skills.find(s => s.key === skillKey);
-        if (!skill) return socket.emit("skillDenied", "Skill inválida.");
-
-        if (!validateActionIntent(user, skill, socket)) return;
-
-        const cost = getSkillCost(user, skill);
-        const { isEnergy, current } = getChampionResourceInfo(user);
-        if (cost > current) {
-            const label = isEnergy ? "EN" : "MP";
-            return socket.emit("skillDenied", `${label} insuficiente.`);
-        }
-
-        socket.emit("skillApproved", { userId, skillKey });
-    });
-
-    // =============================
-    //  useSkill (enfileira ação pendente)
-    // =============================
-
-    socket.on("useSkill", ({ userId, skillKey, targetIds }) => {
-        const playerSlot = connectedSockets.get(socket.id);
-        const player = players[playerSlot];
-        const user = activeChampions.get(userId);
-
-        if (!player || !user || user.team !== player.team) {
-            socket.emit(
-                "actionFailed",
-                "Você não tem permissão para usar habilidades com este campeão."
-            );
-            return;
-        }
-
-        const skill = user.skills.find(s => s.key === skillKey);
-        if (!skill) {
-            socket.emit("actionFailed", "Habilidade não encontrada.");
-            return;
-        }
-
-        const cost = getSkillCost(user, skill);
-        const { isEnergy, current } = getChampionResourceInfo(user);
-        if (!user.spendResource(cost)) {
-            const label = isEnergy ? "EN" : "MP";
-            socket.emit("actionFailed", `${label} insuficiente.`);
-            return;
-        }
-        const resourceSnapshot = current;
-
-        // Valida alvos
-        const targets = {};
-        for (const role in targetIds) {
-            targets[role] = activeChampions.get(targetIds[role]);
-            if (!targets[role]) {
-                socket.emit(
-                    "actionFailed",
-                    `Alvo inválido para a função ${role}.`
-                );
-                return;
-            }
-        }
-
-        pendingActions.push({
-            championId: userId,
-            skillKey,
-            targetIds,
-            priority: skill.priority || 0,
-            speed: user.Speed,
-            turn: currentTurn,
-            resourceCost: cost,
-            resourceSnapshot
-        });
-
-        io.to(socket.id).emit(
-            "combatLog",
-            `${formatChampionName(user)} usou ${skill.name}. Ação pendente.`
+        let currentSelection = players[i].selectedTeam.filter(
+          (c) => c !== null,
         );
-    });
+        while (currentSelection.length < TEAM_SIZE) {
+          const champ = getRandomChampionKey(currentSelection);
+          if (!champ) break;
+          currentSelection.push(champ);
+        }
 
-    // =============================
-    //  surrender (Render-se)
-    // =============================
+        players[i].selectedTeam = currentSelection;
+        playerTeamsSelected[i] = true;
+        checkAllTeamsSelected();
+      }, CHAMPION_SELECTION_TIME * 1000);
+    }
+  }
 
-    socket.on("surrender", () => {
-        if (gameEnded) return;
+  /** Seleção automática (editMode) ou delega para seleção manual. */
+  function handleEditModeSelection() {
+    if (!editMode.autoSelection) {
+      handleChampionSelection();
+      return;
+    }
 
-        const playerSlot = connectedSockets.get(socket.id);
-        if (playerSlot === undefined) return;
+    for (let i = 0; i < players.length; i++) {
+      if (!players[i] || playerTeamsSelected[i]) continue;
 
-        const player = players[playerSlot];
-        if (!player) return;
+      let currentSelection = [];
+      while (currentSelection.length < TEAM_SIZE) {
+        const champ =
+          getRandomChampionKey(currentSelection) || Object.keys(championDB)[0];
+        currentSelection.push(champ);
+      }
 
-        const surrenderingTeam = player.team;
-        const winnerTeam = surrenderingTeam === 1 ? 2 : 1;
-        const winnerSlot = winnerTeam - 1;
-        const winnerName = playerNames.get(winnerSlot);
-        const surrendererName = playerNames.get(playerSlot);
+      players[i].selectedTeam = currentSelection;
+      playerTeamsSelected[i] = true;
+    }
 
-        gameEnded = true;
+    if (checkAllTeamsSelected()) {
+      activeChampions.clear();
+      assignChampionsToTeam(
+        players[0].team,
+        players[0].selectedTeam.slice(0, 2),
+      );
+      assignChampionsToTeam(
+        players[1].team,
+        players[1].selectedTeam.slice(0, 2),
+      );
+      io.emit("gameStateUpdate", getGameState());
+    }
+  }
 
-        // Set score to max for the winner
-        playerScores[winnerSlot] = MAX_SCORE;
+  // =============================
+  //  requestPlayerSlot
+  // =============================
+
+  socket.on("requestPlayerSlot", (username) => {
+    const assignResult = assignPlayerSlot(username);
+    if (!assignResult) return;
+
+    const { playerSlot, finalUsername } = assignResult;
+
+    // Aguarda segundo jogador
+    if (!(players[0] && players[1])) {
+      socket.emit(
+        "waitingForOpponent",
+        `Olá, ${finalUsername}, aguardando outro jogador...`,
+      );
+      return;
+    }
+
+    io.emit("allPlayersConnected");
+
+    // Seleção de campeões
+    if (editMode.enabled && editMode.autoSelection) {
+      handleEditModeSelection();
+    } else {
+      handleChampionSelection();
+    }
+
+    // Reconexão — cancela timer e notifica oponente
+    if (disconnectionTimers.has(playerSlot)) {
+      clearTimeout(disconnectionTimers.get(playerSlot));
+      disconnectionTimers.delete(playerSlot);
+
+      const other = playerSlot === 0 ? 1 : 0;
+      if (players[other]) {
+        io.to(players[other].socketId).emit("opponentReconnected");
+      }
+    }
+  });
+
+  // =============================
+  //  disconnect
+  // =============================
+
+  socket.on("disconnect", () => {
+    const disconnectedSlot = connectedSockets.get(socket.id);
+    if (disconnectedSlot === undefined) return;
+
+    const wasGameActive = players[0] !== null && players[1] !== null;
+
+    // Limpa timers pendentes
+    if (disconnectionTimers.has(disconnectedSlot)) {
+      clearTimeout(disconnectionTimers.get(disconnectedSlot));
+      disconnectionTimers.delete(disconnectedSlot);
+    }
+    if (championSelectionTimers[disconnectedSlot]) {
+      clearTimeout(championSelectionTimers[disconnectedSlot]);
+      championSelectionTimers[disconnectedSlot] = null;
+    }
+
+    // Libera slot
+    players[disconnectedSlot] = null;
+    connectedSockets.delete(socket.id);
+    playerNames.delete(disconnectedSlot);
+    playerTeamsSelected[disconnectedSlot] = false;
+    playersReadyToEndTurn.delete(disconnectedSlot);
+    pendingActions = [];
+
+    const connectedCount = players.filter((p) => p !== null).length;
+    io.emit("playerCountUpdate", connectedCount);
+    io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
+
+    // Nenhum jogador restante — reset total
+    if (connectedCount === 0) {
+      resetGameState();
+      io.emit("gameStateUpdate", getGameState());
+      disconnectionTimers.forEach((timer) => clearTimeout(timer));
+      disconnectionTimers.clear();
+      return;
+    }
+
+    // Um jogador restante com jogo ativo — inicia contagem regressiva
+    if (wasGameActive && connectedCount === 1) {
+      const remainingSlot = players[0] ? 0 : 1;
+      const remainingSocketId = players[remainingSlot].socketId;
+
+      io.to(remainingSocketId).emit("opponentDisconnected", {
+        timeout: DISCONNECT_TIMEOUT,
+      });
+
+      const timer = setTimeout(() => {
+        io.to(remainingSocketId).emit(
+          "forceLogout",
+          "Seu oponente se desconectou e não reconectou a tempo.",
+        );
+
+        players[remainingSlot] = null;
+        connectedSockets.delete(remainingSocketId);
+        playerNames.delete(remainingSlot);
+        resetGameState();
+        io.emit("playerCountUpdate", players.filter((p) => p !== null).length);
+        io.emit("playerNamesUpdate", Array.from(playerNames.entries()));
+        io.emit("gameStateUpdate", getGameState());
+        disconnectionTimers.delete(disconnectedSlot);
+      }, DISCONNECT_TIMEOUT);
+
+      disconnectionTimers.set(disconnectedSlot, timer);
+    }
+  });
+
+  // =============================
+  //  selectTeam
+  // =============================
+
+  socket.on(
+    "selectTeam",
+    ({ team: clientTeam, champions: selectedChampionKeys }) => {
+      const playerSlot = connectedSockets.get(socket.id);
+      const player = players[playerSlot];
+
+      if (!player || player.team !== clientTeam) {
+        socket.emit(
+          "actionFailed",
+          "Você não tem permissão para selecionar campeões para este time.",
+        );
+        return;
+      }
+      if (playerTeamsSelected[playerSlot]) {
+        socket.emit("actionFailed", "Você já confirmou sua equipe.");
+        return;
+      }
+
+      // Valida e preenche slots vazios com campeões aleatórios
+      let finalTeam = [...selectedChampionKeys];
+      const allChampionKeys = Object.keys(championDB);
+
+      for (let i = 0; i < TEAM_SIZE; i++) {
+        if (finalTeam[i] && allChampionKeys.includes(finalTeam[i])) continue;
+
+        let randomChamp;
+        do {
+          randomChamp = getRandomChampionKey();
+        } while (randomChamp && finalTeam.includes(randomChamp));
+
+        finalTeam[i] = randomChamp || Object.keys(championDB)[0];
+      }
+
+      player.selectedTeam = finalTeam;
+      playerTeamsSelected[playerSlot] = true;
+
+      if (championSelectionTimers[playerSlot]) {
+        clearTimeout(championSelectionTimers[playerSlot]);
+        championSelectionTimers[playerSlot] = null;
+      }
+
+      // Ambos selecionaram — iniciar jogo
+      if (checkAllTeamsSelected()) {
+        activeChampions.clear();
+        currentTurn = 1;
+        turnHistory.clear();
+        playerScores = [0, 0];
+        gameEnded = false;
         io.emit("scoreUpdate", {
-            player1: playerScores[0],
-            player2: playerScores[1]
+          player1: playerScores[0],
+          player2: playerScores[1],
         });
 
-        emitCombatAction({
-            action: null,
-            effects: [{ type: "gameOver", winnerTeam, winnerName }],
-            log: `${formatPlayerName(surrendererName, surrenderingTeam)} se rendeu! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-            state: null
+        // Implanta campeões na arena
+        assignChampionsToTeam(
+          players[0].team,
+          players[0].selectedTeam.slice(0, 2),
+        );
+        assignChampionsToTeam(
+          players[1].team,
+          players[1].selectedTeam.slice(0, 2),
+        );
+        assignChampionsToTeam(
+          players[0].team,
+          players[0].selectedTeam.slice(2, 3),
+        );
+        assignChampionsToTeam(
+          players[1].team,
+          players[1].selectedTeam.slice(2, 3),
+        );
+
+        io.emit("gameStateUpdate", getGameState());
+        io.emit("backChampionUpdate", {
+          team: players[0].team,
+          championKey: players[0].backChampion,
         });
+        io.emit("backChampionUpdate", {
+          team: players[1].team,
+          championKey: players[1].backChampion,
+        });
+      } else {
+        socket.emit(
+          "teamSelectionConfirmed",
+          "Equipe confirmada! Aguardando o outro jogador...",
+        );
+      }
+    },
+  );
+
+  // =============================
+  //  removeChampion (edit mode / debug)
+  // =============================
+
+  socket.on("removeChampion", ({ championId }) => {
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const championToRemove = activeChampions.get(championId);
+
+    if (!player || !championToRemove || championToRemove.team !== player.team) {
+      socket.emit(
+        "actionFailed",
+        "Você não tem permissão para remover este campeão.",
+      );
+      return;
+    }
+
+    removeChampionFromGame(championId, player.team);
+  });
+
+  // =============================
+  //  changeChampionHp (edit mode / debug)
+  // =============================
+
+  socket.on("changeChampionHp", ({ championId, amount }) => {
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const champion = activeChampions.get(championId);
+
+    if (!player || !champion || champion.team !== player.team) {
+      socket.emit(
+        "actionFailed",
+        "Você não tem permissão para alterar o HP deste campeão.",
+      );
+      return;
+    }
+
+    const oldHP = champion.HP;
+    champion.HP += amount;
+
+    logTurnEvent("hpChanged", {
+      championId,
+      championName: champion.name,
+      oldHP,
+      newHP: champion.HP,
+      amount,
     });
 
-    // =============================
-    //  endTurn
-    // =============================
+    if (champion.HP <= 0) {
+      removeChampionFromGame(championId, champion.team);
+    } else if (amount > 0 && champion.HP > champion.maxHP) {
+      champion.maxHP += amount;
+    }
 
-    socket.on("endTurn", () => {
-        if (gameEnded) {
-            socket.emit("actionFailed", "O jogo já terminou.");
-            return;
-        }
+    io.emit("gameStateUpdate", getGameState());
+  });
 
-        const playerSlot = connectedSockets.get(socket.id);
-        if (playerSlot === undefined) {
-            socket.emit(
-                "actionFailed",
-                "Você não está em um slot de jogador válido."
-            );
-            return;
-        }
+  // =============================
+  //  changeChampionStat (edit mode / debug)
+  // =============================
 
-        playersReadyToEndTurn.add(playerSlot);
-        io.emit("playerConfirmedEndTurn", playerSlot);
+  socket.on("changeChampionStat", ({ championId, stat, action }) => {
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const champion = activeChampions.get(championId);
 
-        if (playersReadyToEndTurn.size === 2) {
-            // Valida se ambos ainda estão conectados
-            if (players[0] === null || players[1] === null) {
-                playersReadyToEndTurn.clear();
-                socket.emit(
-                    "actionFailed",
-                    "Seu oponente foi desconectado. O turno foi cancelado."
-                );
-                return;
-            }
-            handleEndTurn();
-        } else {
-            socket.emit(
-                "waitingForOpponentEndTurn",
-                "Aguardando o outro jogador confirmar o fim do turno."
-            );
-        }
+    if (!player || !champion || champion.team !== player.team) {
+      socket.emit(
+        "actionFailed",
+        "Você não tem permissão para alterar os stats deste campeão.",
+      );
+      return;
+    }
+
+    const statSteps = { Attack: 5, Defense: 5, Speed: 5, Critical: 1 };
+    const step = statSteps[stat] || 5;
+    const delta = action === "up" ? step : -step;
+    const oldValue = champion[stat];
+
+    if (stat in champion) {
+      champion[stat] += delta;
+      if (champion[stat] < 0) champion[stat] = 0;
+
+      logTurnEvent("statChanged", {
+        championId,
+        championName: champion.name,
+        stat,
+        oldValue,
+        newValue: champion[stat],
+        delta,
+      });
+    }
+
+    io.emit("gameStateUpdate", getGameState());
+  });
+
+  // =============================
+  //  requestSkillUse → skillApproved / skillDenied
+  // =============================
+
+  socket.on("requestSkillUse", ({ userId, skillKey }) => {
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const user = activeChampions.get(userId);
+
+    if (!player || !user || user.team !== player.team) {
+      return socket.emit("skillDenied", "Sem permissão.");
+    }
+
+    const skill = user.skills.find((s) => s.key === skillKey);
+    if (!skill) return socket.emit("skillDenied", "Skill inválida.");
+
+    if (!validateActionIntent(user, skill, socket)) return;
+
+    const cost = getSkillCost(user, skill);
+    const { isEnergy, current } = getChampionResourceInfo(user);
+    if (!editMode.freeCostSkills && cost > current) {
+      const label = isEnergy ? "EN" : "MP";
+      return socket.emit("skillDenied", `${label} insuficiente.`);
+    }
+
+    socket.emit("skillApproved", { userId, skillKey });
+  });
+
+  // =============================
+  //  useSkill (enfileira ação pendente)
+  // =============================
+
+  socket.on("useSkill", ({ userId, skillKey, targetIds }) => {
+    const playerSlot = connectedSockets.get(socket.id);
+    const player = players[playerSlot];
+    const user = activeChampions.get(userId);
+
+    if (!player || !user || user.team !== player.team) {
+      socket.emit(
+        "actionFailed",
+        "Você não tem permissão para usar habilidades com este campeão.",
+      );
+      return;
+    }
+
+    const skill = user.skills.find((s) => s.key === skillKey);
+    if (!skill) {
+      socket.emit("actionFailed", "Habilidade não encontrada.");
+      return;
+    }
+
+    const cost = getSkillCost(user, skill);
+    const { isEnergy, current } = getChampionResourceInfo(user);
+    if (!editMode.freeCostSkills && !user.spendResource(cost)) {
+      const label = isEnergy ? "EN" : "MP";
+      socket.emit("actionFailed", `${label} insuficiente.`);
+      return;
+    }
+    const resourceSnapshot = current;
+
+    // Valida alvos
+    const targets = {};
+    for (const role in targetIds) {
+      targets[role] = activeChampions.get(targetIds[role]);
+      if (!targets[role]) {
+        socket.emit("actionFailed", `Alvo inválido para a função ${role}.`);
+        return;
+      }
+    }
+
+    pendingActions.push({
+      championId: userId,
+      skillKey,
+      targetIds,
+      priority: skill.priority || 0,
+      speed: user.Speed,
+      turn: currentTurn,
+      resourceCost: cost,
+      resourceSnapshot,
     });
+
+    io.to(socket.id).emit(
+      "combatLog",
+      `${formatChampionName(user)} usou ${skill.name}. Ação pendente.`,
+    );
+  });
+
+  // =============================
+  //  surrender (Render-se)
+  // =============================
+
+  socket.on("surrender", () => {
+    if (gameEnded) return;
+
+    const playerSlot = connectedSockets.get(socket.id);
+    if (playerSlot === undefined) return;
+
+    const player = players[playerSlot];
+    if (!player) return;
+
+    const surrenderingTeam = player.team;
+    const winnerTeam = surrenderingTeam === 1 ? 2 : 1;
+    const winnerSlot = winnerTeam - 1;
+    const winnerName = playerNames.get(winnerSlot);
+    const surrendererName = playerNames.get(playerSlot);
+
+    gameEnded = true;
+
+    // Set score to max for the winner
+    playerScores[winnerSlot] = MAX_SCORE;
+    io.emit("scoreUpdate", {
+      player1: playerScores[0],
+      player2: playerScores[1],
+    });
+
+    emitCombatAction({
+      action: null,
+      effects: [{ type: "gameOver", winnerTeam, winnerName }],
+      log: `${formatPlayerName(surrendererName, surrenderingTeam)} se rendeu! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
+      state: null,
+    });
+  });
+
+  // =============================
+  //  endTurn
+  // =============================
+
+  socket.on("endTurn", () => {
+    if (gameEnded) {
+      socket.emit("actionFailed", "O jogo já terminou.");
+      return;
+    }
+
+    const playerSlot = connectedSockets.get(socket.id);
+    if (playerSlot === undefined) {
+      socket.emit(
+        "actionFailed",
+        "Você não está em um slot de jogador válido.",
+      );
+      return;
+    }
+
+    playersReadyToEndTurn.add(playerSlot);
+    io.emit("playerConfirmedEndTurn", playerSlot);
+
+    if (playersReadyToEndTurn.size === 2) {
+      // Valida se ambos ainda estão conectados
+      if (players[0] === null || players[1] === null) {
+        playersReadyToEndTurn.clear();
+        socket.emit(
+          "actionFailed",
+          "Seu oponente foi desconectado. O turno foi cancelado.",
+        );
+        return;
+      }
+      handleEndTurn();
+    } else {
+      socket.emit(
+        "waitingForOpponentEndTurn",
+        "Aguardando o outro jogador confirmar o fim do turno.",
+      );
+    }
+  });
 });
 
 // ============================================================
@@ -2017,5 +2074,5 @@ io.on("connection", socket => {
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });

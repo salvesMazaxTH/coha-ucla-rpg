@@ -87,6 +87,7 @@ export function createCombatAnimationManager(deps) {
   let processing = false;
   let lastLoggedTurn = null;
   let currentPhase = "null";
+  const editMode = deps.editMode || { freeCostSkills: false };
 
   // ============================================================
   //  QUEUE MANAGEMENT
@@ -280,6 +281,8 @@ export function createCombatAnimationManager(deps) {
   async function animateEffect(effect) {
     if (!effect || !effect.type) return;
 
+    console.log("[animateEffect] EFFECT TYPE: ", effect.type, effect);
+
     switch (effect.type) {
       case "damage":
         await animateDamage(effect);
@@ -318,10 +321,15 @@ export function createCombatAnimationManager(deps) {
         break;
 
       case "tauntRedirection":
+        console.log(
+          "[animateEffect] Animating taunt redirection effect:",
+          effect,
+        );
         await animateTauntRedirection(effect);
         break;
 
       case "dialog": {
+        console.log("[animateEffect] Animating dialog effect:", effect);
         const { message, blocking = true, html = false } = effect;
 
         if (blocking) {
@@ -339,14 +347,8 @@ export function createCombatAnimationManager(deps) {
         break;
 
       default:
-        console.warn("[AnimManager] Unknown effect type:", effect.type);
+        return;
     }
-  }
-
-  function shouldShowActionDialog(effect) {
-    if (!effect || !effect.type) return false;
-
-    return ["damage", "evasion", "immune", "shieldBlock"].includes(effect.type);
   }
 
   // ============================================================
@@ -360,6 +362,11 @@ export function createCombatAnimationManager(deps) {
 
   async function animateDamage(effect) {
     const { targetId, amount, isCritical, isDot } = effect;
+
+    if (!amount || amount <= 0) {
+      return;
+    }
+
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
@@ -368,30 +375,20 @@ export function createCombatAnimationManager(deps) {
     if (isDot) {
       const champion = deps.activeChampions.get(targetId);
       const name = champion ? formatChampionName(champion) : "Alvo";
-      // showNonBlockingDialog(`${name} sofreu dano.`, true);
       await showBlockingDialog(`${name} sofreu dano.`, true);
     }
 
-    // Show critical hit dialog if applicable
     if (isCritical) {
       const champion = deps.activeChampions.get(targetId);
       const name = champion ? formatChampionName(champion) : "Alvo";
-      // showNonBlockingDialog(
-      //   `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
-      //   true,
-      // );
       await showBlockingDialog(
         `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
         true,
       );
     }
 
-    // Apply .damage class to .champion element
-    // CSS: .damage triggers shake animation
-    // CSS: .damage .portrait::after creates red overlay on portrait
     championEl.classList.add("damage");
 
-    // Create floating damage number inside .portrait-wrapper
     if (portraitWrapper) {
       createFloatElement(
         portraitWrapper,
@@ -401,20 +398,27 @@ export function createCombatAnimationManager(deps) {
       );
     }
 
-    // Update HP bar incrementally (visual only, not authoritative)
     updateVisualHP(targetId, -amount);
 
-    // Wait for the damage shake animation to complete
-    // 🔥 Espera a animação CSS terminar de verdade
     await new Promise((resolve) => {
+      let resolved = false;
+
       const handler = (event) => {
         if (event.target === championEl) {
+          resolved = true; // 🔥 AGORA SIM
           championEl.removeEventListener("animationend", handler);
           resolve();
         }
       };
 
       championEl.addEventListener("animationend", handler);
+
+      setTimeout(() => {
+        if (!resolved) {
+          championEl.removeEventListener("animationend", handler);
+          resolve();
+        }
+      }, 600);
     });
 
     await wait(450);
@@ -697,8 +701,13 @@ export function createCombatAnimationManager(deps) {
       createFloatElement(portraitWrapper, "PROVOCAÇÃO", "taunt-float");
     }
 
+    setTimeout(() => {
+      championEl.classList.remove("taunt");
+    }, 375);
+
+    // Descomentar quando criar a animação de provocação no CSS e quiser que o efeito dure o tempo da animação
     // 🔥 Espera a animação CSS terminar de verdade
-    await new Promise((resolve) => {
+    /* await new Promise((resolve) => {
       const handler = (event) => {
         if (event.target === championEl) {
           championEl.removeEventListener("animationend", handler);
@@ -706,10 +715,10 @@ export function createCombatAnimationManager(deps) {
         }
       };
 
-      championEl.addEventListener("animationend", handler);
+      championEl?.addEventListener("animationend", handler);
     });
 
-    championEl.classList.remove("taunt");
+    championEl?.classList.remove("taunt"); */
   }
   // ============================================================
 
@@ -978,7 +987,7 @@ export function createCombatAnimationManager(deps) {
       if (!champion) continue;
 
       syncChampionFromSnapshot(champion, snap);
-      champion.updateUI(deps.getCurrentTurn());
+      champion.updateUI(editMode);
     }
   }
 
@@ -1067,7 +1076,7 @@ export function createCombatAnimationManager(deps) {
       }
 
       syncChampionFromSnapshot(champion, champData);
-      champion.updateUI(deps.getCurrentTurn());
+      champion.updateUI(editMode);
     }
 
     // Refresh status indicators for all champions

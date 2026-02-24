@@ -3,7 +3,7 @@ export default {
   portrait: "/assets/portraits/barao_estrondoso.webp",
   unreleased: true,
   HP: 375,
-  Attack: 70,
+  Attack: 85,
   Defense: 135,
   Speed: 55,
 

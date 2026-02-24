@@ -157,7 +157,8 @@ const editMode = {
   autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unreleasedChampions: false,
+  unavailableChampions: false,
+  freeCostSkills: false, // Habilidades não consomem recurso. (CLIENT-ONLY)
 };
 
 // ============================================================
@@ -184,8 +185,8 @@ let selectedChampions = Array(TEAM_SIZE).fill(null);
 let championSelectionTimer = null;
 let championSelectionTimeLeft = 0;
 let playerTeamConfirmed = false;
-let allAvailableChampionKeys = [];
-let draggedChampionKey = null;
+/* let allAvailableChampionKeys = [];
+let draggedChampionKey = null; */
 let draggedFromSlotIndex = -1; // -1 = grade disponível, >= 0 = slot selecionado
 
 // --- Temporizadores ---
@@ -211,12 +212,6 @@ const mainContent = document.getElementById("main-content");
 const endTurnBtn = document.querySelector("#end-turn-btn");
 const combatDialog = document.getElementById("combat-dialog");
 const combatDialogText = document.getElementById("combat-dialog-text");
-const backChampionDisplayTeam1 = document.getElementById(
-  "backChampionDisplayTeam1",
-);
-const backChampionDisplayTeam2 = document.getElementById(
-  "backChampionDisplayTeam2",
-);
 
 // --- Seleção de campeões ---
 const championSelectionScreen = document.getElementById(
@@ -265,6 +260,7 @@ const combatAnimations = createCombatAnimationManager({
     StatusIndicator.startRotationLoop(champions),
   combatDialog,
   combatDialogText,
+  editMode,
 
   onQueueEmpty: () => {
     socket.emit("combatAnimationsFinished");
@@ -275,35 +271,12 @@ const combatAnimations = createCombatAnimationManager({
 //  LOGIN & CONEXÃO
 // ============================================================
 
-socket.on("connect", () => {
-  if (editMode.enabled && editMode.autoLogin) {
-    username = "EditUser";
-    socket.emit("requestPlayerSlot", username);
-  }
-});
-
 socket.on("editModeUpdate", (serverEditMode = {}) => {
   Object.assign(editMode, serverEditMode);
   // Auto-login in edit mode: if server enabled autoLogin, fill username and join
-  try {
-    if (
-      editMode.enabled &&
-      editMode.autoLogin &&
-      usernameInput &&
-      joinArenaBtn &&
-      loginScreen.classList.contains("active") &&
-      !playerId
-    ) {
-      const storedName =
-        localStorage.getItem("dev_username") ||
-        serverEditMode.autoLoginName ||
-        "dev";
-      usernameInput.value = storedName;
-      // simulate user clicking the join button
-      joinArenaBtn.click();
-    }
-  } catch (e) {
-    console.warn("Auto-login failed:", e);
+  if (editMode.enabled && editMode.autoLogin) {
+    // 🔥 pede slot automaticamente
+    socket.emit("requestPlayerSlot");
   }
 });
 
@@ -587,9 +560,9 @@ function renderAvailableChampions() {
   let allAvailableChampionKeys = Object.keys(championDB).filter((key) => {
     const champion = championDB[key];
     const isChampion = (champion.entityType ?? "champion") === "champion";
-    const isUnreleased = champion.unreleased === true;
+    const isunavailable = champion.unreleased || champion.disabled;
     if (!isChampion) return false;
-    if (isUnreleased && !editMode.unreleasedChampions) return false;
+    if (isunavailable && !editMode.unavailableChampions) return false;
     return true;
   });
 
@@ -1173,7 +1146,7 @@ async function handleSkillUsage(button) {
 
   const resourceState = user.getResourceState();
   const cost = user.getSkillCost(skill);
-  if (cost > resourceState.current) {
+  if (!editMode.freeCostSkills && cost > resourceState.current) {
     alert(
       resourceState.type === "energy" ? "EN insuficiente." : "MP insuficiente.",
     );
