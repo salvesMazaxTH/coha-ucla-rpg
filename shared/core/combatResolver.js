@@ -467,6 +467,8 @@ export const CombatResolver = {
 
         val = context.ignoreMinimumFloor ? Math.max(val, 0) : Math.max(val, 10);
 
+        val = this.roundToFive(val);
+
         target.takeDamage(val, context);
 
         console.log(
@@ -659,8 +661,10 @@ export const CombatResolver = {
         const results = emitCombatEvent(
             "onAfterDmgTaking",
             {
-                attacker,
-                target,
+                attacker, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+                target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
+                dmgSrc: attacker,
+                dmgReceiver: target,
                 skill,
                 damage,
                 mode,

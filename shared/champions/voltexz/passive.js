@@ -9,7 +9,7 @@ export default {
     return `Sempre que Voltexz causar dano, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
 
-  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (owner?.id !== dmgSrc?.id) return;
 
     let log = "";

@@ -1013,12 +1013,12 @@ function createOverlay(champion) {
 
   const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
-  // --- Lista de habilidades (passiva + skills) ---
+  // --- Passiva ---
   const passive = champion?.passive;
   const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
   const passiveDesc =
     typeof passive?.description === "function"
-      ? passive.description()
+      ? passive.description(champion)
       : typeof passive?.description === "string"
         ? passive.description
         : "";
@@ -1027,11 +1027,11 @@ function createOverlay(champion) {
 
   if (passiveDesc) {
     passiveItemHtml = `
-    <div class="portrait-overlay-skill">
-      <h4 class="portrait-overlay-skill-name">
+    <div class="portrait-overlay-passive">
+      <h4 class="portrait-overlay-passive-name">
         ${escapeHtml(passiveName)}
       </h4>
-      <p class="portrait-overlay-skill-desc">
+      <p class="portrait-overlay-passive-desc">
         ${toParagraphs(passiveDesc)}
       </p>
     </div>
@@ -1063,7 +1063,7 @@ function createOverlay(champion) {
   details.innerHTML = `
     <div class="portrait-overlay-details-content">
       <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
-      <div class="portrait-overlay-skills-list">
+      <div class="portrait-overlay-passive-list">
         ${passiveItemHtml}
       </div>
       <div class="portrait-overlay-stats-list">

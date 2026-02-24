@@ -241,8 +241,8 @@ export function createCombatAnimationManager(deps) {
             .filter((e) => e.targetId)
             .every((e) => e.targetId === action.userId);
 
-        if (targetName && !onlySelfTarget) {
-          dialogText = `${userName} usou ${skillName} em ${targetName}.`;
+        if (action.targetName) {
+          dialogText = `${userName} usou ${skillName} em ${action.targetName}.`;
         } else {
           dialogText = `${userName} usou ${skillName}.`;
         }
@@ -378,15 +378,6 @@ export function createCombatAnimationManager(deps) {
       await showBlockingDialog(`${name} sofreu dano.`, true);
     }
 
-    if (isCritical) {
-      const champion = deps.activeChampions.get(targetId);
-      const name = champion ? formatChampionName(champion) : "Alvo";
-      await showBlockingDialog(
-        `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
-        true,
-      );
-    }
-
     championEl.classList.add("damage");
 
     if (portraitWrapper) {
@@ -399,6 +390,15 @@ export function createCombatAnimationManager(deps) {
     }
 
     updateVisualHP(targetId, -amount);
+
+    if (isCritical) {
+      const champion = deps.activeChampions.get(targetId);
+      const name = champion ? formatChampionName(champion) : "Alvo";
+      await showBlockingDialog(
+        `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
+        true,
+      );
+    }
 
     await new Promise((resolve) => {
       let resolved = false;
@@ -698,7 +698,7 @@ export function createCombatAnimationManager(deps) {
       championEl.classList.add("taunt");
     }
     if (portraitWrapper) {
-      createFloatElement(portraitWrapper, "PROVOCAÇÃO", "taunt-float");
+      createFloatElement(portraitWrapper, "PROVOCADO", "taunt-float");
     }
 
     setTimeout(() => {
@@ -1022,10 +1022,7 @@ export function createCombatAnimationManager(deps) {
     // Runtime shields
     if (snap.runtime) {
       champion.runtime = {
-        ...champion.runtime,
-        shields: Array.isArray(snap.runtime.shields)
-          ? snap.runtime.shields
-          : [],
+        ...snap.runtime,
       };
     }
 

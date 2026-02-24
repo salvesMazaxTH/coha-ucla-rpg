@@ -675,6 +675,53 @@ function extractEffectsFromResult(result) {
   return effects;
 }
 
+function buildEmitTargetInfo({ user, primaryResults, context }) {
+  let realTargetIds = [];
+
+  // 🔹 1️⃣ Se houve dano/cura direta via results
+  if (primaryResults?.length) {
+    realTargetIds = [
+      ...new Set(
+        primaryResults
+          .map((r) => r.targetId)
+          .filter((id) => id && id !== user.id),
+      ),
+    ];
+  }
+
+  // 🔹 2️⃣ Fallback: usar eventos do context (buff, shield, heal, resource)
+  if (!realTargetIds.length && context) {
+    const contextTargetIds = [
+      ...context.healEvents.map((e) => e.targetId),
+      ...context.buffEvents.map((e) => e.targetId),
+      ...context.shieldEvents.map((e) => e.targetId),
+      ...context.resourceEvents.map((e) => e.targetId),
+    ].filter((id) => id && id !== user.id);
+
+    realTargetIds = [...new Set(contextTargetIds)];
+  }
+
+  let targetName = null;
+
+  if (realTargetIds.length === 1) {
+    const champ = activeChampions.get(realTargetIds[0]);
+    targetName = champ ? formatChampionName(champ) : null;
+  } else if (realTargetIds.length > 1) {
+    const names = realTargetIds.map((id) => {
+      const champ = activeChampions.get(id);
+      return champ ? formatChampionName(champ) : "Desconhecido";
+    });
+
+    const last = names.pop();
+    targetName = `${names.join(", ")} e ${last}`;
+  }
+
+  return {
+    targetId: realTargetIds.length === 1 ? realTargetIds[0] : null,
+    targetName,
+  };
+}
+
 function emitCombatEnvelopesFromResults({
   results,
   user,
@@ -686,15 +733,8 @@ function emitCombatEnvelopesFromResults({
   const primaryResults = results.filter(
     (r) =>
       (r.damageDepth ?? 0) === 0 &&
-      (r.totalDamage !== undefined ||
-        r.heal !== (undefined || null) ||
-        r.targetId),
+      (r.totalDamage !== undefined || r.heal !== undefined || r.targetId),
   );
-
-  const firstRealTargetId = primaryResults[0]?.targetId || null;
-  const firstRealTarget = firstRealTargetId
-    ? activeChampions.get(firstRealTargetId)
-    : null;
 
   const reactionResults = results.filter((r) => (r.damageDepth ?? 0) > 0);
 
@@ -710,7 +750,7 @@ function emitCombatEnvelopesFromResults({
     context.shieldEvents.length > 0 ||
     context.resourceEvents.length > 0;
 
-  // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais
+  // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais (buff, shield, etc)
   if (primaryResults.length === 0 && hasSideEffects) {
     const { effects, affectedIds } = buildEffectsFromGroup({
       resultsGroup: [],
@@ -720,18 +760,11 @@ function emitCombatEnvelopesFromResults({
       user,
     });
 
-    console.log(
-      "🧪 PRIMARY RESULTS TARGETS:",
-      primaryResults.map((r) => ({
-        targetId: r.targetId,
-        userId: r.userId,
-      })),
-    );
-
-    console.log(
-      "🧪 EFFECT TARGET IDS:",
-      effects.filter((e) => e.type === "damage").map((e) => e.targetId),
-    );
+    const { targetId, targetName } = buildEmitTargetInfo({
+      user,
+      primaryResults: [],
+      context,
+    });
 
     emitCombatAction({
       action: {
@@ -739,8 +772,8 @@ function emitCombatEnvelopesFromResults({
         userName: user.name,
         skillKey: skill.key,
         skillName: skill.name,
-        targetId: firstRealTargetId,
-        targetName: firstRealTarget?.name || null,
+        targetId,
+        targetName,
       },
       effects,
       state: snapshotChampions([...affectedIds]),
@@ -749,7 +782,7 @@ function emitCombatEnvelopesFromResults({
     return;
   }
 
-  // 🔹 CASO 2: ... 
+  // 🔹 CASO 2: Apenas resultados lógicos (ex: taunt puro)
   if (primaryResults.length === 0 && logicalResults.length > 0) {
     const { effects, affectedIds } = buildEffectsFromGroup({
       resultsGroup: logicalResults,
@@ -771,10 +804,11 @@ function emitCombatEnvelopesFromResults({
       effects,
       state: snapshotChampions(affectedIds),
     });
+
     return;
   }
 
-  // 🔹 CASO 3: Houve results (com ou sem efeitos colaterais) EMITIR AÇÃO PRINCIPAL AGRUPADA
+  // 🔹 CASO 3: Houve results principais (dano, cura direta, etc)
   if (primaryResults.length > 0) {
     const { effects, affectedIds } = buildEffectsFromGroup({
       resultsGroup: primaryResults,
@@ -784,73 +818,27 @@ function emitCombatEnvelopesFromResults({
       user,
     });
 
-    // 🔥 IDs únicos dos alvos inimigos
-    const enemyTargetIds = [
-      ...new Set(
-        primaryResults
-          .map((r) => r.targetId)
-          .filter((id) => {
-            if (!id) return false;
-            if (id === user.id) return false;
-
-            const champ = activeChampions.get(id);
-            return champ && champ.team !== user.team;
-          }),
-      ),
-    ];
-
-    let targetName = null;
-
-    if (enemyTargetIds.length > 0) {
-      const aliveEnemies = Array.from(activeChampions.values()).filter(
-        (c) => c.team !== user.team && c.alive,
-      );
-
-      // 🔥 Todos os inimigos vivos
-      if (enemyTargetIds.length === aliveEnemies.length) {
-        targetName = "todos os inimigos";
-      }
-      // 🔥 1 alvo
-      else if (enemyTargetIds.length === 1) {
-        const champ = activeChampions.get(enemyTargetIds[0]);
-        targetName = champ ? formatChampionName(champ) : "Desconhecido";
-      }
-      // 🔥 2+ alvos
-      else {
-        const names = enemyTargetIds.map((id) => {
-          const champ = activeChampions.get(id);
-          return champ ? formatChampionName(champ) : "Desconhecido";
-        });
-
-        const last = names.pop();
-        targetName = `${names.join(", ")} e ${last}`;
-      }
-    }
-
-    console.log("🧪 PRIMARY RESULTS:", primaryResults);
-    console.log("🧪 EFFECTS FINAL:", effects);
-
-    const action = {
-      userId: user.id,
-      userName: user.name,
-      skillKey: skill.key,
-      skillName: skill.name,
-      targetId: enemyTargetIds.length === 1 ? enemyTargetIds[0] : null,
-      targetName,
-    };
-
-    console.log("EMIT ACTION:", {
-      action,
-      effectsLength: effects.length,
+    const { targetId, targetName } = buildEmitTargetInfo({
+      user,
+      primaryResults,
+      context
     });
 
     emitCombatAction({
-      action,
+      action: {
+        userId: user.id,
+        userName: user.name,
+        skillKey: skill.key,
+        skillName: skill.name,
+        targetId,
+        targetName,
+      },
       effects,
       state: snapshotChampions(affectedIds),
     });
   }
-  // 🔹 CASO 4: EMITIR REAÇÕES SEPARADAS
+
+  // 🔹 CASO 4: Reações separadas
   for (const entry of reactionResults) {
     const { effects, affectedIds } = buildEffectsFromGroup({
       resultsGroup: [entry],

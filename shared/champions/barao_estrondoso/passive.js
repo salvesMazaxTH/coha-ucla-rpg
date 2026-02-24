@@ -6,19 +6,23 @@ export default {
   storageBasePercent: 30,
   storageShieldPercent: 40,
   storageCap: 250,
-  description() {
-    return `
-    O núcleo do Barão absorve impactos para alimentar seu canhão nuclear.
+  description(champion) {
+    const stored = champion.runtime?.storedDamage || 0;
 
-    • Recebe +10% de dano adicional de todas as fontes (mínimo +10).
-    • Armazena ${this.storageBasePercent || 30}% do dano recebido (máx. ${this.storageCap || 250}).
-    • Enquanto "Blindagem Reforçada" estiver ativa, armazena ${this.storageShieldPercent || 40}% em vez disso.
+    return `
+    O Barão converte dano recebido em energia destrutiva.
+
+    Recebe +${this.damageTakenBonusPercent}% de dano adicional (mín. +${this.damageTakenBonusFlatMin}).
+
+    Armazena ${this.storageBasePercent}% do dano sofrido (máx. ${this.storageCap}). Com Blindagem Reforçada, armazena ${this.storageShieldPercent}% em vez disso.
+
+    ${stored > 0 ? `Dano armazenado: ${stored}` : ""}
 
     Sobrecarga do Reator:
-    Após usar qualquer habilidade (exceto Ataque Básico), o Barão ficará "Atordoado" no turno seguinte.
+    Após usar uma habilidade (exceto Ataque Básico), fica Atordoado no próximo turno.
 
     Explosão Final:
-    Ao usar sua Ult, todo o dano armazenado é adicionado ao golpe e o armazenamento é zerado.`;
+    Ao usar a Ultimate, causa dano adicional igual ao total armazenado e zera o acúmulo.`;
   },
 
   // 🔴 Recebe 10% de dano adicional (mínimo +10)
@@ -38,14 +42,25 @@ export default {
     if (owner?.id !== dmgReceiver?.id) return;
     if (!damage || damage <= 0) return;
 
+    console.log(
+      `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
+    );
+
     const storageRate = owner.hasKeyword?.("blindagem_reforcada") ? 0.4 : 0.3;
 
     const stored = Math.floor(damage * storageRate);
+
+    console.log(
+      `[${owner.name} - Reator Cataclísmico] Dano armazenado: ${stored} (Taxa: ${storageRate * 100}%)`,
+    );
 
     owner.runtime = owner.runtime || {};
     owner.runtime.storedDamage = Math.min(
       250,
       (owner.runtime.storedDamage || 0) + stored,
+    );
+    console.log(
+      `[${owner.name} - Reator Cataclísmico] Dano armazenado total: ${owner.runtime.storedDamage}`,
     );
   },
 

@@ -1546,7 +1546,7 @@ i {
   margin-bottom: 6px;
 }
 
-.portrait-overlay-skill-list {
+.portrait-overlay-passive-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1567,7 +1567,7 @@ i {
   align-items: center;
 }
 
-.portrait-overlay-skill-desc {
+.portrait-overlay-passive-desc {
   margin: 4px;
   padding: 2px;
 }

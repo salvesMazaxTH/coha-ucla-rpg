@@ -166,6 +166,7 @@ const kaiSkills = [
         bf: 0,
         damagePerHit: 40,
         hits: 6,
+        burningBonus: 10,
         contact: true,
         manaCost: 400,
         priority: 0,
@@ -191,7 +192,7 @@ const kaiSkills = [
                 const target =
                     enemies[Math.floor(Math.random() * enemies.length)];
                 const isBurning = target.hasKeyword("queimando");
-                const directBonus = isBurning ? 10 : 0;
+                const directBonus = isBurning ? this.burningBonus : 0;
                 const result = CombatResolver.processDamageEvent({
                     baseDamage: this.damagePerHit,
                     user,
