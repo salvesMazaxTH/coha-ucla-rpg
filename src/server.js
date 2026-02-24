@@ -57,7 +57,8 @@ function applyGlobalTurnRegen(champion, context) {
     const threshold = base * 0.7;
 
     if (current < threshold) {
-        const bonus = base * 0.1; // 10%
+        const missingRes = base - current;
+        const bonus = base * 0.1 + missingRes * 0.1; // 10% da base e da perdida
         totalRegen += bonus;
     }
 
