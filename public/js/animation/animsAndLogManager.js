@@ -235,12 +235,6 @@ export function createCombatAnimationManager(deps) {
 
         let dialogText;
 
-        const onlySelfTarget =
-          hasEffects &&
-          effects
-            .filter((e) => e.targetId)
-            .every((e) => e.targetId === action.userId);
-
         if (action.targetName) {
           dialogText = `${userName} usou ${skillName} em ${action.targetName}.`;
         } else {
@@ -367,15 +361,18 @@ export function createCombatAnimationManager(deps) {
       return;
     }
 
+    const { targetName } = effect ?? { targetName: "Alvo" };
+
+    console.log("[animateDamage] EFFECT RECEBIDO NO CLIENT: ", effect);
+    console.log("isCritical?: ", effect.isCritical, typeof effect.isCritical);
+
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
     if (isDot) {
-      const champion = deps.activeChampions.get(targetId);
-      const name = champion ? formatChampionName(champion) : "Alvo";
-      await showBlockingDialog(`${name} sofreu dano.`, true);
+      await showBlockingDialog(`${targetName} sofreu dano.`, true);
     }
 
     championEl.classList.add("damage");
@@ -392,10 +389,8 @@ export function createCombatAnimationManager(deps) {
     updateVisualHP(targetId, -amount);
 
     if (isCritical) {
-      const champion = deps.activeChampions.get(targetId);
-      const name = champion ? formatChampionName(champion) : "Alvo";
       await showBlockingDialog(
-        `UM ACERTO CRÍTICO! ${name} sofreu um dano devastador!`,
+        `UM ACERTO CRÍTICO! ${targetName} sofreu um dano devastador!`,
         true,
       );
     }
@@ -440,10 +435,9 @@ export function createCombatAnimationManager(deps) {
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
-    const champion = deps.activeChampions.get(targetId);
-    const name = champion ? formatChampionName(champion) : "Alvo";
-    // showNonBlockingDialog(`${name} recuperou vida.`, true);
-    await showBlockingDialog(`${name} recuperou vida.`, true);
+    const { targetName } = effect ?? { targetName: "Alvo" };
+    // showNonBlockingDialog(`${targetName} recuperou vida.`, true);
+    await showBlockingDialog(`${targetName} recuperou vida.`, true);
 
     // Apply .heal class to .champion element
     championEl.classList.add("heal");

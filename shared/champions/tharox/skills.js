@@ -41,6 +41,15 @@ const tharoxSkills = [
       });
 
       const userName = formatChampionName(user);
+
+      context.effects = context.effects || [];
+
+      context.effects.push({
+        type: "taunt",
+        sourceId: user.id,
+        targetId: enemyChampions.map((c) => c.id),
+      });
+
       return {
         log: `${userName} executou Provocação Primeva. Todos os inimigos foram provocados e ${userName} recebeu -${this.damageReductionAmount} de Dano Bruto Final.`,
       };

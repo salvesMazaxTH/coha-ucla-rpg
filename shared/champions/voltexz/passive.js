@@ -14,25 +14,37 @@ export default {
 
     let log = "";
 
+    let recoilDamage = 0;
+
     if (damage > 0) {
-      const recoilDamage = editMode
+      recoilDamage = editMode
         ? 999
         : Math.round((damage * (this.recoilPercent / 100)) / 5) * 5;
-
-      if (recoilDamage > 0) {
-        owner.takeDamage(recoilDamage);
-        log += `⚡ ${owner.name} sofreu ${recoilDamage} de dano de recuo por Sobrecarga Instável!`;
-      }
     }
 
-    const overloaded = dmgReceiver.applyKeyword(
-      "sobrecarga",
-      this.sobrecargaDuration,
-      context,
-    );
+    context.extraDamageQueue ??= [];
 
-    if (overloaded) {
-      log += `\n⚡ ${dmgReceiver.name} foi marcado com "Sobrecarga"!`;
+    if (recoilDamage > 0) {
+      context.extraDamageQueue.push({
+        type: "recuo_dano",
+        mode: "direct",
+        baseDamage: recoilDamage,
+        directDamage: recoilDamage,
+        user: owner,
+        source: owner,
+        target: owner,
+        skill: {
+          key: "sobrecarga_instavel_recoil",
+        },
+      });
+
+      context.effects = context.effects || [];
+      context.effects.push({
+        type: "dialog",
+        message: `${owner.name} sofre ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
+        sourceId: owner.id,
+        targetId: owner.id,
+      });
     }
 
     return { log };

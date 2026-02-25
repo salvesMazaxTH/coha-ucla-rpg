@@ -129,7 +129,7 @@ const editMode = {
   actMultipleTimesPerTurn: false,
   unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
-  alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
+  alwaysCrit: true, // Força crítico em todo ataque. (SERVER-ONLY)
   freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
@@ -594,7 +594,7 @@ function extractEffectsFromResult(result) {
   }
 
   // Imunidade absoluta — totalDamage 0, log menciona imunidade
-  if (
+  /*  if (
     result.totalDamage === 0 &&
     !result.evaded &&
     result.log?.includes("Imunidade Absoluta")
@@ -606,10 +606,10 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-  }
+  } */
 
   // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
-  if (
+  /* if (
     result.totalDamage === 0 &&
     !result.evaded &&
     result.log?.includes("bloqueou completamente")
@@ -621,9 +621,9 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-  }
+  } */
 
-  // Dano
+  /*   // Dano
   if (result.totalDamage === 0) {
     effects.push({
       type: "damage",
@@ -644,7 +644,7 @@ function extractEffectsFromResult(result) {
       targetName: getNameById(result.targetId),
       sourceName: getNameById(result.userId),
     });
-  }
+  } */
 
   // Heal direto do resultado (lifesteal)
   if (result.heal && result.heal.amount > 0 && result.heal.targetId) {
@@ -675,32 +675,7 @@ function extractEffectsFromResult(result) {
   return effects;
 }
 
-function buildEmitTargetInfo({ user, primaryResults, context }) {
-  let realTargetIds = [];
-
-  // 🔹 1️⃣ Se houve dano/cura direta via results
-  if (primaryResults?.length) {
-    realTargetIds = [
-      ...new Set(
-        primaryResults
-          .map((r) => r.targetId)
-          .filter((id) => id && id !== user.id),
-      ),
-    ];
-  }
-
-  // 🔹 2️⃣ Fallback: usar eventos do context (buff, shield, heal, resource)
-  if (!realTargetIds.length && context) {
-    const contextTargetIds = [
-      ...context.healEvents.map((e) => e.targetId),
-      ...context.buffEvents.map((e) => e.targetId),
-      ...context.shieldEvents.map((e) => e.targetId),
-      ...context.resourceEvents.map((e) => e.targetId),
-    ].filter((id) => id && id !== user.id);
-
-    realTargetIds = [...new Set(contextTargetIds)];
-  }
-
+function buildEmitTargetInfo(realTargetIds) {
   let targetName = null;
 
   if (realTargetIds.length === 1) {
@@ -709,7 +684,7 @@ function buildEmitTargetInfo({ user, primaryResults, context }) {
   } else if (realTargetIds.length > 1) {
     const names = realTargetIds.map((id) => {
       const champ = activeChampions.get(id);
-      return champ ? formatChampionName(champ) : "Desconhecido";
+      return champ ? formatChampionName(champ) : "Desconecido";
     });
 
     const last = names.pop();
@@ -723,168 +698,85 @@ function buildEmitTargetInfo({ user, primaryResults, context }) {
 }
 
 function emitCombatEnvelopesFromResults({
-  results,
   user,
   skill,
-  targets,
   context,
   actionResourceCost,
 }) {
-  const primaryResults = results.filter(
-    (r) =>
-      (r.damageDepth ?? 0) === 0 &&
-      (r.totalDamage !== undefined || r.heal !== undefined || r.targetId),
-  );
+  const effectsBuildResult = buildEffectsFromContext({
+    context,
+    actionResourceCost,
+    user,
+  });
+  const allEffects = effectsBuildResult.effects;
+  const affectedIds = effectsBuildResult.affectedIds;
 
-  const reactionResults = results.filter((r) => (r.damageDepth ?? 0) > 0);
+  const mainEvents = allEffects.filter((e) => 
+    (e.damageDepth ?? 0) === 0);
 
-  const logicalResults = results.filter(
-    (r) =>
-      (r.damageDepth ?? 0) === 0 && r.totalDamage === undefined && !r.targetId,
-  );
+  const reactionEvents = allEffects.filter((e) => 
+    (e.damageDepth ?? 0) > 0);
 
-  const hasSideEffects =
-    actionResourceCost > 0 ||
-    context.healEvents.length > 0 ||
-    context.buffEvents.length > 0 ||
-    context.shieldEvents.length > 0 ||
-    context.resourceEvents.length > 0;
+  const realTargetIds = [
+    ...new Set(
+      mainEvents.map((e) => e.targetId).filter((id) => id && id !== user.id),
+    ),
+  ];
 
-  // 🔹 CASO 1: Não houve results, mas houve efeitos colaterais (buff, shield, etc)
-  if (primaryResults.length === 0 && hasSideEffects) {
-    const { effects, affectedIds } = buildEffectsFromGroup({
-      resultsGroup: [],
-      context,
-      includeContextEvents: true,
-      actionResourceCost,
-      user,
-    });
+  const { targetId, targetName } = buildEmitTargetInfo(realTargetIds);
 
-    const { targetId, targetName } = buildEmitTargetInfo({
-      user,
-      primaryResults: [],
-      context,
-    });
+  emitCombatAction({
+    action: {
+      userId: user.id,
+      userName: user.name,
+      skillKey: skill.key,
+      skillName: skill.name,
+      targetId,
+      targetName,
+    },
+    effects: allEffects,
+    state: snapshotChampions([...affectedIds]),
+  });
+
+  const reactionDepths = [...new Set(reactionEvents.map((e) => e.damageDepth))];
+
+  for (const depth of reactionDepths) {
+    const effectsForDepth = reactionEvents.filter(
+      (e) => e.damageDepth === depth,
+    );
+
+    const realTargetIds = [
+      ...new Set(
+        effectsForDepth
+          .map((e) => e.targetId)
+          .filter((id) => id && id !== user.id),
+      ),
+    ];
+
+    const { targetId, targetName } = buildEmitTargetInfo(realTargetIds);
 
     emitCombatAction({
       action: {
-        userId: user.id,
-        userName: user.name,
-        skillKey: skill.key,
-        skillName: skill.name,
+        userId: effectsForDepth[0]?.sourceId || user.id,
+        userName:
+          activeChampions.get(effectsForDepth[0]?.sourceId)?.name || user.name,
+        skillKey: `${skill.key}-reaction-${depth}`,
+        skillName: `${skill.name} (Reação ${depth})`,
         targetId,
         targetName,
       },
-      effects,
+      effects: effectsForDepth,
       state: snapshotChampions([...affectedIds]),
-    });
-
-    return;
-  }
-
-  // 🔹 CASO 2: Apenas resultados lógicos (ex: taunt puro)
-  if (primaryResults.length === 0 && logicalResults.length > 0) {
-    const { effects, affectedIds } = buildEffectsFromGroup({
-      resultsGroup: logicalResults,
-      context,
-      includeContextEvents: true,
-      actionResourceCost,
-      user,
-    });
-
-    emitCombatAction({
-      action: {
-        userId: user.id,
-        userName: user.name,
-        skillKey: skill.key,
-        skillName: skill.name,
-        targetId: null,
-        targetName: null,
-      },
-      effects,
-      state: snapshotChampions(affectedIds),
-    });
-
-    return;
-  }
-
-  // 🔹 CASO 3: Houve results principais (dano, cura direta, etc)
-  if (primaryResults.length > 0) {
-    const { effects, affectedIds } = buildEffectsFromGroup({
-      resultsGroup: primaryResults,
-      context,
-      includeContextEvents: true,
-      actionResourceCost,
-      user,
-    });
-
-    const { targetId, targetName } = buildEmitTargetInfo({
-      user,
-      primaryResults,
-      context
-    });
-
-    emitCombatAction({
-      action: {
-        userId: user.id,
-        userName: user.name,
-        skillKey: skill.key,
-        skillName: skill.name,
-        targetId,
-        targetName,
-      },
-      effects,
-      state: snapshotChampions(affectedIds),
-    });
-  }
-
-  // 🔹 CASO 4: Reações separadas
-  for (const entry of reactionResults) {
-    const { effects, affectedIds } = buildEffectsFromGroup({
-      resultsGroup: [entry],
-      context,
-      includeContextEvents: false,
-      actionResourceCost: 0,
-      user,
-    });
-
-    emitCombatAction({
-      action: {
-        userId: entry.userId,
-        userName: activeChampions.get(entry.userId)?.name || null,
-        skillKey: entry.skill?.key || "reaction",
-        skillName: entry.skill?.name || "Reação",
-        targetId: entry.targetId || null,
-        targetName: activeChampions.get(entry.targetId)?.name || null,
-      },
-      effects,
-      state: snapshotChampions(affectedIds),
     });
   }
 }
 
-function buildEffectsFromGroup({
-  resultsGroup,
-  context,
-  includeContextEvents,
-  actionResourceCost,
-  user,
-}) {
+function buildEffectsFromContext({ context, actionResourceCost, user }) {
   const effects = [];
   const affectedIds = new Set();
 
-  // 🔥 Effects vindos do processDamageEvent
-  for (const entry of resultsGroup) {
-    const extracted = extractEffectsFromResult(entry);
-    effects.push(...extracted);
-
-    if (entry.targetId) affectedIds.add(entry.targetId);
-    if (entry.userId) affectedIds.add(entry.userId);
-    if (entry.heal?.targetId) affectedIds.add(entry.heal.targetId);
-  }
-
   // 🔥 Gasto de recurso da skill principal
-  if (includeContextEvents && actionResourceCost > 0) {
+  if (actionResourceCost > 0) {
     const isEnergy = user.energy !== undefined;
 
     effects.push({
@@ -900,56 +792,73 @@ function buildEffectsFromGroup({
     affectedIds.add(user.id);
   }
 
-  if (includeContextEvents) {
-    for (const h of context.healEvents) {
-      effects.push({
-        type: "heal",
-        targetId: h.targetId,
-        sourceId: h.sourceId,
-        amount: h.amount,
-        targetName: activeChampions.get(h.targetId)?.name || null,
-        sourceName: activeChampions.get(h.sourceId)?.name || null,
-      });
-      affectedIds.add(h.targetId);
-    }
+  console.log("🧪 damageEvents:", context.damageEvents);
 
-    for (const s of context.shieldEvents) {
-      effects.push({
-        type: "shield",
-        targetId: s.targetId,
-        sourceId: s.sourceId,
-        amount: s.amount,
-        targetName: activeChampions.get(s.targetId)?.name || null,
-        sourceName: activeChampions.get(s.sourceId)?.name || null,
-      });
-      affectedIds.add(s.targetId);
-    }
+  for (const damage of context.damageEvents) {
+    effects.push({
+      type: "damage",
+      targetId: damage.targetId,
+      sourceId: damage.sourceId,
+      amount: damage.amount,
+      targetName: formatChampionName(activeChampions.get(damage.targetId)),
+      sourceName: formatChampionName(activeChampions.get(damage.sourceId)),
+      isCritical: damage.isCritical ?? false,
+      evaded: damage.evaded ?? false,
+      immune: damage.immune ?? false,
+      shieldBlocked: damage.shieldBlocked ?? false,
+      damageDepth: damage.damageDepth ?? 0,
+    });
+    affectedIds.add(damage.targetId);
+  }
 
-    for (const b of context.buffEvents) {
-      effects.push({
-        type: "buff",
-        targetId: b.targetId,
-        sourceId: b.sourceId,
-        amount: b.amount,
-        statName: b.statName,
-        targetName: activeChampions.get(b.targetId)?.name || null,
-        sourceName: activeChampions.get(b.sourceId)?.name || null,
-      });
-      affectedIds.add(b.targetId);
-    }
+  for (const heal of context.healEvents) {
+    effects.push({
+      type: "heal",
+      targetId: heal.targetId,
+      sourceId: heal.sourceId,
+      amount: heal.amount,
+      targetName: formatChampionName(activeChampions.get(heal.targetId)),
+      sourceName: formatChampionName(activeChampions.get(heal.sourceId)),
+    });
+    affectedIds.add(heal.targetId);
+  }
 
-    for (const r of context.resourceEvents) {
-      effects.push({
-        type: r.type,
-        targetId: r.targetId,
-        sourceId: r.sourceId,
-        amount: r.amount,
-        resourceType: r.resourceType,
-        targetName: activeChampions.get(r.targetId)?.name || null,
-        sourceName: activeChampions.get(r.sourceId)?.name || null,
-      });
-      affectedIds.add(r.targetId);
-    }
+  for (const shield of context.shieldEvents) {
+    effects.push({
+      type: "shield",
+      targetId: shield.targetId,
+      sourceId: shield.sourceId,
+      amount: shield.amount,
+      targetName: formatChampionName(activeChampions.get(shield.targetId)),
+      sourceName: formatChampionName(activeChampions.get(shield.sourceId)),
+    });
+    affectedIds.add(shield.targetId);
+  }
+
+  for (const buff of context.buffEvents) {
+    effects.push({
+      type: "buff",
+      targetId: buff.targetId,
+      sourceId: buff.sourceId,
+      amount: buff.amount,
+      statName: buff.statName,
+      targetName: formatChampionName(activeChampions.get(buff.targetId)),
+      sourceName: formatChampionName(activeChampions.get(buff.sourceId)),
+    });
+    affectedIds.add(buff.targetId);
+  }
+
+  for (const r of context.resourceEvents) {
+    effects.push({
+      type: r.type,
+      targetId: r.targetId,
+      sourceId: r.sourceId,
+      amount: r.amount,
+      resourceType: r.resourceType,
+      targetName: formatChampionName(activeChampions.get(r.targetId)),
+      sourceName: formatChampionName(activeChampions.get(r.sourceId)),
+    });
+    affectedIds.add(r.targetId);
   }
 
   return { effects, affectedIds };
@@ -1136,7 +1045,7 @@ function createBaseContext({ sourceId = null } = {}) {
     // ========================
     // EVENT BUFFERS
     // ========================
-
+    damageEvents: [],
     healEvents: [],
     buffEvents: [],
     resourceEvents: [],
@@ -1148,6 +1057,29 @@ function createBaseContext({ sourceId = null } = {}) {
     // ========================
     // REGISTRIES
     // ========================
+
+    registerDamage({
+      target,
+      amount,
+      sourceId,
+      isCritical = false,
+      damageDepth = 0,
+      flags,
+    } = {}) {
+      if (!target?.id) return;
+
+      this.damageEvents.push({
+        type: "damage",
+        sourceId: sourceId || null,
+        targetId: target.id,
+        amount,
+        isCritical: !!isCritical,
+        damageDepth: damageDepth || 0,
+        evaded: !!flags?.evaded,
+        immune: !!flags?.immune,
+        shieldBlocked: !!flags?.shieldBlocked,
+      });
+    },
 
     registerHeal({ target, amount, sourceId } = {}) {
       const value = Number(amount) || 0;
