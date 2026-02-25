@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../core/formatters.js";
+
 const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999), entre outras coisas.
 
 export default {
@@ -6,13 +8,16 @@ export default {
   sobrecargaDuration: 2,
   sobrecargaBonusPercent: 15,
   description() {
-    return `Sempre que Voltexz causar dano, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
+    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
 
-  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, skill, damage, context }) {
     if (owner?.id !== dmgSrc?.id) return;
 
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
+
+    // Ataque Básico não aplica recuo nem Sobrecarga
+    if (skill.key === "ataque_basico") return;
 
     let log = "";
 
@@ -43,16 +48,41 @@ export default {
       context.dialogEvents = context.dialogEvents || [];
       context.dialogEvents.push({
         type: "dialog",
-        message: `${owner.name} sofre ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
+        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
         sourceId: owner.id,
         targetId: owner.id,
+        blocking: false,
       });
     }
+
+    if (dmgReceiver.hasKeyword?.("sobrecarga")) {
+      dmgReceiver.removeKeyword("sobrecarga");
+      return;
+    } 
+
+    dmgReceiver.applyKeyword("sobrecarga", this.sobrecargaDuration, context, {
+      sourceSkill: skill,
+    });
 
     return { log };
   },
 
-  onBeforeDmgDealing({ dmgSrc, dmgReceiver, owner, crit, damage, context }) {
+  onBeforeDmgDealing({
+    dmgSrc,
+    dmgReceiver,
+    owner,
+    crit,
+    damage,
+    context,
+    skill,
+  }) {
+    console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(dmgSrc));
+
+    console.log("OWNER:", owner?.name);
+    console.log("DMG SRC:", dmgSrc?.name);
+    console.log("ALVO:", dmgReceiver?.name);
+    console.log("HAS SOBRECARGA?", dmgReceiver?.hasKeyword?.("sobrecarga"));
+
     if (owner?.id !== dmgSrc?.id) return;
 
     if (!dmgReceiver.hasKeyword?.("sobrecarga")) return;
@@ -61,7 +91,15 @@ export default {
 
     dmgReceiver.removeKeyword("sobrecarga");
 
-    let log = `⚡ ACERTO ! ${dmgSrc.name} explorou "Sobrecarga" de ${dmgReceiver.name} (+${this.sobrecargaBonusPercent}% dano)!`;
+    context.dialogEvents.push({
+      type: "dialog",
+      message: `${formatChampionName(dmgReceiver)} foi consumido por "Sobrecarga"!`,
+      sourceId: dmgSrc.id,
+      targetId: dmgReceiver.id,
+      blocking: false,
+    });
+
+    let log = `⚡ ACERTO ! ${formatChampionName(dmgSrc)} explorou "Sobrecarga" de ${formatChampionName(dmgReceiver)} (+${this.sobrecargaBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

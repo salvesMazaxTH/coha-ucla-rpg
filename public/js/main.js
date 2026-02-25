@@ -66,7 +66,7 @@ function showSkillOverlay(button, skill, champion) {
       skill.element
         ? `
       <div class="skill-overlay-element-row">
-        <span class="meta-label">Elemento</span>
+        <span class="meta-label">Elemento: </span>
         <span class="meta-value">
           ${elementEmoji[skill.element] || skill.element}
         </span>
@@ -76,8 +76,19 @@ function showSkillOverlay(button, skill, champion) {
     }
 
     <div class="skill-overlay-contact-row">
-      <span class="meta-label">Contato</span>
+      <span class="meta-label">Contato: </span>
       <span class="meta-value">${skill.contact ? "✅" : "❌"}</span>
+    </div>
+
+    <div class="skill-overlay-content-priority-row">
+      <span class="meta-label">Prioridade: </span>
+      <span class="meta-value">${
+        skill.priority != null
+          ? skill.priority > 0
+            ? `+${skill.priority}`
+            : skill.priority
+          : "-"
+      }</span>
     </div>
 
     <div class="skill-overlay-desc">
@@ -1166,6 +1177,8 @@ socket.on("skillDenied", (message) => {
 socket.on("skillApproved", async ({ userId, skillKey }) => {
   const user = activeChampions.get(userId);
   if (!user) return;
+
+  user.syncActionStateUI();
 
   const skill = user.skills.find((s) => s.key === skillKey);
   if (!skill) return;

@@ -2,254 +2,247 @@ import { StatusIndicator } from "./statusIndicator.js";
 import { CombatResolver } from "./combatResolver.js";
 
 export class Champion {
-    constructor(data = {}) {
-        const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
+  constructor(data = {}) {
+    const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
 
-        // IDENTIDADE
-        this.id = identity.id;
-        this.name = identity.name;
-        this.portrait = identity.portrait;
-        this.team = identity.team;
-        this.elementalAffinities =
-            Array.from(identity.elementalAffinities) || [];
-        this.entityType = identity.entityType ?? "champion";
+    // IDENTIDADE
+    this.id = identity.id;
+    this.name = identity.name;
+    this.portrait = identity.portrait;
+    this.team = identity.team;
+    this.elementalAffinities = Array.from(identity.elementalAffinities) || [];
+    this.entityType = identity.entityType ?? "champion";
 
-        // STATS
-        // Stats atuais
-        this.HP = stats.HP;
-        this.maxHP = stats.HP;
-        this.Attack = stats.Attack;
-        this.Defense = stats.Defense;
-        this.Speed = stats.Speed;
-        this.Evasion = stats.Evasion ?? 0;
-        this.Critical = stats.Critical ?? 0;
-        this.LifeSteal = stats.LifeSteal ?? 0;
-        // Base Stats (ESSENCIAL)
-        this.baseHP = stats.HP;
-        this.baseAttack = stats.Attack;
-        this.baseDefense = stats.Defense;
-        this.baseSpeed = stats.Speed;
-        this.baseEvasion = stats.Evasion ?? 0;
-        this.baseCritical = stats.Critical ?? 0;
-        this.baseLifeSteal = stats.LifeSteal ?? 0;
+    // STATS
+    // Stats atuais
+    this.HP = stats.HP;
+    this.maxHP = stats.HP;
+    this.Attack = stats.Attack;
+    this.Defense = stats.Defense;
+    this.Speed = stats.Speed;
+    this.Evasion = stats.Evasion ?? 0;
+    this.Critical = stats.Critical ?? 0;
+    this.LifeSteal = stats.LifeSteal ?? 0;
+    // Base Stats (ESSENCIAL)
+    this.baseHP = stats.HP;
+    this.baseAttack = stats.Attack;
+    this.baseDefense = stats.Defense;
+    this.baseSpeed = stats.Speed;
+    this.baseEvasion = stats.Evasion ?? 0;
+    this.baseCritical = stats.Critical ?? 0;
+    this.baseLifeSteal = stats.LifeSteal ?? 0;
 
-        this.resourceCap = 999;
+    this.resourceCap = 999;
 
-        this.initializeResources(stats);
+    this.initializeResources(stats);
 
-        // COMBATE
-        this.skills = combat.skills;
-        this.passive = combat.passive || null;
-        this.damageModifiers = [];
-        this.statModifiers = [];
-        this.tauntEffects = [];
-        this.damageReductionModifiers = [];
-        this.keywords = new Map();
-        this.alive = true;
-        this.hasActedThisTurn = false;
+    // COMBATE
+    this.skills = combat.skills;
+    this.passive = combat.passive || null;
+    this.damageModifiers = [];
+    this.statModifiers = [];
+    this.tauntEffects = [];
+    this.damageReductionModifiers = [];
+    this.keywords = new Map();
+    this.alive = true;
+    this.hasActedThisTurn = false;
 
-        // RUNTIME
-        this.runtime = this.buildRuntime(runtime);
+    // RUNTIME
+    this.runtime = this.buildRuntime(runtime);
+  }
+
+  static fromBaseData(baseData, id, team) {
+    return new Champion({
+      identity: {
+        id,
+        name: baseData.name,
+        portrait: baseData.portrait,
+        team,
+        entityType: baseData.entityType,
+        elementalAffinities: baseData.elementalAffinities || [],
+      },
+
+      stats: {
+        HP: baseData.HP,
+        Attack: baseData.Attack,
+        Defense: baseData.Defense,
+        Speed: baseData.Speed,
+        Evasion: baseData.Evasion,
+        Critical: baseData.Critical,
+        LifeSteal: baseData.LifeSteal,
+        mana: baseData.mana,
+        energy: baseData.energy,
+      },
+
+      combat: {
+        skills: baseData.skills.map((s) => ({ ...s })),
+        passive: baseData.passive,
+      },
+    });
+  }
+
+  // Método para serializar o estado do campeão
+  serialize() {
+    const resourceState = this.getResourceState();
+    const resourcePayload =
+      resourceState.type === "energy"
+        ? {
+            energy: resourceState.current,
+          }
+        : {
+            mana: resourceState.current,
+          };
+
+    return {
+      id: this.id,
+      championKey:
+        typeof this.id === "string" && this.id.includes("-")
+          ? this.id.split("-")[0]
+          : this.name,
+
+      team: this.team,
+
+      name: this.name,
+      portrait: this.portrait,
+
+      HP: this.HP,
+      maxHP: this.maxHP,
+      Attack: this.Attack,
+      Defense: this.Defense,
+      Speed: this.Speed,
+      Evasion: this.Evasion,
+      Critical: this.Critical,
+      LifeSteal: this.LifeSteal,
+
+      ...resourcePayload,
+
+      runtime: {
+        ...this.runtime,
+        shields: Array.isArray(this.runtime?.shields)
+          ? this.runtime.shields
+          : [],
+      },
+
+      keywords: Array.from(this.keywords.entries()),
+      skills: this.skills.map((s) => ({
+        key: s.key,
+        name: s.name,
+        description: s.description,
+        priority: s.priority || 0,
+      })),
+    };
+  }
+
+  // ======== Resource Management System ========
+
+  roundResource(value) {
+    return Math.round(Number(value) || 0);
+  }
+
+  getResourceState() {
+    const isEnergy = this.energy !== undefined;
+
+    return {
+      type: isEnergy ? "energy" : "mana",
+      currentKey: isEnergy ? "energy" : "mana",
+      current: isEnergy ? Number(this.energy ?? 0) : Number(this.mana ?? 0),
+    };
+  }
+
+  initializeResources(stats = {}) {
+    //console.log("INITIALIZANDO RECURSO:", this.name);
+
+    const hasEnergy = Number.isFinite(stats.energy);
+    const hasMana = Number.isFinite(stats.mana);
+
+    if (hasEnergy && hasMana) {
+      throw new Error(
+        `[Champion] ${this.name} declarou Mana e Energia. Apenas um recurso é permitido.`,
+      );
     }
 
-    static fromBaseData(baseData, id, team) {
-        return new Champion({
-            identity: {
-                id,
-                name: baseData.name,
-                portrait: baseData.portrait,
-                team,
-                entityType: baseData.entityType,
-                elementalAffinities: baseData.elementalAffinities || []
-            },
+    const type = hasEnergy ? "energy" : "mana";
+    const initialValue = hasEnergy ? stats.energy : hasMana ? stats.mana : 0;
 
-            stats: {
-                HP: baseData.HP,
-                Attack: baseData.Attack,
-                Defense: baseData.Defense,
-                Speed: baseData.Speed,
-                Evasion: baseData.Evasion,
-                Critical: baseData.Critical,
-                LifeSteal: baseData.LifeSteal,
-                mana: baseData.mana,
-                energy: baseData.energy
-            },
-
-            combat: {
-                skills: baseData.skills.map(s => ({ ...s })),
-                passive: baseData.passive
-            }
-        });
+    if (!hasEnergy && !hasMana) {
+      console.warn(
+        `[Champion] ${this.name} não declarou mana ou energia. Usando 0 por padrão.`,
+      );
     }
 
-    // Método para serializar o estado do campeão
-    serialize() {
-        const resourceState = this.getResourceState();
-        const resourcePayload =
-            resourceState.type === "energy"
-                ? {
-                      energy: resourceState.current
-                  }
-                : {
-                      mana: resourceState.current
-                  };
+    this.resourceCap = Number.isFinite(this.resourceCap)
+      ? this.resourceCap
+      : 999;
 
-        return {
-            id: this.id,
-            championKey:
-                typeof this.id === "string" && this.id.includes("-")
-                    ? this.id.split("-")[0]
-                    : this.name,
+    this.applyResourceChange({
+      amount: initialValue,
+      type,
+      mode: "set",
+    });
 
-            team: this.team,
+    if (type === "energy") {
+      this.mana = undefined;
+      this.baseEnergy = initialValue;
+    } else {
+      this.energy = undefined;
+      this.baseMana = initialValue;
+    }
+  }
 
-            name: this.name,
-            portrait: this.portrait,
+  addResource(input) {
+    let amount;
+    let source = this;
+    let resourceType = "mana";
+    let context;
 
-            HP: this.HP,
-            maxHP: this.maxHP,
-            Attack: this.Attack,
-            Defense: this.Defense,
-            Speed: this.Speed,
-            Evasion: this.Evasion,
-            Critical: this.Critical,
-            LifeSteal: this.LifeSteal,
-
-            ...resourcePayload,
-
-            runtime: {
-                ...this.runtime,
-                shields: Array.isArray(this.runtime?.shields)
-                    ? this.runtime.shields
-                    : []
-            },
-
-            keywords: Array.from(this.keywords.entries()),
-            skills: this.skills.map(s => ({
-                key: s.key,
-                name: s.name,
-                description: s.description,
-                priority: s.priority || 0
-            }))
-        };
+    if (typeof input === "number") {
+      amount = input;
+    } else if (typeof input === "object") {
+      amount = input.amount;
+      source = input.source ?? this;
+      resourceType = input.resourceType ?? "mana";
+      context = input.context;
     }
 
-    // ======== Resource Management System ========
+    const value = Math.max(0, Number(amount) || 0);
+    if (value === 0) return 0;
 
-    roundResource(value) {
-        return Math.round(Number(value) || 0);
-    }
+    const result = this.applyResourceChange({
+      amount: value,
+      mode: "add",
+      resourceType,
+      source,
+      context,
+    });
 
-    getResourceState() {
-        const isEnergy = this.energy !== undefined;
+    return result.applied;
+  }
 
-        return {
-            type: isEnergy ? "energy" : "mana",
-            currentKey: isEnergy ? "energy" : "mana",
-            current: isEnergy
-                ? Number(this.energy ?? 0)
-                : Number(this.mana ?? 0)
-        };
-    }
+  spendResource(cost) {
+    const amount = Math.max(0, Number(cost) || 0);
+    if (amount === 0) return true;
 
-    initializeResources(stats = {}) {
-        //console.log("INITIALIZANDO RECURSO:", this.name);
+    const current = this.energy !== undefined ? this.energy : this.mana;
 
-        const hasEnergy = Number.isFinite(stats.energy);
-        const hasMana = Number.isFinite(stats.mana);
+    if (current < amount) return false;
 
-        if (hasEnergy && hasMana) {
-            throw new Error(
-                `[Champion] ${this.name} declarou Mana e Energia. Apenas um recurso é permitido.`
-            );
-        }
+    this.applyResourceChange({
+      amount: -amount,
+      mode: "add",
+    });
 
-        const type = hasEnergy ? "energy" : "mana";
-        const initialValue = hasEnergy
-            ? stats.energy
-            : hasMana
-              ? stats.mana
-              : 0;
+    return true;
+  }
 
-        if (!hasEnergy && !hasMana) {
-            console.warn(
-                `[Champion] ${this.name} não declarou mana ou energia. Usando 0 por padrão.`
-            );
-        }
+  applyResourceChange({ amount, type, mode = "add" } = {}) {
+    const cap = Number.isFinite(this.resourceCap) ? this.resourceCap : 999;
 
-        this.resourceCap = Number.isFinite(this.resourceCap)
-            ? this.resourceCap
-            : 999;
+    const resolvedType =
+      type || (this.energy !== undefined ? "energy" : "mana");
 
-        this.applyResourceChange({
-            amount: initialValue,
-            type,
-            mode: "set"
-        });
+    const isEnergy = resolvedType === "energy";
 
-        if (type === "energy") {
-            this.mana = undefined;
-            this.baseEnergy = initialValue;
-        } else {
-            this.energy = undefined;
-            this.baseMana = initialValue;
-        }
-    }
-
-    addResource(input) {
-        let amount;
-        let source = this;
-        let resourceType = "mana";
-        let context;
-
-        if (typeof input === "number") {
-            amount = input;
-        } else if (typeof input === "object") {
-            amount = input.amount;
-            source = input.source ?? this;
-            resourceType = input.resourceType ?? "mana";
-            context = input.context;
-        }
-
-        const value = Math.max(0, Number(amount) || 0);
-        if (value === 0) return 0;
-
-        const result = this.applyResourceChange({
-            amount: value,
-            mode: "add",
-            resourceType,
-            source,
-            context
-        });
-
-        return result.applied;
-    }
-
-    spendResource(cost) {
-        const amount = Math.max(0, Number(cost) || 0);
-        if (amount === 0) return true;
-
-        const current = this.energy !== undefined ? this.energy : this.mana;
-
-        if (current < amount) return false;
-
-        this.applyResourceChange({
-            amount: -amount,
-            mode: "add"
-        });
-
-        return true;
-    }
-
-    applyResourceChange({ amount, type, mode = "add" } = {}) {
-        const cap = Number.isFinite(this.resourceCap) ? this.resourceCap : 999;
-
-        const resolvedType =
-            type || (this.energy !== undefined ? "energy" : "mana");
-
-        const isEnergy = resolvedType === "energy";
-
-        /*    console.log(
+    /*    console.log(
       "[RESOURCE CHANGE]",
       this.name,
       "Amount:",
@@ -258,648 +251,627 @@ export class Champion {
       isEnergy ? this.energy : this.mana,
     ); */
 
-        const currentValue = Number(
-            isEnergy ? (this.energy ?? 0) : (this.mana ?? 0)
-        );
+    const currentValue = Number(
+      isEnergy ? (this.energy ?? 0) : (this.mana ?? 0),
+    );
 
-        const delta = this.roundResource(amount);
+    const delta = this.roundResource(amount);
 
-        const rawNext = mode === "set" ? delta : currentValue + delta;
+    const rawNext = mode === "set" ? delta : currentValue + delta;
 
-        const clamped = this.roundToFive(Math.max(0, Math.min(cap, rawNext)));
+    const clamped = this.roundToFive(Math.max(0, Math.min(cap, rawNext)));
 
-        const applied =
-            mode === "set" ? clamped - currentValue : clamped - currentValue;
+    const applied =
+      mode === "set" ? clamped - currentValue : clamped - currentValue;
 
-        if (isEnergy) {
-            this.energy = clamped;
-        } else {
-            this.mana = clamped;
-        }
+    if (isEnergy) {
+      this.energy = clamped;
+    } else {
+      this.mana = clamped;
+    }
 
-        /*     console.log(
+    /*     console.log(
       "[RESOURCE AFTER]",
       this.name,
       "After:",
       isEnergy ? this.energy : this.mana,
     ); */
 
-        // Atualiza máximo histórico (base dinâmica da barra)
-        if (!this.resourceMaxSeen || clamped > this.resourceMaxSeen) {
-            this.resourceMaxSeen = clamped;
-        }
-
-        return {
-            applied,
-            value: clamped,
-            isCappedMax: clamped >= cap
-        };
+    // Atualiza máximo histórico (base dinâmica da barra)
+    if (!this.resourceMaxSeen || clamped > this.resourceMaxSeen) {
+      this.resourceMaxSeen = clamped;
     }
 
-    // Frontend only:
-    getSkillCost(skill) {
-        if (!skill) return 0;
+    return {
+      applied,
+      value: clamped,
+      isCappedMax: clamped >= cap,
+    };
+  }
 
-        const baseCost = Number(skill.cost);
-        if (Number.isFinite(baseCost)) {
-            return Math.max(0, baseCost);
-        }
+  // Frontend only:
+  getSkillCost(skill) {
+    if (!skill) return 0;
 
-        if (this.energy !== undefined) {
-            return Number.isFinite(skill.energyCost)
-                ? Math.max(0, skill.energyCost)
-                : 0;
-        }
-
-        return Number.isFinite(skill.manaCost)
-            ? Math.max(0, skill.manaCost)
-            : 0;
+    const baseCost = Number(skill.cost);
+    if (Number.isFinite(baseCost)) {
+      return Math.max(0, baseCost);
     }
 
-    // ======== Runtime ========
-
-    buildRuntime(runtime = {}) {
-        return {
-            ...runtime,
-            shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
-            resourceRegenMultiplier: Number.isFinite(
-                runtime?.resourceRegenMultiplier
-            )
-                ? runtime.resourceRegenMultiplier
-                : 1,
-            resourceRegenFlatBonus: Number.isFinite(
-                runtime?.resourceRegenFlatBonus
-            )
-                ? runtime.resourceRegenFlatBonus
-                : 0
-        };
+    if (this.energy !== undefined) {
+      return Number.isFinite(skill.energyCost)
+        ? Math.max(0, skill.energyCost)
+        : 0;
     }
 
-    // ======== Keyword System ========
-    normalizeKeywordName(keywordName) {
-        if (typeof keywordName !== "string") return "";
-        return keywordName.trim().toLowerCase();
-    }
-    /**
-     * Apply a keyword effect to this champion
-     * @param {string} keywordName - Name of the keyword (e.g., 'inerte', 'imunidade absoluta')
-     * @param {number} duration - Number of turns the keyword lasts
-     * @param {object} context - Context with currentTurn
-     * @param {object} metadata - Additional data to store with the keyword
-     */
-    applyKeyword(keywordName, duration, context, metadata = {}) {
-        const normalizedName = this.normalizeKeywordName(keywordName);
+    return Number.isFinite(skill.manaCost) ? Math.max(0, skill.manaCost) : 0;
+  }
 
-        const { currentTurn } = context || {};
+  // ======== Runtime ========
 
-        const isStackable = normalizedName === "poison";
+  buildRuntime(runtime = {}) {
+    return {
+      ...runtime,
+      shields: Array.isArray(runtime?.shields) ? runtime.shields : [],
+      resourceRegenMultiplier: Number.isFinite(runtime?.resourceRegenMultiplier)
+        ? runtime.resourceRegenMultiplier
+        : 1,
+      resourceRegenFlatBonus: Number.isFinite(runtime?.resourceRegenFlatBonus)
+        ? runtime.resourceRegenFlatBonus
+        : 0,
+    };
+  }
 
-        if (!normalizedName) {
-            return false;
-        }
+  // ======== Keyword System ========
+  normalizeKeywordName(keywordName) {
+    if (typeof keywordName !== "string") return "";
+    return keywordName.trim().toLowerCase();
+  }
+  /**
+   * Apply a keyword effect to this champion
+   * @param {string} keywordName - Name of the keyword (e.g., 'inerte', 'imunidade absoluta')
+   * @param {number} duration - Number of turns the keyword lasts
+   * @param {object} context - Context with currentTurn
+   * @param {object} metadata - Additional data to store with the keyword
+   */
+  applyKeyword(keywordName, duration, context, metadata = {}) {
+    const normalizedName = this.normalizeKeywordName(keywordName);
 
-        if (
-            this.hasKeyword("imunidade absoluta") &&
-            normalizedName !== "imunidade absoluta"
-        ) {
-            console.log(
-                `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`
-            );
-            return false;
-        }
+    const { currentTurn } = context || {};
 
-        if (this.hasKeyword(normalizedName)) {
-            // sobrescrever a antiga com a nova (reseta duração e metadata)
-            if (!isStackable) {
-                this.keywords.delete(normalizedName);
-            }
-        }
+    const isStackable = normalizedName === "poison";
 
-        // 🛡️ Ação já foi bloqueada por Escudo Supremo/Feitiço nesta execução
-        if (context?.shieldBlockedTargets?.has(this.id)) {
-            console.log(
-                `[Champion] ${this.name}: keyword "${keywordName}" bloqueada (ação já negada por escudo).`
-            );
-            return false;
-        }
-
-        duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
-
-        const persistent = metadata?.persistent || false;
-        if (persistent) duration = Infinity; // Se for persistente, ignora a duração
-
-        this.keywords.set(normalizedName, {
-            expiresAtTurn: Number.isFinite(currentTurn)
-                ? currentTurn + Number(duration || 0)
-                : NaN,
-            duration,
-            appliedAtTurn: currentTurn,
-            ...metadata
-        });
-        console.log(
-            `[Champion] ${this.name} aplicou keyword "${normalizedName}" até o turno ${currentTurn + duration}.`
-        );
-
-        // 🎨 Atualiza os indicadores visuais
-        StatusIndicator.animateIndicatorAdd(this, normalizedName);
-
-        return true;
+    if (!normalizedName) {
+      return false;
     }
 
-    /**
-     * Check if champion has an active keyword
-     * @param {string} keywordName - Name of the keyword
-     * @returns {boolean}
-     */
-    hasKeyword(keywordName) {
-        return this.keywords.has(this.normalizeKeywordName(keywordName));
-    }
-
-    /**
-     * Get keyword data
-     * @param {string} keywordName - Name of the keyword
-     * @returns {object|null}
-     */
-    getKeyword(keywordName) {
-        return (
-            this.keywords.get(this.normalizeKeywordName(keywordName)) || null
-        );
-    }
-
-    /**
-     * Remove a keyword immediately
-     * @param {string} keywordName - Name of the keyword to remove
-     */
-    removeKeyword(keywordName) {
-        const normalizedName = this.normalizeKeywordName(keywordName);
-        if (this.keywords.has(normalizedName)) {
-            this.keywords.delete(normalizedName);
-            console.log(
-                `[Champion] Keyword "${normalizedName}" removido de ${this.name}.`
-            );
-
-            // 🎨 Anima a remoção do indicador
-            StatusIndicator.animateIndicatorRemove(this, normalizedName);
-        }
-    }
-
-    /**
-     * Purge all expired keywords at turn end
-     * @param {number} currentTurn - Current turn number
-     * @returns {array} List of removed keyword names
-     */
-    purgeExpiredKeywords(currentTurn) {
-        const removedKeywords = [];
-        for (const [keywordName, keywordData] of this.keywords.entries()) {
-            if (keywordData.expiresAtTurn <= currentTurn) {
-                this.keywords.delete(keywordName);
-                removedKeywords.push(keywordName);
-                console.log(
-                    `[Champion] Keyword "${keywordName}" expirou para ${this.name}.`
-                );
-
-                // 🎨 Anima a remoção do indicador com delay visual
-                StatusIndicator.animateIndicatorRemove(this, keywordName);
-            }
-        }
-        return removedKeywords;
-    }
-    // ======== End Keyword System ========
-
-    // Method to mark that the champion has acted
-    markActionTaken() {
-        this.hasActedThisTurn = true;
-    }
-
-    // Method to reset the action status for a new turn
-    resetActionStatus() {
-        this.hasActedThisTurn = false;
-    }
-
-    roundToFive(x) {
-        return Math.round(x / 5) * 5;
-    }
-
-    modifyStat({
-        statName,
-        amount,
-        duration = 1,
-        context,
-        isPermanent = false,
-        isPercent = false
-    } = {}) {
-        if (amount === 0) {
-            return { appliedAmount: 0, isCappedMax: false, log: null };
-        }
-
-        if (amount > 0) {
-            return this.buffStat({
-                statName,
-                amount,
-                duration,
-                context,
-                isPermanent,
-                isPercent
-            });
-        }
-
-        return this.debuffStat({
-            statName,
-            amount,
-            duration,
-            context,
-            isPermanent
-        });
-    }
-
-    applyStatModifier({
-        statName,
-        amount,
-        duration = 1,
-        context,
-        isPermanent = false
-    } = {}) {
-        if (!(statName in this)) {
-            console.warn(
-                `Tentativa de modificar stat inexistente: ${statName}`
-            );
-            return;
-        }
-
-        amount = this.roundToFive(amount); // funciona inclusive para negativos
-
-        // Limite de 10-99 para stats que não sejam HP, exceto ATQ
-
-        const limits = {
-            Critical: { min: 0, max: 95 },
-            Evasion: { min: 0, max: 95 },
-            default: { min: 10, max: 999 }
-        };
-
-        const { min, max } = limits[statName] || limits.default;
-
-        const previous = this[statName];
-        const clamped = Math.max(min, Math.min(previous + amount, max));
-        const appliedAmount = clamped - previous;
-
-        this[statName] = clamped;
-
-        const isCappedMax = amount > 0 && appliedAmount === 0;
-        const capLog = isCappedMax
-            ? `O stat ${statName} já está no máximo.`
-            : null;
-
-        const currentTurn = context?.currentTurn ?? 0;
-
-        if (appliedAmount !== 0) {
-            this.statModifiers.push({
-                statName: statName,
-                amount: appliedAmount,
-                expiresAtTurn: currentTurn + duration,
-                isPermanent: isPermanent // Identifica se a mudança é permanente
-            });
-        }
-
-        if (appliedAmount > 0 && context?.registerBuff) {
-            context.registerBuff({
-                target: this,
-                amount: appliedAmount,
-                statName,
-                sourceId: context.buffSourceId
-            });
-        }
-
-        console.log(
-            `[Champion] ${this.name} teve ${statName} alterado em ${appliedAmount}. ` +
-                (isPermanent
-                    ? "A alteração é permanente e não será revertida."
-                    : `A alteração será revertida no turno ${currentTurn + duration}.`)
-        );
-
-        return {
-            appliedAmount,
-            isCappedMax,
-            log: capLog
-        };
-    }
-
-    buffStat({
-        statName,
-        amount,
-        duration = 1,
-        context,
-        isPermanent = false,
-        isPercent = false
-    } = {}) {
-        if (!(statName in this)) {
-            console.warn(
-                `Tentativa de modificar stat inexistente: ${statName}`
-            );
-            return;
-        }
-
-        const normalizedAmount = Math.abs(Number(amount) || 0);
-
-        let effectiveAmount = normalizedAmount;
-
-        if (isPercent) {
-            const usesBase = statName !== "HP" && statName !== "maxHP";
-            const baseKey = `base${statName}`;
-            const baseValue = usesBase ? this[baseKey] : this[statName];
-            const percentBase = Number.isFinite(baseValue)
-                ? baseValue
-                : Number.isFinite(this[statName])
-                  ? this[statName]
-                  : 0;
-
-            effectiveAmount = (percentBase * normalizedAmount) / 100;
-        }
-
-        return this.applyStatModifier({
-            statName,
-            amount: effectiveAmount,
-            duration,
-            context,
-            isPermanent
-        });
-    }
-
-    debuffStat({
-        statName,
-        amount,
-        duration = 1,
-        context,
-        isPermanent = false
-    } = {}) {
-        if (!(statName in this)) {
-            console.warn(
-                `Tentativa de modificar stat inexistente: ${statName}`
-            );
-            return;
-        }
-
-        const normalizedAmount = -Math.abs(Number(amount) || 0);
-
-        return this.applyStatModifier({
-            statName,
-            amount: normalizedAmount,
-            duration,
-            context,
-            isPermanent
-        });
-    }
-
-    modifyHP(
-        amount,
-        {
-            duration = 1,
-            context,
-            isPermanent = false,
-            maxHPOnly = false,
-            affectMax = false
-        } = {}
+    if (
+      this.hasKeyword("imunidade absoluta") &&
+      normalizedName !== "imunidade absoluta"
     ) {
-        amount = this.roundToFive(amount);
-
-        if (amount === 0) {
-            return { appliedAmount: 0, isCappedMax: false, log: null };
-        }
-
-        // 🔹 Alteração estrutural proporcional (buff real de vida)
-        if (affectMax) {
-            const previousHP = this.HP;
-
-            const result =
-                amount > 0
-                    ? this.buffStat({
-                          statName: "maxHP",
-                          amount,
-                          duration,
-                          context,
-                          isPermanent
-                      })
-                    : this.debuffStat({
-                          statName: "maxHP",
-                          amount,
-                          duration,
-                          context,
-                          isPermanent
-                      });
-
-            // Aplica o mesmo delta ao HP atual
-            const nextHP = this.roundToFive(previousHP + result.appliedAmount);
-            this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
-
-            return result;
-        }
-        // 🔹 Apenas altera o teto, sem mexer proporcionalmente
-        if (maxHPOnly) {
-            return amount > 0
-                ? this.buffStat({
-                      statName: "maxHP",
-                      amount,
-                      duration,
-                      context,
-                      isPermanent
-                  })
-                : this.debuffStat({
-                      statName: "maxHP",
-                      amount,
-                      duration,
-                      context,
-                      isPermanent
-                  });
-        }
-
-        // 🔹 HP atual (cura/dano)
-        if (amount > 0) {
-            this.heal(amount, context);
-        } else {
-            const previous = this.HP;
-            const newHP = Math.max(0, previous + amount); // amount já é negativo
-            this.HP = newHP;
-        }
-
-        return {
-            appliedAmount: amount,
-            isCappedMax: false,
-            log: null
-        };
+      console.log(
+        `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`,
+      );
+      return false;
     }
 
-    /**
-     * Checks if this champion has a spell/supreme shield that blocks the current action.
-     * If blocked, consumes the shield and returns true.
-     * @param {object} context - Combat context (must have currentSkill for spell shield check)
-     * @returns {boolean}
-     */
-    _checkAndConsumeShieldBlock(context) {
-        if (!Array.isArray(this.runtime?.shields)) return false;
+    if (this.hasKeyword(normalizedName)) {
+      // sobrescrever a antiga com a nova (reseta duração e metadata)
+      if (!isStackable) {
+        this.keywords.delete(normalizedName);
+      }
+    }
 
-        // 🛡️ Escudo Supremo: bloqueia QUALQUER ação
-        const supremeIdx = this.runtime.shields.findIndex(
-            s => s.type === "supreme" && s.amount > 0
+    // 🛡️ Ação já foi bloqueada por Escudo Supremo/Feitiço nesta execução
+    if (context?.shieldBlockedTargets?.has(this.id)) {
+      console.log(
+        `[Champion] ${this.name}: keyword "${keywordName}" bloqueada (ação já negada por escudo).`,
+      );
+      return false;
+    }
+
+    duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
+
+    const persistent = metadata?.persistent || false;
+    if (persistent) duration = Infinity; // Se for persistente, ignora a duração
+
+    this.keywords.set(normalizedName, {
+      expiresAtTurn: Number.isFinite(currentTurn)
+        ? currentTurn + Number(duration || 0)
+        : NaN,
+      duration,
+      appliedAtTurn: currentTurn,
+      ...metadata,
+    });
+    console.log(
+      `[Champion] ${this.name} aplicou keyword "${normalizedName}" até o turno ${currentTurn + duration}.`,
+    );
+
+    // 🎨 Atualiza os indicadores visuais
+    StatusIndicator.animateIndicatorAdd(this, normalizedName);
+
+    return true;
+  }
+
+  /**
+   * Check if champion has an active keyword
+   * @param {string} keywordName - Name of the keyword
+   * @returns {boolean}
+   */
+  hasKeyword(keywordName) {
+    return this.keywords.has(this.normalizeKeywordName(keywordName));
+  }
+
+  /**
+   * Get keyword data
+   * @param {string} keywordName - Name of the keyword
+   * @returns {object|null}
+   */
+  getKeyword(keywordName) {
+    return this.keywords.get(this.normalizeKeywordName(keywordName)) || null;
+  }
+
+  /**
+   * Remove a keyword immediately
+   * @param {string} keywordName - Name of the keyword to remove
+   */
+  removeKeyword(keywordName) {
+    const normalizedName = this.normalizeKeywordName(keywordName);
+    if (this.keywords.has(normalizedName)) {
+      this.keywords.delete(normalizedName);
+      console.log(
+        `[Champion] Keyword "${normalizedName}" removido de ${this.name}.`,
+      );
+
+      // 🎨 Anima a remoção do indicador
+      StatusIndicator.animateIndicatorRemove(this, normalizedName);
+    }
+  }
+
+  /**
+   * Purge all expired keywords at turn end
+   * @param {number} currentTurn - Current turn number
+   * @returns {array} List of removed keyword names
+   */
+  purgeExpiredKeywords(currentTurn) {
+    const removedKeywords = [];
+    for (const [keywordName, keywordData] of this.keywords.entries()) {
+      if (keywordData.expiresAtTurn <= currentTurn) {
+        this.keywords.delete(keywordName);
+        removedKeywords.push(keywordName);
+        console.log(
+          `[Champion] Keyword "${keywordName}" expirou para ${this.name}.`,
         );
-        if (supremeIdx !== -1) {
-            this.runtime.shields.splice(supremeIdx, 1);
-            console.log(
-                `[Champion] 🛡️ ${this.name}: Escudo Supremo bloqueou a ação completamente e se dissipou!`
-            );
-            return true;
-        }
 
-        // 🛡️ Escudo de Feitiço: bloqueia apenas ações sem contato
-        if (context?.currentSkill?.contact === false) {
-            const spellIdx = this.runtime.shields.findIndex(
-                s => s.type === "spell" && s.amount > 0
-            );
-            if (spellIdx !== -1) {
-                this.runtime.shields.splice(spellIdx, 1);
-                console.log(
-                    `[Champion] 🛡️ ${this.name}: Escudo de Feitiço bloqueou a ação sem contato e se dissipou!`
-                );
-                return true;
-            }
-        }
+        // 🎨 Anima a remoção do indicador com delay visual
+        StatusIndicator.animateIndicatorRemove(this, keywordName);
+      }
+    }
+    return removedKeywords;
+  }
+  // ======== End Keyword System ========
 
-        return false;
+  // Method to mark that the champion has acted
+  markActionTaken() {
+    this.hasActedThisTurn = true;
+    this.syncActionStateUI();
+  }
+
+  // Method to reset the action status for a new turn
+  resetActionStatus() {
+    this.hasActedThisTurn = false;
+    this.syncActionStateUI();
+  }
+
+  roundToFive(x) {
+    return Math.round(x / 5) * 5;
+  }
+
+  modifyStat({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+    isPercent = false,
+  } = {}) {
+    if (amount === 0) {
+      return { appliedAmount: 0, isCappedMax: false, log: null };
     }
 
-    addShield(amount, decayPerTurn = 0, context, type = "regular") {
-        /*     console.log("SERVER ADD SHIELD:", this.name, amount); */
+    if (amount > 0) {
+      return this.buffStat({
+        statName,
+        amount,
+        duration,
+        context,
+        isPermanent,
+        isPercent,
+      });
+    }
 
-        this.runtime.shields.push({
+    return this.debuffStat({
+      statName,
+      amount,
+      duration,
+      context,
+      isPermanent,
+    });
+  }
+
+  applyStatModifier({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+  } = {}) {
+    if (!(statName in this)) {
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
+      return;
+    }
+
+    amount = this.roundToFive(amount); // funciona inclusive para negativos
+
+    // Limite de 10-99 para stats que não sejam HP, exceto ATQ
+
+    const limits = {
+      Critical: { min: 0, max: 95 },
+      Evasion: { min: 0, max: 95 },
+      default: { min: 10, max: 999 },
+    };
+
+    const { min, max } = limits[statName] || limits.default;
+
+    const previous = this[statName];
+    const clamped = Math.max(min, Math.min(previous + amount, max));
+    const appliedAmount = clamped - previous;
+
+    this[statName] = clamped;
+
+    const isCappedMax = amount > 0 && appliedAmount === 0;
+    const capLog = isCappedMax ? `O stat ${statName} já está no máximo.` : null;
+
+    const currentTurn = context?.currentTurn ?? 0;
+
+    if (appliedAmount !== 0) {
+      this.statModifiers.push({
+        statName: statName,
+        amount: appliedAmount,
+        expiresAtTurn: currentTurn + duration,
+        isPermanent: isPermanent, // Identifica se a mudança é permanente
+      });
+    }
+
+    if (appliedAmount > 0 && context?.registerBuff) {
+      context.registerBuff({
+        target: this,
+        amount: appliedAmount,
+        statName,
+        sourceId: context.buffSourceId,
+      });
+    }
+
+    console.log(
+      `[Champion] ${this.name} teve ${statName} alterado em ${appliedAmount}. ` +
+        (isPermanent
+          ? "A alteração é permanente e não será revertida."
+          : `A alteração será revertida no turno ${currentTurn + duration}.`),
+    );
+
+    return {
+      appliedAmount,
+      isCappedMax,
+      log: capLog,
+    };
+  }
+
+  buffStat({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+    isPercent = false,
+  } = {}) {
+    if (!(statName in this)) {
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
+      return;
+    }
+
+    const normalizedAmount = Math.abs(Number(amount) || 0);
+
+    let effectiveAmount = normalizedAmount;
+
+    if (isPercent) {
+      const usesBase = statName !== "HP" && statName !== "maxHP";
+      const baseKey = `base${statName}`;
+      const baseValue = usesBase ? this[baseKey] : this[statName];
+      const percentBase = Number.isFinite(baseValue)
+        ? baseValue
+        : Number.isFinite(this[statName])
+          ? this[statName]
+          : 0;
+
+      effectiveAmount = (percentBase * normalizedAmount) / 100;
+    }
+
+    return this.applyStatModifier({
+      statName,
+      amount: effectiveAmount,
+      duration,
+      context,
+      isPermanent,
+    });
+  }
+
+  debuffStat({
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+  } = {}) {
+    if (!(statName in this)) {
+      console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
+      return;
+    }
+
+    const normalizedAmount = -Math.abs(Number(amount) || 0);
+
+    return this.applyStatModifier({
+      statName,
+      amount: normalizedAmount,
+      duration,
+      context,
+      isPermanent,
+    });
+  }
+
+  modifyHP(
+    amount,
+    {
+      duration = 1,
+      context,
+      isPermanent = false,
+      maxHPOnly = false,
+      affectMax = false,
+    } = {},
+  ) {
+    amount = this.roundToFive(amount);
+
+    if (amount === 0) {
+      return { appliedAmount: 0, isCappedMax: false, log: null };
+    }
+
+    // 🔹 Alteração estrutural proporcional (buff real de vida)
+    if (affectMax) {
+      const previousHP = this.HP;
+
+      const result =
+        amount > 0
+          ? this.buffStat({
+              statName: "maxHP",
+              amount,
+              duration,
+              context,
+              isPermanent,
+            })
+          : this.debuffStat({
+              statName: "maxHP",
+              amount,
+              duration,
+              context,
+              isPermanent,
+            });
+
+      // Aplica o mesmo delta ao HP atual
+      const nextHP = this.roundToFive(previousHP + result.appliedAmount);
+      this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
+
+      return result;
+    }
+    // 🔹 Apenas altera o teto, sem mexer proporcionalmente
+    if (maxHPOnly) {
+      return amount > 0
+        ? this.buffStat({
+            statName: "maxHP",
             amount,
-            decayPerTurn,
-            type // "regular" | "spell" | "supreme"
-        });
+            duration,
+            context,
+            isPermanent,
+          })
+        : this.debuffStat({
+            statName: "maxHP",
+            amount,
+            duration,
+            context,
+            isPermanent,
+          });
+    }
 
-        // Registra evento de escudo no contexto para o combat dialog
-        if (context?.registerShield) {
-            context.registerShield({ target: this, amount });
+    // 🔹 HP atual (cura/dano)
+    if (amount > 0) {
+      this.heal(amount, context);
+    } else {
+      const previous = this.HP;
+      const newHP = Math.max(0, previous + amount); // amount já é negativo
+      this.HP = newHP;
+    }
+
+    return {
+      appliedAmount: amount,
+      isCappedMax: false,
+      log: null,
+    };
+  }
+
+  /**
+   * Checks if this champion has a spell/supreme shield that blocks the current action.
+   * If blocked, consumes the shield and returns true.
+   * @param {object} context - Combat context (must have currentSkill for spell shield check)
+   * @returns {boolean}
+   */
+  _checkAndConsumeShieldBlock(context) {
+    if (!Array.isArray(this.runtime?.shields)) return false;
+
+    // 🛡️ Escudo Supremo: bloqueia QUALQUER ação
+    const supremeIdx = this.runtime.shields.findIndex(
+      (s) => s.type === "supreme" && s.amount > 0,
+    );
+    if (supremeIdx !== -1) {
+      this.runtime.shields.splice(supremeIdx, 1);
+      console.log(
+        `[Champion] 🛡️ ${this.name}: Escudo Supremo bloqueou a ação completamente e se dissipou!`,
+      );
+      return true;
+    }
+
+    // 🛡️ Escudo de Feitiço: bloqueia apenas ações sem contato
+    if (context?.currentSkill?.contact === false) {
+      const spellIdx = this.runtime.shields.findIndex(
+        (s) => s.type === "spell" && s.amount > 0,
+      );
+      if (spellIdx !== -1) {
+        this.runtime.shields.splice(spellIdx, 1);
+        console.log(
+          `[Champion] 🛡️ ${this.name}: Escudo de Feitiço bloqueou a ação sem contato e se dissipou!`,
+        );
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  addShield(amount, decayPerTurn = 0, context, type = "regular") {
+    /*     console.log("SERVER ADD SHIELD:", this.name, amount); */
+
+    this.runtime.shields.push({
+      amount,
+      decayPerTurn,
+      type, // "regular" | "spell" | "supreme"
+    });
+
+    // Registra evento de escudo no contexto para o combat dialog
+    if (context?.registerShield) {
+      context.registerShield({ target: this, amount });
+    }
+
+    console.log(
+      `[Champion] ${this.name} ganhou um escudo de ${amount} HP (tipo: ${type}) com decaimento de ${decayPerTurn} por turno.`,
+    );
+  }
+
+  applyTaunt(taunterId, duration, context) {
+    this.tauntEffects.push({
+      taunterId: taunterId,
+      expiresAtTurn: context.currentTurn + duration,
+    });
+    console.log(
+      `[Champion] ${this.name} taunted by ${taunterId}. Will expire at turn ${context.currentTurn + duration}.`,
+    );
+  }
+
+  isTauntedBy(taunterId) {
+    return this.tauntEffects.some((effect) => effect.taunterId === taunterId);
+  }
+
+  applyDamageReduction({ amount, duration, source = "unknown", context }) {
+    this.damageReductionModifiers.push({
+      amount: amount,
+      expiresAtTurn: context.currentTurn + duration,
+      source: source,
+    });
+    console.log(
+      `[Champion] ${this.name} gained ${amount} damage reduction from ${source}. Will expire at turn ${context.currentTurn + duration}.`,
+    );
+  }
+
+  getTotalDamageReduction() {
+    return this.damageReductionModifiers.reduce(
+      (total, mod) => total + mod.amount,
+      0,
+    );
+  }
+
+  purgeExpiredStatModifiers(currentTurn) {
+    const revertedStats = [];
+    this.statModifiers = this.statModifiers.filter((modifier) => {
+      if (modifier.expiresAtTurn <= currentTurn && !modifier.isPermanent) {
+        // Revert the stat change only if not permanent
+        this[modifier.statName] -= modifier.amount;
+        if (modifier.statName === "maxHP") {
+          // Keep current HP in sync with maxHP reverting
+          const nextHP = this.roundToFive(this.HP - modifier.amount);
+          this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
         }
-
-        console.log(
-            `[Champion] ${this.name} ganhou um escudo de ${amount} HP (tipo: ${type}) com decaimento de ${decayPerTurn} por turno.`
-        );
-    }
-
-    applyTaunt(taunterId, duration, context) {
-        this.tauntEffects.push({
-            taunterId: taunterId,
-            expiresAtTurn: context.currentTurn + duration
+        revertedStats.push({
+          championId: this.id,
+          statName: modifier.statName,
+          revertedAmount: -modifier.amount,
+          newValue: this[modifier.statName],
         });
         console.log(
-            `[Champion] ${this.name} taunted by ${taunterId}. Will expire at turn ${context.currentTurn + duration}.`
+          `[Champion] ${this.name} ${modifier.statName} reverted by ${-modifier.amount}. New value: ${this[modifier.statName]}.`,
         );
-    }
+        return false; // Remove expired modifier
+      }
+      // Keep active or permanent modifiers
+      return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
+    });
 
-    isTauntedBy(taunterId) {
-        return this.tauntEffects.some(effect => effect.taunterId === taunterId);
-    }
-
-    applyDamageReduction({ amount, duration, source = "unknown", context }) {
-        this.damageReductionModifiers.push({
-            amount: amount,
-            expiresAtTurn: context.currentTurn + duration,
-            source: source
-        });
+    this.tauntEffects = this.tauntEffects.filter((effect) => {
+      if (effect.expiresAtTurn <= currentTurn) {
         console.log(
-            `[Champion] ${this.name} gained ${amount} damage reduction from ${source}. Will expire at turn ${context.currentTurn + duration}.`
+          `[Champion] Taunt effect from ${effect.taunterId} on ${this.name} expired.`,
         );
-    }
+        return false;
+      }
+      return true;
+    });
 
-    getTotalDamageReduction() {
-        return this.damageReductionModifiers.reduce(
-            (total, mod) => total + mod.amount,
-            0
-        );
-    }
+    this.damageReductionModifiers = this.damageReductionModifiers.filter(
+      (modifier) => {
+        if (modifier.expiresAtTurn <= currentTurn) {
+          console.log(
+            `[Champion] Damage reduction of ${modifier.amount} from ${modifier.source} on ${this.name} expired.`,
+          );
+          return false;
+        }
+        return true;
+      },
+    );
 
-    purgeExpiredStatModifiers(currentTurn) {
-        const revertedStats = [];
-        this.statModifiers = this.statModifiers.filter(modifier => {
-            if (
-                modifier.expiresAtTurn <= currentTurn &&
-                !modifier.isPermanent
-            ) {
-                // Revert the stat change only if not permanent
-                this[modifier.statName] -= modifier.amount;
-                if (modifier.statName === "maxHP") {
-                    // Keep current HP in sync with maxHP reverting
-                    const nextHP = this.roundToFive(this.HP - modifier.amount);
-                    this.HP = Math.max(0, Math.min(nextHP, this.maxHP));
-                }
-                revertedStats.push({
-                    championId: this.id,
-                    statName: modifier.statName,
-                    revertedAmount: -modifier.amount,
-                    newValue: this[modifier.statName]
-                });
-                console.log(
-                    `[Champion] ${this.name} ${modifier.statName} reverted by ${-modifier.amount}. New value: ${this[modifier.statName]}.`
-                );
-                return false; // Remove expired modifier
-            }
-            // Keep active or permanent modifiers
-            return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
-        });
+    return revertedStats;
+  }
 
-        this.tauntEffects = this.tauntEffects.filter(effect => {
-            if (effect.expiresAtTurn <= currentTurn) {
-                console.log(
-                    `[Champion] Taunt effect from ${effect.taunterId} on ${this.name} expired.`
-                );
-                return false;
-            }
-            return true;
-        });
+  // 🖥️ Cria o HTML e se “materializa” no mundo
+  render(container, handlers = {}) {
+    // Função auxiliar: criar elemento do campeão
+    const createChampionElement = (handlers = {}) => {
+      const div = document.createElement("div");
+      div.classList.add("champion");
+      div.dataset.championId = this.id;
+      div.dataset.team = this.team;
 
-        this.damageReductionModifiers = this.damageReductionModifiers.filter(
-            modifier => {
-                if (modifier.expiresAtTurn <= currentTurn) {
-                    console.log(
-                        `[Champion] Damage reduction of ${modifier.amount} from ${modifier.source} on ${this.name} expired.`
-                    );
-                    return false;
-                }
-                return true;
-            }
-        );
+      div.innerHTML = buildChampionHTML({ editMode: handlers.editMode });
 
-        return revertedStats;
-    }
+      return div;
+    };
 
-    // 🖥️ Cria o HTML e se “materializa” no mundo
-    render(container, handlers = {}) {
-        // Função auxiliar: criar elemento do campeão
-        const createChampionElement = (handlers = {}) => {
-            const div = document.createElement("div");
-            div.classList.add("champion");
-            div.dataset.championId = this.id;
-            div.dataset.team = this.team;
+    // Função auxiliar: construir HTML do campeão
+    const buildChampionHTML = ({ editMode = true } = {}) => {
+      const resourceState = this.getResourceState();
 
-            div.innerHTML = buildChampionHTML({ editMode: handlers.editMode });
+      const buildSkillsHTML = () => {
+        return this.skills
+          .map((skill, index) => {
+            const isUlt = index === this.skills.length - 1;
+            const isBasicAttack = index === 0;
+            const label = isUlt ? "ULT" : isBasicAttack ? "AB" : `Hab.${index}`;
 
-            return div;
-        };
-
-        // Função auxiliar: construir HTML do campeão
-        const buildChampionHTML = ({ editMode = true } = {}) => {
-            const resourceState = this.getResourceState();
-
-            const buildSkillsHTML = () => {
-                return this.skills
-                    .map((skill, index) => {
-                        const isUlt = index === this.skills.length - 1;
-                        const isBasicAttack = index === 0;
-                        const label = isUlt
-                            ? "ULT"
-                            : isBasicAttack
-                              ? "AB"
-                              : `Hab.${index}`;
-
-                        return `
+            return `
               <button 
                 class="skill-btn ${isUlt ? "ultimate" : ""}"
                 data-champion-id="${this.id}"
@@ -911,13 +883,13 @@ export class Champion {
                 <span class="skill-label">${label}</span>
               </button>
             `;
-                    })
-                    .join("");
-            };
+          })
+          .join("");
+      };
 
-            const skillsHTML = buildSkillsHTML();
+      const skillsHTML = buildSkillsHTML();
 
-            return `
+      return `
       <div class="portrait-wrapper">
         <div class="portrait" data-id="${this.id}">
           <img 
@@ -937,7 +909,7 @@ export class Champion {
         </div>
 
         <p><span class="resource-label">${
-            resourceState.type === "energy" ? "EN" : "MP"
+          resourceState.type === "energy" ? "EN" : "MP"
         }</span>: <span class="mp">${resourceState.current}</span></p>
 
         <div class="mp-bar">
@@ -950,294 +922,310 @@ export class Champion {
         </div>
 
         ${
-            editMode
-                ? `
+          editMode
+            ? `
           <div class="delete">
             <button class="delete-btn" data-id="${this.id}">
               <i class='bx bx-trash'></i>
             </button>
           </div>
         `
-                : ""
+            : ""
         }
       `;
-        };
+    };
 
-        // Função auxiliar: vincular handlers aos elementos
-        const bindChampionHandlers = (div, handlers = {}) => {
-            const { onSkillClick, onDelete } = handlers;
+    // Função auxiliar: vincular handlers aos elementos
+    const bindChampionHandlers = (div, handlers = {}) => {
+      const { onSkillClick, onDelete } = handlers;
 
-            // botões das skills
-            div.querySelectorAll(".skill-btn").forEach(btn => {
-                btn.addEventListener("click", () => {
-                    onSkillClick?.(btn);
-                });
-            });
-            // botão de deletar
-            div.querySelector(".delete-btn")?.addEventListener("click", () => {
-                onDelete?.(this.id);
-            });
-            // abrir o overlay do card do campeão
-            div.querySelector(".portrait")?.addEventListener("click", e => {
-                handlers.onPortraitClick?.(this);
-            });
+      // botões das skills
+      div.querySelectorAll(".skill-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          onSkillClick?.(btn);
+        });
+      });
+      // botão de deletar
+      div.querySelector(".delete-btn")?.addEventListener("click", () => {
+        onDelete?.(this.id);
+      });
+      // abrir o overlay do card do campeão
+      div.querySelector(".portrait")?.addEventListener("click", (e) => {
+        handlers.onPortraitClick?.(this);
+      });
 
-            div.querySelectorAll(".skill-btn").forEach(button => {
-                const skillKey = button.dataset.skillKey;
+      div.querySelectorAll(".skill-btn").forEach((button) => {
+        const skillKey = button.dataset.skillKey;
 
-                const champion = this;
-                if (!champion) return;
+        const champion = this;
+        if (!champion) return;
 
-                const skill = champion.skills.find(s => s.key === skillKey);
-                if (!skill) return;
-
-                // =========================
-                // DESKTOP (hover)
-                // =========================
-                button.addEventListener("mouseenter", e => {
-                    e.preventDefault();
-                    handlers.showSkillOverlay?.(button, skill, champion);
-                });
-
-                button.addEventListener("mouseout", e => {
-                    e.preventDefault();
-                    handlers.removeSkillOverlay?.();
-                });
-
-                // =========================
-                // MOBILE (touch)
-                // =========================
-                button.addEventListener("touchstart", e => {
-                    e.preventDefault();
-
-                    handlers.showSkillOverlay?.(button, skill, champion);
-
-                    if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
-
-                    // Fecha sozinho após 2.5s
-                    skillOverlayTimeout = setTimeout(() => {
-                        handlers.removeSkillOverlay?.();
-                    }, 2500);
-                });
-
-                button.addEventListener("touchend", () => {
-                    handlers.removeSkillOverlay?.();
-                });
-
-                button.addEventListener("touchcancel", () => {
-                    handlers.removeSkillOverlay?.();
-                });
-            });
-            // 🔥 bloquear menu padrão da imagem
-            const img = div.querySelector(".portrait img");
-            if (img) {
-                img.addEventListener("contextmenu", e => e.preventDefault());
-            }
-        };
-
-        // Executar o fluxo
-        const div = createChampionElement(handlers);
-        bindChampionHandlers(div, handlers);
-
-        this.el = div;
-        container.appendChild(div);
-    }
-
-    // 🔄 Atualiza UI sem buscar no DOM toda vez
-    updateUI(context) {
-        if (!this.el) return;
+        const skill = champion.skills.find((s) => s.key === skillKey);
+        if (!skill) return;
 
         // =========================
-        // HP
+        // DESKTOP (hover)
         // =========================
+        button.addEventListener("mouseenter", (e) => {
+          e.preventDefault();
+          handlers.showSkillOverlay?.(button, skill, champion);
+        });
 
-        const HpDiv = this.el.querySelector(".hp");
-        const fill = this.el.querySelector(".hp-fill");
-
-        // Remove escudos vazios PRIMEIRO
-        if (Array.isArray(this.runtime?.shields)) {
-            this.runtime.shields = this.runtime.shields.filter(
-                s => s.amount > 0
-            );
-        }
-
-        const hasShield =
-            Array.isArray(this.runtime?.shields) &&
-            this.runtime.shields.length > 0;
-
-        // Texto base
-        let hpText = `${this.HP}/${this.maxHP}`;
-
-        // Se tiver escudo, soma total e adiciona ao texto
-        if (hasShield) {
-            const totalShield = this.runtime.shields.reduce(
-                (sum, s) => sum + s.amount,
-                0
-            );
-            hpText += ` 🛡️ (${totalShield})`;
-            this.el.classList.add("has-shield");
-        } else {
-            this.el.classList.remove("has-shield");
-        }
-
-        HpDiv.textContent = hpText;
-
-        // Barra de HP
-        const percent = (this.HP / this.maxHP) * 100;
-        fill.style.width = `${percent}%`;
-
-        if (percent <= 19) {
-            fill.style.background = "#ff2a2a";
-        } else if (percent <= 49) {
-            fill.style.background = "#ffcc00";
-        } else {
-            fill.style.background = "#00ff66";
-        }
-
-        // =========================
-        // RECURSO (MP)
-        // =========================
-
-        const resourceState = this.getResourceState();
-        const mpValueEl = this.el.querySelector(".mp");
-        const mpFill = this.el.querySelector(".mp-fill");
-        const resourceLabel = this.el.querySelector(".resource-label");
-
-        if (mpValueEl && mpFill) {
-            const mpCurrent = resourceState.current;
-
-            // Base dinâmica = maior valor já atingido
-            const mpBase = this.resourceMaxSeen || mpCurrent || 0;
-
-            const mpPercent =
-                mpBase > 0
-                    ? Math.max(0, Math.min(100, (mpCurrent / mpBase) * 100))
-                    : 0;
-
-            mpValueEl.textContent = `${mpCurrent}`;
-            mpFill.style.width = `${mpPercent}%`;
-            mpFill.style.background =
-                resourceState.type === "energy" ? "#f4d03f" : "#4aa3ff";
-
-            this.el.dataset.resourceType = resourceState.type;
-        }
-
-        if (resourceLabel) {
-            resourceLabel.textContent =
-                resourceState.type === "energy" ? "EN" : "MP";
-        }
-
-        // =========================
-        // SEGMENTOS (HP / RECURSO)
-        // =========================
-
-        const hpSegments = this.el.querySelector(".hp-segments");
-        if (hpSegments) {
-            const hpPerSegment = 50;
-            const hpSegmentCount = Math.floor(this.maxHP / hpPerSegment);
-            const currentHpCount = Number(hpSegments.dataset.segmentCount) || 0;
-
-            if (hpSegmentCount !== currentHpCount) {
-                hpSegments.innerHTML = "";
-                for (let i = 0; i < hpSegmentCount; i++) {
-                    hpSegments.appendChild(document.createElement("div"));
-                }
-                hpSegments.dataset.segmentCount = String(hpSegmentCount);
-            }
-        }
-
-        const mpSegments = this.el.querySelector(".mp-segments");
-        if (mpSegments) {
-            console.log("resourceMaxSeen:", this.resourceMaxSeen);
-
-            const mpBase = this.resourceMaxSeen || 0;
-            const mpPerSegment = 100;
-
-            const mpSegmentCount = Math.floor(mpBase / mpPerSegment);
-            const currentMpCount = Number(mpSegments.dataset.segmentCount) || 0;
-
-            if (mpSegmentCount !== currentMpCount) {
-                mpSegments.innerHTML = "";
-                for (let i = 0; i < mpSegmentCount; i++) {
-                    const seg = document.createElement("div");
-                    seg.className = "mp-segment";
-                    mpSegments.appendChild(seg);
-                }
-                mpSegments.dataset.segmentCount = String(mpSegmentCount);
-            }
-        }
-
-        // =========================
-        // SKILLS (custo de recurso)
-        // =========================
-
-        this.el.querySelectorAll(".skill-btn").forEach(button => {
-            const skillKey = button.dataset.skillKey;
-            const skill = this.skills.find(s => s.key === skillKey);
-            const cost = this.getSkillCost(skill);
-            const hasResource = context?.freeCostSkills ? true : resourceState.current >= cost;
-
-            if (!hasResource) {
-                if (!button.disabled) {
-                    button.dataset.disabledByResource = "true";
-                }
-                button.disabled = true;
-                button.classList.add("resource-locked");
-            } else {
-                button.classList.remove("resource-locked");
-                if (button.dataset.disabledByResource === "true") {
-                    button.disabled = false;
-                    button.dataset.disabledByResource = "false";
-                }
-            }
+        button.addEventListener("mouseout", (e) => {
+          e.preventDefault();
+          handlers.removeSkillOverlay?.();
         });
 
         // =========================
-        // Status indicators
+        // MOBILE (touch)
         // =========================
+        button.addEventListener("touchstart", (e) => {
+          e.preventDefault();
 
-        StatusIndicator.updateChampionIndicators(this);
+          handlers.showSkillOverlay?.(button, skill, champion);
+
+          if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
+
+          // Fecha sozinho após 2.5s
+          skillOverlayTimeout = setTimeout(() => {
+            handlers.removeSkillOverlay?.();
+          }, 2500);
+        });
+
+        button.addEventListener("touchend", () => {
+          handlers.removeSkillOverlay?.();
+        });
+
+        button.addEventListener("touchcancel", () => {
+          handlers.removeSkillOverlay?.();
+        });
+      });
+      // 🔥 bloquear menu padrão da imagem
+      const img = div.querySelector(".portrait img");
+      if (img) {
+        img.addEventListener("contextmenu", (e) => e.preventDefault());
+      }
+    };
+
+    // Executar o fluxo
+    const div = createChampionElement(handlers);
+    bindChampionHandlers(div, handlers);
+
+    this.el = div;
+    container.appendChild(div);
+  }
+
+  // 🔄 Atualiza UI sem buscar no DOM toda vez
+  updateUI(context) {
+    if (!this.el) return;
+
+    // =========================
+    // HP
+    // =========================
+
+    const HpDiv = this.el.querySelector(".hp");
+    const fill = this.el.querySelector(".hp-fill");
+
+    // Remove escudos vazios PRIMEIRO
+    if (Array.isArray(this.runtime?.shields)) {
+      this.runtime.shields = this.runtime.shields.filter((s) => s.amount > 0);
     }
 
-    takeDamage(amount, context) {
-        if (!this.alive) return;
+    const hasShield =
+      Array.isArray(this.runtime?.shields) && this.runtime.shields.length > 0;
 
-        for (const shield of this.runtime.shields) {
-            // Escudos de Feitiço e Supremo não absorvem HP — só bloqueiam ações
-            if (shield.type && shield.type !== "regular") continue;
-            if (amount <= 0) break;
+    // Texto base
+    let hpText = `${this.HP}/${this.maxHP}`;
 
-            const absorbed = Math.min(shield.amount, amount);
-            shield.amount -= absorbed;
-            amount -= absorbed;
-        }
-
-        this.HP -= amount;
-        this.HP = this.roundToFive(this.HP);
-
-        if (this.HP <= 0) {
-            this.HP = 0;
-            this.alive = false;
-        }
+    // Se tiver escudo, soma total e adiciona ao texto
+    if (hasShield) {
+      const totalShield = this.runtime.shields.reduce(
+        (sum, s) => sum + s.amount,
+        0,
+      );
+      hpText += ` 🛡️ (${totalShield})`;
+      this.el.classList.add("has-shield");
+    } else {
+      this.el.classList.remove("has-shield");
     }
 
-    heal(amount, context) {
-        if (!this.alive) return 0;
+    HpDiv.textContent = hpText;
 
-        const before = this.HP;
-        this.HP = Math.min(this.HP + amount, this.maxHP);
-        const healed = Math.max(0, this.HP - before);
+    // Barra de HP
+    const percent = (this.HP / this.maxHP) * 100;
+    fill.style.width = `${percent}%`;
 
-        const ctx = context || this.runtime?.currentContext;
-        if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
-            ctx.registerHeal({ target: this, amount: healed });
-        }
-
-        return healed;
+    if (percent <= 19) {
+      fill.style.background = "#ff2a2a";
+    } else if (percent <= 49) {
+      fill.style.background = "#ffcc00";
+    } else {
+      fill.style.background = "#00ff66";
     }
 
-    // inútil, pois remove do DOM é feito diretamente pelo Client ao receber o evento do Server
-    /* die() { 
+    // =========================
+    // RECURSO (MP)
+    // =========================
+
+    const resourceState = this.getResourceState();
+    const mpValueEl = this.el.querySelector(".mp");
+    const mpFill = this.el.querySelector(".mp-fill");
+    const resourceLabel = this.el.querySelector(".resource-label");
+
+    if (mpValueEl && mpFill) {
+      const mpCurrent = resourceState.current;
+
+      // Base dinâmica = maior valor já atingido
+      const mpBase = this.resourceMaxSeen || mpCurrent || 0;
+
+      const mpPercent =
+        mpBase > 0 ? Math.max(0, Math.min(100, (mpCurrent / mpBase) * 100)) : 0;
+
+      mpValueEl.textContent = `${mpCurrent}`;
+      mpFill.style.width = `${mpPercent}%`;
+      mpFill.style.background =
+        resourceState.type === "energy" ? "#f4d03f" : "#4aa3ff";
+
+      this.el.dataset.resourceType = resourceState.type;
+    }
+
+    if (resourceLabel) {
+      resourceLabel.textContent = resourceState.type === "energy" ? "EN" : "MP";
+    }
+
+    // =========================
+    // SEGMENTOS (HP / RECURSO)
+    // =========================
+
+    const hpSegments = this.el.querySelector(".hp-segments");
+    if (hpSegments) {
+      const hpPerSegment = 50;
+      const hpSegmentCount = Math.floor(this.maxHP / hpPerSegment);
+      const currentHpCount = Number(hpSegments.dataset.segmentCount) || 0;
+
+      if (hpSegmentCount !== currentHpCount) {
+        hpSegments.innerHTML = "";
+        for (let i = 0; i < hpSegmentCount; i++) {
+          hpSegments.appendChild(document.createElement("div"));
+        }
+        hpSegments.dataset.segmentCount = String(hpSegmentCount);
+      }
+    }
+
+    const mpSegments = this.el.querySelector(".mp-segments");
+    if (mpSegments) {
+      console.log("resourceMaxSeen:", this.resourceMaxSeen);
+
+      const mpBase = this.resourceMaxSeen || 0;
+      const mpPerSegment = 100;
+
+      const mpSegmentCount = Math.floor(mpBase / mpPerSegment);
+      const currentMpCount = Number(mpSegments.dataset.segmentCount) || 0;
+
+      if (mpSegmentCount !== currentMpCount) {
+        mpSegments.innerHTML = "";
+        for (let i = 0; i < mpSegmentCount; i++) {
+          const seg = document.createElement("div");
+          seg.className = "mp-segment";
+          mpSegments.appendChild(seg);
+        }
+        mpSegments.dataset.segmentCount = String(mpSegmentCount);
+      }
+    }
+
+    // =========================
+    // SKILLS (custo de recurso)
+    // =========================
+
+    this.el.querySelectorAll(".skill-btn").forEach((button) => {
+      const skillKey = button.dataset.skillKey;
+      const skill = this.skills.find((s) => s.key === skillKey);
+      const cost = this.getSkillCost(skill);
+      const hasResource = context?.freeCostSkills
+        ? true
+        : resourceState.current >= cost;
+
+      if (!hasResource) {
+        if (!button.disabled) {
+          button.dataset.disabledByResource = "true";
+        }
+        button.disabled = true;
+        button.classList.add("resource-locked");
+      } else {
+        button.classList.remove("resource-locked");
+        if (button.dataset.disabledByResource === "true") {
+          button.disabled = false;
+          button.dataset.disabledByResource = "false";
+        }
+      }
+    });
+
+    // =========================
+    // Status indicators
+    // =========================
+
+    StatusIndicator.updateChampionIndicators(this);
+    // =========================
+    // Botões das skills (bloqueio por ação já tomada)
+    // =========================
+
+    this.syncActionStateUI();
+  }
+
+  syncActionStateUI() {
+    if (!this.el) return;
+    if (this.hasActedThisTurn) {
+      this.el.querySelectorAll(".skill-btn").forEach((btn) => {
+        btn.disabled = true;
+        btn.dataset.locked = "actionTaken";
+      });
+    } else {
+      this.el.querySelectorAll(".skill-btn").forEach((btn) => {
+        btn.disabled = false;
+        btn.dataset.locked = "false";
+      });
+    }
+  }
+
+  takeDamage(amount, context) {
+    if (!this.alive) return;
+
+    for (const shield of this.runtime.shields) {
+      // Escudos de Feitiço e Supremo não absorvem HP — só bloqueiam ações
+      if (shield.type && shield.type !== "regular") continue;
+      if (amount <= 0) break;
+
+      const absorbed = Math.min(shield.amount, amount);
+      shield.amount -= absorbed;
+      amount -= absorbed;
+    }
+
+    this.HP -= amount;
+    this.HP = this.roundToFive(this.HP);
+
+    if (this.HP <= 0) {
+      this.HP = 0;
+      this.alive = false;
+    }
+  }
+
+  heal(amount, context) {
+    if (!this.alive) return 0;
+
+    const before = this.HP;
+    this.HP = Math.min(this.HP + amount, this.maxHP);
+    const healed = Math.max(0, this.HP - before);
+
+    const ctx = context || this.runtime?.currentContext;
+    if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
+      ctx.registerHeal({ target: this, amount: healed });
+    }
+
+    return healed;
+  }
+
+  // inútil, pois remove do DOM é feito diretamente pelo Client ao receber o evento do Server
+  /* die() { 
     this.alive = false;
     this.HP = 0;
     console.log(
@@ -1247,41 +1235,41 @@ export class Champion {
     this.destroy();
   } */
 
-    destroy() {
-        console.log(
-            `[Server Champion.destroy() called for ${this.name} (ID: ${this.id})`
-        );
-        console.log(`[Client] this.el value:`, this.el);
-        console.log(`[Client] typeof this.el:`, typeof this.el);
-        // Remove do DOM
-        if (this.el) {
-            this.el.remove();
-            this.el = null;
-            console.log(
-                `[Client] Removed DOM element for ${this.name} (ID: ${this.id}).`
-            );
-        } else {
-            console.log(
-                `[Client] No DOM element (this.el) found for ${this.name} (ID: ${this.id}) to remove.`
-            );
-        }
-        // No longer directly removing from activeChampions here, as server will handle it
-        // and send a championRemoved event.
+  destroy() {
+    console.log(
+      `[Server Champion.destroy() called for ${this.name} (ID: ${this.id})`,
+    );
+    console.log(`[Client] this.el value:`, this.el);
+    console.log(`[Client] typeof this.el:`, typeof this.el);
+    // Remove do DOM
+    if (this.el) {
+      this.el.remove();
+      this.el = null;
+      console.log(
+        `[Client] Removed DOM element for ${this.name} (ID: ${this.id}).`,
+      );
+    } else {
+      console.log(
+        `[Client] No DOM element (this.el) found for ${this.name} (ID: ${this.id}) to remove.`,
+      );
     }
+    // No longer directly removing from activeChampions here, as server will handle it
+    // and send a championRemoved event.
+  }
 
-    addDamageModifier(mod) {
-        this.damageModifiers.push(mod);
-    }
+  addDamageModifier(mod) {
+    this.damageModifiers.push(mod);
+  }
 
-    purgeExpiredModifiers(currentTurn) {
-        this.damageModifiers = this.damageModifiers.filter(m => {
-            if (m.permanent) return true; // permanente
+  purgeExpiredModifiers(currentTurn) {
+    this.damageModifiers = this.damageModifiers.filter((m) => {
+      if (m.permanent) return true; // permanente
 
-            return m.expiresAtTurn > currentTurn; // temporário
-        });
-    }
+      return m.expiresAtTurn > currentTurn; // temporário
+    });
+  }
 
-    getDamageModifiers() {
-        return this.damageModifiers || [];
-    }
+  getDamageModifiers() {
+    return this.damageModifiers || [];
+  }
 }

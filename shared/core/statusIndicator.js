@@ -179,7 +179,7 @@ export const StatusIndicator = {
     this.updateChampionIndicators(champion);
 
     const portraitElement = champion.el?.querySelector(".portrait");
-    console.log("[animateIndicatorAdd] portraitElement:", portraitElement);
+    //console.log("[animateIndicatorAdd] portraitElement:", portraitElement);
 
     if (!portraitElement) return;
 

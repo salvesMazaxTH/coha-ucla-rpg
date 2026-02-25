@@ -10,7 +10,7 @@ const basicAttack = {
   manaCost: 0,
   priority: 0,
   description() {
-    return `Custo: ${this.manaCost} MP\nAtaque básico genérico (BF ${this.bf} + ${this.bonusFlat} bônus flat).\nContato: ${this.contact ? "✅" : "❌"}`;
+    return `\n Ataque básico genérico (BF ${this.bf} + ${this.bonusFlat} bônus flat).`;
   },
   targetSpec: ["enemy"],
   execute({ user, targets, context = {} }) {

@@ -329,7 +329,8 @@ export const CombatResolver = {
             ? "🛡️ Não é muito efetivo..."
             : null;
       if (message) {
-        context?.extraEffects.push({
+        context.dialogEvents = context.dialogEvents || [];
+        context.dialogEvents.push({
           type: "dialog",
           message,
           blocking: false,
@@ -1011,6 +1012,29 @@ export const CombatResolver = {
       };
     }
 
+    if (mode === "pure") {
+      const amount = baseDamage ?? 0;
+
+      if (amount <= 0) return null;
+
+      target.currentHP = Math.max(0, target.currentHP - amount);
+
+      context.registerDamage({
+        target,
+        amount,
+        sourceId: user?.id,
+        isCritical: false,
+        damageDepth: depth, 
+        flags: { recoil: true },
+      });
+
+      return {
+        targetId: target.id,
+        damage: amount,
+        isCritical: false,
+        flags: { recoil: true },
+      };
+    }
     // =========================
     // 2️⃣ CÁLCULO DO DANO
     // =========================
@@ -1041,7 +1065,7 @@ export const CombatResolver = {
       skill,
       damage,
       crit,
-      user,
+      attacker: user,
       target,
       context,
       allChampions,
@@ -1206,7 +1230,7 @@ export const CombatResolver = {
     const ls = this._applyLifeSteal(user, finalDamage, allChampions);
     const lsAmount = Number(ls?.amount) || 0;
 
-    // 🔥 Processa fila de danos extras (ex: contra-ataques)
+    // 🔥 Processa fila de danos extras (ex: contra-ataques, recuos etc.)
     let extraResults = [];
 
     if (context.extraDamageQueue?.length) {
@@ -1268,11 +1292,6 @@ export const CombatResolver = {
     // =========================
 
     console.groupEnd();
-
-    if (context.extraEffects?.length) {
-      extraEffects.push(...context.extraEffects);
-      context.extraEffects = [];
-    }
 
     const mainResult = {
       baseDamage,

@@ -14,19 +14,18 @@
 6. [Classe Champion](#6-classe-champion)
 7. [Sistema de Recursos (Mana / Energia)](#7-sistema-de-recursos-mana--energia)
 8. [Pipeline de Combate — CombatResolver](#8-pipeline-de-combate--combatresolver)
-9. [Sistema de Contexto e Efeitos Estruturados](#9-sistema-de-contexto-e-efeitos-estruturados)
-10. [Fórmulas de Dano e Defesa](#10-fórmulas-de-dano-e-defesa)
-11. [Sistema de Afinidades Elementais](#11-sistema-de-afinidades-elementais)
-12. [Sistema de Hooks — CombatEvents](#12-sistema-de-hooks--combatevents)
-13. [Sistema de Keywords](#13-sistema-de-keywords)
-14. [Sistema de Escudos (Shields)](#14-sistema-de-escudos-shields)
-15. [Sistema de Modificadores de Dano](#15-sistema-de-modificadores-de-dano)
-16. [Gerenciador de Animações — AnimsAndLogManager](#16-gerenciador-de-animações--animsandlogmanager)
-17. [Indicadores de Status — StatusIndicator](#17-indicadores-de-status--statusindicator)
-18. [Histórico de Turnos](#18-histórico-de-turnos)
-19. [Modo de Edição / Debug](#19-modo-de-edição--debug)
-20. [Como Criar um Novo Campeão](#20-como-criar-um-novo-campeão)
-21. [Decisões de Design e Convenções](#21-decisões-de-design-e-convenções)
+9. [Fórmulas de Dano e Defesa](#9-fórmulas-de-dano-e-defesa)
+10. [Sistema de Afinidades Elementais](#10-sistema-de-afinidades-elementais)
+11. [Sistema de Hooks — CombatEvents](#11-sistema-de-hooks--combatevents)
+12. [Sistema de Keywords](#12-sistema-de-keywords)
+13. [Sistema de Escudos (Shields)](#13-sistema-de-escudos-shields)
+14. [Sistema de Modificadores de Dano](#14-sistema-de-modificadores-de-dano)
+15. [Gerenciador de Animações — AnimsAndLogManager](#15-gerenciador-de-animações--animsandlogmanager)
+16. [Indicadores de Status — StatusIndicator](#16-indicadores-de-status--statusindicator)
+17. [Histórico de Turnos](#17-histórico-de-turnos)
+18. [Modo de Edição / Debug](#18-modo-de-edição--debug)
+19. [Como Criar um Novo Campeão](#19-como-criar-um-novo-campeão)
+20. [Decisões de Design e Convenções](#20-decisões-de-design-e-convenções)
 
 ---
 
@@ -142,12 +141,12 @@ Um turno segue o ciclo:
 Ambos os jogadores confirmam o fim do turno. O servidor então:
 
 1. Ordena `pendingActions` por `priority DESC`, depois `speed DESC` (Speed do campeão desempata).
-2. Processa cada ação em ordem via `performSkillExecution(action, context)`:
+2. Processa cada ação em ordem:
    - Verifica se o campeão usuário ainda está vivo.
    - Verifica se o alvo ainda está vivo.
-   - Executa `skill.execute({ user, targets, context })` → acumula eventos no `context.*Events`.
-   - Chama `buildEffectsFromContext(context)` → transforma todos os eventos acumulados num único `effects[]` estruturado.
-   - Chama `emitCombatEnvelopesFromResults(results, context)` → emite envelopes `combatAction` para todos os clientes.
+   - Executa `skill.execute({ user, targets, context })` → obtém resultado.
+   - Constrói envelope `combatAction` com `{ action, effects[], log, state[] }`.
+   - Emite para todos via `io.emit("combatAction", envelope)`.
 3. Aplica efeitos de início de turno (keywords: `queimando`, `envenenado`).
 4. Aplica regen de recurso global (`BASE_REGEN = 80`) para todos os campeões vivos.
 5. Aplica eventos do hook `onTurnStart` de passivas.
@@ -216,7 +215,7 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
 
 ### Envelopes de Ação (`combatAction`)
 
-O envelope é o contrato principal entre servidor e cliente para comunicar o resultado de uma skill. **O servidor é responsável por incluir toda a informação necessária para a renderização — o cliente não precisa fazer lookups no `activeChampions` Map para montar nomes ou contexto.**
+O envelope é o contrato principal entre servidor e cliente para comunicar o resultado de uma skill:
 
 ```js
 {
@@ -226,29 +225,19 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
     skillName: string,      // Nome legível
     targetId: string | null // ID do alvo principal (para diálogo)
   },
-  effects: [                // Lista de efeitos visuais, em ordem — gerados por buildEffectsFromContext()
+  effects: [                // Lista de efeitos visuais, em ordem
     {
-      // --- Campos presentes em todos os tipos ---
       type: "damage" | "heal" | "shield" | "buff" | "evasion" | "resourceGain"
             | "keywordApplied" | "keywordRemoved" | "immune" | "gameOver"
-            | "shieldBlock" | "taunt" | "bonusAttack" | "dialog",
-      targetId: string,       // ID do campeão afetado
-      sourceId?: string,      // ID do campeão que originou o efeito
-      targetName?: string,    // ✅ Nome legível do alvo (enviado pelo servidor)
-      sourceName?: string,    // ✅ Nome legível da fonte (enviado pelo servidor)
-
-      // --- Campos do tipo "damage" ---
-      amount?: number,        // Dano causado (após escudos e defesa)
-      isCritical?: boolean,   // Se foi golpe crítico
-      evaded?: boolean,       // Se o alvo evadiu
-      immune?: boolean,       // Se o alvo estava imune
-      shieldBlocked?: boolean,// Se um escudo supremo/feitiço bloqueou a ação
-      damageDepth?: number,   // 0 = ação principal, >0 = reação/contra-ataque
-
-      // --- Campos do tipo "dialog" ---
-      message?: string,       // Texto do diálogo
-      blocking?: boolean,     // true = aguarda exibição (padrão); false = não bloqueante
-      html?: boolean,         // true = renderiza innerHTML em vez de textContent
+            | "shieldBlock" | "taunt" | "bonusAttack"
+            | "dialog",     // 🔥 diálogo customizado vindo de hook/passiva
+      targetId: string,     // Campeão afetado (não usado em "dialog")
+      amount?: number,      // Quantidade (dano, cura, escudo…)
+      crit?: boolean,       // Se foi crítico
+      // Campos específicos do tipo "dialog":
+      message?: string,     // Texto do diálogo
+      blocking?: boolean,   // true = aguarda exibição (padrão); false = não bloqueante
+      html?: boolean,       // true = renderiza innerHTML em vez de textContent
     }
   ],
   log: string,              // Texto completo HTML do log de combate
@@ -257,8 +246,6 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
   ]
 }
 ```
-
-> **Nota arquitetural**: `targetName` e `sourceName` são enviados pelo servidor com os nomes já formatados. O cliente os usa diretamente para exibir texto — sem precisar resolver IDs no `activeChampions` Map.
 
 ---
 
@@ -398,35 +385,7 @@ O cliente e o servidor têm funções paralelas para isso (`Champion.getSkillCos
 
 O `CombatResolver` é um objeto singleton (não uma classe) com todos os métodos de cálculo de dano. O método central é `processDamageEvent()`.
 
-### Visão de Alto Nível — Fluxo Completo de uma Ação
-
-```
-performSkillExecution(action, context)
-  └── skill.execute({ user, targets, context })
-        └── CombatResolver.processDamageEvent({ ... })
-              ├── [pipeline de dano — ver abaixo]
-              ├── registerDamage(context, { ... })   ← acumula em context.damageEvents[]
-              ├── lifesteal / regen → context.resourceEvents[]
-              └── extraDamageQueue → processDamageEvent() recursivo (damageDepth++)
-
-  ← resultado(s) retornados para performSkillExecution
-
-  └── buildEffectsFromContext(context)
-        ├── context.damageEvents[]   → effects type "damage"
-        ├── context.healEvents[]     → effects type "heal"
-        ├── context.buffEvents[]     → effects type "buff"
-        ├── context.resourceEvents[] → effects type "resourceGain"
-        ├── context.keywordEvents[]  → effects type "keywordApplied" / "keywordRemoved"
-        ├── context.shieldEvents[]   → effects type "shield"
-        └── extraEffects de hooks    → mesclados na ordem correta
-
-  └── emitCombatEnvelopesFromResults(results, context)
-        └── io.emit("combatAction", { action, effects, log, state })
-```
-
-> **⚠️ Antes (sistema antigo, removido)**: O servidor extraía efeitos via `extractEffectsFromResult()` lendo os campos do resultado ou fazendo parsing de strings de log. Esse sistema foi **completamente substituído** por acumulação programática no `context`. Nenhum efeito é mais extraído de texto.
-
-### `processDamageEvent(params)` — Etapas em Ordem
+### `processDamageEvent(params)` — Pipeline Completo
 
 ```
 params = {
@@ -436,81 +395,61 @@ params = {
   user,           // Champion atacante
   target,         // Champion alvo
   skill,          // objeto Skill
-  context,        // contexto do turno — acumula *Events
+  context,        // contexto do turno (currentTurn, allChampions, etc.)
   options,        // { force: bool, disable: bool } para crítico
   allChampions    // Map ou Array de todos os campeões
 }
 ```
 
+**Etapas em ordem:**
+
 ```
 1. PRÉ-CHECAGENS
-   ├── Imunidade absoluta?
-   │     → registra context.damageEvents[]{immune:true}; retorna
-   ├── Shield Block? → consome escudo supremo/feitiço
-   │     → registra context.damageEvents[]{shieldBlocked:true}; retorna
-   └── Evasão? → roll aleatório vs target.Evasion%
-         → registra context.damageEvents[]{evaded:true}; retorna
+   ├── Imunidade absoluta? → retorna resultado imune (sem dano)
+   ├── Shield Block? → consome escudo do tipo "supremo"/"feitiço"; retorna bloqueio
+   └── Evasão? → roll aleatório vs target.Evasion%; retorna evasion result
 
 2. CÁLCULO DO DANO
    ├── processCrit()                  → { didCrit, bonus, critExtra }
-   ├── _applyDamageModifiers()        → aplica mods do atacante
-   ├── _applyBeforeDealingPassive()   → hook onBeforeDmgDealing
+   ├── _applyDamageModifiers()        → aplica mods do atacante (buffs de dano, etc.)
+   ├── _applyBeforeDealingPassive()   → hook onBeforeDmgDealing do atacante
    │     pode retornar: { damage?, crit?, logs?, effects? }
-   └── _composeFinalDamage()          → aplica defesa e crítico
+   └── _composeFinalDamage()          → aplica defesa e crítico sobre o damage atual
 
-3. APLICAÇÃO DO DANO  ← beforeTake opera sobre o finalDamage já composto
-   ├── _applyBeforeTakingPassive()    → hook onBeforeDmgTaking
+3. APLICAÇÃO DO DANO  ← ⚠️ beforeTake opera sobre o finalDamage já composto
+   ├── _applyBeforeTakingPassive()    → hook onBeforeDmgTaking do alvo
    │     pode retornar: { damage?, crit?, ignoreMinimumFloor?, logs?, effects? }
    ├── _getAffinityDamage()           → ajuste elemental (weak +20%+25 | resist -40)
-   ├── _applyDamage()                 → debita HP, consome escudos regulares
-   └── registerDamage(context, {      ← ✅ acumula no contexto (não constrói log)
-         targetId, sourceId,
-         targetName, sourceName,
-         amount, isCritical,
-         damageDepth, skill
-       })
+   └── _applyDamage()                 → debita HP, consome escudos, garante mínimo
 
 4. AFTER HOOKS
-   ├── _applyAfterTakingPassive()    → hook onAfterDmgTaking
-   │     pode retornar: { logs?, effects? }
-   └── _applyAfterDealingPassive()   → hook onAfterDmgDealing
-         pode retornar: { logs?, effects? }
+   ├── _applyAfterTakingPassive()    → hook onAfterDmgTaking do alvo
+   │     pode retornar: { damage?, crit?, logs?, effects? }
+   └── _applyAfterDealingPassive()   → hook onAfterDmgDealing do atacante
+         pode retornar: { damage?, crit?, logs?, effects? }
 
 5. EFEITOS SECUNDÁRIOS
-   ├── applyRegenFromDamage()  → context.resourceEvents[]
-   ├── _applyLifeSteal()       → champion.heal(); context.healEvents[]
-   └── extraDamageQueue        → processDamageEvent() recursivo com damageDepth+1
+   ├── applyRegenFromDamage()  → regen de recurso por dano causado
+   ├── _applyLifeSteal()       → roubo de vida
+   └── extraDamageQueue        → processa contra-ataques e danos extras em cascata
 
-6. RETORNO
+6. CONSTRUÇÃO DO LOG
+   └── Monta string HTML com todos os resultados intermediários
+
+7. RETORNO
    → {
        baseDamage, totalDamage, finalHP, totalHeal, heal,
-       targetId, userId, evaded, log, crit, skill,
-       damageDepth,             // 0 = ação principal; >0 = reação
-       extraEffects?: Effect[]  // effects de hooks, mesclados por buildEffectsFromContext
+       targetId, userId, evaded, log, crit, damageDepth, skill,
+       extraEffects?: Effect[]  // effects[] agregados de todos os hooks da pipeline
      }
-   → Ou array [mainResult, ...extraResults] se houver dano extra via extraDamageQueue
+   → Ou array [mainResult, ...extraResults] se houver dano extra
 ```
 
-> **⚠️ Atenção: ordem do pipeline** — `_applyBeforeTakingPassive` é chamado **depois** de `_composeFinalDamage`. O hook do alvo recebe e pode modificar o `finalDamage` já calculado com defesa e crítico, não o `baseDamage` bruto.
+> **⚠️ Atenção: ordem do pipeline** — `_applyBeforeTakingPassive` é chamado **depois** de `_composeFinalDamage`, ou seja, o hook do alvo recebe e pode modificar o `finalDamage` já calculado com defesa e crítico, não o `baseDamage` bruto. Isso é diferente do que o nome pode sugerir e deve ser considerado ao escrever passivas.
 
-### `damageDepth` — Ações Principais vs Reações
+### `damageDepth` e Cascata
 
-`context.damageDepth` (padrão `0`) rastreia quantos níveis de profundidade o dano atual está:
-
-- **`depth === 0`**: Ação principal iniciada pelo jogador.
-- **`depth >= 1`**: Reação — contra-ataque, dano refletido, passiva que causa dano secundário.
-
-Passivas que geram dano extra devem verificar o `damageDepth` antes de enfileirar em `context.extraDamageQueue` para evitar recursão infinita:
-
-```js
-onAfterDmgTaking({ damage, context }) {
-  if (context.damageDepth > 0) return; // evita cascata infinita
-  context.extraDamageQueue = context.extraDamageQueue || [];
-  context.extraDamageQueue.push({ user: self, target: attacker, baseDamage: 50, ... });
-}
-```
-
-O `damageDepth` também é propagado para o effect `"damage"` enviado ao cliente, permitindo que a UI distinga animações de ações principais de reações.
+Para evitar loops infinitos em passivas que causam dano (ex: contra-ataques), o contexto rastreia `damageDepth`. Depth 0 = ação principal, depth 1+ = reação. Passivas devem verificar o depth antes de gerar dano extra.
 
 ### Damage Modes
 
@@ -522,136 +461,7 @@ O `damageDepth` também é propagado para o effect `"damage"` enviado ao cliente
 
 ---
 
-## 9. Sistema de Contexto e Efeitos Estruturados
-
-Esta seção documenta o sistema que substitui completamente a extração de efeitos a partir de resultados ou parsing de logs.
-
-### O Objeto `context`
-
-O `context` é um objeto criado pelo servidor no início de cada execução de skill e passado por toda a pipeline. Ele serve como **acumulador de eventos** — em vez de retornar efeitos em estruturas aninhadas ou extraí-los de logs de texto, cada subsistema registra seus eventos diretamente no contexto:
-
-```js
-context = {
-  currentTurn: number,
-  allChampions: Map | Champion[],
-  damageDepth: number,          // profundidade de recursão de dano
-
-  // Arrays de eventos — preenchidos durante a execução
-  damageEvents: [],             // { targetId, sourceId, targetName, sourceName, amount, isCritical, evaded, immune, shieldBlocked, damageDepth }
-  healEvents: [],               // { targetId, sourceId, targetName, sourceName, amount }
-  buffEvents: [],               // { targetId, sourceId, buffName, ... }
-  resourceEvents: [],           // { targetId, sourceId, amount, resourceType }
-  keywordEvents: [],            // { targetId, keyword, action: "add"|"remove" }
-  shieldEvents: [],             // { targetId, amount, shieldType }
-  extraEffects: [],             // effects extras vindos de hooks (type livre)
-
-  // Flags de comportamento
-  ignoreMinimumFloor: boolean,
-  isDot: boolean,               // true = dano de tick (DoT); suprime onAfterDmgDealing
-  extraDamageQueue: [],         // fila de processDamageEvent() a executar em cascata
-  extraLogs: [],                // logs extras para o log de combate
-}
-```
-
-### `registerDamage(context, payload)`
-
-Função chamada pelo `CombatResolver` após `_applyDamage()` para acumular o evento de dano no contexto:
-
-```js
-registerDamage(context, {
-  targetId: target.id,
-  sourceId: user.id,
-  targetName: target.name,       // nome puro (sem HTML)
-  sourceName: user.name,
-  amount: finalDamage,
-  isCritical: crit.didCrit,
-  evaded: false,
-  immune: false,
-  shieldBlocked: false,
-  damageDepth: context.damageDepth ?? 0,
-  skill,
-});
-// → push em context.damageEvents[]
-```
-
-Para casos especiais (evasão, imunidade, bloqueio de escudo), os campos booleanos correspondentes são `true` e `amount` é `0`.
-
-### `buildEffectsFromContext(context)`
-
-Chamada pelo servidor **após** `skill.execute()` retornar, transforma todos os arrays de eventos do contexto num único `Effect[]` ordenado:
-
-```js
-function buildEffectsFromContext(context) {
-  const effects = [];
-
-  for (const ev of context.damageEvents) {
-    effects.push({
-      type: "damage",
-      targetId: ev.targetId,
-      sourceId: ev.sourceId,
-      targetName: ev.targetName,
-      sourceName: ev.sourceName,
-      amount: ev.amount,
-      isCritical: ev.isCritical,
-      evaded: ev.evaded,
-      immune: ev.immune,
-      shieldBlocked: ev.shieldBlocked,
-      damageDepth: ev.damageDepth,
-    });
-  }
-
-  for (const ev of context.healEvents) {
-    effects.push({ type: "heal", targetId: ev.targetId, amount: ev.amount, ... });
-  }
-
-  for (const ev of context.resourceEvents) {
-    effects.push({ type: "resourceGain", targetId: ev.targetId, amount: ev.amount, resourceType: ev.resourceType });
-  }
-
-  // ... idem para buffEvents, keywordEvents, shieldEvents
-
-  // Mescla extraEffects de hooks na posição correta
-  effects.push(...context.extraEffects);
-
-  return effects;
-}
-```
-
-A ordem dos effects no array resultante determina a ordem de animação no cliente. Effects de dano da ação principal (`damageDepth === 0`) vêm antes de reações (`damageDepth > 0`).
-
-### `emitCombatEnvelopesFromResults(results, context)`
-
-Após `buildEffectsFromContext`, o servidor monta e emite os envelopes:
-
-```js
-function emitCombatEnvelopesFromResults(results, context) {
-  const effects = buildEffectsFromContext(context);
-  const state = buildStateSnapshots(context.affectedChampions);
-  const log = buildCombatLog(context);
-
-  io.emit("combatAction", {
-    action: { userId, skillKey, skillName, targetId },
-    effects,
-    log,
-    state,
-  });
-}
-```
-
-### Por que este modelo?
-
-| Sistema antigo (removido) | Sistema atual |
-|---|---|
-| `extractEffectsFromResult(result)` — lia campos do objeto de resultado | `buildEffectsFromContext(context)` — lê arrays acumulados |
-| Parsing de strings de log para detectar imunidade/bloqueio | Flags booleanas estruturadas no evento |
-| `resultsGroup` — agrupamento intermediário de resultados | Sem agrupamento — um único `context` acumula tudo |
-| Cliente resolvia `targetName` via `activeChampions.get(id).name` | Servidor envia `targetName` / `sourceName` prontos |
-
-> **Regra**: nenhum novo código deve extrair informação de strings de log ou fazer parsing textual de resultados. Todo efeito deve ser registrado programaticamente nos arrays do `context`.
-
----
-
-## 10. Fórmulas de Dano e Defesa
+## 9. Fórmulas de Dano e Defesa
 
 ### Fórmula de Dano (basicAttack como exemplo)
 
@@ -705,7 +515,7 @@ Antes de o HP ser debitado, escudos do tipo `"regular"` absorvem dano na ordem e
 
 ---
 
-## 11. Sistema de Afinidades Elementais
+## 10. Sistema de Afinidades Elementais
 
 O sistema elemental é uma camada adicional de modificação de dano aplicada **após** `_composeFinalDamage` e **após** `_applyBeforeTakingPassive`, imediatamente antes de `_applyDamage`.
 
@@ -770,7 +580,7 @@ Se a skill não tiver `skill.element` definido, `_getAffinityDamage` retorna o d
 
 ---
 
-## 12. Sistema de Hooks — CombatEvents
+## 11. Sistema de Hooks — CombatEvents
 
 **Arquivo**: `shared/core/combatEvents.js`
 
@@ -841,7 +651,7 @@ Estes são avaliados junto às passivas permanentes em cada `emitCombatEvent`.
 
 ---
 
-## 13. Sistema de Keywords
+## 12. Sistema de Keywords
 
 Keywords são **status de combate** aplicados aos campeões, armazenados em `champion.keywords` como um `Map<string, object>`.
 
@@ -888,7 +698,7 @@ Para adicionar uma nova keyword com ícone, basta adicionar entrada em `StatusIn
 
 ---
 
-## 14. Sistema de Escudos (Shields)
+## 13. Sistema de Escudos (Shields)
 
 Escudos são armazenados em `champion.runtime.shields` como array de objetos:
 
@@ -914,7 +724,7 @@ O efeito visual de escudo ativo é a classe CSS `.has-shield` no elemento do cam
 
 ---
 
-## 15. Sistema de Modificadores de Dano
+## 14. Sistema de Modificadores de Dano
 
 `champion.damageModifiers` é um array de objetos que modificam o dano de saída do campeão:
 
@@ -933,7 +743,7 @@ Existe também `champion.damageReductionModifiers` para redução de dano recebi
 
 ---
 
-## 16. Gerenciador de Animações — AnimsAndLogManager
+## 15. Gerenciador de Animações — AnimsAndLogManager
 
 **Arquivo**: `public/js/animation/animsAndLogManager.js`
 
@@ -961,16 +771,11 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 
 ```
 1. Exibe dialog de "X usou Y em Z" (showBlockingDialog)
-   └── usa action.userId / action.targetId apenas para o diálogo de anúncio
 2. Para cada effect em effects[]:
    └── animateEffect(effect) → aguarda animação CSS
-       ├── effect.targetName / effect.sourceName → usados diretamente (sem lookup)
-       └── effect.isCritical, effect.evaded, etc. → lidos do effect
 3. applyStateSnapshots(state) → sincroniza dados com a verdade do servidor
 4. appendToLog(log) → exibe texto no painel lateral
 ```
-
-> **Importante**: O cliente **não faz** `activeChampions.get(effect.targetId).name` para montar textos. Os campos `targetName` e `sourceName` já chegam prontos no effect, enviados pelo servidor. O `targetId` é usado apenas para encontrar o **elemento DOM** a animar.
 
 ### Efeitos Animados
 
@@ -988,23 +793,6 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 | `shieldBlock`    | —                                                   | "BLOQUEADO!" como float                   |
 | `gameOver`       | overlay de vitória                                  | —                                         |
 | `dialog`         | `showBlockingDialog()` ou `showNonBlockingDialog()` | —                                         |
-
-#### Campos do effect `"damage"` usados pelo cliente
-
-```js
-animateDamage(effect) {
-  const el = getChampionElement(effect.targetId); // DOM lookup por ID
-  // Textos e metadados vêm prontos — sem lookups adicionais:
-  effect.isCritical   // → adiciona classe visual de crítico
-  effect.evaded       // → animação de evasão em vez de dano
-  effect.immune       // → float "IMUNE!"
-  effect.shieldBlocked// → float "BLOQUEADO!"
-  effect.amount       // → determina damage tier (tamanho do float)
-  effect.damageDepth  // → pode ser usado para diferenciar animação de reação
-  effect.targetName   // → texto do float ou log (sem lookup)
-  effect.sourceName   // → idem
-}
-```
 
 ### Tipo `dialog` — Diálogos Customizados de Hooks
 
@@ -1050,7 +838,7 @@ Após todas as animações de uma ação, os snapshots do servidor são aplicado
 
 ---
 
-## 17. Indicadores de Status — StatusIndicator
+## 16. Indicadores de Status — StatusIndicator
 
 **Arquivo**: `shared/core/statusIndicator.js`
 
@@ -1089,7 +877,7 @@ keywordIcons["nome"] = {
 
 ---
 
-## 18. Histórico de Turnos
+## 17. Histórico de Turnos
 
 O servidor mantém `turnHistory: Map<number, TurnData>` com o seguinte formato por turno:
 
@@ -1112,7 +900,7 @@ Isso é útil para:
 
 ---
 
-## 19. Modo de Edição / Debug
+## 18. Modo de Edição / Debug
 
 O `editMode` é um objeto de configuração no servidor:
 
@@ -1132,7 +920,7 @@ O servidor filtra `damageOutput` e `alwaysCrit` antes de enviar `editModeUpdate`
 
 ---
 
-## 20. Como Criar um Novo Campeão
+## 19. Como Criar um Novo Campeão
 
 ### 1. Criar a pasta e o `index.js`
 
@@ -1203,11 +991,11 @@ const meu_campeao = {
     name: "Nome da Passiva",
     description: "Descrição da passiva.",
 
-    // Hooks opcionais — use os nomes canônicos:
-    onAfterDmgDealing({ attacker, target, damage, crit, skill, context }) {
+    // Hooks opcionais — implemente apenas os necessários:
+    onAfterDealing({ attacker, target, damage, crit, skill, context }) {
       // chamado após o campeão causar dano
     },
-    onAfterDmgTaking({ attacker, target, damage, context }) {
+    onAfterTaking({ attacker, target, damage, context }) {
       // chamado após o campeão receber dano
     },
     onTurnStart({ owner, context, allChampions }) {
@@ -1248,7 +1036,7 @@ export default championDB;
 
 ---
 
-## 21. Decisões de Design e Convenções
+## 20. Decisões de Design e Convenções
 
 ### Por que Server Authoritative?
 
@@ -1280,20 +1068,6 @@ Os hooks passaram por uma padronização de nomenclatura:
 A migração é **incremental**: o `emitCombatEvent` suporta ambos os nomes enquanto os campeões são atualizados individualmente. Ao criar um campeão novo ou atualizar um existente, use sempre os nomes canônicos com prefixo `on`.
 
 Os aliases de payload (`self` / `owner` no `onTurnStart`, `user` / `attacker` no before/after) existem pelo mesmo motivo histórico e serão unificados gradualmente.
-
-### Efeitos estruturados vs. parsing de logs (sistema antigo removido)
-
-O sistema original extraía informações de efeitos lendo campos de objetos de resultado ou fazendo parsing de strings de log (`extractEffectsFromResult`, `resultsGroup`). Esse padrão foi **completamente removido**. As razões:
-
-- Parsing de string é frágil — qualquer mudança no texto do log quebrava a extração de efeitos.
-- `resultsGroup` criava um nível extra de indireção desnecessário.
-- O cliente precisava resolver nomes fazendo `activeChampions.get(id)` em vez de usar dados já disponíveis.
-
-O sistema atual (`context.*Events → buildEffectsFromContext`) é totalmente programático e tipado. Cada subsistema escreve diretamente no contexto; nenhum parsing acontece.
-
-### O servidor envia nomes, o cliente não faz lookups para texto
-
-Antes o cliente fazia `activeChampions.get(effect.targetId)?.name` para montar textos de log e floats. Agora o servidor envia `targetName` e `sourceName` prontos em cada effect. O `targetId` no cliente é usado **exclusivamente** para encontrar o elemento DOM a animar — nunca para resolver nomes ou outros dados.
 
 ### `editMode` separado entre server e client
 

@@ -790,8 +790,6 @@ function buildEffectsFromContext({ context, actionResourceCost, user }) {
     affectedIds.add(user.id);
   }
 
-  console.log("🧪 damageEvents:", context.damageEvents);
-
   for (const damage of context.damageEvents) {
     effects.push({
       type: "damage",
@@ -866,7 +864,6 @@ function buildEffectsFromContext({ context, actionResourceCost, user }) {
       sourceId: dialog.sourceId,
       sourceName: formatChampionName(activeChampions.get(dialog.sourceId)),
     });
-
   }
 
   return { effects, affectedIds };
@@ -911,13 +908,7 @@ function emitCombatAction(envelope) {
 // ============================================================
 
 /** Executa a habilidade, emite payloads e registra no histórico. */
-function performSkillExecution(
-  user,
-  skill,
-  targets,
-  actionResourceCost = 0,
-  actionResourceSnapshot = null,
-) {
+function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
   // 🔹 1. Criar contexto
   const context = createBaseContext({ sourceId: user.id });
   context.currentSkill = skill;
@@ -1215,6 +1206,15 @@ function resolveSkillActions() {
 function handleEndTurn() {
   resolveSkillActions();
   processChampionsDeaths();
+
+  const context = {
+    currentTurn,
+    activeChampions: Array.from(activeChampions.values()).filter(
+      (c) => c.alive,
+    ),
+  };
+
+  emitCombatEvent("onTurnEnd", context, activeChampions);
 
   // NÃO chama início de turno aqui.
   // Espera confirmação do client.
@@ -1578,8 +1578,19 @@ io.on("connection", (socket) => {
   // =============================
 
   socket.on("disconnect", () => {
-    const disconnectedSlot = connectedSockets.get(socket.id);
-    if (disconnectedSlot === undefined) return;
+    let disconnectedSlot = connectedSockets.get(socket.id);
+
+    if (disconnectedSlot === undefined) {
+      // fallback: procura no array players
+      disconnectedSlot = players.findIndex(
+        (p) => p && p.socketId === socket.id,
+      );
+    }
+
+    if (disconnectedSlot === -1 || disconnectedSlot === undefined) {
+      console.warn("Disconnect de socket não mapeado:", socket.id);
+      return;
+    }
 
     const wasGameActive = players[0] !== null && players[1] !== null;
 
@@ -1616,6 +1627,8 @@ io.on("connection", (socket) => {
 
     // Um jogador restante com jogo ativo — inicia contagem regressiva
     if (wasGameActive && connectedCount === 1) {
+      console.log("PLAYERS:", players);
+      console.log("CONNECTED COUNT:", connectedCount);
       const remainingSlot = players[0] ? 0 : 1;
       const remainingSocketId = players[remainingSlot].socketId;
 

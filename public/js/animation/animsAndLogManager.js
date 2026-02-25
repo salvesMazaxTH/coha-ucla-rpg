@@ -324,13 +324,13 @@ export function createCombatAnimationManager(deps) {
 
       case "dialog": {
         console.log("[animateEffect] Animating dialog effect:", effect);
-        const { message, blocking = true, html = false } = effect;
+        const { message, blocking = true, html = true } = effect;
 
         if (blocking) {
           await showBlockingDialog(message, html);
         } else {
-          // showNonBlockingDialog(message, html);
-          await showBlockingDialog(message, html);
+          showNonBlockingDialog(message, html);
+          //await showBlockingDialog(message, html);
         }
 
         break;
@@ -939,29 +939,29 @@ export function createCombatAnimationManager(deps) {
     dialog.classList.add("hidden");
   }
 
-  // function showNonBlockingDialog(text, isHtml = false) {
-  //   const dialog = deps.combatDialog;
-  //   const dialogText = deps.combatDialogText;
-  //   if (!dialog || !dialogText) return;
-  //
-  //   if (isHtml) {
-  //     dialogText.innerHTML = text;
-  //   } else {
-  //     dialogText.textContent = text;
-  //   }
-  //
-  //   dialog.classList.remove("hidden", "leaving");
-  //   dialog.classList.add("active");
-  //
-  //   setTimeout(() => {
-  //     dialog.classList.add("leaving");
-  //
-  //     setTimeout(() => {
-  //       dialog.classList.remove("active", "leaving");
-  //       dialog.classList.add("hidden");
-  //     }, TIMING.DIALOG_LEAVE);
-  //   }, TIMING.DIALOG_DISPLAY);
-  // }
+  function showNonBlockingDialog(text, isHtml = false) {
+    const dialog = deps.combatDialog;
+    const dialogText = deps.combatDialogText;
+    if (!dialog || !dialogText) return;
+
+    if (isHtml) {
+      dialogText.innerHTML = text;
+    } else {
+      dialogText.textContent = text;
+    }
+
+    dialog.classList.remove("hidden", "leaving");
+    dialog.classList.add("active");
+
+    setTimeout(() => {
+      dialog.classList.add("leaving");
+
+      setTimeout(() => {
+        dialog.classList.remove("active", "leaving");
+        dialog.classList.add("hidden");
+      }, TIMING.DIALOG_LEAVE);
+    }, TIMING.DIALOG_DISPLAY);
+  }
 
   // ============================================================
   //  STATE SYNCHRONIZATION

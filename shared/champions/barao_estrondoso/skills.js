@@ -51,7 +51,7 @@ const baraoEstrondosoSkills = [
         defBuffDuration: 2,
 
         description() {
-            return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em ${this.defenseBuff} por ${defBuffDuration} turnos e passa a armazenar 40% do dano na Passiva em vez de 30%.`;
+            return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em ${this.defenseBuff} por ${this.defBuffDuration} turnos e passa a armazenar 40% do dano na Passiva em vez de 30%.`;
         },
         targetSpec: ["self"],
         execute({ user, context }) {
