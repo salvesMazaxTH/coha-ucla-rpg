@@ -12,6 +12,8 @@ export default {
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (owner?.id !== dmgSrc?.id) return;
 
+    if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
+
     let log = "";
 
     let recoilDamage = 0;
@@ -38,8 +40,8 @@ export default {
         },
       });
 
-      context.effects = context.effects || [];
-      context.effects.push({
+      context.dialogEvents = context.dialogEvents || [];
+      context.dialogEvents.push({
         type: "dialog",
         message: `${owner.name} sofre ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
         sourceId: owner.id,

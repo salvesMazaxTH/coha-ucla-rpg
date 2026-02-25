@@ -697,7 +697,7 @@ function buildEmitTargetInfo(realTargetIds) {
   };
 }
 
-function emitCombatEnvelopesFromResults({
+function buildCombatEnvelopesFromResults({
   user,
   skill,
   context,
@@ -711,11 +711,9 @@ function emitCombatEnvelopesFromResults({
   const allEffects = effectsBuildResult.effects;
   const affectedIds = effectsBuildResult.affectedIds;
 
-  const mainEvents = allEffects.filter((e) => 
-    (e.damageDepth ?? 0) === 0);
+  const mainEvents = allEffects.filter((e) => (e.damageDepth ?? 0) === 0);
 
-  const reactionEvents = allEffects.filter((e) => 
-    (e.damageDepth ?? 0) > 0);
+  const reactionEvents = allEffects.filter((e) => (e.damageDepth ?? 0) > 0);
 
   const realTargetIds = [
     ...new Set(
@@ -861,6 +859,16 @@ function buildEffectsFromContext({ context, actionResourceCost, user }) {
     affectedIds.add(r.targetId);
   }
 
+  for (const dialog of context.dialogEvents) {
+    effects.push({
+      type: dialog.type,
+      message: dialog.message,
+      sourceId: dialog.sourceId,
+      sourceName: formatChampionName(activeChampions.get(dialog.sourceId)),
+    });
+
+  }
+
   return { effects, affectedIds };
 }
 
@@ -946,7 +954,7 @@ function performSkillExecution(
   }
 
   // 🔹 7. Emitir envelopes
-  emitCombatEnvelopesFromResults({
+  buildCombatEnvelopesFromResults({
     results,
     user,
     skill,
@@ -1050,6 +1058,7 @@ function createBaseContext({ sourceId = null } = {}) {
     buffEvents: [],
     resourceEvents: [],
     shieldEvents: [],
+    dialogEvents: [],
 
     healSourceId: sourceId,
     buffSourceId: sourceId,
