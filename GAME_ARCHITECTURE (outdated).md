@@ -407,7 +407,7 @@ params = {
 1. PRÉ-CHECAGENS
    ├── Imunidade absoluta? → retorna resultado imune (sem dano)
    ├── Shield Block? → consome escudo do tipo "supremo"/"feitiço"; retorna bloqueio
-   └── Evasão? → roll aleatório vs target.Evasion%; retorna evasion result
+   └── Esquiva? → roll aleatório vs target.Evasion%; retorna evasion result
 
 2. CÁLCULO DO DANO
    ├── processCrit()                  → { didCrit, bonus, critExtra }
@@ -785,7 +785,7 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 | `heal`           | `.heal` + brilho verde                              | `.heal-float`                             |
 | `shield`         | `.has-shield` + bolha                               | `.shield-float`                           |
 | `buff`           | `.buff` + brilho dourado                            | `.buff-float`                             |
-| `evasion`        | `.evasion` + slide                                  | "EVASÃO!" como float                      |
+| `evasion`        | `.evasion` + slide                                  | "Esquiva!" como float                     |
 | `resourceGain`   | —                                                   | `.resource-float-mana` ou `-energy`       |
 | `keywordApplied` | `animateIndicatorAdd()`                             | `.taunt-float` se taunt                   |
 | `keywordRemoved` | `animateIndicatorRemove()`                          | —                                         |
@@ -1029,7 +1029,7 @@ export default championDB;
 
 - **IDs de skill com underscore e snake_case**: `"rajada_de_fogo"`.
 - **`description()` como função**: Permite exibir valores dinâmicos (custo, BF, etc.) via `this`.
-- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente em skills, pois o resolver lida com escudos, evasão, crítico, lifesteal, hooks, log, etc.
+- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente em skills, pois o resolver lida com escudos, Esquiva, crítico, lifesteal, hooks, log, etc.
 - **Passivas devem verificar `damageDepth`** antes de gerar dano extra para evitar recursão infinita: `if (context.damageDepth > 0) return;`.
 - **Keywords**: Use `champion.keywords.set("nome", { duration: N })` para aplicar. O servidor deve emitir `keywordApplied` no array de effects para que o cliente anime.
 - **Escudos**: Adicione em `champion.runtime.shields.push({ amount: X, type: "regular", source: skill.key })`.

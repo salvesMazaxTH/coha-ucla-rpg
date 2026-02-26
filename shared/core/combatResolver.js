@@ -26,8 +26,8 @@ export const CombatResolver = {
     const evaded = roll < chance;
 
     if (debugMode) {
-      console.log(`🎯 Roll de Evasão: ${roll.toFixed(2)}`);
-      console.log(`🎲 Chance de Evasão: ${chance}%`);
+      console.log(`🎯 Roll de Esquiva: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance de Esquiva: ${chance}%`);
       console.log(evaded ? "✅ Ataque EVADIDO!" : "❌ Ataque ACERTADO");
     }
 
@@ -1024,7 +1024,7 @@ export const CombatResolver = {
         amount,
         sourceId: user?.id,
         isCritical: false,
-        damageDepth: depth, 
+        damageDepth: depth,
         flags: { recoil: true },
       });
 

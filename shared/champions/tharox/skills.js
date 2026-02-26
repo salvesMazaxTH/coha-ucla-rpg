@@ -18,7 +18,7 @@ const tharoxSkills = [
     damageReductionAmount: 20,
     damageReductionDuration: 2,
     contact: false,
-    manaCost: 180,
+    manaCost: 200,
     priority: 2,
     description() {
       return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano bruto final de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
@@ -62,7 +62,7 @@ const tharoxSkills = [
     bf: 80,
     defScaling: 20,
     contact: true,
-    manaCost: 60,
+    manaCost: 50,
     priority: 0,
     description() {
       return `Causa dano bruto ao inimigo somado a ${this.defScaling}% da Defesa.`;

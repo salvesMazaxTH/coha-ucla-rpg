@@ -448,7 +448,7 @@ params = {
    │     → registra context.damageEvents[]{immune:true}; retorna
    ├── Shield Block? → consome escudo supremo/feitiço
    │     → registra context.damageEvents[]{shieldBlocked:true}; retorna
-   └── Evasão? → roll aleatório vs target.Evasion%
+   └── Esquiva? → roll aleatório vs target.Evasion%
          → registra context.damageEvents[]{evaded:true}; retorna
 
 2. CÁLCULO DO DANO
@@ -561,7 +561,7 @@ Função chamada pelo `CombatResolver` após `_applyDamage()` para acumular o ev
 registerDamage(context, {
   targetId: target.id,
   sourceId: user.id,
-  targetName: target.name,       // nome puro (sem HTML)
+  targetName: target.name, // nome puro (sem HTML)
   sourceName: user.name,
   amount: finalDamage,
   isCritical: crit.didCrit,
@@ -574,7 +574,7 @@ registerDamage(context, {
 // → push em context.damageEvents[]
 ```
 
-Para casos especiais (evasão, imunidade, bloqueio de escudo), os campos booleanos correspondentes são `true` e `amount` é `0`.
+Para casos especiais (Esquiva, imunidade, bloqueio de escudo), os campos booleanos correspondentes são `true` e `amount` é `0`.
 
 ### `buildEffectsFromContext(context)`
 
@@ -640,12 +640,12 @@ function emitCombatEnvelopesFromResults(results, context) {
 
 ### Por que este modelo?
 
-| Sistema antigo (removido) | Sistema atual |
-|---|---|
+| Sistema antigo (removido)                                              | Sistema atual                                             |
+| ---------------------------------------------------------------------- | --------------------------------------------------------- |
 | `extractEffectsFromResult(result)` — lia campos do objeto de resultado | `buildEffectsFromContext(context)` — lê arrays acumulados |
-| Parsing de strings de log para detectar imunidade/bloqueio | Flags booleanas estruturadas no evento |
-| `resultsGroup` — agrupamento intermediário de resultados | Sem agrupamento — um único `context` acumula tudo |
-| Cliente resolvia `targetName` via `activeChampions.get(id).name` | Servidor envia `targetName` / `sourceName` prontos |
+| Parsing de strings de log para detectar imunidade/bloqueio             | Flags booleanas estruturadas no evento                    |
+| `resultsGroup` — agrupamento intermediário de resultados               | Sem agrupamento — um único `context` acumula tudo         |
+| Cliente resolvia `targetName` via `activeChampions.get(id).name`       | Servidor envia `targetName` / `sourceName` prontos        |
 
 > **Regra**: nenhum novo código deve extrair informação de strings de log ou fazer parsing textual de resultados. Todo efeito deve ser registrado programaticamente nos arrays do `context`.
 
@@ -980,7 +980,7 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 | `heal`           | `.heal` + brilho verde                              | `.heal-float`                             |
 | `shield`         | `.has-shield` + bolha                               | `.shield-float`                           |
 | `buff`           | `.buff` + brilho dourado                            | `.buff-float`                             |
-| `evasion`        | `.evasion` + slide                                  | "EVASÃO!" como float                      |
+| `evasion`        | `.evasion` + slide                                  | "Esquiva!" como float                     |
 | `resourceGain`   | —                                                   | `.resource-float-mana` ou `-energy`       |
 | `keywordApplied` | `animateIndicatorAdd()`                             | `.taunt-float` se taunt                   |
 | `keywordRemoved` | `animateIndicatorRemove()`                          | —                                         |
@@ -996,7 +996,7 @@ animateDamage(effect) {
   const el = getChampionElement(effect.targetId); // DOM lookup por ID
   // Textos e metadados vêm prontos — sem lookups adicionais:
   effect.isCritical   // → adiciona classe visual de crítico
-  effect.evaded       // → animação de evasão em vez de dano
+  effect.evaded       // → animação de Esquiva em vez de dano
   effect.immune       // → float "IMUNE!"
   effect.shieldBlocked// → float "BLOQUEADO!"
   effect.amount       // → determina damage tier (tamanho do float)
@@ -1241,7 +1241,7 @@ export default championDB;
 
 - **IDs de skill com underscore e snake_case**: `"rajada_de_fogo"`.
 - **`description()` como função**: Permite exibir valores dinâmicos (custo, BF, etc.) via `this`.
-- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente em skills, pois o resolver lida com escudos, evasão, crítico, lifesteal, hooks, log, etc.
+- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente em skills, pois o resolver lida com escudos, Esquiva, crítico, lifesteal, hooks, log, etc.
 - **Passivas devem verificar `damageDepth`** antes de gerar dano extra para evitar recursão infinita: `if (context.damageDepth > 0) return;`.
 - **Keywords**: Use `champion.keywords.set("nome", { duration: N })` para aplicar. O servidor deve emitir `keywordApplied` no array de effects para que o cliente anime.
 - **Escudos**: Adicione em `champion.runtime.shields.push({ amount: X, type: "regular", source: skill.key })`.

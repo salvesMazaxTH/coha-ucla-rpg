@@ -41,7 +41,7 @@ const nodeSparckina07Skills = [
     evasionPercent: 10,
     buffDuration: 2,
     contact: false,
-    energyCost: 100,
+    energyCost: 50,
     priority: 0,
     element: "lightning",
     description() {

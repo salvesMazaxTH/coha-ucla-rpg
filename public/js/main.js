@@ -886,7 +886,7 @@ function showQuickStatsOverlay(champion) {
   });
 
   statRows.push({
-    label: "Evasão",
+    label: "Esquiva",
     value: champion.Evasion ?? 0,
     base: champion.baseEvasion,
     percent: true,
@@ -1054,7 +1054,7 @@ function createOverlay(champion) {
     { name: "Ataque", value: champion.Attack },
     { name: "Defesa", value: champion.Defense },
     { name: "Velocidade", value: champion.Speed },
-    { name: "Evasão", value: champion.Evasion ?? 0 },
+    { name: "Esquiva", value: champion.Evasion ?? 0 },
     { name: "Crítico", value: champion.Critical ?? 0 },
     { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
   ]

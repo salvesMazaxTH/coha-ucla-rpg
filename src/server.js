@@ -123,14 +123,14 @@ import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
 // ============================================================
 
 const editMode = {
-  enabled: false,
+  enabled: true,
   autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -571,109 +571,6 @@ function resolveSkillTargets(user, skill, action) {
  * Extrai efeitos visuais ordenados a partir de um resultado do CombatResolver.
  * Retorna um array de efeitos que o cliente animará sequencialmente.
  */
-function extractEffectsFromResult(result) {
-  if (result?.extraEffects?.some((e) => e.type === "dialog")) {
-    console.log("🟡 EXTRACT → recebeu dialog:", result.extraEffects);
-  }
-
-  const effects = [];
-  if (!result || typeof result !== "object") return effects;
-
-  const getNameById = (id) =>
-    id ? activeChampions.get(id)?.name || null : null;
-
-  // Evasão — se evadiu, não há dano nem heal
-  if (result.evaded && result.targetId) {
-    effects.push({
-      type: "evasion",
-      targetId: result.targetId,
-      sourceId: result.userId,
-      targetName: getNameById(result.targetId),
-      sourceName: getNameById(result.userId),
-    });
-  }
-
-  // Imunidade absoluta — totalDamage 0, log menciona imunidade
-  /*  if (
-    result.totalDamage === 0 &&
-    !result.evaded &&
-    result.log?.includes("Imunidade Absoluta")
-  ) {
-    effects.push({
-      type: "immune",
-      targetId: result.targetId,
-      sourceId: result.userId,
-      targetName: getNameById(result.targetId),
-      sourceName: getNameById(result.userId),
-    });
-  } */
-
-  // Bloqueio por escudo — totalDamage 0, log menciona bloqueio
-  /* if (
-    result.totalDamage === 0 &&
-    !result.evaded &&
-    result.log?.includes("bloqueou completamente")
-  ) {
-    effects.push({
-      type: "shieldBlock",
-      targetId: result.targetId,
-      sourceId: result.userId,
-      targetName: getNameById(result.targetId),
-      sourceName: getNameById(result.userId),
-    });
-  } */
-
-  /*   // Dano
-  if (result.totalDamage === 0) {
-    effects.push({
-      type: "damage",
-      targetId: result.targetId,
-      amount: 0,
-      isCritical: false,
-      isBlocked: true,
-    });
-  }
-
-  if (result.totalDamage > 0 && result.targetId) {
-    effects.push({
-      type: "damage",
-      targetId: result.targetId,
-      sourceId: result.userId,
-      amount: result.totalDamage,
-      isCritical: result.crit?.didCrit || false,
-      targetName: getNameById(result.targetId),
-      sourceName: getNameById(result.userId),
-    });
-  } */
-
-  // Heal direto do resultado (lifesteal)
-  if (result.heal && result.heal.amount > 0 && result.heal.targetId) {
-    effects.push({
-      type: "heal",
-      targetId: result.heal.targetId,
-      sourceId: result.heal.sourceId || result.userId,
-      amount: result.heal.amount,
-      targetName: getNameById(result.heal.targetId),
-      sourceName: getNameById(result.heal.sourceId || result.userId),
-    });
-  }
-
-  if (result.extraEffects?.length) {
-    const dialogEffects = result.extraEffects.filter(
-      (e) => e.type === "dialog",
-    );
-    if (dialogEffects.length) {
-      console.log("🟢 RD → dialog em extraEffects:", dialogEffects);
-    }
-    effects.push(...result.extraEffects);
-  }
-
-  if (effects.some((e) => e.type === "dialog")) {
-    console.log("🟡 EXTRACT → dialog entrou nos effects finais:", effects);
-  }
-
-  return effects;
-}
 
 function buildEmitTargetInfo(realTargetIds) {
   let targetName = null;

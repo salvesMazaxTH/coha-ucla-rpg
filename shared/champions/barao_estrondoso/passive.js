@@ -5,6 +5,8 @@ export default {
   name: "Reator Cataclísmico",
   storageBasePercent: 30,
   storageShieldPercent: 40,
+  damageTakenBonusPercent: 10,
+  damageTakenBonusFlatMin: 10,
   storageCap: 250,
   description(champion) {
     const stored = champion.runtime?.storedDamage || 0;
@@ -29,7 +31,7 @@ export default {
   onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
-    const bonus = Math.max(10, Math.floor(damage * 0.1));
+    const bonus = Math.max(this.damageTakenBonusFlatMin, Math.floor(damage * (this.damageTakenBonusPercent / 100)));
     const modifiedDamage = damage + bonus;
 
     return {
@@ -46,7 +48,7 @@ export default {
       `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
     );
 
-    const storageRate = owner.hasKeyword?.("blindagem_reforcada") ? 0.4 : 0.3;
+    const storageRate = owner.hasKeyword?.("blindagem_reforcada") ? this.storageShieldPercent / 100 : this.storageBasePercent / 100;
 
     const stored = Math.floor(damage * storageRate);
 
@@ -56,7 +58,7 @@ export default {
 
     owner.runtime = owner.runtime || {};
     owner.runtime.storedDamage = Math.min(
-      250,
+      this.storageCap,
       (owner.runtime.storedDamage || 0) + stored,
     );
     console.log(

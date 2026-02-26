@@ -161,7 +161,7 @@ const naelysSkills = [
     key: "sobrefluxo",
     name: "Sobrefluxo",
     contact: false,
-    manaCost: 380,
+    manaCost: 350,
     priority: 3,
     duration: 3,
     maxBonus: 120,

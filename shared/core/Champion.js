@@ -975,30 +975,6 @@ export class Champion {
           e.preventDefault();
           handlers.removeSkillOverlay?.();
         });
-
-        // =========================
-        // MOBILE (touch)
-        // =========================
-        button.addEventListener("touchstart", (e) => {
-          e.preventDefault();
-
-          handlers.showSkillOverlay?.(button, skill, champion);
-
-          if (skillOverlayTimeout) clearTimeout(skillOverlayTimeout);
-
-          // Fecha sozinho após 2.5s
-          skillOverlayTimeout = setTimeout(() => {
-            handlers.removeSkillOverlay?.();
-          }, 2500);
-        });
-
-        button.addEventListener("touchend", () => {
-          handlers.removeSkillOverlay?.();
-        });
-
-        button.addEventListener("touchcancel", () => {
-          handlers.removeSkillOverlay?.();
-        });
       });
       // 🔥 bloquear menu padrão da imagem
       const img = div.querySelector(".portrait img");

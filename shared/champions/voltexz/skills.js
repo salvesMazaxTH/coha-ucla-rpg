@@ -114,7 +114,7 @@ const voltexzSkills = [
     name: "Descarga Cataclísmica",
     bf: 185,
     contact: false,
-    manaCost: 800,
+    manaCost: 700,
     priority: 0,
     element: "lightning",
     description() {

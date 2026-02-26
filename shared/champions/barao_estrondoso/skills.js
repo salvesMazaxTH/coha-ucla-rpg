@@ -58,9 +58,9 @@ const baraoEstrondosoSkills = [
             user.applyKeyword("blindagem_reforcada", 2, context);
 
             user.modifyStat({
-                stat: "Defense",
+                statName: "Defense",
                 amount: this.defenseBuff,
-                duration: this.buffDuration,
+                duration: this.defBuffDuration,
                 context
             });
 

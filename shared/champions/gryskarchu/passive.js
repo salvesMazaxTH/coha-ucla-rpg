@@ -11,6 +11,7 @@ export default {
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
     if (healSrc?.id !== owner.id) return;
     if (healTarget.team !== owner.team) return;
+    if (healTarget.id === owner.id) return; // impede auto-trigger, evita loop infinito
 
     const selfHealAmount = Math.round(amount / 5) * 5;
     if (selfHealAmount <= 0) return;
@@ -34,7 +35,7 @@ export default {
           source: "passiva-fonte-da-vida-overheal",
         },
         affectMax: true,
-        isPermanent,
+        isPermanent: true,
       });
     }
 

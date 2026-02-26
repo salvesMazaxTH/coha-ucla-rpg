@@ -286,10 +286,6 @@ export function createCombatAnimationManager(deps) {
         await animateHeal(effect);
         break;
 
-      case "evasion":
-        await animateEvasion(effect);
-        break;
-
       case "shield":
         await animateShield(effect);
         break;
@@ -363,11 +359,23 @@ export function createCombatAnimationManager(deps) {
 
     const { targetName } = effect ?? { targetName: "Alvo" };
 
-    console.log("[animateDamage] EFFECT RECEBIDO NO CLIENT: ", effect);
-    console.log("isCritical?: ", effect.isCritical, typeof effect.isCritical);
-
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
+
+    if (effect.evaded) {
+      await animateEvasion(effect);
+      return;
+    }
+
+    if (effect.immune) {
+      await animateImmune(effect);
+      return;
+    }
+
+    if (effect.shieldBlocked) {
+      await animateShieldBlock(effect);
+      return;
+    }
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
@@ -736,9 +744,7 @@ export function createCombatAnimationManager(deps) {
     const playerTeam = window.playerTeam;
     const isWinner = playerTeam === winnerTeam;
 
-    gameOverMessage.textContent = isWinner
-      ? `Vitória! Parabéns, ${winnerName || "Jogador"}!`
-      : `Derrota. ${winnerName || "O adversário"} venceu.`;
+    gameOverMessage.textContent = isWinner ? `Vitória!!` : `Derrota.`;
 
     gameOverContent.classList.remove("hidden", "win", "lose");
     gameOverContent.classList.add(isWinner ? "win" : "lose");

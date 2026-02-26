@@ -19,7 +19,7 @@ const sereneSkills = [
     hpThreshold: 65,
     contact: false,
     manaCost: 50,
-    priority: 0,
+    priority: 2,
     description() {
       return `Concede ${this.shieldFull} de escudo a si mesma ou a um aliado. Se estiver abaixo de ${this.hpThreshold}% do HP máximo, concede ${this.shieldReduced}.`;
     },
