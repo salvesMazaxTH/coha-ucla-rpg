@@ -20,14 +20,10 @@ const raliaSkills = [
     atkBuff: 35,
     buffDuration: 2,
     contact: false,
-    manaCost: 25,
+    manaCost: 150,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.
-        Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (Dano Direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.
-        Em seguida, ataca um inimigo.`;
+      return `Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (dano direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos. Em seguida, ataca um inimigo.`;
     },
     targetSpec: ["self", "enemy"],
     execute({ user, targets, context = {} }) {
@@ -84,15 +80,10 @@ const raliaSkills = [
     healPercent: 60,
     minHeal: 25,
     contact: true,
-    manaCost: 30,
+    manaCost: 250,
     priority: 0,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.
-        Rália se cura em ${this.healPercent}% do dano efetivo causado
-        Arredondado para o múltiplo de 5 mais próximo
-        Cura mínima: ${this.minHeal}`;
+      return `Ralia se cura em ${this.healPercent}% do dano efetivo causado (arredondado para o múltiplo de 5 mais próximo). Cura mínima: ${this.minHeal}.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -130,20 +121,10 @@ const raliaSkills = [
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
-    manaCost: 35,
+    manaCost: 600,
     priority: 1,
     description() {
-      return `Custo: ${this.manaCost} MP
-        Prioridade: +${this.priority}
-        Contato: ${this.contact ? "✅" : "❌"}
-        BF ${this.bf}.
-        Rália finca sua lâmina no chão e impõe sua lei ao campo.
-        Ao ativar, por ${this.debuffDuration} turnos (inclui o atual):
-        1️⃣ Zona de Contestação
-        Inimigos ativos sofrem:
-        −${this.atkDebuff} de Ataque
-        2️⃣ Golpe de Retaliação:
-        Ralia executa um ataque automático contra todos os inimigos vivos imediatamente (dano = BF ${this.bf} como Dano Direto).`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos (dano direto).`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, context = {} }) {

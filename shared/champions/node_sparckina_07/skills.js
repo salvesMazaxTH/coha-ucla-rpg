@@ -13,7 +13,7 @@ const nodeSparckina07Skills = [
     name: "Sparkling Slash",
     bf: 70,
     contact: true,
-    energyCost: 140,
+    energyCost: 150,
     priority: 0,
     element: "lightning",
     description() {
@@ -79,7 +79,7 @@ const nodeSparckina07Skills = [
     bf: 135,
     paralyzeDuration: 2,
     contact: true,
-    energyCost: 420,
+    energyCost: 400,
     priority: 0,
     element: "lightning",
     description() {

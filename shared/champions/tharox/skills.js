@@ -45,7 +45,7 @@ const tharoxSkills = [
       context.effects = context.effects || [];
 
       context.effects.push({
-        type: "taunt",
+        type: "tauntRedirection",
         sourceId: user.id,
         targetId: enemyChampions.map((c) => c.id),
       });
@@ -65,7 +65,7 @@ const tharoxSkills = [
     manaCost: 60,
     priority: 0,
     description() {
-      return `Causa dano bruto ao inimigo (BF ${this.bf}) somado a ${this.defScaling}% da Defesa.`;
+      return `Causa dano bruto ao inimigo somado a ${this.defScaling}% da Defesa.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

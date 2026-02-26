@@ -123,14 +123,14 @@ import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
 // ============================================================
 
 const editMode = {
-  enabled: true,
-  autoLogin: true,
+  enabled: false,
+  autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: true,
+  unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
-  alwaysCrit: true, // Força crítico em todo ataque. (SERVER-ONLY)
-  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
+  alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
+  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;

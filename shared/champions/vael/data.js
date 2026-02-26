@@ -7,5 +7,5 @@ export default {
   Speed: 80,
   Critical: 25,
 
-  energy: 360,
+  energy: 350,
 };

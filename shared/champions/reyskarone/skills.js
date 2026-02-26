@@ -25,12 +25,7 @@ const reyskaroneSkills = [
     manaCost: 80,
     priority: 1,
     description() {
-      return `Custo: ${this.manaCost} MP
-      Contato: ${this.contact ? "✅" : "❌"}
-      Prioridade: +${this.priority}
-      BF ${this.bf}.
-      Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos.
-      Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Além disso, ataca o alvo escolhido imediatamente após a execução da habilidade (BF ${this.bf}).`;
+      return `Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos. Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Em seguida, ataca o alvo escolhido imediatamente.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -124,12 +119,7 @@ const reyskaroneSkills = [
     manaCost: 180,
     priority: 4,
     description() {
-      return `Custo: ${this.manaCost} MP
-       Prioridade: +${this.priority}
-       Concede a um aliado:
-       +${this.atkBuff} ATQ
-       +${this.lifeStealBuff}% LifeSteal
-       Duração: ${this.buffDuration} turnos`;
+      return `Concede a um aliado: +${this.atkBuff} ATQ, +${this.lifeStealBuff}% LifeSteal por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
@@ -172,13 +162,7 @@ const reyskaroneSkills = [
     manaCost: 300,
     priority: 5,
     description() {
-      return `Custo: ${this.manaCost} MP
-      Prioridade: +${this.priority}
-      Seleciona um aliado:
-      Ele recebe:
-      +${this.atkBuffPercent}% ATQ
-      +${this.lifeStealBuff}% LifeSteal
-      Duração: ${this.buffDuration} turnos`;
+      return `Seleciona um aliado: ele recebe +${this.atkBuffPercent}% ATQ e +${this.lifeStealBuff}% LifeSteal por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {

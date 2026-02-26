@@ -7,7 +7,7 @@ export default {
   Speed: 80,
 
   Evasion: 5,
-  energy: 320,
+  energy: 300,
 
   elementalAffinities: ["lightning"],
 };

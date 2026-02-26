@@ -1,11 +1,11 @@
 export default {
   name: "Serene",
   portrait: "/assets/portraits/serene.webp",
-  unreleased: true,
+  disabled: true,
   HP: 365,
-  Attack: 132,
+  Attack: 130,
   Defense: 75,
   Speed: 40,
 
-  mana: 130,
+  mana: 350,
 };
