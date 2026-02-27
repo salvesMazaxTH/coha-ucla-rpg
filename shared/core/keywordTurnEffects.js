@@ -3,7 +3,7 @@
 export const KeywordTurnEffects = {
     queimando: {
         onTurnStart({ champion, context, allChampions }) {
-            const damage = 25;
+            const damage = 20;
 
             return {
                 type: "damage",

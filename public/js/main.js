@@ -27,15 +27,8 @@ function showSkillOverlay(button, skill, champion) {
   // Helper: paragraphs
   const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
 
-  // Cost
-  let cost = champion?.getSkillCost ? champion.getSkillCost(skill) : skill.cost;
-  let costType =
-    skill.energyCost !== undefined
-      ? "EN"
-      : skill.manaCost !== undefined
-        ? "MP"
-        : "-";
-  if (cost === undefined) cost = "-";
+  const ultCostBars =
+    skill.isUltimate && Number.isInteger(skill.ultCost) ? skill.ultCost : null;
 
   overlay.innerHTML = `
   <div class="skill-overlay-content">
@@ -45,9 +38,17 @@ function showSkillOverlay(button, skill, champion) {
     </div>
 
     <div class="skill-overlay-meta-primary">
+    ${
+      ultCostBars
+        ? `
+    <div class="skill-meta-item">
+      <span class="meta-label">Custo: </span>
+      <span class="meta-value">${ultCostBars} barra${ultCostBars > 1 ? "s" : ""}</span>
+    </div>
+  `
+        : ""
+    }
       <div class="skill-meta-item">
-        <span class="meta-label">Custo: </span>
-        <span class="meta-value">${cost} ${costType}</span>
       </div>
 
       ${
@@ -805,7 +806,7 @@ function createNewChampion(championData) {
     // Adiciona overlay de hover/touch nas skills
     showSkillOverlay: showSkillOverlay,
     removeSkillOverlay: removeSkillOverlay,
-    editMode: editMode.enabled,
+    editMode: editMode,
   });
 
   // Adiciona listeners para hover/touch no retrato
@@ -1155,12 +1156,18 @@ async function handleSkillUsage(button) {
     return;
   }
 
-  const resourceState = user.getResourceState();
   const cost = user.getSkillCost(skill);
-  if (!editMode.freeCostSkills && cost > resourceState.current) {
-    alert(
-      resourceState.type === "energy" ? "EN insuficiente." : "MP insuficiente.",
-    );
+
+  console.log(
+    "CLIENT CHECK: ",
+    user.name,
+    "tentando usar",
+    skill.name,
+    `(Custo: ${cost}, Ultômetro: ${user.ultMeter})`,
+  );
+
+  if (!editMode.freeCostSkills && cost > user.ultMeter) {
+    alert(`Valor de ultômetro insuficiente.`);
     user.updateUI(currentTurn);
     return;
   }

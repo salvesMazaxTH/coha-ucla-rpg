@@ -18,7 +18,7 @@ const sereneSkills = [
     shieldReduced: 35,
     hpThreshold: 65,
     contact: false,
-    manaCost: 50,
+
     priority: 2,
     description() {
       return `Concede ${this.shieldFull} de escudo a si mesma ou a um aliado. Se estiver abaixo de ${this.hpThreshold}% do HP máximo, concede ${this.shieldReduced}.`;
@@ -53,7 +53,7 @@ const sereneSkills = [
     hpDamagePercent: 15,
     stunDuration: 1,
     contact: false,
-    manaCost: 150,
+
     priority: 1,
     description() {
       return `Causa dano direto igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
@@ -101,7 +101,7 @@ const sereneSkills = [
     reductionDuration: 2,
     surviveHP: 50,
     contact: false,
-    manaCost: 400,
+
     priority: 4,
     description() {
       return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com pelo menos ${this.surviveHP} de HP e tornam-se imunes até a próxima ação de Serene.`;

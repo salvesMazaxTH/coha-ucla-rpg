@@ -45,8 +45,8 @@ export default {
         },
       });
 
-      context.dialogEvents = context.dialogEvents || [];
-      context.dialogEvents.push({
+      context.visual.dialogEvents = context.visual.dialogEvents || [];
+      context.visual.dialogEvents.push({
         type: "dialog",
         message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
         sourceId: owner.id,

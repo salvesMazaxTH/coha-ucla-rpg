@@ -6,7 +6,5 @@ export default {
   Defense: 205,
   Speed: 20,
 
-  mana: 300,
-
   elementalAffinities: ["earth"],
 };

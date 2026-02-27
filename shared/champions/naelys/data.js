@@ -1,13 +1,11 @@
 export default {
-    name: "Naelys",
-    portrait: "/assets/portraits/naelys.webp",
-    unreleased: true,
-    HP: 340,
-    Attack: 150,
-    Defense: 100,
-    Speed: 40,
+  name: "Naelys",
+  portrait: "/assets/portraits/naelys.webp",
+  unreleased: true,
+  HP: 340,
+  Attack: 150,
+  Defense: 100,
+  Speed: 40,
 
-    mana: 500,
-
-    elementalAffinities: ["water"]
+  elementalAffinities: ["water"],
 };

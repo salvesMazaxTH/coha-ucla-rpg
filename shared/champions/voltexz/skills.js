@@ -15,7 +15,6 @@ const voltexzSkills = [
     name: "Relâmpagos Gêmeos",
     bf: 45,
     contact: false,
-    manaCost: 600,
     priority: 0,
     element: "lightning",
     description() {
@@ -63,7 +62,6 @@ const voltexzSkills = [
     bf: 20,
     paralyzeDuration: 1,
     contact: false,
-    manaCost: 300,
     priority: 1,
     element: "lightning",
     description() {
@@ -114,7 +112,8 @@ const voltexzSkills = [
     name: "Descarga Cataclísmica",
     bf: 185,
     contact: false,
-    manaCost: 700,
+    isUltimate: true,
+    ultCost: 3,
     priority: 0,
     element: "lightning",
     description() {

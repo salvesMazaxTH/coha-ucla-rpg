@@ -16,7 +16,7 @@ const naelthosSkills = [
     bf: 75,
     healAmount: 45,
     contact: false,
-    manaCost: 150,
+
     priority: 0,
     element: "water",
     description() {
@@ -76,7 +76,7 @@ const naelthosSkills = [
     name: "Forma Aquática",
     effectDuration: 2,
     contact: false,
-    manaCost: 350,
+
     priority: 1,
     element: "water",
     description() {
@@ -111,7 +111,7 @@ const naelthosSkills = [
     maxBonus: 160,
     contact: false,
     element: "water",
-    manaCost: 550,
+
     priority: 0,
     description() {
       return `Aumenta HP máximo em ${this.hpFactor}% do HP base, cura ${this.healAmount} HP e ativa o efeito Mar em Ascensão: ataques recebem bônus de dano (+${this.bonusPerStack} para cada ${this.hpPerStack} de HP atual, até ${this.maxBonus}) por ${this.effectDuration} turnos.`;

@@ -15,7 +15,7 @@ const naelysSkills = [
     name: "Pingente das Ondas",
     contact: false,
     bf: 80,
-    manaCost: 150,
+
     priority: 1,
     element: "water",
     selfHealAmount: 50,
@@ -72,7 +72,7 @@ const naelysSkills = [
     key: "massa_do_mar_revolto",
     name: "Massa do Mar Revolto",
     contact: false,
-    manaCost: 250,
+
     priority: 2,
     element: "water",
     damageReduction: 20,
@@ -121,7 +121,7 @@ const naelysSkills = [
             },
           });
 
-          context.dialogEvents.push({
+          context.visual.dialogEvents.push({
             type: "dialog",
             message: `${formatChampionName(self)} realiza um contra-ataque da Massa do Mar Revolto em ${formatChampionName(attacker)}!`,
             sourceId: self.id,
@@ -161,7 +161,7 @@ const naelysSkills = [
     key: "sobrefluxo",
     name: "Sobrefluxo",
     contact: false,
-    manaCost: 350,
+
     priority: 3,
     duration: 3,
     maxBonus: 120,

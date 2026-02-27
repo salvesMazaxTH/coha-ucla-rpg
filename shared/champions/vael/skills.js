@@ -15,7 +15,6 @@ const vaelSkills = [
     name: "Corte Instantâneo",
     bf: 65,
     contact: true,
-    energyCost: 100,
     priority: 0,
     description() {
       return `Causa dano bruto ao inimigo com chance de crítico.`;
@@ -40,7 +39,6 @@ const vaelSkills = [
     bfPrimary: 55,
     bfSecondary: 60,
     contact: true,
-    energyCost: 300,
     priority: 0,
     description() {
       return `Causa dano bruto ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
@@ -91,7 +89,8 @@ const vaelSkills = [
     name: "Veredito do Fio Silencioso",
     bf: 145,
     contact: true,
-    energyCost: 500,
+    isUltimate: true,
+    ultCost: 3,
     priority: 0,
     description() {
       return `Causa dano bruto devastador ao inimigo.`;

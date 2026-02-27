@@ -5,6 +5,4 @@ export default {
   Attack: 130,
   Defense: 75,
   Speed: 40,
-
-  mana: 350,
 };

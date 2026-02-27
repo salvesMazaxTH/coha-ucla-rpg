@@ -5,14 +5,14 @@ export default [
     bf: 15,
     bonusFlat: 20,
     contact: true,
-    manaCost: 0,
+
     priority: 0,
     description: "basic",
     targetSpec: ["enemy"],
   {
     name: "hab.1",
     type: "active",
-    cost: "mana",
+
     target: "enemy",
     description: "none",
   },
@@ -20,7 +20,7 @@ export default [
   {
     name: "hab.2",
     type: "active",
-    cost: "mana",
+
     target: "enemy",
     description: "none",
   },
@@ -28,7 +28,7 @@ export default [
   {
     name: "ult",
     type: "ultimate",
-    cost: "mana",
+
     target: "enemy",
     description: "none",
   },

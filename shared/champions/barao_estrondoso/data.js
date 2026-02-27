@@ -5,6 +5,4 @@ export default {
   Attack: 85,
   Defense: 135,
   Speed: 55,
-
-  energy: 200,
 };

@@ -18,7 +18,7 @@ const gryskarchuSkills = [
     bf: 75,
     rootDuration: 1,
     contact: false,
-    manaCost: 50,
+
     priority: 0,
     description() {
       return `Causa dano bruto ao inimigoe aplica "Enraizado" por ${this.rootDuration} turnos.`;
@@ -54,7 +54,7 @@ const gryskarchuSkills = [
     name: "Florescimento Vital",
     healAmount: 50,
     contact: false,
-    manaCost: 100,
+
     priority: 0,
     description() {
       return `Gryskarchu cura a si e todos os aliados ativos em ${this.healAmount} HP.`;
@@ -87,7 +87,9 @@ const gryskarchuSkills = [
     buffDuration: 2,
     defDamageBonus: 35,
     contact: false,
-    manaCost: 350,
+    isUltimate: true,
+    ultCost: 2,
+
     priority: 5,
     description() {
       return `Concede +${this.defBuff}% de DEF a si ou a um aliado por ${this.buffDuration} turnos, cura em ${this.healPercent}% do HP máximo e dá bônus de dano (+${this.defDamageBonus}% da DEF) por ${this.buffDuration} turnos.`;

@@ -7,5 +7,4 @@ export default {
   Speed: 40,
 
   LifeSteal: 10,
-  energy: 450,
 };

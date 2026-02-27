@@ -184,88 +184,65 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function processCombatAction(envelope) {
-    const { action, effects, log, state } = envelope;
-
-    const hasEffects = Array.isArray(effects) && effects.length > 0;
+    const { action, log, state, ...eventGroups } = envelope;
 
     // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
     if (action) {
       currentPhase = "combat";
 
-      // 1. Se houver dialog customizado
-      if (action.customDialog?.message) {
-        const { message, html = false, blocking = true } = action.customDialog;
-
-        if (blocking) {
-          await showBlockingDialog(message, html);
-        } else {
-          // showNonBlockingDialog(message, html);
-          await showBlockingDialog(message, html);
-        }
-
-        await wait(TIMING.BETWEEN_ACTIONS);
+      if (typeof handleActionDialog === "function") {
+        await handleActionDialog(action);
       }
+    }
 
-      // 2. Se NÃO suprimir o padrão
-      else if (!action.suppressDefaultDialog) {
-        const userChampion = deps.activeChampions.get(action.userId);
+    for (const [key, events] of Object.entries(eventGroups)) {
+      if (!Array.isArray(events) || events.length === 0) continue;
 
-        const userName = userChampion
-          ? formatChampionName(userChampion)
-          : action.userName || "Alguém";
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i];
+        switch (key) {
+          case "damageEvents":
+            await animateDamage(event);
+            break;
 
-        // 🔥 PRIORIDADE 1: usar action.targetName (multi-target agregado)
-        let targetName = action.targetName || null;
+          case "healEvents":
+            await animateHeal(event);
+            break;
 
-        if (!targetName && hasEffects) {
-          const firstEffectWithTarget = effects.find((e) => e.targetId);
-          if (firstEffectWithTarget) {
-            const targetChampion = deps.activeChampions.get(
-              firstEffectWithTarget.targetId,
-            );
-            if (targetChampion) {
-              targetName = formatChampionName(targetChampion);
+          case "shieldEvents":
+            await animateShield(event);
+            break;
+
+          case "buffEvents":
+            await animateBuff(event);
+            break;
+
+          case "resourceEvents":
+            animateResourceChange(event);
+            break;
+
+          case "dialogEvents": {
+            const { message, blocking = true, html = false } = event;
+
+            if (!message) break;
+
+            if (blocking) {
+              await showBlockingDialog(message, html);
+            } else {
+              showNonBlockingDialog(message, html);
             }
+
+            break;
           }
-        }
 
-        const skillName = action.skillName
-          ? `<b>${typeof action.skillName === "object" ? action.skillName.name : action.skillName}</b>`
-          : "<b>uma habilidade</b>";
-
-        let dialogText;
-
-        if (action.targetName) {
-          dialogText = `${userName} usou ${skillName} em ${action.targetName}.`;
-        } else {
-          dialogText = `${userName} usou ${skillName}.`;
-        }
-
-        await showBlockingDialog(dialogText, true);
-        await wait(TIMING.BETWEEN_ACTIONS);
-      }
-    }
-
-    // 2. Animate each effect sequentially — deterministic order
-    if (hasEffects) {
-      for (let i = 0; i < effects.length; i++) {
-        const effect = effects[i];
-        await animateEffect(effect);
-        if (i < effects.length - 1) {
-          await wait(TIMING.BETWEEN_EFFECTS);
+          default:
+            console.warn("Grupo de evento desconhecido:", key);
         }
       }
     }
 
-    // 3. Apply authoritative final state (corrects any visual discrepancies)
-    if (state) {
-      applyStateSnapshots(state);
-    }
-
-    // 4. Append verbose log text to the combat log panel
-    if (log) {
-      appendToLog(log);
-    }
+    if (state) applyStateSnapshots(state);
+    if (log) appendToLog(log);
   }
 
   // ============================================================
@@ -356,8 +333,8 @@ export function createCombatAnimationManager(deps) {
     if (!amount || amount <= 0) {
       return;
     }
-
-    const { targetName } = effect ?? { targetName: "Alvo" };
+    const champion = deps.activeChampions.get(targetId);
+    const targetName = champion ? formatChampionName(champion) : "Alvo";
 
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
@@ -439,12 +416,19 @@ export function createCombatAnimationManager(deps) {
 
   async function animateHeal(effect) {
     const { targetId, amount } = effect;
+
     const championEl = getChampionElement(targetId);
+
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
-    const { targetName } = effect ?? { targetName: "Alvo" };
+
+    const champion = deps.activeChampions.get(targetId);
+
+    const targetName = champion ? formatChampionName(champion) : "Alvo";
+
     // showNonBlockingDialog(`${targetName} recuperou vida.`, true);
+
     await showBlockingDialog(`${targetName} recuperou vida.`, true);
 
     // Apply .heal class to .champion element
@@ -545,45 +529,29 @@ export function createCombatAnimationManager(deps) {
   //  RESOURCE REGEN ANIMATION
   // ============================================================
 
-  async function animateResourceGain(effect) {
-    animateResourceChange(effect, 1);
-  }
-
-  async function animateResourceSpend(effect) {
-    animateResourceChange(effect, -1);
-  }
-
-  function animateResourceChange(effect, direction) {
-    const { targetId, amount, resourceType } = effect || {};
+  function animateResourceChange(effect, direction = 1) {
+    const { targetId, amount } = effect || {};
     const normalizedAmount = Math.abs(Number(amount) || 0);
+
     if (!targetId || normalizedAmount <= 0) return;
 
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
-    const resolvedType = resolveResourceType(
-      championEl,
-      targetId,
-      resourceType,
-    );
 
-    const label = resolvedType === "energy" ? "EN" : "MP";
     const sign = direction >= 0 ? "+" : "-";
-
-    let floatEl = null;
+    const bars = getUltBarDelta(
+      direction >= 0 ? normalizedAmount : -normalizedAmount,
+    );
 
     if (portraitWrapper) {
       const floatClass =
-        direction >= 0
-          ? resolvedType === "energy"
-            ? "resource-float-energy"
-            : "resource-float-mana"
-          : "resource-float-spend";
+        direction >= 0 ? "resource-float-ult-gain" : "resource-float-ult-spend";
 
-      floatEl = createFloatElement(
+      createFloatElement(
         portraitWrapper,
-        `${sign}${normalizedAmount} ${label}`,
+        `${sign}${bars}`,
         "resource-float",
         floatClass,
       );
@@ -592,8 +560,13 @@ export function createCombatAnimationManager(deps) {
     updateVisualResource(
       targetId,
       direction >= 0 ? normalizedAmount : -normalizedAmount,
-      resolvedType,
+      "ult",
     );
+  }
+
+  function getUltBarDelta(deltaUnits) {
+    const UNITS_PER_BAR = 3;
+    return (deltaUnits / UNITS_PER_BAR).toFixed(2);
   }
 
   // ============================================================
@@ -629,19 +602,28 @@ export function createCombatAnimationManager(deps) {
 
   async function animateBuff(effect) {
     const { sourceId, targetId, sourceName, targetName } = effect || {};
+
     const targetChampion = deps.activeChampions.get(targetId);
+
     const resolvedTargetName = targetChampion
       ? formatChampionName(targetChampion)
       : targetName || "Alvo";
+
     const sourceChampion = deps.activeChampions.get(sourceId);
+
     const resolvedSourceName = sourceChampion
       ? formatChampionName(sourceChampion)
       : sourceName || null;
+
     const championEl = getChampionElement(targetId);
+
+    if (!championEl) return;
+
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
     // Universal: se não há sourceId, ou sourceId === targetId, é auto-buff
     let text;
+
     if (!sourceId || sourceId === targetId) {
       text = `${resolvedTargetName} fortaleceu-se.`;
     } else if (resolvedSourceName) {
@@ -841,53 +823,29 @@ export function createCombatAnimationManager(deps) {
     }
   }
 
-  function resolveResourceType(championEl, championId, explicitType) {
-    if (explicitType === "energy" || explicitType === "mana") {
-      return explicitType;
-    }
-
-    const dataType = championEl?.dataset?.resourceType;
-    if (dataType === "energy" || dataType === "mana") return dataType;
-
-    const champion = deps.activeChampions.get(championId);
-    const fallbackType = champion?.getResourceState?.().type;
-    return fallbackType === "energy" ? "energy" : "mana";
-  }
-
-  function updateVisualResource(championId, delta, resourceType) {
+  function updateVisualResource(championId, deltaUnits) {
     const el = getChampionElement(championId);
     if (!el) return;
 
-    const mpSpan = el.querySelector(".mp");
-    const fill = el.querySelector(".mp-fill");
-    if (!mpSpan || !fill) return;
+    const fill = el.querySelector(".ult-fill");
+    if (!fill) return;
 
-    const mpText = mpSpan.textContent;
-    const match = mpText.match(/^(\d+)\/(\d+)/);
-    let current = 0;
-    let max = 999;
+    // 🔹 Cap fixo do sistema
+    const MAX_UNITS = 15;
+    const UNITS_PER_BAR = 3;
 
-    if (match) {
-      current = parseInt(match[1], 10);
-      max = Number.isFinite(parseInt(match[2], 10))
-        ? parseInt(match[2], 10)
-        : 999;
-    } else {
-      const single = mpText.match(/^(\d+)/);
-      if (!single) return;
-      current = parseInt(single[1], 10);
-    }
+    // 🔹 Pega valor atual do dataset (fonte confiável da UI)
+    let currentUnits = Number(el.dataset.ultUnits || 0);
 
-    current = Math.max(0, Math.min(max, current + delta));
-    mpSpan.textContent = `${current}`;
+    // 🔹 Aplica delta
+    currentUnits = Math.max(0, Math.min(MAX_UNITS, currentUnits + deltaUnits));
 
-    const percent = (current / max) * 100;
+    // 🔹 Salva novamente
+    el.dataset.ultUnits = currentUnits;
+
+    // 🔹 Atualiza barra visual contínua
+    const percent = (currentUnits / MAX_UNITS) * 100;
     fill.style.width = `${percent}%`;
-    fill.style.background = resourceType === "energy" ? "#f4d03f" : "#4aa3ff";
-
-    if (resourceType === "energy" || resourceType === "mana") {
-      el.dataset.resourceType = resourceType;
-    }
   }
 
   // ============================================================
@@ -921,6 +879,38 @@ export function createCombatAnimationManager(deps) {
   //    .combat-dialog.active   → visible (triggers dialogIn)
   //    .combat-dialog.leaving  → fading out (triggers dialogOut)
   // ============================================================
+
+  async function handleActionDialog(action) {
+    if (!action) return;
+
+    const { userId, userName, skillName, targetId, targetName } = action;
+
+    // Resolve usuário pelo estado atual (preferível ao nome cru)
+    const userChampion = deps.activeChampions.get(userId);
+    const resolvedUserName = userChampion
+      ? formatChampionName(userChampion)
+      : userName || "Alguém";
+
+    const resolvedSkillName = skillName
+      ? `<b>${typeof skillName === "object" ? skillName.name : skillName}</b>`
+      : "<b>uma habilidade</b>";
+
+    let dialogText;
+
+    // Se tiver alvo e não for self-target
+    if (targetId && targetId !== userId) {
+      const targetChampion = deps.activeChampions.get(targetId);
+      const resolvedTargetName = targetChampion
+        ? formatChampionName(targetChampion)
+        : targetName || "Alvo";
+
+      dialogText = `${resolvedUserName} usou ${resolvedSkillName} em ${resolvedTargetName}.`;
+    } else {
+      dialogText = `${resolvedUserName} usou ${resolvedSkillName}.`;
+    }
+
+    await showBlockingDialog(dialogText, true);
+  }
 
   async function showBlockingDialog(text, isHtml = false) {
     const dialog = deps.combatDialog;
@@ -987,7 +977,10 @@ export function createCombatAnimationManager(deps) {
       if (!champion) continue;
 
       syncChampionFromSnapshot(champion, snap);
-      champion.updateUI(editMode);
+
+      champion.updateUI({
+        freeCostSkills: editMode?.freeCostSkills === true,
+      });
     }
   }
 
@@ -1005,19 +998,8 @@ export function createCombatAnimationManager(deps) {
     if (snap.Critical !== undefined) champion.Critical = snap.Critical;
     if (snap.LifeSteal !== undefined) champion.LifeSteal = snap.LifeSteal;
 
-    // Resource
-    const hasEnergy = snap.energy !== undefined;
-    const hasMana = snap.mana !== undefined;
-
-    if (hasEnergy) {
-      champion.energy = snap.energy;
-      champion.mana = undefined;
-    }
-
-    if (hasMana) {
-      champion.mana = snap.mana;
-      if (!hasEnergy) champion.energy = undefined;
-    }
+    // Resource (ultMeter)
+    if (snap.ultMeter !== undefined) champion.ultMeter = snap.ultMeter;
 
     // Runtime shields
     if (snap.runtime) {
@@ -1063,17 +1045,14 @@ export function createCombatAnimationManager(deps) {
       let champion = deps.activeChampions.get(champData.id);
 
       if (!champion) {
-        // New champion — create and render in the arena
-        try {
-          champion = deps.createNewChampion(champData);
-        } catch (err) {
-          console.error("[AnimManager] Failed to create champion:", err);
-          continue;
-        }
+        champion = deps.createNewChampion(champData);
       }
 
       syncChampionFromSnapshot(champion, champData);
-      champion.updateUI(editMode);
+
+      champion.updateUI({
+        freeCostSkills: editMode?.freeCostSkills === true,
+      });
     }
 
     // Refresh status indicators for all champions

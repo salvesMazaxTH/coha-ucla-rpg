@@ -9,7 +9,7 @@ const kaiSkills = [
     name: "Gancho Rápido",
     bf: 60,
     contact: true,
-    manaCost: 150,
+
     priority: 1,
     description() {
       return `Ataque rápido de contato. Causa dano físico ao inimigo.`;
@@ -33,7 +33,7 @@ const kaiSkills = [
     key: "postura_da_brasa_viva",
     name: "Postura da Brasa Viva",
     contact: false,
-    manaCost: 100,
+
     damageReduction: 25,
     counterAtkDmg: 15,
     flamingFistsBonus: 15,
@@ -88,7 +88,7 @@ const kaiSkills = [
             },
           });
 
-          context.dialogEvents.push({
+          context.visual.dialogEvents.push({
             type: "dialog",
             message: `${formatChampionName(owner)} realiza um contra-ataque da Brasa Viva em ${formatChampionName(dmgSrc)}!`,
             sourceId: owner.id,
@@ -176,9 +176,11 @@ const kaiSkills = [
     hits: 6,
     burningBonus: 10,
     contact: true,
-    manaCost: 400,
+
     priority: 0,
     element: "fire",
+    isUltimate: true,
+    ultCost: 2,
     description() {
       return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando dano bruto de ${this.damagePerHit}. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
     },

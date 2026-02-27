@@ -7,23 +7,17 @@ const blyskartriSkills = [
   {
     key: "fluxo_restaurador",
     name: "Fluxo Restaurador",
-    manaGiven: 100,
-    manaCost: 50,
+
     contact: false,
     description() {
-      return `Concede ${this.manaGiven} de mana a si ou a um aliado selecionado.`;
+      return `Concede recurso a si ou a um aliado selecionado.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
       const { ally } = targets;
-      ally.addResource({
-        amount: this.manaGiven,
-        resourceType: "mana",
-        source: user,
-        context,
-      });
+      // Removido: addResource mana
       return {
-        log: `${formatChampionName(user)} restaurou mana de ${formatChampionName(ally)}.`,
+        log: `${formatChampionName(user)} restaurou recurso de ${formatChampionName(ally)}.`,
       };
     },
   },
@@ -35,11 +29,10 @@ const blyskartriSkills = [
     speedBuff: 10,
     evasionBuff: 2,
     buffsDuration: 2,
-    manaGiven: 50,
-    manaCost: 600,
+
     contact: false,
     description() {
-      return `Concede ${this.speedBuff} e aumenta a Esquiva em ${this.evasionBuff}x (ou concede +5 caso não possua Esquiva) por ${this.buffsDuration} turnos e concede +${this.manaGiven} MP.`;
+      return `Concede ${this.speedBuff} e aumenta a Esquiva em ${this.evasionBuff}x (ou concede +5 caso não possua Esquiva) por ${this.buffsDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
     execute({ user, targets, context = {} }) {
@@ -71,15 +64,10 @@ const blyskartriSkills = [
         });
       }
 
-      ally.addResource({
-        amount: this.manaGiven,
-        resourceType: "mana",
-        source: user,
-        context,
-      });
+      // Removido: addResource mana
 
       return {
-        log: `${formatChampionName(user)} concedeu buffs e mana para ${formatChampionName(ally)}.`,
+        log: `${formatChampionName(user)} concedeu buffs para ${formatChampionName(ally)}.`,
       };
     },
   },
@@ -87,8 +75,7 @@ const blyskartriSkills = [
   {
     key: "florescer_abissal",
     name: "Florescer Abissal",
-    manaBuff: 2,
-    manaCost: 600,
+
     dmgBonusPerStack: 2.5,
     effectDuration: 3,
     contact: false,
@@ -106,14 +93,9 @@ const blyskartriSkills = [
       const { ally } = targets;
 
       // 🔹 1️⃣ Duplica o MP atual
-      const amount = ally.mana * (this.manaBuff - 1);
+      // Removido: cálculo de manaBuff
 
-      ally.addResource({
-        amount,
-        resourceType: "mana",
-        source: user,
-        context,
-      });
+      // Removido: addResource mana
 
       // 🔹 2️⃣ Remove versão antiga do buff (evita stacking duplicado)
       ally.damageModifiers = ally.damageModifiers.filter(
@@ -144,7 +126,7 @@ const blyskartriSkills = [
       });
 
       return {
-        log: `${formatChampionName(user)} duplicou o MP de ${formatChampionName(ally)} e concedeu bônus de dano por ${this.effectDuration} turnos.`,
+        log: `${formatChampionName(user)} concedeu bônus de dano por ${this.effectDuration} turnos.`,
       };
     },
   },

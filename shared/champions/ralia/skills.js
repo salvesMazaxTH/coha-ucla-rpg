@@ -20,7 +20,7 @@ const raliaSkills = [
     atkBuff: 35,
     buffDuration: 2,
     contact: false,
-    energyCost: 150,
+
     priority: 0,
     description() {
       return `Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (dano direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos. Em seguida, ataca um inimigo.`;
@@ -80,7 +80,7 @@ const raliaSkills = [
     healPercent: 60,
     minHeal: 25,
     contact: true,
-    energyCost: 250,
+
     priority: 0,
     description() {
       return `Ralia se cura em ${this.healPercent}% do dano efetivo causado (arredondado para o múltiplo de 5 mais próximo). Cura mínima: ${this.minHeal}.`;
@@ -121,7 +121,7 @@ const raliaSkills = [
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
-    energyCost: 600,
+
     priority: 1,
     description() {
       return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos (dano direto).`;

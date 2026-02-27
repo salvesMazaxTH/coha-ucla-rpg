@@ -782,38 +782,6 @@ export const CombatResolver = {
     };
   },
 
-  applyRegenFromDamage(attacker, damageDealt) {
-    if (!attacker || damageDealt <= 0) return 0;
-
-    const isEnergy = attacker.energy !== undefined;
-    const current = isEnergy
-      ? Number(attacker.energy ?? 0)
-      : Number(attacker.mana ?? 0);
-
-    const base = attacker.baseMana ?? attacker.baseEnergy ?? 0;
-
-    if (current >= 999) return 0;
-
-    // 10% do recurso base
-    const regenAmount = Math.floor(base * 0.1);
-
-    const result = attacker.applyResourceChange({
-      amount: regenAmount,
-      mode: "add",
-    });
-
-    console.log(
-      "[REGEN FROM DAMAGE]",
-      attacker.name,
-      "Damage:",
-      damageDealt,
-      "Regen:",
-      result.applied,
-    );
-
-    return result.applied;
-  },
-
   // -----------------------------------
 
   _buildLog(user, target, skill, dmg, crit, hpAfter) {
@@ -1139,6 +1107,10 @@ export const CombatResolver = {
       context,
     );
 
+    context.editMode?.damageOutput != null
+      ? (finalDamage = context.editMode.damageOutput)
+      : null;
+
     const { hpAfter, actualDmg } = this._applyDamage(
       target,
       finalDamage,
@@ -1148,7 +1120,7 @@ export const CombatResolver = {
     // registro no context, fundamental para animações ("client-side-heavy")
     context.registerDamage({
       target,
-      amount: actualDmg,
+      amount: finalDamage,
       sourceId: user?.id,
       isCritical: crit?.didCrit,
       flags: {},
@@ -1203,30 +1175,6 @@ export const CombatResolver = {
     // 5️⃣ EFEITOS SECUNDÁRIOS
     // =========================
 
-    let regenLog = "";
-    let regenApplied = 0;
-
-    if (actualDmg > 0) {
-      regenApplied = this.applyRegenFromDamage(user, actualDmg);
-
-      if (regenApplied > 0) {
-        const isEnergy = user.energy !== undefined;
-        const resourceType = isEnergy ? "energy" : "mana";
-        const label = isEnergy ? "energia" : "mana";
-
-        regenLog = `${formatChampionName(user)} regenerou ${regenApplied} de ${label} ao causar dano!`;
-
-        context.resourceEvents = context.resourceEvents || [];
-        context.resourceEvents.push({
-          type: "resourceGain",
-          targetId: user.id,
-          sourceId: user.id,
-          amount: regenApplied,
-          resourceType,
-        });
-      }
-    }
-
     const ls = this._applyLifeSteal(user, finalDamage, allChampions);
     const lsAmount = Number(ls?.amount) || 0;
 
@@ -1273,8 +1221,6 @@ export const CombatResolver = {
     if (afterTakeLogs?.length) log += "\n" + afterTakeLogs.join("\n");
 
     if (afterDealLogs?.length) log += "\n" + afterDealLogs.join("\n");
-
-    if (regenLog) log += "\n" + regenLog;
 
     if (ls.text) {
       log += "\n" + ls.text;

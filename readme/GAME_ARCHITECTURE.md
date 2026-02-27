@@ -362,34 +362,120 @@ Todos os valores de HP e de recurso são arredondados para múltiplos de 5 via `
 
 ---
 
-## 7. Sistema de Recursos (Mana / Energia)
+## 7. Sistema de Ultômetro (ultMeter)
 
-Cada campeão usa **exatamente um** tipo de recurso. Declarar ambos no `baseData` lança um erro.
+Todos os campeões usam o **ultômetro** como sistema unificado de recurso para habilidades definitivas (ultimates).
 
-| Tipo               | Cor               | Uso típico                                     |
-| ------------------ | ----------------- | ---------------------------------------------- |
-| Mana (`mana`)      | Azul (#4aa3ff)    | Casters, suportes — regen lenta, pools grandes |
-| Energia (`energy`) | Amarelo (#f4d03f) | Fighters, assassinos — geração por ação        |
+### Representação Interna
+
+- **Máximo**: 5 barras visuais
+- **Unidades internas**: 15 (cada barra = 3 unidades)
+- **Tipo de dado**: inteiro (NUNCA float)
+- **Cor visual**: Dourado (#d4af37)
+
+```js
+champion.ultMeter = 0;      // Valor atual (0-15 unidades)
+champion.ultCap = 15;        // Máximo (padrão: 15)
+```
+
+### Ganho de Ultômetro
+
+O ganho ocorre **por ação** (não por hit individual):
+
+| Ação                          | Ganho      |
+| ----------------------------- | ---------- |
+| Causar dano (skill normal)    | +2 unidades |
+| Causar dano (ultimate)        | +1 unidade  |
+| Tomar dano                    | +1 unidade  |
+| Curar aliado                  | +1 unidade  |
+| Bufar aliado                  | +1 unidade  |
+| Ultimate que não causa dano   | 0 unidades  |
+
+**Importante**: Skills AoE ou multi-alvo contam **uma única vez por ação**, não uma vez por alvo atingido.
 
 ### Regen Global
 
-A cada fim de turno, **todos os campeões vivos** recebem `BASE_REGEN = 80` de recurso automaticamente (via `applyGlobalTurnRegen`). Isso é feito **depois** da resolução das ações, antes do `turnUpdate`.
+A cada **início de turno**, todos os campeões vivos recebem `+2 unidades` de ultômetro automaticamente (via `applyGlobalTurnRegen`). Isso garante economia estável e progressão previsível.
 
-Campeões também podem regenerar recurso ao causar dano (`applyRegenFromDamage` no `CombatResolver`, controlado por `champion.resourceRegenOnDamage`).
+### Custo de Ultimates
 
-### Custo de Skill
-
-O custo de uma skill é resolvido em cascata:
+Ultimates são identificadas por:
 
 ```js
-// Prioridade de leitura do custo:
-1. skill.cost           // campo genérico (número direto)
-2. skill.energyCost     // custo específico de energia
-3. skill.manaCost       // custo específico de mana
+{
+  key: "ultimate_skill",
+  name: "Nome da Ultimate",
+  isUltimate: true,        // Flag obrigatória
+  ultCost: 4,              // Custo em BARRAS (não unidades)
+  execute({ user, targets, context }) { ... }
+}
 ```
 
-O cliente e o servidor têm funções paralelas para isso (`Champion.getSkillCost()` e `getSkillCost()` helper em server.js), garantindo que a UI reflita exatamente o que o servidor validará.
+O servidor converte barras para unidades internas:
 
+```js
+const costUnits = skill.ultCost * 3;  // 4 barras = 12 unidades
+```
+
+### Validação no Servidor
+
+Quando um jogador tenta usar uma skill:
+
+```js
+// 1. Verificar se é ultimate
+if (skill.isUltimate) {
+  const cost = getSkillCost(skill);  // ultCost * 3
+  
+  // 2. Verificar ultômetro
+  if (user.ultMeter < cost) {
+    return denySkill("Ultômetro insuficiente");
+  }
+  
+  // 3. Debitar custo
+  user.spendUlt(cost);
+}
+```
+
+### Métodos da Classe Champion
+
+```js
+// Adicionar ultômetro
+champion.addUlt(amount);
+champion.addUlt({ amount, source, context });
+
+// Gastar ultômetro
+champion.spendUlt(cost);  // retorna false se insuficiente
+
+// Alterar diretamente
+champion.applyUltChange({ amount, mode: "add" | "set" });
+
+// Obter estado
+champion.getResourceState();  // → { type: "ult", current, max }
+
+// Obter custo de skill (client-side)
+champion.getSkillCost(skill);  // converte barras → unidades
+```
+
+### Diferenças do Sistema Antigo (Mana/Energia)
+
+| Sistema Antigo                    | Sistema Novo (ultMeter)              |
+| --------------------------------- | ------------------------------------ |
+| Mana (azul) ou Energia (amarelo)  | Ultômetro (dourado) - único recurso  |
+| Regen de 50-80 por turno          | Regen fixo de +2 unidades por turno |
+| Regen variável ao causar dano     | Ganho fixo por tipo de ação          |
+| `skill.manaCost` / `energyCost`   | `skill.isUltimate` + `skill.ultCost` |
+| Skills comuns custam recurso      | Skills comuns não custam recurso     |
+| Todas skills custam recurso       | Apenas ultimates custam ultômetro    |
+
+### Economia de Jogo
+
+Com o sistema de ultômetro:
+
+- **Inevitabilidade**: Todos os jogadores chegam à primeira ultimate naturalmente (regen global + ganhos por ação)
+- **Incentivo ofensivo**: Ações agressivas (causar dano) geram mais ultômetro que defensivas
+- **Controle de ritmo**: Ultimates de 5 barras (15 unidades) levam ~6-8 turnos para carregar
+- **Sem snowball**: Ganhos são fixos por ação, não escalam exponencialmente
+- **Espaço de design**: Permite ultimates de 3-5 barras com timing bem diferenciado
 ---
 
 ## 8. Pipeline de Combate — CombatResolver
