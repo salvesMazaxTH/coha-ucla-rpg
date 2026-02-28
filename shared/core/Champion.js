@@ -835,6 +835,8 @@ export class Champion {
             src="${this.portrait}"
           >
         </div>
+        
+        <canvas class="vfx-layer"></canvas>
       </div> 
 
         <h3 class="champion-name">${this.name}</h3>

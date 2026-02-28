@@ -397,6 +397,7 @@ body.team-selection-active .team-container:hover {
 
 .portrait-wrapper {
   position: relative;
+  /* display: inline-block; */
 }
 
 .portrait {

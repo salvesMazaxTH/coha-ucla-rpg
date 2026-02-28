@@ -568,88 +568,134 @@
   }
 }
 
-.champion.has-shield .portrait::before {
+/* ========================= */
+/* SHIELD CONTAINER         */
+/* ========================= */
+
+.vfx-layer {
+  position: absolute;
+  inset: -20px; /* escudo maior que o retrato */
+  width: calc(100% + 40px);
+  height: calc(100% + 40px);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* .champion.has-shield .portrait-wrapper::before,
+.champion.has-shield .portrait-wrapper::after {
   content: "";
   position: absolute;
-  width: 80%;
-  height: 60%;
-  top: 30%;
-  left: 35%;
+  inset: -12px;
   border-radius: 50%;
   pointer-events: none;
+  z-index: 5;
+} */
+
+/* ========================= */
+/* Camada 1 — Campo mágico  */
+/* ========================= */
+
+/* .champion.has-shield .portrait-wrapper::before {
   background: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.6) 0%,
-    rgba(255, 255, 255, 0.25) 40%,
-    transparent 70%
+    circle at 50% 50%,
+    rgba(120, 200, 255, 0.35) 0%,
+    rgba(80, 160, 255, 0.25) 40%,
+    rgba(0, 80, 200, 0.15) 65%,
+    rgba(0, 40, 120, 0.05) 80%,
+    transparent 100%
   );
-  filter: blur(8px);
-  opacity: 0.6;
+
+  box-shadow:
+    inset 0 0 30px rgba(120, 200, 255, 0.6),
+    0 0 25px rgba(0, 150, 255, 0.5);
+
+  animation: shieldPulse 2.8s ease-in-out infinite;
+} */
+
+/* ========================= */
+/* Camada 2 — Anel externo  */
+/* ========================= */
+
+/* .champion.has-shield .portrait-wrapper::after {
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 200, 255, 0.8),
+    rgba(0, 120, 255, 0.4),
+    rgba(0, 200, 255, 0.8)
+  );
+
+  filter: blur(2px);
+  opacity: 0.9;
+  animation: shieldRotate 4s linear infinite;
+  mask: radial-gradient(
+    circle,
+    transparent 55%,
+    black 60%,
+    black 70%,
+    transparent 75%
+  );
+} */
+
+/* ========================= */
+/* Glow extra (halo suave)  */
+/* ========================= */
+
+/* .champion.has-shield .portrait {
+  position: relative;
 }
 
 .champion.has-shield .portrait::after {
   content: "";
-  z-index: 4;
   position: absolute;
-  width: 140%;
-  height: 140%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: -18px;
   border-radius: 50%;
-  pointer-events: none;
   background: radial-gradient(
-    circle at 50% 40%,
-    rgba(120, 210, 255, 0.85) 0%,
-    rgba(70, 170, 255, 0.65) 20%,
-    rgba(40, 140, 255, 0.45) 40%,
-    rgba(20, 100, 255, 0.25) 60%,
-    rgba(0, 70, 200, 0.15) 75%,
-    transparent 85%
+    circle,
+    rgba(100, 200, 255, 0.4) 0%,
+    rgba(0, 140, 255, 0.25) 40%,
+    transparent 75%
   );
-  box-shadow:
-    0 0 25px rgba(100, 200, 255, 0.6),
-    inset 0 0 30px rgba(120, 220, 255, 0.6);
-  animation:
-    bubbleAppear 450ms ease-out,
-    bubblePulse 2.4s ease-in-out infinite;
+  filter: blur(12px);
+  z-index: -1;
+  animation: shieldGlow 3s ease-in-out infinite;
+} */
+
+/* ========================= */
+/* Animações                 */
+/* ========================= */
+
+/* @keyframes shieldRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-@keyframes bubbleAppear {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
-  }
-
-  60% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.05);
-  }
-
+@keyframes shieldPulse {
+  0%,
   100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1);
+    opacity: 0.8;
   }
-}
-
-@keyframes bubblePulse {
-  0% {
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow:
-      0 0 20px rgba(100, 200, 255, 0.5),
-      inset 0 0 20px rgba(120, 220, 255, 0.4);
-  }
-
   50% {
-    transform: translate(-50%, -50%) scale(1.035);
-    box-shadow:
-      0 0 40px rgba(100, 200, 255, 0.9),
-      inset 0 0 35px rgba(120, 220, 255, 0.7);
-  }
-
-  100% {
-    transform: translate(-50%, -50%) scale(1);
+    transform: scale(1.04);
+    opacity: 1;
   }
 }
+
+@keyframes shieldGlow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+} */
 
 /* ============================================
       STATUS INDICATOR ANIMATIONS

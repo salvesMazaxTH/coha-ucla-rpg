@@ -78,7 +78,7 @@ const baraoEstrondosoSkills = [
     priority: -999,
 
     isUltimate: true,
-    ultCost: 5,
+    ultCost: 4,
 
     description() {
       return `Causa dano ABSURDO ao inimigo somado ao dano armazenado. Este ataque é sempre um acerto Crítico. Após o ataque, o dano armazenado é zerado.`;

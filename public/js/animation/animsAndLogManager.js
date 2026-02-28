@@ -1,4 +1,7 @@
 import { formatChampionName } from "/shared/core/formatters.js";
+
+import { playVFX, stopVFX } from "./vfx/vfxManager.js";
+
 // ============================================================
 //  animsAndLogManager.js — Combat Animation & Log System (v2)
 //
@@ -246,79 +249,6 @@ export function createCombatAnimationManager(deps) {
   }
 
   // ============================================================
-  //  EFFECT ANIMATION DISPATCH
-  // ============================================================
-
-  async function animateEffect(effect) {
-    if (!effect || !effect.type) return;
-
-    console.log("[animateEffect] EFFECT TYPE: ", effect.type, effect);
-
-    switch (effect.type) {
-      case "damage":
-        await animateDamage(effect);
-        break;
-
-      case "heal":
-        await animateHeal(effect);
-        break;
-
-      case "shield":
-        await animateShield(effect);
-        break;
-
-      case "resourceGain":
-        animateResourceGain(effect);
-        break;
-
-      case "resourceSpend":
-        await animateResourceSpend(effect);
-        break;
-
-      case "immune":
-        await animateImmune(effect);
-        break;
-
-      case "shieldBlock":
-        await animateShieldBlock(effect);
-        break;
-
-      case "buff":
-        await animateBuff(effect);
-        break;
-
-      case "tauntRedirection":
-        console.log(
-          "[animateEffect] Animating taunt redirection effect:",
-          effect,
-        );
-        await animateTauntRedirection(effect);
-        break;
-
-      case "dialog": {
-        console.log("[animateEffect] Animating dialog effect:", effect);
-        const { message, blocking = true, html = true } = effect;
-
-        if (blocking) {
-          await showBlockingDialog(message, html);
-        } else {
-          showNonBlockingDialog(message, html);
-          //await showBlockingDialog(message, html);
-        }
-
-        break;
-      }
-
-      case "gameOver":
-        await handleGameOver(effect);
-        break;
-
-      default:
-        return;
-    }
-  }
-
-  // ============================================================
   //  DAMAGE ANIMATION
   //
   //  CSS mapping:
@@ -511,7 +441,9 @@ export function createCombatAnimationManager(deps) {
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+
     const champion = deps.activeChampions.get(targetId);
+
     const name = champion ? formatChampionName(champion) : "Alvo";
     // showNonBlockingDialog(`${name} recebeu um escudo.`, true);
     await showBlockingDialog(`${name} recebeu um escudo.`, true);
@@ -520,6 +452,8 @@ export function createCombatAnimationManager(deps) {
     if (portraitWrapper) {
       createFloatElement(portraitWrapper, `🛡️ ${amount}`, "shield-float");
     }
+
+    syncChampionVFX(champion);
 
     // Shield bubble visual (.has-shield) is applied when state syncs via updateUI
     await wait(600);
@@ -981,6 +915,41 @@ export function createCombatAnimationManager(deps) {
       champion.updateUI({
         freeCostSkills: editMode?.freeCostSkills === true,
       });
+
+      syncChampionVFX(champion);
+    }
+  }
+
+  function syncChampionVFX(champion) {
+    console.log("Syncing VFX for champion:", champion.id);
+
+    if (!champion?.el) return;
+
+    const canvas = champion.el.querySelector(".vfx-layer");
+    if (!canvas) return;
+
+    const runtime = champion.runtime || {};
+
+    const currentState = {
+      shield: Array.isArray(runtime.shields) && runtime.shields.length > 0,
+      fireStance: runtime.fireStance === true,
+    };
+
+    champion._vfxState ??= {};
+
+    for (const key in currentState) {
+      const active = currentState[key];
+      const wasActive = champion._vfxState[key];
+
+      if (active && !wasActive) {
+        playVFX(key, canvas);
+      }
+
+      if (!active && wasActive) {
+        stopVFX(canvas);
+      }
+
+      champion._vfxState[key] = active;
     }
   }
 

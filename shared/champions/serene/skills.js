@@ -102,6 +102,9 @@ const sereneSkills = [
     surviveHP: 50,
     contact: false,
 
+    isUltimate: true,
+    ultCost: 2,
+
     priority: 4,
     description() {
       return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com pelo menos ${this.surviveHP} de HP e tornam-se imunes até a próxima ação de Serene.`;

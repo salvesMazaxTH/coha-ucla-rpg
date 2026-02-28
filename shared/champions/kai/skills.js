@@ -54,6 +54,8 @@ const kaiSkills = [
       const counterAtkDmg = this.counterAtkDmg;
       const flamingFistsBonus = this.flamingFistsBonus;
 
+      user.runtime.fireStance = true; // Sinaliza para o sistema de VFX que a postura está ativa
+
       const effect = {
         key: "postura_da_brasa_viva",
         state: "postura", // "postura" → "brasa_viva"
@@ -111,6 +113,7 @@ const kaiSkills = [
 
           if (this.state === "postura") {
             this.state = "brasa_viva";
+            this.runtime.fireStance = true; // Sinaliza para o sistema de VFX que a postura está ativa
             this.expiresAt = context.currentTurn + 2;
 
             return {
@@ -146,10 +149,11 @@ const kaiSkills = [
 
         // 🔥 REMOÇÃO AUTOMÁTICA
         onTurnStart({ self, context }) {
-          if (context.currentTurn >= this.expiresAt) {
+          if (context.currentTurn > this.expiresAt) {
             self.runtime.hookEffects = self.runtime.hookEffects.filter(
               (e) => e !== this,
             );
+            self.runtime.fireStance = false; // Sinaliza para o sistema de VFX que a postura foi removida
           }
         },
       };
