@@ -54,12 +54,12 @@ const kaiSkills = [
       const counterAtkDmg = this.counterAtkDmg;
       const flamingFistsBonus = this.flamingFistsBonus;
 
-      user.runtime.fireStance = true; // Sinaliza para o sistema de VFX que a postura está ativa
+      user.runtime.fireStance = "postura"; // Sinaliza para o sistema de VFX que a postura está ativa
 
       const effect = {
         key: "postura_da_brasa_viva",
         state: "postura", // "postura" → "brasa_viva"
-        expiresAt: context.currentTurn + 1,
+        expiresAt: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE
         onAfterDmgTaking({
@@ -92,9 +92,10 @@ const kaiSkills = [
 
           context.visual.dialogEvents.push({
             type: "dialog",
-            message: `${formatChampionName(owner)} realiza um contra-ataque da Brasa Viva em ${formatChampionName(dmgSrc)}!`,
+            message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(dmgSrc)}!`,
             sourceId: owner.id,
             targetId: owner.id,
+            html: true,
           });
 
           dmgSrc.applyKeyword("queimando", 2, context, {
@@ -104,22 +105,6 @@ const kaiSkills = [
           return {
             log: `${formatChampionName(dmgSrc)} é queimado ao atingir ${formatChampionName(owner)} em contato!`,
           };
-        },
-
-        // 🔥 TRANSIÇÃO PARA BRASA VIVA
-        onAfterDmgDealing({ dmgSrc, owner, damage, context }) {
-          if (dmgSrc !== owner) return;
-          if (damage <= 0) return;
-
-          if (this.state === "postura") {
-            this.state = "brasa_viva";
-            this.runtime.fireStance = true; // Sinaliza para o sistema de VFX que a postura está ativa
-            this.expiresAt = context.currentTurn + 2;
-
-            return {
-              log: "🔥 Brasa Viva é ativada!",
-            };
-          }
         },
 
         // 🔥 BÔNUS ENQUANTO BRASA VIVA
@@ -133,27 +118,42 @@ const kaiSkills = [
           };
         },
 
-        onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, context }) {
-          if (this.state !== "brasa_viva") return;
+        onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
           if (dmgSrc !== owner) return;
-          if (!dmgReceiver?.applyKeyword) return;
+          if (damage <= 0) return;
 
-          dmgReceiver.applyKeyword("queimando", 2, context, {
-            source: owner,
-          });
+          // 🔥 TRANSIÇÃO
+          if (this.state === "postura" && owner.runtime.fireStance !== "brasa_viva") {
+            this.state = "brasa_viva";
+            owner.runtime.fireStance = "brasa_viva";
+            this.expiresAt = context.currentTurn + 2;
 
-          return {
-            log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,
-          };
+            return {
+              log: "🔥 Brasa Viva é ativada!",
+            };
+          }
+
+          // 🔥 EFEITO ATIVO
+          if (this.state === "brasa_viva") {
+            if (!dmgReceiver?.applyKeyword) return;
+
+            dmgReceiver.applyKeyword("queimando", 2, context, {
+              source: owner,
+            });
+
+            return {
+              log: `${formatChampionName(dmgReceiver)} está Queimando (Brasa Viva)!`,
+            };
+          }
         },
 
         // 🔥 REMOÇÃO AUTOMÁTICA
         onTurnStart({ self, context }) {
-          if (context.currentTurn > this.expiresAt) {
+          if (context.currentTurn >= this.expiresAt) {
             self.runtime.hookEffects = self.runtime.hookEffects.filter(
               (e) => e !== this,
             );
-            self.runtime.fireStance = false; // Sinaliza para o sistema de VFX que a postura foi removida
+            self.runtime.fireStance = null; // Sinaliza para o sistema de VFX que a postura foi removida
           }
         },
       };

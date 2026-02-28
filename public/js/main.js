@@ -1297,8 +1297,8 @@ async function selectTargetForRole(
     return { ally: target };
   }
 
-  // ALL ALLIES (inclui self — servidor resolve)
-  if (role === "all:ally") return {};
+  // ALLY/ENEMY GLOBAL (sem seleção, afeta todos os campeões do tipo)
+  if (role === "all:ally" || role === "all" || role === "all:enemy") return {};
 
   // ENEMY (seleção manual)
   if (role === "enemy") {

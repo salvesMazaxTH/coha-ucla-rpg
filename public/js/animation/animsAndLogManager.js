@@ -1,6 +1,6 @@
 import { formatChampionName } from "/shared/core/formatters.js";
 
-import { playVFX, stopVFX } from "./vfx/vfxManager.js";
+import { syncChampionVFX } from "./vfx/vfxManager.js";
 
 // ============================================================
 //  animsAndLogManager.js — Combat Animation & Log System (v2)
@@ -916,40 +916,10 @@ export function createCombatAnimationManager(deps) {
         freeCostSkills: editMode?.freeCostSkills === true,
       });
 
+      if (champion.name === "Kai" || champion.name === "kai") {
+        console.log("Kai fireStance:", champion.runtime.fireStance);
+      }
       syncChampionVFX(champion);
-    }
-  }
-
-  function syncChampionVFX(champion) {
-    console.log("Syncing VFX for champion:", champion.id);
-
-    if (!champion?.el) return;
-
-    const canvas = champion.el.querySelector(".vfx-layer");
-    if (!canvas) return;
-
-    const runtime = champion.runtime || {};
-
-    const currentState = {
-      shield: Array.isArray(runtime.shields) && runtime.shields.length > 0,
-      fireStance: runtime.fireStance === true,
-    };
-
-    champion._vfxState ??= {};
-
-    for (const key in currentState) {
-      const active = currentState[key];
-      const wasActive = champion._vfxState[key];
-
-      if (active && !wasActive) {
-        playVFX(key, canvas);
-      }
-
-      if (!active && wasActive) {
-        stopVFX(canvas);
-      }
-
-      champion._vfxState[key] = active;
     }
   }
 

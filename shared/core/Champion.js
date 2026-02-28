@@ -112,20 +112,27 @@ export class Champion {
       ultMeter: this.ultMeter,
       ultCap: this.ultCap,
 
-      runtime: {
-        ...this.runtime,
-        shields: Array.isArray(this.runtime?.shields)
-          ? this.runtime.shields
-          : [],
-      },
+      runtime: (() => {
+        const clone = { ...this.runtime };
 
-      keywords: Array.from(this.keywords.entries()),
-      skills: this.skills.map((s) => ({
-        key: s.key,
-        name: s.name,
-        description: s.description,
-        priority: s.priority || 0,
-      })),
+        delete clone.hookEffects;
+        delete clone.currentContext;
+
+        return clone;
+      })(),
+
+      keywords: Array.from(this.keywords.entries()).map(([key, value]) => {
+        const safeValue = { ...value };
+
+        if (safeValue.source && typeof safeValue.source === "object") {
+          safeValue.source = {
+            id: safeValue.source.id,
+            name: safeValue.source.name,
+          };
+        }
+
+        return [key, safeValue];
+      }),
     };
   }
 

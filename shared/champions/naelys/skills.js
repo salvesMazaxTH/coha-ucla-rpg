@@ -123,7 +123,7 @@ const naelysSkills = [
 
           context.visual.dialogEvents.push({
             type: "dialog",
-            message: `${formatChampionName(self)} realiza um contra-ataque da Massa do Mar Revolto em ${formatChampionName(attacker)}!`,
+            message: `${formatChampionName(self)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(attacker)}!`,
             sourceId: self.id,
             targetId: attacker.id,
           });

@@ -713,9 +713,7 @@ function snapshotChampions(ids) {
  */
 function emitCombatAction(envelope) {
   if (!envelope) return;
-  if (envelope.effects?.some((e) => e.type === "dialog")) {
-    console.log("🔴 ENVELOPE → dialog presente:", envelope.effects);
-  }
+
   io.emit("combatAction", envelope);
 }
 
