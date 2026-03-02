@@ -385,7 +385,7 @@ O ganho ocorre **por ação** (não por hit individual):
 | Ação                        | Ganho       |
 | --------------------------- | ----------- |
 | Causar dano (skill normal)  | +2 unidades |
-| Causar dano (ultimate)      | +1 unidade  |
+<!-- | Causar dano (ultimate)      | +1 unidade  | atualmente não usado -->
 | Tomar dano                  | +1 unidade  |
 | Curar aliado                | +1 unidade  |
 | Bufar aliado                | +1 unidade  |

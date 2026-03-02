@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../core/formatters";
+import { formatChampionName } from "../../core/formatters.js";
 
 export default {
   name: "O Raio Pode Cair Duas Vezes",

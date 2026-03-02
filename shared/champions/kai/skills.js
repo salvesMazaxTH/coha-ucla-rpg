@@ -33,7 +33,6 @@ const kaiSkills = [
     key: "postura_da_brasa_viva",
     name: "Postura da Brasa Viva",
     contact: false,
-    damageMode: "piercing",
     damageReduction: 25,
     counterAtkDmg: 15,
     flamingFistsBonus: 15,
@@ -42,7 +41,7 @@ const kaiSkills = [
 
     description() {
       return `Kai assume uma postura incandescente até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. 
-      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano piercing e aplica queimadura. 
+      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano perfurante e aplica queimadura. 
       Se causar dano, ativa Brasa Viva por 2 turnos: seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada.`;
     },
 

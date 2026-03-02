@@ -50,9 +50,9 @@ export const CombatResolver = {
     });
 
     const lifesteal = this._applyLifeSteal(
-      user,
+      ctx.user,
       applied.actualDmg,
-      allChampions,
+      ctx.allChampions,
     );
     ctx.lifesteal = lifesteal;
 

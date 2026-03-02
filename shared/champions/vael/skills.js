@@ -46,7 +46,7 @@ const vaelSkills = [
       return `Causa dano ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
     },
     targetSpec: [
-      { type: "enemy", unique: true },
+      { type: "enemy" },
       { type: "enemy", unique: true },
     ],
 

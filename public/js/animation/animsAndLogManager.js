@@ -224,6 +224,10 @@ export function createCombatAnimationManager(deps) {
             animateResourceChange(event);
             break;
 
+          case "redirectionEvents":
+            animateTauntRedirection(event);
+            break;
+
           case "dialogEvents": {
             const { message, blocking = true, html = false } = event;
 
@@ -834,9 +838,10 @@ export function createCombatAnimationManager(deps) {
     // Se tiver alvo e não for self-target
     if (targetId && targetId !== userId) {
       const targetChampion = deps.activeChampions.get(targetId);
-      const resolvedTargetName = targetChampion
-        ? formatChampionName(targetChampion)
-        : targetName || "Alvo";
+      
+      const resolvedTargetName =
+        targetName ||
+        (targetChampion ? formatChampionName(targetChampion) : "Alvo");
 
       dialogText = `${resolvedUserName} usou ${resolvedSkillName} em ${resolvedTargetName}.`;
     } else {

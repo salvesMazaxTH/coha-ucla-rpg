@@ -28,6 +28,54 @@ function refundActionResource(user, action) {
   }
 }
 
+/** 
+ * Aplica ganho de ultMeter baseado no contexto de um evento de combate.
+ */
+function applyUltMeterFromContext({ user, context }) {
+  const damageEvents = context.visual.damageEvents || [];
+  const healEvents = context.visual.healEvents || [];
+  const buffEvents = context.visual.buffEvents || [];
+
+  // =========================
+  // 🔹 GANHO DO USUÁRIO
+  // =========================
+
+  if (damageEvents.length > 0) {
+    const regenAmount = context.currentSkill?.isUltimate ? 1 : 2;
+    const applied = user.addUlt({ amount: regenAmount, context });
+
+    console.log("[ULT - DEALER]", user.name, applied);
+  }
+  else if (healEvents.length > 0) {
+    const applied = user.addUlt({ amount: 1, context });
+    console.log("[ULT - HEAL]", user.name, applied);
+  }
+  else if (buffEvents.length > 0) {
+    const applied = user.addUlt({ amount: 1, context });
+    console.log("[ULT - BUFF]", user.name, applied);
+  }
+
+  // =========================
+  // 🔹 GANHO DE QUEM SOFREU DANO
+  // =========================
+
+  const damagedTargets = new Set();
+
+  for (const event of damageEvents) {
+    if (!event.targetId || event.amount <= 0) continue;
+    damagedTargets.add(event.targetId);
+  }
+
+  for (const targetId of damagedTargets) {
+    const target = activeChampions.get(targetId);
+    if (!target || !target.alive) continue;
+
+    const applied = target.addUlt({ amount: 1, context });
+
+    console.log("[ULT - TAKEN]", target.name, applied);
+  }
+}
+
 // ============================================================
 //  IMPORTS
 // ============================================================
@@ -352,139 +400,155 @@ function canExecuteAction(user, action) {
 // ============================================================
 
 /** Resolve os alvos de uma ação, respeitando Taunt e validando existência. */
-function resolveSkillTargets(user, skill, action) {
+function resolveSkillTargets(user, skill, action, context) {
   const currentTargets = {};
   let redirected = false;
 
-  // --- TAUNT ---
-  const hasTaunt = user.tauntEffects?.some(
+  console.log("==== RESOLVE START ====");
+  console.log("Skill:", skill.key);
+  console.log("Incoming targetIds:", action.targetIds);
+  console.log("TauntEffects:", user.tauntEffects);
+
+  // Antecipar contexto
+  context ??= createBaseContext({ sourceId: user.id });
+
+  // =========================
+  // TAUNT
+  // =========================
+
+  const activeTaunt = user.tauntEffects?.find(
     (effect) => effect.expiresAtTurn > currentTurn,
   );
 
+  const hasTaunt = !!activeTaunt;
+
   const canRedirect =
-    hasTaunt && action.targetIds && Object.keys(action.targetIds).length > 0;
+    hasTaunt && action?.targetIds && Object.keys(action.targetIds).length > 0;
 
-  const redirectableRoles = [];
+  // =========================
+  // REDIRECTION
+  // =========================
 
-  skill.targetSpec?.forEach((spec, index) => {
-    const type = typeof spec === "string" ? spec : spec.type;
-
-    if (type === "enemy") {
-      const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
-      redirectableRoles.push(roleKey);
-    }
-  });
-
-  if (canRedirect && redirectableRoles.length > 0) {
-    const taunterId = user.tauntEffects[0].taunterId;
-    const taunter = activeChampions.get(taunterId);
+  if (canRedirect && Array.isArray(skill.targetSpec)) {
+    const taunter = activeChampions.get(activeTaunt.taunterId);
 
     if (taunter && taunter.alive) {
-      let redirected = false;
+      let redirectionEvents = [];
 
-      for (const role in action.targetIds) {
-        const original = activeChampions.get(action.targetIds[role]);
+      skill.targetSpec.forEach((spec, index) => {
+        const type = typeof spec === "string" ? spec : spec.type;
 
-        if (
-          !redirected &&
-          redirectableRoles.includes(role) &&
-          original &&
-          original.alive &&
-          original.team !== user.team
-        ) {
-          currentTargets[role] = taunter;
-          redirected = true;
-        } else {
-          currentTargets[role] = original;
-        }
-      }
+        if (type !== "enemy") return;
 
-      if (redirected) {
-        io.emit(
-          "combatLog",
-          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
-        );
+        const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
 
-        context.visual.redirectionEvents =
-          context.visual.redirectionEvents || [];
+        const originalId = action.targetIds?.[roleKey];
 
-        context.visual.redirectionEvents.push({
+        if (!originalId) return;
+
+        const original = activeChampions.get(originalId);
+        if (!original || !original.alive) return;
+
+        // Se unique obrigatório → NÃO redireciona automaticamente
+        if (spec.unique === true) return;
+
+        // Redireciona
+        currentTargets[roleKey] = taunter;
+        redirected = true;
+
+        redirectionEvents.push({
           type: "tauntRedirection",
           attackerId: user.id,
           fromTargetId: original.id,
           toTargetId: taunter.id,
         });
-      }
-    } else {
+      });
+
+      // Preencher demais roles não redirecionados
       for (const role in action.targetIds) {
-        currentTargets[role] = activeChampions.get(action.targetIds[role]);
+        if (!currentTargets[role]) {
+          const target = activeChampions.get(action.targetIds[role]);
+          if (target && target.alive) {
+            currentTargets[role] = target;
+          }
+        }
       }
-    }
-  } else {
-    for (const role in action.targetIds) {
-      currentTargets[role] = activeChampions.get(action.targetIds[role]);
+
+      if (redirected) {
+        context.visual.redirectionEvents =
+          context.visual.redirectionEvents || [];
+
+        context.visual.redirectionEvents.push(...redirectionEvents);
+
+        io.emit(
+          "combatLog",
+          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
+        );
+      }
     }
   }
 
-  // --- Resolução normal ---
+  // =========================
+  // NORMAL RESOLUTION (if nothing redirected)
+  // =========================
+
   if (!redirected) {
-    // Verifica se a skill possui alvos globais (all-enemies, all-allies, all)
     const normalizedSpec = Array.isArray(skill.targetSpec)
       ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
       : [];
 
-    const hasAllEnemies = normalizedSpec.includes("all-enemies");
-    const hasAllAllies = normalizedSpec.includes("all-allies");
+    const hasAllEnemies =
+      normalizedSpec.includes("all-enemies") ||
+      normalizedSpec.includes("all:enemy");
+
+    const hasAllAllies =
+      normalizedSpec.includes("all-allies") ||
+      normalizedSpec.includes("all:ally");
+
     const hasAll = normalizedSpec.includes("all");
 
     if (hasAllEnemies || hasAllAllies || hasAll) {
-      // Alvos globais — resolvidos automaticamente pelo servidor
       if (hasAllEnemies || hasAll) {
         const enemies = Array.from(activeChampions.values()).filter(
           (c) => c.team !== user.team && c.alive,
         );
-        enemies.forEach((e, i) => {
+
+        enemies.forEach((enemy, i) => {
           const key = i === 0 ? "enemy" : `enemy${i + 1}`;
-          currentTargets[key] = e;
+          currentTargets[key] = enemy;
         });
       }
+
       if (hasAllAllies || hasAll) {
         const allies = Array.from(activeChampions.values()).filter(
           (c) => c.team === user.team && c.alive,
         );
-        allies.forEach((a, i) => {
+
+        allies.forEach((ally, i) => {
           const key = i === 0 ? "ally" : `ally${i + 1}`;
-          currentTargets[key] = a;
+          currentTargets[key] = ally;
         });
       }
-    } else {
-      // Alvos manuais — enviados pelo client via targetIds
+    } else if (action?.targetIds) {
       for (const role in action.targetIds) {
         const target = activeChampions.get(action.targetIds[role]);
 
         if (target && target.alive) {
           currentTargets[role] = target;
         } else if (role === "self") {
-          // "self" sempre resolve para o próprio user
           currentTargets[role] = user;
         }
-        // Alvo morto/inválido → simplesmente não entra em currentTargets.
-        // A porção da skill referente a esse alvo não será executada,
-        // mas as demais porções continuam normalmente.
       }
-    }
-
-    // Se nenhum alvo restou, aí sim cancela a ação
-    if (Object.keys(currentTargets).length === 0) {
-      io.emit(
-        "combatLog",
-        `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
-      );
-      return null;
     }
   }
 
-  console.log("FINAL TARGETS:", Object.keys(currentTargets));
+  if (Object.keys(currentTargets).length === 0) {
+    io.emit(
+      "combatLog",
+      `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
+    );
+    return null;
+  }
 
   return currentTargets;
 }
@@ -515,7 +579,7 @@ function buildEmitTargetInfo(realTargetIds) {
   }
 
   return {
-    targetId: realTargetIds.length === 1 ? realTargetIds[0] : null,
+    targetId: realTargetIds[0] ?? null,
     targetName,
   };
 }
@@ -541,11 +605,11 @@ function emitSystemEnvelopesFromContext({ user, skill, context }) {
         ult: c.ultMeter,
       })),
     );
-    emitCombatAction(mainEnvelope);
+    emitGameAction(mainEnvelope);
   }
 
   for (const envelope of reactionEnvelopes) {
-    emitCombatAction(envelope);
+    emitGameAction(envelope);
   }
 }
 
@@ -723,7 +787,7 @@ function snapshotChampions(ids) {
  *   log     — texto verboso para o log de combate
  *   state   — snapshots do estado final dos campeões afetados
  */
-function emitCombatAction(envelope) {
+function emitGameAction(envelope) {
   if (!envelope) return;
 
   io.emit("combatAction", envelope);
@@ -734,9 +798,15 @@ function emitCombatAction(envelope) {
 // ============================================================
 
 /** Executa a habilidade, emite payloads e registra no histórico. */
-function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
+function performSkillExecution(
+  user,
+  skill,
+  targets,
+  actionResourceCost = 0,
+  context,
+) {
   // 🔹 1. Criar contexto
-  const context = createBaseContext({ sourceId: user.id });
+  context ??= createBaseContext({ sourceId: user.id });
   context.currentSkill = skill;
 
   // 🔹 2. Injetar contexto nos campeões
@@ -761,25 +831,7 @@ function performSkillExecution(user, skill, targets, actionResourceCost = 0) {
   // 🔹 6. Normalizar resultado
   const results = Array.isArray(result) ? result : result ? [result] : [];
 
-  const dealtDamage = context.visual.damageEvents.reduce(
-    (sum, e) => sum + (e.amount || 0),
-    0,
-  );
-
-  if (dealtDamage > 0) {
-    const applied = user.applyRegenFromDamage(context);
-
-    console.log(
-      "[ULT REGEN]",
-      user.name,
-      "antes:",
-      user.ultMeter,
-      "aplicado:",
-      applied,
-      "depois:",
-      user.ultMeter,
-    );
-  }
+  applyUltMeterFromContext({ user, context });
 
   for (const r of results) {
     if (r?.extraEffects?.some((e) => e.type === "dialog")) {
@@ -860,19 +912,16 @@ function executeSkillAction(action) {
     return false;
   }
 
-  const targets = resolveSkillTargets(user, skill, action);
+  const context = createBaseContext({ sourceId: user.id });
+
+  const targets = resolveSkillTargets(user, skill, action, context);
+  console.log("STEP 1 - TARGETS:", targets);
   if (!targets) {
     refundActionResource(user, action);
     return false;
   }
 
-  performSkillExecution(
-    user,
-    skill,
-    targets,
-    action.resourceCost,
-    action.resourceSnapshot,
-  );
+  performSkillExecution(user, skill, targets, action.resourceCost, context);
   return true;
 }
 
@@ -1101,7 +1150,7 @@ function processChampionsDeaths() {
     const winnerTeam = winnerSlot + 1;
     const winnerName = playerNames.get(winnerSlot);
 
-    emitCombatAction({
+    emitGameAction({
       action: null,
       effects: [{ type: "gameOver", winnerTeam, winnerName }],
       log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
@@ -1229,7 +1278,7 @@ function processTurnStartKeywords({ activeChampions, context }) {
     if (r.log) logs.push(r.log);
   });
 
-  emitCombatAction({
+  emitGameAction({
     action: null,
     effects,
     log: logs.join("\n") || null,
@@ -1770,7 +1819,7 @@ io.on("connection", (socket) => {
       player2: playerScores[1],
     });
 
-    emitCombatAction({
+    emitGameAction({
       action: null,
       effects: [{ type: "gameOver", winnerTeam, winnerName }],
       log: `${formatPlayerName(surrendererName, surrenderingTeam)} se rendeu! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,

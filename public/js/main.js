@@ -48,14 +48,18 @@ function showSkillOverlay(button, skill, champion) {
   `
         : ""
     }
-      <div class="skill-meta-item">
-        <span class="meta-label">Tipo: ${
-          skill.damageMode
-            ? `<span class="meta-value">${getDamageModeLabel(skill.damageMode)}</span>`
-            : "-"
-        }</span>
-        } </span>
-      </div>
+      ${
+        skill.damageMode != null
+          ? `
+        <div class="skill-meta-item">
+          <span class="meta-label">Tipo de Dano:</span>
+          <span class="meta-value">
+            ${getDamageModeLabel(skill.damageMode)}
+          </span>
+        </div>
+      `
+          : ""
+      }
 
       ${
         skill.bf

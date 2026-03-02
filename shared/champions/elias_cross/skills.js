@@ -2,7 +2,7 @@ import { CombatResolver } from "../../core/combatResolver.js";
 import { formatChampionName } from "../../core/formatters.js";
 import basicAttack from "../basicAttack.js";
 
-export const eliasCrossSkills = [
+const eliasCrossSkills = [
   // =========================
   // Ataque Básico
   // =========================
@@ -124,6 +124,8 @@ export const eliasCrossSkills = [
     name: "Tempestade de Raios",
     bf: 135,
     damageMode: "standard",
+    isUltimate: true,
+    ultCost: 3,
     recoilDamage: 40,
     recoilDamageMode: "absolute",
     contact: false,
@@ -168,3 +170,5 @@ export const eliasCrossSkills = [
     },
   },
 ];
+
+export default eliasCrossSkills;
