@@ -13,11 +13,11 @@ const nodeSparckina07Skills = [
     name: "Sparkling Slash",
     bf: 70,
     contact: true,
-
+    damageMode: "standard",
     priority: 0,
     element: "lightning",
     description() {
-      return `Causa dano bruto ao inimigo.`;
+      return `Causa dano ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -79,11 +79,11 @@ const nodeSparckina07Skills = [
     bf: 135,
     paralyzeDuration: 2,
     contact: true,
-
+    damageMode: "standard",
     priority: 0,
     element: "lightning",
     description() {
-      return `Causa alto dano bruto ao inimigo (BF ${this.bf}) e aplica paralisia por ${this.paralyzeDuration} turnos.`;
+      return `Causa alto dano ao inimigo (BF ${this.bf}) e aplica paralisia por ${this.paralyzeDuration} turnos.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

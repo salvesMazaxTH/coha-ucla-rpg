@@ -15,12 +15,13 @@ const naelthosSkills = [
     name: "Toque da Maré Serena",
     bf: 75,
     healAmount: 45,
+    damageMode: "standard",
     contact: false,
 
     priority: 0,
     element: "water",
     description() {
-      return `Naelthos causa dano bruto ao inimigo e cura o aliado mais ferido em ${this.healAmount} HP.`;
+      return `Naelthos causa dano ao inimigo e cura o aliado mais ferido em ${this.healAmount} HP.`;
     },
     targetSpec: ["enemy"],
 
@@ -109,6 +110,7 @@ const naelthosSkills = [
     hpPerStack: 30,
     bonusPerStack: 20,
     maxBonus: 160,
+    damageMode: "standard",
     contact: false,
     element: "water",
 

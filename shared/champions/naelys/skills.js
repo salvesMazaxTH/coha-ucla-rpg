@@ -15,13 +15,13 @@ const naelysSkills = [
     name: "Pingente das Ondas",
     contact: false,
     bf: 80,
-
+    damageMode: "standard",
     priority: 1,
     element: "water",
     selfHealAmount: 50,
     allyHealAmount: 20,
     description() {
-      return `Naelys cura a si mesma em ${this.selfHealAmount} HP e um aliado em ${this.allyHealAmount} HP, causando dano bruto ao inimigo (BF ${this.bf}).`;
+      return `Naelys cura a si mesma em ${this.selfHealAmount} HP e um aliado em ${this.allyHealAmount} HP, causando dano ao inimigo (BF ${this.bf}).`;
     },
     targetSpec: ["enemy", "self", { type: "select:ally", excludesSelf: true }],
     execute({ user, targets, context = {} }) {
@@ -110,7 +110,7 @@ const naelysSkills = [
           const baseDamage = (self.Attack * basic.bf) / 100;
 
           context.extraDamageQueue.push({
-            mode: "raw",
+            mode: "standard",
             baseDamage,
             user: self,
             target: attacker,
@@ -161,7 +161,7 @@ const naelysSkills = [
     key: "sobrefluxo",
     name: "Sobrefluxo",
     contact: false,
-
+    damageMode: "standard",
     priority: 3,
     duration: 3,
     maxBonus: 120,
@@ -170,7 +170,7 @@ const naelysSkills = [
     element: "water",
 
     description() {
-      return `Por ${this.duration} turnos, Naelys causa dano adicional baseado no HP perdido (até +${this.maxBonus} de dano bruto).`;
+      return `Por ${this.duration} turnos, Naelys causa dano adicional baseado no HP perdido (até +${this.maxBonus}).`;
     },
 
     targetSpec: ["self"],

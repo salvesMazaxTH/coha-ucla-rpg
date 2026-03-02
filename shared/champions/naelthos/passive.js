@@ -7,8 +7,8 @@ export default {
   maxHeal: 35,
   description() {
     return `Sempre que Naelthos receber dano,
-ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
-(Máx. +${this.maxHeal} por acerto)`;
+    ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
+    (Máx. +${this.maxHeal} por acerto)`;
   },
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (damage <= 0) return;

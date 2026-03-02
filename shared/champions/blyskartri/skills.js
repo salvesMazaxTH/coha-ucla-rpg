@@ -26,6 +26,7 @@ const blyskartriSkills = [
     key: "blyskartri_hab_2",
     name: "Blyskartri-Hab-2",
     bf: 60,
+    damageMode: "standard",
     speedBuff: 10,
     evasionBuff: 2,
     buffsDuration: 2,
@@ -75,7 +76,7 @@ const blyskartriSkills = [
   {
     key: "florescer_abissal",
     name: "Florescer Abissal",
-
+    damageMode: "standard",
     dmgBonusPerStack: 2.5,
     effectDuration: 3,
     contact: false,

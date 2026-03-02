@@ -15,6 +15,7 @@ const raliaSkills = [
     key: "juramento_de_ferro",
     name: "Juramento de Ferro",
     bf: 60,
+    damageMode: "standard",
     selfDamage: 10,
     defLoss: 30,
     atkBuff: 35,
@@ -23,7 +24,7 @@ const raliaSkills = [
 
     priority: 0,
     description() {
-      return `Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP (dano direto), para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos. Em seguida, ataca um inimigo.`;
+      return `Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos. Em seguida, ataca um inimigo.`;
     },
     targetSpec: ["self", "enemy"],
     execute({ user, targets, context = {} }) {
@@ -77,6 +78,7 @@ const raliaSkills = [
     key: "sentença_de_campo",
     name: "Sentença de Campo",
     bf: 90,
+    damageMode: "standard",
     healPercent: 60,
     minHeal: 25,
     contact: true,
@@ -118,13 +120,14 @@ const raliaSkills = [
     key: "decreto_do_bastiao",
     name: "Decreto do Bastião",
     bf: 55,
+    damageMode: "piercing",
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
 
     priority: 1,
     description() {
-      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos (dano direto).`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos.`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, context = {} }) {
@@ -141,8 +144,7 @@ const raliaSkills = [
       enemies.forEach((enemy) => {
         const damageResult = CombatResolver.processDamageEvent({
           baseDamage,
-          mode: "hybrid", // 'hybrid' para Dano Direto puro ou Direto + bruto
-          directDamage: baseDamage, // Dano Direto puro
+          mode: "piercing",
           user,
           target: enemy,
           skill: this,

@@ -15,9 +15,10 @@ const vaelSkills = [
     name: "Corte Instantâneo",
     bf: 65,
     contact: true,
+    damageMode: "standard",
     priority: 0,
     description() {
-      return `Causa dano bruto ao inimigo com chance de crítico.`;
+      return `Causa dano ao inimigo com chance de crítico.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -39,9 +40,10 @@ const vaelSkills = [
     bfPrimary: 55,
     bfSecondary: 60,
     contact: true,
+    damageMode: "standard",
     priority: 0,
     description() {
-      return `Causa dano bruto ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
+      return `Causa dano ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
     },
     targetSpec: [
       { type: "enemy", unique: true },
@@ -89,11 +91,12 @@ const vaelSkills = [
     name: "Veredito do Fio Silencioso",
     bf: 145,
     contact: true,
+    damageMode: "standard",
     isUltimate: true,
     ultCost: 3,
     priority: 0,
     description() {
-      return `Causa dano bruto devastador ao inimigo.`;
+      return `Causa dano devastador ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

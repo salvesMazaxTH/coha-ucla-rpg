@@ -7,7 +7,7 @@ const basicAttack = {
   bf: 15,
   bonusFlat: 20,
   contact: true,
-  manaCost: 0,
+  damageMode: "standard",
   priority: 0,
   description() {
     return `\n Ataque básico genérico (BF ${this.bf} + ${this.bonusFlat} bônus flat).`;

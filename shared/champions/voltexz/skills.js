@@ -15,10 +15,11 @@ const voltexzSkills = [
     name: "Relâmpagos Gêmeos",
     bf: 45,
     contact: false,
+    damageMode: "standard",
     priority: 0,
     element: "lightning",
     description() {
-      return `Causa dano bruto em até dois inimigos (pode escolher o mesmo alvo para ambos).`;
+      return `Causa dano em até dois inimigos (pode escolher o mesmo alvo para ambos).`;
     },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
@@ -62,10 +63,11 @@ const voltexzSkills = [
     bf: 20,
     paralyzeDuration: 1,
     contact: false,
+    damageMode: "standard",
     priority: 1,
     element: "lightning",
     description() {
-      return `Causa dano bruto (BF ${this.bf}) e paralisa o alvo por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
+      return `Causa dano (BF ${this.bf}) e paralisa o alvo por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -74,8 +76,6 @@ const voltexzSkills = [
       const results = [];
       const damageResult = CombatResolver.processDamageEvent({
         baseDamage,
-        mode: "hybrid", // 'hybrid' para Dano Direto puro ou parte Bruto e parte Direto
-        directDamage: baseDamage, // Dano Direto puro
         user,
         target: enemy,
         skill: this,
@@ -112,12 +112,13 @@ const voltexzSkills = [
     name: "Descarga Cataclísmica",
     bf: 185,
     contact: false,
+    damageMode: "standard",
     isUltimate: true,
     ultCost: 3,
     priority: 0,
     element: "lightning",
     description() {
-      return `Causa dano bruto massivo ao inimigo.`;
+      return `Causa dano massivo ao inimigo.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {

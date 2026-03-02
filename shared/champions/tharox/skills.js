@@ -20,7 +20,7 @@ const tharoxSkills = [
     contact: false,
     priority: 2,
     description() {
-      return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano bruto final de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
+      return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
     },
     targetSpec: ["self"],
     execute({ user, targets, context = {} }) {
@@ -50,7 +50,7 @@ const tharoxSkills = [
       });
 
       return {
-        log: `${userName} executou Provocação Primeva. Todos os inimigos foram provocados e ${userName} recebeu -${this.damageReductionAmount} de Dano Bruto Final.`,
+        log: `${userName} executou Provocação Primeva. Todos os inimigos foram provocados e ${userName} recebeu -${this.damageReductionAmount} de Redução de Dano.`,
       };
     },
   },
@@ -59,11 +59,12 @@ const tharoxSkills = [
     key: "impacto_da_couraça",
     name: "Impacto da Couraça",
     bf: 80,
+    damageMode: "standard",
     defScaling: 20,
     contact: true,
     priority: 0,
     description() {
-      return `Causa dano bruto ao inimigo somado a ${this.defScaling}% da Defesa.`;
+      return `Causa dano ao inimigo somado a ${this.defScaling}% da Defesa.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -87,6 +88,7 @@ const tharoxSkills = [
     name: "Apoteose do Monólito",
     hpGain: 50,
     defGain: 10,
+    damageMode: "standard",
     baseDef: 205,
     defDamagePercent: 45,
     maxDamageBonus: 80,

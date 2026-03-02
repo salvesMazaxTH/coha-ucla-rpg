@@ -9,11 +9,63 @@ const MAX_CRIT_CHANCE = 95;
 const ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
 
 export const CombatResolver = {
+  // ==========================================================
+  // UTILITÁRIOS BÁSICOS
+  // ==========================================================
   roundToFive(x) {
     return Math.round(x / 5) * 5;
   },
 
-  // ------------------------
+  // ==========================================================
+  // FLUXO PRINCIPAL (ORQUESTRADOR)
+  // ==========================================================
+
+  processDamageEvent(params) {
+    const ctx = this._normalizeContext(params);
+
+    const early = this._handlePreChecks(ctx);
+    if (early) return early;
+
+    this._runBeforeHooks(ctx);
+
+    ctx.finalDamage = this._composeFinalDamage(
+      ctx.mode,
+      ctx.damage,
+      ctx.crit,
+      ctx.piercingPortion,
+      ctx.target,
+      ctx.context,
+    );
+
+    const applied = this._applyDamage(ctx.target, ctx.finalDamage, ctx.context);
+
+    ctx.hpAfter = applied.hpAfter;
+    ctx.actualDmg = applied.actualDmg;
+
+    ctx.context.registerDamage({
+      target: ctx.target,
+      amount: ctx.finalDamage,
+      sourceId: ctx.user?.id,
+      isCritical: ctx.crit?.didCrit,
+    });
+
+    const lifesteal = this._applyLifeSteal(
+      user,
+      applied.actualDmg,
+      allChampions,
+    );
+    ctx.lifesteal = lifesteal;
+
+    this._runAfterHooks(ctx);
+
+    const extraResults = this._processExtraQueue(ctx);
+
+    return this._buildFinalResult(ctx, extraResults);
+  },
+
+  // ==========================================================
+  // PRÉ-CHECAGENS
+  // ==========================================================
 
   _rollEvasion({ attacker, target, context }) {
     if (target.Evasion <= 0) return false;
@@ -38,8 +90,9 @@ export const CombatResolver = {
     return evaded ? { evaded: true, log: finalLog } : false;
   },
 
-  // -------------------------
-  // Crit. related
+  // ==========================================================
+  // CRÍTICO
+  // ==========================================================
 
   rollCrit(user, context, critOptions = {}) {
     const { force = false, disable = false } = critOptions;
@@ -152,12 +205,10 @@ export const CombatResolver = {
     return crit;
   },
 
-  // -------------------------------------------------
+  // ==========================================================
+  // CÁLCULO E APLICAÇÃO DE DANO
+  // ==========================================================
 
-  // -----------------------------------
-  // Cálculo e aplicação de dano e seus métodos auxiliares
-
-  // Modificadores
   _applyDamageModifiers(damage, user, target, skill, context) {
     if (!user?.getDamageModifiers) {
       if (debugMode)
@@ -403,8 +454,8 @@ export const CombatResolver = {
     const defensePercent = this.defenseToPercent(defenseUsed);
     const flatReduction = target.getTotalDamageReduction?.() || 0;
 
-    // ---------- RAW ----------
-    if (mode === "raw") {
+    // ---------- STANDARD ----------
+    if (mode === "standard") {
       finalDamage = Math.max(
         finalDamage - finalDamage * defensePercent - flatReduction,
         0,
@@ -413,16 +464,16 @@ export const CombatResolver = {
     // ---------- HYBRID ----------
     else {
       const directPortion = Math.min(direct, finalDamage);
-      const rawPortion = finalDamage - directPortion;
+      const standardPortion = finalDamage - directPortion;
 
       const directAfterReduction = Math.max(directPortion - flatReduction, 0);
 
-      const rawAfterReduction = Math.max(
-        rawPortion - rawPortion * defensePercent - flatReduction,
+      const standardAfterReduction = Math.max(
+        standardPortion - standardPortion * defensePercent - flatReduction,
         0,
       );
 
-      finalDamage = directAfterReduction + rawAfterReduction;
+      finalDamage = directAfterReduction + standardAfterReduction;
     }
 
     // ---------- FINALIZAÇÃO ----------
@@ -476,18 +527,18 @@ export const CombatResolver = {
     return { hpAfter, actualDmg };
   },
 
-  _applyBeforeTakingPassive({
+  _applyBeforeDealingPassive({
     mode,
+    skill,
     damage,
     crit,
-    skill,
     attacker,
     target,
     context,
     allChampions,
   }) {
     const results = emitCombatEvent(
-      "onBeforeDmgTaking",
+      "onBeforeDmgDealing",
       {
         mode,
         damage,
@@ -502,8 +553,8 @@ export const CombatResolver = {
       allChampions,
     );
 
-    const effects = [];
     const logs = [];
+    const effects = [];
 
     for (const r of results) {
       if (!r) continue;
@@ -549,18 +600,18 @@ export const CombatResolver = {
     };
   },
 
-  _applyBeforeDealingPassive({
+  _applyBeforeTakingPassive({
     mode,
-    skill,
     damage,
     crit,
+    skill,
     attacker,
     target,
     context,
     allChampions,
   }) {
     const results = emitCombatEvent(
-      "onBeforeDmgDealing",
+      "onBeforeDmgTaking",
       {
         mode,
         damage,
@@ -575,8 +626,8 @@ export const CombatResolver = {
       allChampions,
     );
 
-    const logs = [];
     const effects = [];
+    const logs = [];
 
     for (const r of results) {
       if (!r) continue;
@@ -782,7 +833,9 @@ export const CombatResolver = {
     };
   },
 
-  // -----------------------------------
+  // ==========================================================
+  // LOG E RECUPERAÇÃO
+  // ==========================================================
 
   _buildLog(user, target, skill, dmg, crit, hpAfter) {
     const userName = formatChampionName(user);
@@ -865,6 +918,10 @@ export const CombatResolver = {
     };
   },
 
+  // ==========================================================
+  // RESULTADOS DE BLOQUEIO/IMUNIDADE
+  // ==========================================================
+
   _isImmune(target) {
     return target.hasKeyword?.("imunidade absoluta");
   },
@@ -899,9 +956,272 @@ export const CombatResolver = {
     };
   },
 
-  processDamageEvent(params) {
+  // ==========================================================
+  // FLUXO PRINCIPAL - CONTEXTO
+  // ==========================================================
+
+  _normalizeContext(params) {
     const {
-      mode = "raw",
+      mode = "standard",
+      baseDamage = 0,
+      piercingPortion = 0,
+      user,
+      target,
+      skill,
+      context = {},
+      critOptions = {},
+      allChampions = [],
+    } = params;
+
+    const damageDepth = context.damageDepth ?? 0;
+
+    if (damageDepth === 0) {
+      console.group(`⚔️ ${user.name} → ${target.name}`);
+    } else {
+      console.group(`↪️ REAÇÃO (${context.origin || "extra"})`);
+    }
+
+    return {
+      mode,
+      baseDamage: Number.isFinite(baseDamage) ? baseDamage : 0,
+      damage: Number.isFinite(baseDamage) ? baseDamage : 0,
+      piercingPortion,
+      user,
+      target,
+      skill,
+      critOptions,
+      allChampions,
+      crit: { didCrit: false },
+      beforeLogs: [],
+      afterLogs: [],
+      context: {
+        ...context,
+        damageDepth,
+        extraDamageQueue: context.extraDamageQueue ?? [],
+        extraLogs: context.extraLogs ?? [],
+        extraEffects: context.extraEffects ?? [],
+      },
+    };
+  },
+
+  // ==========================================================
+  // FLUXO PRINCIPAL - ETAPA 1: PRE CHECKS
+  // ==========================================================
+
+  _handlePreChecks(ctx) {
+    const { mode, user, target, baseDamage, skill, context } = ctx;
+
+    // IMUNE SEMPRE
+    if (this._isImmune(target)) {
+      context.registerDamage({
+        target,
+        amount: 0,
+        sourceId: user?.id,
+        flags: { immune: true },
+      });
+      console.groupEnd();
+      return this._buildImmuneResult(baseDamage, user, target, skill);
+    }
+
+    // ABSOLUTE ignora escudo e evasão
+    if (mode !== "absolute") {
+      if (target._checkAndConsumeShieldBlock?.(context)) {
+        context.registerDamage({
+          target,
+          amount: 0,
+          sourceId: user?.id,
+          flags: { shieldBlocked: true },
+        });
+        console.groupEnd();
+        return this._buildShieldBlockResult(baseDamage, user, target, skill);
+      }
+
+      const evasion = this._rollEvasion({ attacker: user, target, context });
+      if (evasion?.evaded) {
+        context.registerDamage({
+          target,
+          amount: 0,
+          sourceId: user?.id,
+          flags: { evaded: true },
+        });
+        console.groupEnd();
+        return {
+          totalDamage: 0,
+          evaded: true,
+          targetId: target.id,
+          userId: user.id,
+        };
+      }
+    }
+
+    return null;
+  },
+
+  // ==========================================================
+  // FLUXO PRINCIPAL - ETAPA 2: BEFORE HOOKS
+  // ==========================================================
+
+  _runBeforeHooks(ctx) {
+    const { mode, user, target, skill, context, allChampions } = ctx;
+
+    if (mode !== "absolute") {
+      ctx.crit = this.processCrit({
+        baseDamage: ctx.damage,
+        user,
+        target,
+        context,
+        critOptions: ctx.critOptions,
+      }) ?? { didCrit: false };
+
+      ctx.damage = this._applyDamageModifiers(
+        ctx.damage,
+        user,
+        target,
+        skill,
+        context,
+      );
+
+      const beforeDeal = this._applyBeforeDealingPassive({
+        mode,
+        skill,
+        damage: ctx.damage,
+        crit: ctx.crit,
+        attacker: user,
+        target,
+        context,
+        allChampions,
+      });
+
+      if (beforeDeal?.damage !== undefined) ctx.damage = beforeDeal.damage;
+      if (beforeDeal?.crit !== undefined) ctx.crit = beforeDeal.crit;
+      if (beforeDeal?.logs?.length) ctx.beforeLogs.push(...beforeDeal.logs);
+
+      const beforeTake = this._applyBeforeTakingPassive({
+        mode,
+        skill,
+        damage: ctx.damage,
+        crit: ctx.crit,
+        dmgSrc: user,
+        dmgReceiver: target,
+        context,
+        allChampions,
+      });
+
+      if (beforeTake?.damage !== undefined) ctx.damage = beforeTake.damage;
+      if (beforeTake?.crit !== undefined) ctx.crit = beforeTake.crit;
+      if (beforeTake?.logs?.length) ctx.beforeLogs.push(...beforeTake.logs);
+    }
+  },
+
+  // ==========================================================
+  // FLUXO PRINCIPAL - ETAPA 3: AFTER HOOKS
+  // ==========================================================
+
+  _runAfterHooks(ctx) {
+    const { user, target, skill, actualDmg, context, allChampions } = ctx;
+
+    const afterTake = this._applyAfterTakingPassive({
+      attacker: user,
+      target,
+      skill,
+      damage: actualDmg,
+      context,
+      allChampions,
+    });
+
+    const afterDeal = this._applyAfterDealingPassive({
+      attacker: user,
+      target,
+      skill,
+      damage: actualDmg,
+      context,
+      allChampions,
+    });
+
+    if (afterTake?.logs?.length) ctx.afterLogs.push(...afterTake.logs);
+
+    if (afterDeal?.logs?.length) ctx.afterLogs.push(...afterDeal.logs);
+  },
+
+  // ==========================================================
+  // FLUXO PRINCIPAL - ETAPA 4: EXTRA QUEUE
+  // ==========================================================
+
+  _processExtraQueue(ctx) {
+    const { context, allChampions } = ctx;
+    if (!context.extraDamageQueue.length) return [];
+
+    const queue = [...context.extraDamageQueue];
+    context.extraDamageQueue = [];
+
+    const results = [];
+
+    for (const extra of queue) {
+      const result = this.processDamageEvent({
+        ...extra,
+        context: {
+          ...context,
+          damageDepth: (context.damageDepth ?? 0) + 1,
+          origin: extra.skill?.key || "reaction",
+        },
+        allChampions,
+      });
+
+      if (Array.isArray(result)) results.push(...result);
+      else if (result) results.push(result);
+    }
+
+    return results;
+  },
+
+  // ==========================================================
+  // FLUXO PRINCIPAL - ETAPA 5: FINAL RESULT
+  // ==========================================================
+
+  _buildFinalResult(ctx, extraResults) {
+    const {
+      user,
+      target,
+      skill,
+      actualDmg,
+      hpAfter,
+      crit,
+      beforeLogs,
+      afterLogs,
+      context,
+    } = ctx;
+
+    let log = this._buildLog(user, target, skill, actualDmg, crit, hpAfter);
+
+    const allLogs = [...beforeLogs, ...afterLogs, ...(context.extraLogs || [])];
+
+    if (allLogs.length) {
+      log += "\n" + allLogs.join("\n");
+    }
+
+    console.groupEnd();
+
+    const main = {
+      totalDamage: actualDmg,
+      finalHP: target.HP,
+      targetId: target.id,
+      userId: user.id,
+      log,
+      crit,
+      damageDepth: context.damageDepth,
+      skill,
+    };
+
+    if (extraResults.length) {
+      return [main, ...extraResults];
+    }
+
+    return main;
+  },
+
+  /*   processDamageEvent(params) {
+    const {
+      mode = "standard",
       baseDamage,
       directDamage = 0,
       user,
@@ -910,12 +1230,12 @@ export const CombatResolver = {
       context,
       critOptions = {},
       allChampions = [],
-    } = params;
+    } = params; */
 
-    // =========================
-    // 1️⃣ PRÉ-CHECAGENS
-    // =========================
-    const depth = context.damageDepth ?? 0;
+  // =========================
+  // 1️⃣ PRÉ-CHECAGENS
+  // =========================
+  /*  const depth = context.damageDepth ?? 0;
 
     if (depth === 0) {
       console.group(`⚔️ AÇÃO PRINCIPAL: ${user.name} → ${target.name}`);
@@ -1002,12 +1322,12 @@ export const CombatResolver = {
         isCritical: false,
         flags: { recoil: true },
       };
-    }
-    // =========================
-    // 2️⃣ CÁLCULO DO DANO
-    // =========================
+    } */
+  // =========================
+  // 2️⃣ CÁLCULO DO DANO
+  // =========================
 
-    context.extraEffects = context.extraEffects || [];
+  /*  context.extraEffects = context.extraEffects || [];
     let extraEffects = [];
 
     let crit = this.processCrit({
@@ -1063,12 +1383,12 @@ export const CombatResolver = {
     console.log(
       `➡️ Dano final calculado (depois da "compose"): ${finalDamage}`,
     );
+ */
+  // =========================
+  // 3️⃣ APLICAR DANO
+  // =========================
 
-    // =========================
-    // 3️⃣ APLICAR DANO
-    // =========================
-
-    context.extraLogs = [];
+  /* context.extraLogs = [];
 
     const beforeTake = this._applyBeforeTakingPassive({
       mode,
@@ -1124,13 +1444,13 @@ export const CombatResolver = {
       sourceId: user?.id,
       isCritical: crit?.didCrit,
       flags: {},
-    });
+    }); */
 
-    // =========================
-    // 4️⃣ AFTER HOOKS
-    // =========================
+  // =========================
+  // 4️⃣ AFTER HOOKS
+  // =========================
 
-    /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
+  /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
     console.log({
       attacker: user?.name,
       target: target?.name,
@@ -1141,7 +1461,7 @@ export const CombatResolver = {
       allChampions,
     }); */
 
-    const afterTakeResult = this._applyAfterTakingPassive({
+  /*    const afterTakeResult = this._applyAfterTakingPassive({
       attacker: user,
       target,
       skill,
@@ -1169,13 +1489,13 @@ export const CombatResolver = {
 
     if (afterDealResult?.effects?.length) {
       extraEffects.push(...afterDealResult.effects);
-    }
+    } */
 
-    // =========================
-    // 5️⃣ EFEITOS SECUNDÁRIOS
-    // =========================
+  // =========================
+  // 5️⃣ EFEITOS SECUNDÁRIOS
+  // =========================
 
-    const ls = this._applyLifeSteal(user, finalDamage, allChampions);
+  /*    const ls = this._applyLifeSteal(user, finalDamage, allChampions);
     const lsAmount = Number(ls?.amount) || 0;
 
     // 🔥 Processa fila de danos extras (ex: contra-ataques, recuos etc.)
@@ -1203,13 +1523,13 @@ export const CombatResolver = {
           extraResults.push(result);
         }
       }
-    }
+    } */
 
-    // =========================
-    // 6️⃣ CONSTRUÇÃO DO LOG
-    // =========================
+  // =========================
+  // 6️⃣ CONSTRUÇÃO DO LOG
+  // =========================
 
-    const afterTakeLogs = afterTakeResult?.logs || [];
+  /*  const afterTakeLogs = afterTakeResult?.logs || [];
     const afterDealLogs = afterDealResult?.logs || [];
 
     let log = this._buildLog(user, target, skill, finalDamage, crit, hpAfter);
@@ -1231,13 +1551,13 @@ export const CombatResolver = {
       if (r.log) log += "\n" + r.log;
     }
 
-    if (context.extraLogs.length) log += "\n" + context.extraLogs.join("\n");
+    if (context.extraLogs.length) log += "\n" + context.extraLogs.join("\n"); */
 
-    // =========================
-    // 7️⃣ RETORNO FINAL
-    // =========================
+  // =========================
+  // 7️⃣ RETORNO FINAL
+  // =========================
 
-    console.groupEnd();
+  /*  console.groupEnd();
 
     const mainResult = {
       baseDamage,
@@ -1276,5 +1596,5 @@ export const CombatResolver = {
     }
 
     return mainResult;
-  },
+  }, */
 };

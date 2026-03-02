@@ -34,7 +34,7 @@ export default {
     if (recoilDamage > 0) {
       context.extraDamageQueue.push({
         type: "recuo_dano",
-        mode: "direct",
+        mode: "piercing",
         baseDamage: recoilDamage,
         directDamage: recoilDamage,
         user: owner,
@@ -58,7 +58,7 @@ export default {
     if (dmgReceiver.hasKeyword?.("sobrecarga")) {
       dmgReceiver.removeKeyword("sobrecarga");
       return;
-    } 
+    }
 
     dmgReceiver.applyKeyword("sobrecarga", this.sobrecargaDuration, context, {
       sourceSkill: skill,

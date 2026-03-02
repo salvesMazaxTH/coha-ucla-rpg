@@ -361,30 +361,42 @@ function resolveSkillTargets(user, skill, action) {
     (effect) => effect.expiresAtTurn > currentTurn,
   );
 
-  const normalizedSpec = Array.isArray(skill.targetSpec)
-    ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
-    : [];
+  const canRedirect =
+    hasTaunt && action.targetIds && Object.keys(action.targetIds).length > 0;
 
-  const isOffensiveSkill = normalizedSpec.some((spec) =>
-    spec.includes("enemy"),
-  );
+  const redirectableRoles = [];
 
-  if (hasTaunt && isOffensiveSkill) {
+  skill.targetSpec?.forEach((spec, index) => {
+    const type = typeof spec === "string" ? spec : spec.type;
+
+    if (type === "enemy") {
+      const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
+      redirectableRoles.push(roleKey);
+    }
+  });
+
+  if (canRedirect && redirectableRoles.length > 0) {
     const taunterId = user.tauntEffects[0].taunterId;
     const taunter = activeChampions.get(taunterId);
 
     if (taunter && taunter.alive) {
+      let redirected = false;
+
       for (const role in action.targetIds) {
         const original = activeChampions.get(action.targetIds[role]);
-        if (original && original.alive && original.team !== user.team) {
+
+        if (
+          !redirected &&
+          redirectableRoles.includes(role) &&
+          original &&
+          original.alive &&
+          original.team !== user.team
+        ) {
           currentTargets[role] = taunter;
           redirected = true;
-        } else if (role === "self") {
-          currentTargets[role] = user;
-        } else if (original && original.alive) {
+        } else {
           currentTargets[role] = original;
         }
-        // Alvo morto → não entra, a porção da skill correspondente é ignorada
       }
 
       if (redirected) {
@@ -392,25 +404,25 @@ function resolveSkillTargets(user, skill, action) {
           "combatLog",
           `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
         );
-        emitCombatAction({
-          action: null,
-          effects: [
-            {
-              type: "tauntRedirection",
-              attackerId: user.id,
-              newTargetId: taunter.id,
-              taunterId: taunter.id,
-            },
-          ],
-          log: `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
-          state: null,
+
+        context.visual.redirectionEvents =
+          context.visual.redirectionEvents || [];
+
+        context.visual.redirectionEvents.push({
+          type: "tauntRedirection",
+          attackerId: user.id,
+          fromTargetId: original.id,
+          toTargetId: taunter.id,
         });
       }
     } else {
-      io.emit(
-        "combatLog",
-        `O provocador de ${formatChampionName(user)} não está ativo. A provocação é ignorada.`,
-      );
+      for (const role in action.targetIds) {
+        currentTargets[role] = activeChampions.get(action.targetIds[role]);
+      }
+    }
+  } else {
+    for (const role in action.targetIds) {
+      currentTargets[role] = activeChampions.get(action.targetIds[role]);
     }
   }
 

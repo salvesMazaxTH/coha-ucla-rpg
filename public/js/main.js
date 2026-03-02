@@ -49,6 +49,12 @@ function showSkillOverlay(button, skill, champion) {
         : ""
     }
       <div class="skill-meta-item">
+        <span class="meta-label">Tipo: ${
+          skill.damageMode
+            ? `<span class="meta-value">${getDamageModeLabel(skill.damageMode)}</span>`
+            : "-"
+        }</span>
+        } </span>
       </div>
 
       ${
@@ -136,6 +142,17 @@ function removeSkillOverlay() {
   if (skillOverlayTimeout) {
     clearTimeout(skillOverlayTimeout);
     skillOverlayTimeout = null;
+  }
+}
+
+function getDamageModeLabel(mode) {
+  switch (mode) {
+    case "standard":
+      return "Normal";
+    case "piercing":
+      return "Perfurante";
+    case "absolute":
+      return "Absoluto";
   }
 }
 

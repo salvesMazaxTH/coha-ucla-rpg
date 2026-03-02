@@ -389,7 +389,7 @@ O `CombatResolver` é um objeto singleton (não uma classe) com todos os método
 
 ```
 params = {
-  mode,           // "raw" | "direct" | "magic" | etc.
+  mode,           // "standard" | "direct" | "magic" | etc.
   baseDamage,     // dano antes de qualquer cálculo
   directDamage,   // dano adicional direto (ignora defesa)
   user,           // Champion atacante
@@ -453,11 +453,11 @@ Para evitar loops infinitos em passivas que causam dano (ex: contra-ataques), o 
 
 ### Damage Modes
 
-| Mode       | Comportamento                              |
-| ---------- | ------------------------------------------ |
-| `"raw"`    | Dano base passando pela defesa normalmente |
-| `"direct"` | Ignora defesa inteiramente                 |
-| `"magic"`  | Pode ter tratamento especial por passivas  |
+| Mode         | Comportamento                              |
+| ------------ | ------------------------------------------ |
+| `"standard"` | Dano base passando pela defesa normalmente |
+| `"direct"`   | Ignora defesa inteiramente                 |
+| `"magic"`    | Pode ter tratamento especial por passivas  |
 
 ---
 

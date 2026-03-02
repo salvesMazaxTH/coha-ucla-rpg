@@ -16,12 +16,13 @@ const gryskarchuSkills = [
     key: "raizes_da_terra",
     name: "Raízes da Terra",
     bf: 75,
+    damageMode: "standard",
     rootDuration: 1,
     contact: false,
 
     priority: 0,
     description() {
-      return `Causa dano bruto ao inimigoe aplica "Enraizado" por ${this.rootDuration} turnos.`;
+      return `Causa dano ao inimigo e aplica "Enraizado" por ${this.rootDuration} turnos.`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context }) {

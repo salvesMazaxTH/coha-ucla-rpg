@@ -9,7 +9,7 @@ const kaiSkills = [
     name: "Gancho Rápido",
     bf: 60,
     contact: true,
-
+    damageMode: "standard",
     priority: 1,
     description() {
       return `Ataque rápido de contato. Causa dano físico ao inimigo.`;
@@ -33,7 +33,7 @@ const kaiSkills = [
     key: "postura_da_brasa_viva",
     name: "Postura da Brasa Viva",
     contact: false,
-
+    damageMode: "piercing",
     damageReduction: 25,
     counterAtkDmg: 15,
     flamingFistsBonus: 15,
@@ -42,7 +42,7 @@ const kaiSkills = [
 
     description() {
       return `Kai assume uma postura incandescente até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. 
-      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano e aplica queimadura. 
+      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano piercing e aplica queimadura. 
       Se causar dano, ativa Brasa Viva por 2 turnos: seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada.`;
     },
 
@@ -78,7 +78,7 @@ const kaiSkills = [
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
-            mode: "direct",
+            mode: "piercing",
             baseDamage: counterAtkDmg,
             directDamage: counterAtkDmg,
             user: owner,
@@ -123,7 +123,10 @@ const kaiSkills = [
           if (damage <= 0) return;
 
           // 🔥 TRANSIÇÃO
-          if (this.state === "postura" && owner.runtime.fireStance !== "brasa_viva") {
+          if (
+            this.state === "postura" &&
+            owner.runtime.fireStance !== "brasa_viva"
+          ) {
             this.state = "brasa_viva";
             owner.runtime.fireStance = "brasa_viva";
             this.expiresAt = context.currentTurn + 2;
@@ -177,6 +180,7 @@ const kaiSkills = [
     name: "Barragem de Socos Incandescentes",
     bf: 0,
     damagePerHit: 40,
+    damageMode: "standard",
     hits: 6,
     burningBonus: 10,
     contact: true,
@@ -186,7 +190,7 @@ const kaiSkills = [
     isUltimate: true,
     ultCost: 2,
     description() {
-      return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando dano bruto de ${this.damagePerHit}. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
+      return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
     },
     targetSpec: ["all-enemies"],
     execute({ user, targets, context = {} }) {

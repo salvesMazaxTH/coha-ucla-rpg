@@ -374,22 +374,22 @@ Todos os campeões usam o **ultômetro** como sistema unificado de recurso para 
 - **Cor visual**: Dourado (#d4af37)
 
 ```js
-champion.ultMeter = 0;      // Valor atual (0-15 unidades)
-champion.ultCap = 15;        // Máximo (padrão: 15)
+champion.ultMeter = 0; // Valor atual (0-15 unidades)
+champion.ultCap = 15; // Máximo (padrão: 15)
 ```
 
 ### Ganho de Ultômetro
 
 O ganho ocorre **por ação** (não por hit individual):
 
-| Ação                          | Ganho      |
-| ----------------------------- | ---------- |
-| Causar dano (skill normal)    | +2 unidades |
-| Causar dano (ultimate)        | +1 unidade  |
-| Tomar dano                    | +1 unidade  |
-| Curar aliado                  | +1 unidade  |
-| Bufar aliado                  | +1 unidade  |
-| Ultimate que não causa dano   | 0 unidades  |
+| Ação                        | Ganho       |
+| --------------------------- | ----------- |
+| Causar dano (skill normal)  | +2 unidades |
+| Causar dano (ultimate)      | +1 unidade  |
+| Tomar dano                  | +1 unidade  |
+| Curar aliado                | +1 unidade  |
+| Bufar aliado                | +1 unidade  |
+| Ultimate que não causa dano | 0 unidades  |
 
 **Importante**: Skills AoE ou multi-alvo contam **uma única vez por ação**, não uma vez por alvo atingido.
 
@@ -414,7 +414,7 @@ Ultimates são identificadas por:
 O servidor converte barras para unidades internas:
 
 ```js
-const costUnits = skill.ultCost * 3;  // 4 barras = 12 unidades
+const costUnits = skill.ultCost * 3; // 4 barras = 12 unidades
 ```
 
 ### Validação no Servidor
@@ -424,13 +424,13 @@ Quando um jogador tenta usar uma skill:
 ```js
 // 1. Verificar se é ultimate
 if (skill.isUltimate) {
-  const cost = getSkillCost(skill);  // ultCost * 3
-  
+  const cost = getSkillCost(skill); // ultCost * 3
+
   // 2. Verificar ultômetro
   if (user.ultMeter < cost) {
     return denySkill("Ultômetro insuficiente");
   }
-  
+
   // 3. Debitar custo
   user.spendUlt(cost);
 }
@@ -444,28 +444,28 @@ champion.addUlt(amount);
 champion.addUlt({ amount, source, context });
 
 // Gastar ultômetro
-champion.spendUlt(cost);  // retorna false se insuficiente
+champion.spendUlt(cost); // retorna false se insuficiente
 
 // Alterar diretamente
 champion.applyUltChange({ amount, mode: "add" | "set" });
 
 // Obter estado
-champion.getResourceState();  // → { type: "ult", current, max }
+champion.getResourceState(); // → { type: "ult", current, max }
 
 // Obter custo de skill (client-side)
-champion.getSkillCost(skill);  // converte barras → unidades
+champion.getSkillCost(skill); // converte barras → unidades
 ```
 
 ### Diferenças do Sistema Antigo (Mana/Energia)
 
-| Sistema Antigo                    | Sistema Novo (ultMeter)              |
-| --------------------------------- | ------------------------------------ |
-| Mana (azul) ou Energia (amarelo)  | Ultômetro (dourado) - único recurso  |
-| Regen de 50-80 por turno          | Regen fixo de +2 unidades por turno |
-| Regen variável ao causar dano     | Ganho fixo por tipo de ação          |
-| `skill.manaCost` / `energyCost`   | `skill.isUltimate` + `skill.ultCost` |
-| Skills comuns custam recurso      | Skills comuns não custam recurso     |
-| Todas skills custam recurso       | Apenas ultimates custam ultômetro    |
+| Sistema Antigo                   | Sistema Novo (ultMeter)              |
+| -------------------------------- | ------------------------------------ |
+| Mana (azul) ou Energia (amarelo) | Ultômetro (dourado) - único recurso  |
+| Regen de 50-80 por turno         | Regen fixo de +2 unidades por turno  |
+| Regen variável ao causar dano    | Ganho fixo por tipo de ação          |
+| `skill.manaCost` / `energyCost`  | `skill.isUltimate` + `skill.ultCost` |
+| Skills comuns custam recurso     | Skills comuns não custam recurso     |
+| Todas skills custam recurso      | Apenas ultimates custam ultômetro    |
 
 ### Economia de Jogo
 
@@ -476,6 +476,7 @@ Com o sistema de ultômetro:
 - **Controle de ritmo**: Ultimates de 5 barras (15 unidades) levam ~6-8 turnos para carregar
 - **Sem snowball**: Ganhos são fixos por ação, não escalam exponencialmente
 - **Espaço de design**: Permite ultimates de 3-5 barras com timing bem diferenciado
+
 ---
 
 ## 8. Pipeline de Combate — CombatResolver
@@ -516,7 +517,7 @@ performSkillExecution(action, context)
 
 ```
 params = {
-  mode,           // "raw" | "direct" | "magic" | etc.
+  mode,           // "standard" | "direct" | "magic" | etc.
   baseDamage,     // dano antes de qualquer cálculo
   directDamage,   // dano adicional direto (ignora defesa)
   user,           // Champion atacante
@@ -600,11 +601,11 @@ O `damageDepth` também é propagado para o effect `"damage"` enviado ao cliente
 
 ### Damage Modes
 
-| Mode       | Comportamento                              |
-| ---------- | ------------------------------------------ |
-| `"raw"`    | Dano base passando pela defesa normalmente |
-| `"direct"` | Ignora defesa inteiramente                 |
-| `"magic"`  | Pode ter tratamento especial por passivas  |
+| Mode         | Comportamento                              |
+| ------------ | ------------------------------------------ |
+| `"standard"` | Dano base passando pela defesa normalmente |
+| `"direct"`   | Ignora defesa inteiramente                 |
+| `"magic"`    | Pode ter tratamento especial por passivas  |
 
 ---
 

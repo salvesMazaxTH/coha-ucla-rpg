@@ -16,10 +16,11 @@ const baraoEstrondosoSkills = [
     name: "Impacto de Aço",
     bf: 100,
     contact: true,
+    damageMode: "standard",
     priority: -999,
     targetSpec: ["enemy"],
     description() {
-      return `Causa dano bruto ao inimigo.`;
+      return `Causa dano ao inimigo.`;
     },
     execute({ user, targets, context = {} }) {
       const { enemy } = targets;
@@ -74,7 +75,7 @@ const baraoEstrondosoSkills = [
     name: "Super Hiper Ultra Mega Blaster Atômico",
     bf: 600,
     contact: false,
-
+    damageMode: "standard",
     priority: -999,
 
     isUltimate: true,

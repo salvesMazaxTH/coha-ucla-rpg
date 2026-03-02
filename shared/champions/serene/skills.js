@@ -53,10 +53,10 @@ const sereneSkills = [
     hpDamagePercent: 15,
     stunDuration: 1,
     contact: false,
-
+    damageMode: "piercing",
     priority: 1,
     description() {
-      return `Causa dano direto igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
+      return `Causa dano (piercing) igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
     },
     targetSpec: ["enemy"],
     execute({ user, targets, context = {} }) {
@@ -73,9 +73,7 @@ const sereneSkills = [
 
       // resolve dano
       const result = CombatResolver.processDamageEvent({
-        mode: "hybrid",
         baseDamage,
-        direct: baseDamage,
         user,
         target: enemy,
         skill: this,

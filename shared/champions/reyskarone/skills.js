@@ -17,6 +17,7 @@ const reyskaroneSkills = [
     key: "tributo_de_sangue",
     name: "Tributo de Sangue",
     bf: 45,
+    damageMode: "standard",
     hpSacrificePercent: 15,
     tributeDuration: 2,
     tributeHeal: 15,

@@ -7,7 +7,7 @@ export default {
   burnDuration: 1,
   description() {
     return `Sempre que Kai causa dano com um Ataque Básico, ele aplica um impacto térmico adicional:
-        - O impacto térmico causa ${this.flamingFistsDamage} de Dano Direto.
+        - O impacto térmico causa ${this.flamingFistsDamage} de dano (piercing).
         Aplicação de Estado:
         Se o alvo não tiver Afinidade: Terra, Água ou Fogo:
         → O alvo fica "Queimando".`;
@@ -23,7 +23,7 @@ export default {
     const impactDamage = this.flamingFistsDamage;
 
     const result = CombatResolver.processDamageEvent({
-      mode: "direct",
+      mode: "piercing",
       baseDamage: impactDamage,
       user: dmgSrc,
       dmgReceiver,
