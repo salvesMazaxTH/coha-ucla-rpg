@@ -27,7 +27,7 @@ const raliaSkills = [
       return `Ralia perde ${this.defLoss} de Defesa e ${this.selfDamage} de HP para ganhar +${this.atkBuff} de Ataque por ${this.buffDuration} turnos. Em seguida, ataca um inimigo.`;
     },
     targetSpec: ["self", "enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       user.takeDamage(this.selfDamage);
 
       user.modifyStat({
@@ -88,7 +88,7 @@ const raliaSkills = [
       return `Ralia se cura em ${this.healPercent}% do dano efetivo causado (arredondado para o múltiplo de 5 mais próximo). Cura mínima: ${this.minHeal}.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const result = CombatResolver.processDamageEvent({
@@ -130,7 +130,7 @@ const raliaSkills = [
       return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos.`;
     },
     targetSpec: ["all-enemies"],
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       // Pegar todos os inimigos (time diferente do usuário)
       const enemies = Array.from(
         context?.allChampions?.values?.() || [],

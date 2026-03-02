@@ -13,7 +13,7 @@ const basicAttack = {
     return `\n Ataque básico genérico (BF ${this.bf} + ${this.bonusFlat} bônus flat).`;
   },
   targetSpec: ["enemy"],
-  execute({ user, targets, context = {} }) {
+  resolve({ user, targets, context = {} }) {
     const { enemy } = targets;
     const baseDamage = (user.Attack * this.bf) / 100 + this.bonusFlat;
     return CombatResolver.processDamageEvent({

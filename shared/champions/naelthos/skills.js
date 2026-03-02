@@ -25,7 +25,7 @@ const naelthosSkills = [
     },
     targetSpec: ["enemy"],
 
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
 
       const baseDamage = (user.Attack * this.bf) / 100;
@@ -85,7 +85,7 @@ const naelthosSkills = [
     },
     targetSpec: ["self"],
 
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       const { currentTurn } = context;
 
       // Apply keywords
@@ -120,7 +120,7 @@ const naelthosSkills = [
     },
     targetSpec: ["self"],
 
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       const { currentTurn } = context;
       console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 

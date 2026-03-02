@@ -29,7 +29,7 @@ const reyskaroneSkills = [
       return `Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos. Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Em seguida, ataca o alvo escolhido imediatamente.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
 
       const hpSacrifice =
@@ -123,7 +123,7 @@ const reyskaroneSkills = [
       return `Concede a um aliado: +${this.atkBuff} ATQ, +${this.lifeStealBuff}% LifeSteal por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
@@ -166,7 +166,7 @@ const reyskaroneSkills = [
       return `Seleciona um aliado: ele recebe +${this.atkBuffPercent}% ATQ e +${this.lifeStealBuff}% LifeSteal por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({

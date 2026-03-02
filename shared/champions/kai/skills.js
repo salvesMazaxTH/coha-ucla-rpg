@@ -15,7 +15,7 @@ const kaiSkills = [
       return `Ataque rápido de contato. Causa dano físico ao inimigo.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       return CombatResolver.processDamageEvent({
@@ -47,7 +47,7 @@ const kaiSkills = [
 
     targetSpec: ["self"],
 
-    execute({ user, context }) {
+    resolve({ user, context }) {
       user.runtime.hookEffects ??= [];
 
       const counterAtkDmg = this.counterAtkDmg;
@@ -192,7 +192,7 @@ const kaiSkills = [
       return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
     },
     targetSpec: ["all-enemies"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       // Busca todos os inimigos vivos do contexto (garante que não dependa de targets)
       const enemies = Array.from(
         (context &&

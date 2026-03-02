@@ -22,7 +22,7 @@ const baraoEstrondosoSkills = [
     description() {
       return `Causa dano ao inimigo.`;
     },
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
@@ -54,7 +54,7 @@ const baraoEstrondosoSkills = [
       return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em ${this.defenseBuff} por ${this.defBuffDuration} turnos e passa a armazenar 40% do dano na Passiva em vez de 30%.`;
     },
     targetSpec: ["self"],
-    execute({ user, context }) {
+    resolve({ user, context }) {
       user.applyKeyword("blindagem_reforcada", 2, context);
 
       user.modifyStat({
@@ -85,7 +85,7 @@ const baraoEstrondosoSkills = [
       return `Causa dano ABSURDO ao inimigo somado ao dano armazenado. Este ataque é sempre um acerto Crítico. Após o ataque, o dano armazenado é zerado.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const storedDamage = user.runtime?.storedDamage || 0;
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;

@@ -23,7 +23,7 @@ const voltexzSkills = [
     },
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
@@ -70,7 +70,7 @@ const voltexzSkills = [
       return `Causa dano (BF ${this.bf}) e paralisa o alvo por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
@@ -121,7 +121,7 @@ const voltexzSkills = [
       return `Causa dano massivo ao inimigo.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];

@@ -24,7 +24,7 @@ const naelysSkills = [
       return `Naelys cura a si mesma em ${this.selfHealAmount} HP e um aliado em ${this.allyHealAmount} HP, causando dano ao inimigo (BF ${this.bf}).`;
     },
     targetSpec: ["enemy", "self", { type: "select:ally", excludesSelf: true }],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally, enemy } = targets;
 
       const baseDamage = (user.Attack * this.bf) / 100;
@@ -83,7 +83,7 @@ const naelysSkills = [
 
     targetSpec: ["self"],
 
-    execute({ user, context }) {
+    resolve({ user, context }) {
       user.runtime.hookEffects ??= [];
 
       const effect = {
@@ -175,7 +175,7 @@ const naelysSkills = [
 
     targetSpec: ["self"],
 
-    execute({ user, context }) {
+    resolve({ user, context }) {
       const { currentTurn } = context;
 
       user.addDamageModifier({

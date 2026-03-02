@@ -25,7 +25,7 @@ const gryskarchuSkills = [
       return `Causa dano ao inimigo e aplica "Enraizado" por ${this.rootDuration} turnos.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context }) {
+    resolve({ user, targets, context }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
@@ -61,7 +61,7 @@ const gryskarchuSkills = [
       return `Gryskarchu cura a si e todos os aliados ativos em ${this.healAmount} HP.`;
     },
     targetSpec: ["all:ally"],
-    execute({ user, context }) {
+    resolve({ user, context }) {
       let someoneHealed = false;
 
       for (const champ of context.allChampions.values()) {
@@ -96,7 +96,7 @@ const gryskarchuSkills = [
       return `Concede +${this.defBuff}% de DEF a si ou a um aliado por ${this.buffDuration} turnos, cura em ${this.healPercent}% do HP máximo e dá bônus de dano (+${this.defDamageBonus}% da DEF) por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
-    execute({ user, targets, context }) {
+    resolve({ user, targets, context }) {
       const { ally } = targets;
       let healAmount = Math.floor(ally.maxHP * (this.healPercent / 100));
       healAmount = Math.round(healAmount / 5) * 5;

@@ -13,7 +13,7 @@ const blyskartriSkills = [
       return `Concede recurso a si ou a um aliado selecionado.`;
     },
     targetSpec: ["select:ally"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
       // Removido: addResource mana
       return {
@@ -36,7 +36,7 @@ const blyskartriSkills = [
       return `Concede ${this.speedBuff} e aumenta a Esquiva em ${this.evasionBuff}x (ou concede +5 caso não possua Esquiva) por ${this.buffsDuration} turnos.`;
     },
     targetSpec: ["select:ally"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
 
       ally.modifyStat({
@@ -90,7 +90,7 @@ const blyskartriSkills = [
 
     targetSpec: ["select:ally"],
 
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
 
       // 🔹 1️⃣ Duplica o MP atual

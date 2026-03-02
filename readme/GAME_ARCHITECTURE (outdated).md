@@ -144,7 +144,7 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
 2. Processa cada ação em ordem:
    - Verifica se o campeão usuário ainda está vivo.
    - Verifica se o alvo ainda está vivo.
-   - Executa `skill.execute({ user, targets, context })` → obtém resultado.
+   - Executa `skill.resolve({ user, targets, context })` → obtém resultado.
    - Constrói envelope `combatAction` com `{ action, effects[], log, state[] }`.
    - Emite para todos via `io.emit("combatAction", envelope)`.
 3. Aplica efeitos de início de turno (keywords: `queimando`, `envenenado`).
@@ -554,7 +554,7 @@ const voltexz = {
   key: "minha_skill",
   name: "Relâmpago",
   element: "lightning",   // elemento do dano desta skill
-  execute({ user, targets, context }) { ... }
+  resolve({ user, targets, context }) { ... }
 }
 ```
 
@@ -969,7 +969,7 @@ const meu_campeao = {
         return `Custo: ${this.manaCost} MP\nDescrição da skill.`;
       },
       targetSpec: ["enemy"], // ["enemy"], ["ally"], ["self"], ["any"], etc.
-      execute({ user, targets, context }) {
+      resolve({ user, targets, context }) {
         const { enemy } = targets;
         const baseDamage = (user.Attack * 80) / 100 + 30;
         return CombatResolver.processDamageEvent({

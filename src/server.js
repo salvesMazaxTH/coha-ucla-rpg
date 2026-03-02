@@ -28,7 +28,7 @@ function refundActionResource(user, action) {
   }
 }
 
-/** 
+/**
  * Aplica ganho de ultMeter baseado no contexto de um evento de combate.
  */
 function applyUltMeterFromContext({ user, context }) {
@@ -45,12 +45,10 @@ function applyUltMeterFromContext({ user, context }) {
     const applied = user.addUlt({ amount: regenAmount, context });
 
     console.log("[ULT - DEALER]", user.name, applied);
-  }
-  else if (healEvents.length > 0) {
+  } else if (healEvents.length > 0) {
     const applied = user.addUlt({ amount: 1, context });
     console.log("[ULT - HEAL]", user.name, applied);
-  }
-  else if (buffEvents.length > 0) {
+  } else if (buffEvents.length > 0) {
     const applied = user.addUlt({ amount: 1, context });
     console.log("[ULT - BUFF]", user.name, applied);
   }
@@ -109,7 +107,8 @@ const editMode = {
   unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -797,6 +796,36 @@ function emitGameAction(envelope) {
 //  EXECUÇÃO DE HABILIDADES
 // ============================================================
 
+function resolveTargets(skill, user, targetIds) {
+  // ALL
+  if (skill.targetSpec?.includes("all")) {
+    return [...activeChampions.values()].filter((c) => c.alive);
+  }
+
+  // ALL ALLY
+  if (skill.targetSpec?.includes("all:ally")) {
+    return [...activeChampions.values()].filter(
+      (c) => c.alive && c.team === user.team,
+    );
+  }
+
+  // ALL ENEMY
+  if (skill.targetSpec?.includes("all:enemy")) {
+    return [...activeChampions.values()].filter(
+      (c) => c.alive && c.team !== user.team,
+    );
+  }
+
+  // SINGLE TARGET (usa targetIds do cliente)
+  const targets = [];
+  for (const role in targetIds) {
+    const champ = activeChampions.get(targetIds[role]);
+    if (champ) targets.push(champ);
+  }
+
+  return targets;
+}
+
 /** Executa a habilidade, emite payloads e registra no histórico. */
 function performSkillExecution(
   user,
@@ -818,7 +847,11 @@ function performSkillExecution(
   context.currentSkill = skill;
 
   // 🔹 3. Executar skill
-  const result = skill.execute({ user, targets, context });
+  const result = skill.resolve({
+    user,
+    targets,
+    context,
+  });
 
   // 🔹 4. Limpar contexto
   activeChampions.forEach((champion) => {
@@ -914,14 +947,17 @@ function executeSkillAction(action) {
 
   const context = createBaseContext({ sourceId: user.id });
 
-  const targets = resolveSkillTargets(user, skill, action, context);
-  console.log("STEP 1 - TARGETS:", targets);
-  if (!targets) {
+  const roleTargets = resolveSkillTargets(user, skill, action, context);
+
+  console.log("STEP 1 - TARGETS:", roleTargets);
+  if (!roleTargets) {
     refundActionResource(user, action);
     return false;
   }
 
-  performSkillExecution(user, skill, targets, action.resourceCost, context);
+  const targetsArray = Object.values(roleTargets);
+
+  performSkillExecution(user, skill, targetsArray, action.resourceCost, context);
   return true;
 }
 
@@ -972,9 +1008,10 @@ function createBaseContext({ sourceId = null } = {}) {
         amount,
         isCritical: !!isCritical,
         damageDepth: damageDepth || 0,
-        evaded: !!flags?.evaded,
+        evaded: flags?.evaded,
         immune: !!flags?.immune,
         shieldBlocked: !!flags?.shieldBlocked,
+        execute: !!flags?.execute,
       });
     },
 
@@ -1760,18 +1797,6 @@ io.on("connection", (socket) => {
 
       if (!editMode.freeCostSkills) {
         user.spendUlt(cost);
-      }
-    }
-
-    // ✅ Validação de alvos
-    const targets = {};
-    for (const role in targetIds) {
-      targets[role] = activeChampions.get(targetIds[role]);
-      if (!targets[role]) {
-        return socket.emit(
-          "actionFailed",
-          `Alvo inválido para a função ${role}.`,
-        );
       }
     }
 

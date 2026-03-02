@@ -20,7 +20,7 @@ const nodeSparckina07Skills = [
       return `Causa dano ao inimigo.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       return CombatResolver.processDamageEvent({
@@ -48,7 +48,7 @@ const nodeSparckina07Skills = [
       return `Aumenta a Velocidade em ${this.speedBuff} e a Esquiva em ${this.evasionPercent}% da Velocidade por ${this.buffDuration} turnos.`;
     },
     targetSpec: ["self"],
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       user.modifyStat({
         statName: "Speed",
         amount: this.speedBuff,
@@ -86,7 +86,7 @@ const nodeSparckina07Skills = [
       return `Causa alto dano ao inimigo (BF ${this.bf}) e aplica paralisia por ${this.paralyzeDuration} turnos.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 

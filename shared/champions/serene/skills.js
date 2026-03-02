@@ -25,7 +25,7 @@ const sereneSkills = [
     },
     targetSpec: ["select:ally"],
 
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { ally } = targets;
 
       let shieldAmount = this.shieldFull;
@@ -59,7 +59,7 @@ const sereneSkills = [
       return `Causa dano (piercing) igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
 
       const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
@@ -108,7 +108,7 @@ const sereneSkills = [
       return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com pelo menos ${this.surviveHP} de HP e tornam-se imunes até a próxima ação de Serene.`;
     },
     targetSpec: ["self"],
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       const activationSkillId = this.key;
 
       // dona do efeito é a Serene, mas o efeito é aplicado em tds aliados.

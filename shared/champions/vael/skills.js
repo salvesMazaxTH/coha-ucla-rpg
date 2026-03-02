@@ -21,7 +21,7 @@ const vaelSkills = [
       return `Causa dano ao inimigo com chance de crítico.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       return CombatResolver.processDamageEvent({
@@ -45,12 +45,9 @@ const vaelSkills = [
     description() {
       return `Causa dano ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
     },
-    targetSpec: [
-      { type: "enemy" },
-      { type: "enemy", unique: true },
-    ],
+    targetSpec: [{ type: "enemy" }, { type: "enemy", unique: true }],
 
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy: primary, enemy2: secondary } = targets;
 
       const baseDamage = (user.Attack * this.bfPrimary) / 100;
@@ -99,7 +96,7 @@ const vaelSkills = [
       return `Causa dano devastador ao inimigo.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 

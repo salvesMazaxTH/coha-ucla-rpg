@@ -24,7 +24,25 @@ export const CombatResolver = {
     const ctx = this._normalizeContext(params);
 
     const early = this._handlePreChecks(ctx);
-    if (early) return early;
+
+    if (early) {
+      ctx.context.registerDamage({
+        target: ctx.target,
+        amount: 0,
+        sourceId: ctx.user?.id,
+        flags: {
+          evaded: true,
+          immune: early.immune === true,
+          shieldBlocked: early.shieldBlocked === true,
+        },
+      });
+      return {
+        totalDamage: 0,
+        ...early,
+        targetId: ctx.target.id,
+        userId: ctx.user?.id,
+      };
+    }
 
     this._runBeforeHooks(ctx);
 
@@ -47,7 +65,16 @@ export const CombatResolver = {
       amount: ctx.finalDamage,
       sourceId: ctx.user?.id,
       isCritical: ctx.crit?.didCrit,
+      flags: {
+        evaded: ctx.evasionAttempt ? false : undefined,
+      },
     });
+
+    const hasExecution = typeof ctx.skill?.executeRule === "function";
+    console.log("🔥 hasExecution:", hasExecution);
+    if (hasExecution) {
+      this._processExecuteIfNeeded(ctx);
+    }
 
     const lifesteal = this._applyLifeSteal(
       ctx.user,
@@ -68,13 +95,34 @@ export const CombatResolver = {
   // ==========================================================
 
   _rollEvasion({ attacker, target, context }) {
-    if (target.Evasion <= 0) return false;
-    const chance = target.Evasion || 0;
+    const editMode = context?.editMode ?? {};
+    const chance = Number(target.Evasion) || 0;
 
-    if (!chance) return false;
+    if (debugMode) {
+      console.log("🔥 _rollEvasion chamado:", {
+        attacker: attacker.name,
+        target: target.name,
+        evasion: chance,
+        editMode,
+      });
+    }
 
+    // 1️⃣ Override absoluto (debug)
+    if (editMode.alwaysEvade) {
+      return {
+        attempted: true,
+        evaded: true,
+        log: `\n${formatChampionName(target)} evadiu automaticamente.`,
+      };
+    }
+
+    // 2️⃣ Sem chance real
+    if (chance <= 0 && !editMode.alwaysEvade) {
+      return null; // NÃO houve tentativa
+    }
+
+    // 3️⃣ Roll
     const roll = Math.random() * 100;
-
     const evaded = roll < chance;
 
     if (debugMode) {
@@ -83,11 +131,12 @@ export const CombatResolver = {
       console.log(evaded ? "✅ Ataque EVADIDO!" : "❌ Ataque ACERTADO");
     }
 
-    const finalLog = evaded
-      ? `\n${formatChampionName(target)} tentou evadir o ataque... e CONSEGUIU!`
-      : `\n${formatChampionName(target)} tentou evadir o ataque... mas FALHOU.`;
-
-    return evaded ? { evaded: true, log: finalLog } : false;
+    // 4️⃣ Resultado padronizado
+    return {
+      evaded,
+      attempted: true,
+      log: `\n${formatChampionName(target)} tentou esquivar o ataque... !`,
+    };
   },
 
   // ==========================================================
@@ -525,6 +574,34 @@ export const CombatResolver = {
     }
 
     return { hpAfter, actualDmg };
+  },
+
+  _processExecuteIfNeeded(ctx) {
+    console.log("🔥 _processExecuteIfNeeded chamado:", {
+      target: ctx.target.name,
+      hp: ctx.target.HP,
+      maxHP: ctx.target.maxHP,
+    });
+    const rule = ctx.skill?.executeRule;
+    if (!rule) return;
+
+    if (ctx.target.isDead) return;
+
+    const threshold = rule(ctx);
+
+    const hpPercent = ctx.target.HP / ctx.target.maxHP;
+
+    if (hpPercent <= threshold && ctx.target.HP > 0) {
+      ctx.target.HP = 0;
+      ctx.target.isDead = true;
+
+      ctx.context.registerDamage({
+        target: ctx.target,
+        amount: 999,
+        sourceId: ctx.user?.id,
+        flags: { isExecute: true },
+      });
+    }
   },
 
   _applyBeforeDealingPassive({
@@ -1013,12 +1090,6 @@ export const CombatResolver = {
 
     // IMUNE SEMPRE
     if (this._isImmune(target)) {
-      context.registerDamage({
-        target,
-        amount: 0,
-        sourceId: user?.id,
-        flags: { immune: true },
-      });
       console.groupEnd();
       return this._buildImmuneResult(baseDamage, user, target, skill);
     }
@@ -1026,37 +1097,23 @@ export const CombatResolver = {
     // ABSOLUTE ignora escudo e evasão
     if (mode !== "absolute") {
       if (target._checkAndConsumeShieldBlock?.(context)) {
-        context.registerDamage({
-          target,
-          amount: 0,
-          sourceId: user?.id,
-          flags: { shieldBlocked: true },
-        });
         console.groupEnd();
         return this._buildShieldBlockResult(baseDamage, user, target, skill);
       }
 
       const evasion = this._rollEvasion({ attacker: user, target, context });
-      if (evasion?.evaded) {
-        context.registerDamage({
-          target,
-          amount: 0,
-          sourceId: user?.id,
-          flags: { evaded: true },
-        });
-        console.groupEnd();
-        return {
-          totalDamage: 0,
-          evaded: true,
-          targetId: target.id,
-          userId: user.id,
-        };
+
+      if (evasion) {
+        if (evasion.evaded) {
+          return { evaded: true };
+        }
+
+        // falhou → apenas marca tentativa
+        ctx.evasionAttempt = true;
       }
     }
-
     return null;
   },
-
   // ==========================================================
   // FLUXO PRINCIPAL - ETAPA 2: BEFORE HOOKS
   // ==========================================================
@@ -1157,6 +1214,7 @@ export const CombatResolver = {
     const results = [];
 
     for (const extra of queue) {
+      console.log("EXTRA ITEM:", extra);
       const result = this.processDamageEvent({
         ...extra,
         context: {
@@ -1218,383 +1276,4 @@ export const CombatResolver = {
 
     return main;
   },
-
-  /*   processDamageEvent(params) {
-    const {
-      mode = "standard",
-      baseDamage,
-      directDamage = 0,
-      user,
-      target,
-      skill,
-      context,
-      critOptions = {},
-      allChampions = [],
-    } = params; */
-
-  // =========================
-  // 1️⃣ PRÉ-CHECAGENS
-  // =========================
-  /*  const depth = context.damageDepth ?? 0;
-
-    if (depth === 0) {
-      console.group(`⚔️ AÇÃO PRINCIPAL: ${user.name} → ${target.name}`);
-    } else {
-      console.group(
-        `↪️ REAÇÃO (${context.origin || "extra"}): ${user.name} → ${target.name}`,
-      );
-    }
-
-    if (!Number.isFinite(baseDamage)) {
-      console.error("❌ baseDamage inválido:", baseDamage);
-      baseDamage = 0;
-    }
-
-    if (this._isImmune(target)) {
-      context.registerDamage({
-        target,
-        amount: 0,
-        sourceId: user?.id,
-        isCritical: false,
-        flags: { immune: true },
-      });
-
-      return this._buildImmuneResult(baseDamage, user, target, skill);
-    }
-
-    if (target._checkAndConsumeShieldBlock?.(context)) {
-      if (!context.shieldBlockedTargets)
-        context.shieldBlockedTargets = new Set();
-      context.shieldBlockedTargets.add(target.id);
-
-      context.registerDamage({
-        target,
-        amount: 0,
-        sourceId: user?.id,
-        isCritical: false,
-        flags: { shieldBlocked: true },
-      });
-
-      return this._buildShieldBlockResult(baseDamage, user, target, skill);
-    }
-
-    const evasion = this._rollEvasion({ attacker: user, target, context });
-    if (evasion?.evaded) {
-      context.registerDamage({
-        target,
-        amount: 0,
-        sourceId: user?.id,
-        isCritical: false,
-        flags: { evaded: true },
-      });
-
-      return {
-        baseDamage,
-        totalDamage: 0,
-        finalHP: target.HP,
-        targetId: target.id,
-        userId: user.id,
-        evaded: true,
-        log: evasion.log,
-        crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
-      };
-    }
-
-    if (mode === "pure") {
-      const amount = baseDamage ?? 0;
-
-      if (amount <= 0) return null;
-
-      target.currentHP = Math.max(0, target.currentHP - amount);
-
-      context.registerDamage({
-        target,
-        amount,
-        sourceId: user?.id,
-        isCritical: false,
-        damageDepth: depth,
-        flags: { recoil: true },
-      });
-
-      return {
-        targetId: target.id,
-        damage: amount,
-        isCritical: false,
-        flags: { recoil: true },
-      };
-    } */
-  // =========================
-  // 2️⃣ CÁLCULO DO DANO
-  // =========================
-
-  /*  context.extraEffects = context.extraEffects || [];
-    let extraEffects = [];
-
-    let crit = this.processCrit({
-      baseDamage,
-      user,
-      target,
-      context,
-      critOptions,
-    }) || { didCrit: false, bonus: 0 };
-
-    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
-
-    let damage = this._applyDamageModifiers(
-      baseDamage,
-      user,
-      target,
-      skill,
-      context,
-    );
-
-    const beforeDeal = this._applyBeforeDealingPassive({
-      mode,
-      skill,
-      damage,
-      crit,
-      attacker: user,
-      target,
-      context,
-      allChampions,
-    });
-
-    if (beforeDeal.crit !== undefined) {
-      crit = beforeDeal.crit;
-    }
-
-    if (beforeDeal.damage !== undefined) {
-      damage = beforeDeal.damage;
-    }
-
-    if (beforeDeal?.effects?.length) {
-      extraEffects.push(...beforeDeal.effects);
-    }
-
-    let finalDamage = this._composeFinalDamage(
-      mode,
-      damage,
-      crit,
-      directDamage,
-      target,
-      context,
-    );
-
-    console.log(
-      `➡️ Dano final calculado (depois da "compose"): ${finalDamage}`,
-    );
- */
-  // =========================
-  // 3️⃣ APLICAR DANO
-  // =========================
-
-  /* context.extraLogs = [];
-
-    const beforeTake = this._applyBeforeTakingPassive({
-      mode,
-      skill,
-      damage: finalDamage,
-      crit,
-      user, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-      target, // aliase enquanto refatora e migra tudo para consistência com os outros hooks
-      dmgSrc: user,
-      dmgReceiver: target,
-      context,
-      allChampions,
-    });
-
-    if (beforeTake?.crit !== undefined) {
-      crit = beforeTake.crit;
-    }
-
-    if (beforeTake?.damage !== undefined) {
-      finalDamage = beforeTake.damage;
-      if (beforeTake?.ignoreMinimumFloor) {
-        context.ignoreMinimumFloor = true;
-      }
-    }
-
-    if (beforeTake?.effects?.length) {
-      extraEffects.push(...beforeTake.effects);
-    }
-
-    //console.log("⚡ skill.element =", skill?.element);
-
-    finalDamage = this._getAffinityDamage(
-      finalDamage,
-      skill?.element,
-      target,
-      context,
-    );
-
-    context.editMode?.damageOutput != null
-      ? (finalDamage = context.editMode.damageOutput)
-      : null;
-
-    const { hpAfter, actualDmg } = this._applyDamage(
-      target,
-      finalDamage,
-      context,
-    );
-
-    // registro no context, fundamental para animações ("client-side-heavy")
-    context.registerDamage({
-      target,
-      amount: finalDamage,
-      sourceId: user?.id,
-      isCritical: crit?.didCrit,
-      flags: {},
-    }); */
-
-  // =========================
-  // 4️⃣ AFTER HOOKS
-  // =========================
-
-  /*     console.log("➡️ Chamando _applyAfterTakingPassive com:");
-    console.log({
-      attacker: user?.name,
-      target: target?.name,
-      damage: finalDamage,
-      mode,
-      crit,
-      depth: context.damageDepth,
-      allChampions,
-    }); */
-
-  /*    const afterTakeResult = this._applyAfterTakingPassive({
-      attacker: user,
-      target,
-      skill,
-      damage: finalDamage,
-      mode,
-      crit,
-      context,
-      allChampions,
-    });
-
-    const afterDealResult = this._applyAfterDealingPassive({
-      attacker: user,
-      skill,
-      target,
-      damage: finalDamage,
-      mode,
-      crit,
-      context,
-      allChampions,
-    });
-
-    if (afterTakeResult?.effects?.length) {
-      extraEffects.push(...afterTakeResult.effects);
-    }
-
-    if (afterDealResult?.effects?.length) {
-      extraEffects.push(...afterDealResult.effects);
-    } */
-
-  // =========================
-  // 5️⃣ EFEITOS SECUNDÁRIOS
-  // =========================
-
-  /*    const ls = this._applyLifeSteal(user, finalDamage, allChampions);
-    const lsAmount = Number(ls?.amount) || 0;
-
-    // 🔥 Processa fila de danos extras (ex: contra-ataques, recuos etc.)
-    let extraResults = [];
-
-    if (context.extraDamageQueue?.length) {
-      const queue = [...context.extraDamageQueue];
-      context.extraDamageQueue = [];
-
-      for (const extra of queue) {
-        const originSkillKey = extra.skill?.key;
-        const result = this.processDamageEvent({
-          ...extra,
-          context: {
-            ...context,
-            damageDepth: (context.damageDepth ?? 0) + 1,
-            origin: originSkillKey || "reaction",
-          },
-          allChampions,
-        });
-
-        if (Array.isArray(result)) {
-          extraResults.push(...result);
-        } else if (result) {
-          extraResults.push(result);
-        }
-      }
-    } */
-
-  // =========================
-  // 6️⃣ CONSTRUÇÃO DO LOG
-  // =========================
-
-  /*  const afterTakeLogs = afterTakeResult?.logs || [];
-    const afterDealLogs = afterDealResult?.logs || [];
-
-    let log = this._buildLog(user, target, skill, finalDamage, crit, hpAfter);
-
-    if (beforeDeal.logs?.length) log += "\n" + beforeDeal.logs.join("\n");
-
-    if (beforeTake.logs?.length) log += "\n" + beforeTake.logs.join("\n");
-
-    if (afterTakeLogs?.length) log += "\n" + afterTakeLogs.join("\n");
-
-    if (afterDealLogs?.length) log += "\n" + afterDealLogs.join("\n");
-
-    if (ls.text) {
-      log += "\n" + ls.text;
-      if (ls.passiveLogs.length) log += "\n   " + ls.passiveLogs.join("\n");
-    }
-
-    for (const r of extraResults) {
-      if (r.log) log += "\n" + r.log;
-    }
-
-    if (context.extraLogs.length) log += "\n" + context.extraLogs.join("\n"); */
-
-  // =========================
-  // 7️⃣ RETORNO FINAL
-  // =========================
-
-  /*  console.groupEnd();
-
-    const mainResult = {
-      baseDamage,
-      totalDamage: finalDamage,
-      finalHP: target.HP,
-      totalHeal: lsAmount,
-      heal:
-        lsAmount > 0
-          ? {
-              amount: lsAmount,
-              lifesteal: lsAmount,
-              targetId: user.id,
-              sourceId: user.id,
-            }
-          : null,
-      targetId: target.id,
-      userId: user.id,
-      evaded: false,
-      log,
-      crit: {
-        chance: user.Critical || 0,
-        didCrit: crit.didCrit,
-        bonus: crit.bonus,
-        roll: crit.roll,
-      },
-
-      // 🔥 ESSENCIAL
-      damageDepth: context.damageDepth ?? 0,
-      skill,
-
-      extraEffects,
-    };
-
-    if (extraResults.length > 0) {
-      return [mainResult, ...extraResults];
-    }
-
-    return mainResult;
-  }, */
 };

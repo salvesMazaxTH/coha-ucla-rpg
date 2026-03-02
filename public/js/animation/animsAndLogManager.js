@@ -264,18 +264,15 @@ export function createCombatAnimationManager(deps) {
   async function animateDamage(effect) {
     const { targetId, amount, isCritical, isDot } = effect;
 
-    if (!amount || amount <= 0) {
-      return;
-    }
     const champion = deps.activeChampions.get(targetId);
     const targetName = champion ? formatChampionName(champion) : "Alvo";
-
     const championEl = getChampionElement(targetId);
+
     if (!championEl) return;
 
-    if (effect.evaded) {
+    if (effect.evaded !== undefined) {
       await animateEvasion(effect);
-      return;
+      if (effect.evaded) return;
     }
 
     if (effect.immune) {
@@ -285,6 +282,28 @@ export function createCombatAnimationManager(deps) {
 
     if (effect.shieldBlocked) {
       await animateShieldBlock(effect);
+      return;
+    }
+
+    // Só agora checa amount, pra que evasion, imunidade etc tenham prioridade mesmo que o dano seja 0
+    if (!amount || amount <= 0) {
+      return;
+    }
+
+    if (effect.execute) {
+      championEl.classList.add("damage");
+
+      const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+
+      if (portraitWrapper) {
+        createFloatElement(portraitWrapper, "999", "damage-float", "execute");
+      }
+
+      updateVisualHP(targetId, -champion.currentHp);
+
+      await wait(700);
+
+      championEl.classList.remove("damage");
       return;
     }
 
@@ -401,34 +420,39 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateEvasion(effect) {
-    const { targetId } = effect;
+    const { targetId, evaded } = effect;
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    // showNonBlockingDialog(
-    //   `${name} tentou evadir o ataque... <b>E CONSEGUIU!</b>`,
-    //   true,
-    // );
-    await showBlockingDialog(
-      `${name} tentou evadir o ataque... <b>E CONSEGUIU!</b>`,
-      true,
-    );
 
-    // 🔥 Espera a animação CSS terminar de verdade
-    await new Promise((resolve) => {
-      const handler = (event) => {
-        if (event.target === championEl) {
-          championEl.removeEventListener("animationend", handler);
-          resolve();
-        }
-      };
+    await showBlockingDialog(`${name} tentou esquivar o ataque...`, true);
 
-      championEl.addEventListener("animationend", handler);
-    });
+    if (evaded) {
+      // 🔥 INICIA A ANIMAÇÃO
+      championEl.classList.add("evasion");
 
-    championEl.classList.remove("evasion");
+      // 🔥 Espera a animação CSS terminar de verdade
+      await new Promise((resolve) => {
+        const handler = (event) => {
+          if (event.target === championEl) {
+            championEl.removeEventListener("animationend", handler);
+            resolve();
+          }
+        };
+
+        championEl.addEventListener("animationend", handler);
+      });
+
+      championEl.classList.remove("evasion");
+      await showBlockingDialog(`${name} CONSEGUIU esquivar o ataque!!`, true);
+    } else {
+      await showBlockingDialog(
+        `...mas falhou em esquivar.`,
+        true,
+      );
+    }
   }
 
   // ============================================================
@@ -838,7 +862,7 @@ export function createCombatAnimationManager(deps) {
     // Se tiver alvo e não for self-target
     if (targetId && targetId !== userId) {
       const targetChampion = deps.activeChampions.get(targetId);
-      
+
       const resolvedTargetName =
         targetName ||
         (targetChampion ? formatChampionName(targetChampion) : "Alvo");
@@ -874,7 +898,7 @@ export function createCombatAnimationManager(deps) {
     dialog.classList.add("hidden");
   }
 
-  function showNonBlockingDialog(text, isHtml = false) {
+  async function showNonBlockingDialog(text, isHtml = false) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
@@ -888,6 +912,7 @@ export function createCombatAnimationManager(deps) {
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");
 
+    await wait(500);
     setTimeout(() => {
       dialog.classList.add("leaving");
 

@@ -23,7 +23,7 @@ const tharoxSkills = [
       return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
     },
     targetSpec: ["self"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       user.applyDamageReduction({
         amount: this.damageReductionAmount,
         duration: this.damageReductionDuration,
@@ -67,7 +67,7 @@ const tharoxSkills = [
       return `Causa dano ao inimigo somado a ${this.defScaling}% da Defesa.`;
     },
     targetSpec: ["enemy"],
-    execute({ user, targets, context = {} }) {
+    resolve({ user, targets, context = {} }) {
       const { enemy } = targets;
       const baseDamage =
         (user.Attack * this.bf) / 100 + user.Defense * (this.defScaling / 100);
@@ -101,7 +101,7 @@ const tharoxSkills = [
       return `Ganha +${this.hpGain} HP, +${this.defGain} DEF, cura proporcional à DEF acima de ${this.baseDef}, e ataques causam bônus de dano igual a ${this.defDamagePercent}% da DEF (máx. ${this.maxDamageBonus}) por ${this.modifierDuration} turnos.`;
     },
     targetSpec: ["self"],
-    execute({ user, context = {} }) {
+    resolve({ user, context = {} }) {
       user.modifyHP(this.hpGain, { maxHPOnly: true });
       user.modifyStat({
         statName: "Defense",

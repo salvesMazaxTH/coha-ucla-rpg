@@ -145,7 +145,7 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
 2. Processa cada ação em ordem via `performSkillExecution(action, context)`:
    - Verifica se o campeão usuário ainda está vivo.
    - Verifica se o alvo ainda está vivo.
-   - Executa `skill.execute({ user, targets, context })` → acumula eventos no `context.*Events`.
+   - Executa `skill.resolve({ user, targets, context })` → acumula eventos no `context.*Events`.
    - Chama `buildEffectsFromContext(context)` → transforma todos os eventos acumulados num único `effects[]` estruturado.
    - Chama `emitCombatEnvelopesFromResults(results, context)` → emite envelopes `combatAction` para todos os clientes.
 3. Aplica efeitos de início de turno (keywords: `queimando`, `envenenado`).
@@ -382,14 +382,14 @@ champion.ultCap = 15; // Máximo (padrão: 15)
 
 O ganho ocorre **por ação** (não por hit individual):
 
-| Ação                        | Ganho       |
-| --------------------------- | ----------- |
-| Causar dano (skill normal)  | +2 unidades |
-<!-- | Causar dano (ultimate)      | +1 unidade  | atualmente não usado -->
-| Tomar dano                  | +1 unidade  |
-| Curar aliado                | +1 unidade  |
-| Bufar aliado                | +1 unidade  |
-| Ultimate que não causa dano | 0 unidades  |
+| Ação                        | Ganho                  |
+| --------------------------- | ---------------------- | ---------- | ------------------------ |
+| Causar dano (skill normal)  | +2 unidades            |
+| <!--                        | Causar dano (ultimate) | +1 unidade | atualmente não usado --> |
+| Tomar dano                  | +1 unidade             |
+| Curar aliado                | +1 unidade             |
+| Bufar aliado                | +1 unidade             |
+| Ultimate que não causa dano | 0 unidades             |
 
 **Importante**: Skills AoE ou multi-alvo contam **uma única vez por ação**, não uma vez por alvo atingido.
 
@@ -407,7 +407,7 @@ Ultimates são identificadas por:
   name: "Nome da Ultimate",
   isUltimate: true,        // Flag obrigatória
   ultCost: 4,              // Custo em BARRAS (não unidades)
-  execute({ user, targets, context }) { ... }
+  resolve({ user, targets, context }) { ... }
 }
 ```
 
@@ -489,7 +489,7 @@ O `CombatResolver` é um objeto singleton (não uma classe) com todos os método
 
 ```
 performSkillExecution(action, context)
-  └── skill.execute({ user, targets, context })
+  └── skill.resolve({ user, targets, context })
         └── CombatResolver.processDamageEvent({ ... })
               ├── [pipeline de dano — ver abaixo]
               ├── registerDamage(context, { ... })   ← acumula em context.damageEvents[]
@@ -665,7 +665,7 @@ Para casos especiais (Esquiva, imunidade, bloqueio de escudo), os campos boolean
 
 ### `buildEffectsFromContext(context)`
 
-Chamada pelo servidor **após** `skill.execute()` retornar, transforma todos os arrays de eventos do contexto num único `Effect[]` ordenado:
+Chamada pelo servidor **após** `skill.resolve()` retornar, transforma todos os arrays de eventos do contexto num único `Effect[]` ordenado:
 
 ```js
 function buildEffectsFromContext(context) {
@@ -831,7 +831,7 @@ const voltexz = {
   key: "minha_skill",
   name: "Relâmpago",
   element: "lightning",   // elemento do dano desta skill
-  execute({ user, targets, context }) { ... }
+  resolve({ user, targets, context }) { ... }
 }
 ```
 
@@ -1268,7 +1268,7 @@ const meu_campeao = {
         return `Custo: ${this.manaCost} MP\nDescrição da skill.`;
       },
       targetSpec: ["enemy"], // ["enemy"], ["ally"], ["self"], ["any"], etc.
-      execute({ user, targets, context }) {
+      resolve({ user, targets, context }) {
         const { enemy } = targets;
         const baseDamage = (user.Attack * 80) / 100 + 30;
         return CombatResolver.processDamageEvent({

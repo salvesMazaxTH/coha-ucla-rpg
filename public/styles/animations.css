@@ -319,6 +319,16 @@
   }
 }
 
+.damage-float.execute {
+  font-size: 52px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 1),
+    0 0 22px rgba(255, 255, 255, 0.8),
+    0 0 40px rgba(255, 255, 255, 0.6);
+}
+
 /* ============================================
       BUFF ANIMATIONS
       ============================================ */
@@ -402,12 +412,12 @@
 }
 
 /* ============================================
-      EVASION ANIMATIONS
+   EVASION ANIMATIONS
       ============================================ */
 
 .evasion {
   animation: evade 550ms ease-out;
-  will-change: transform, filter;
+  will-change: transform, filter, opacity;
 }
 
 .evasion .portrait::after,
@@ -426,43 +436,100 @@
   filter: blur(4px);
   transform: translateX(-8px);
   pointer-events: none;
+  animation: afterimage 550ms ease-out;
 }
 
 @keyframes evade {
   0% {
-    transform: translateX(0) skewX(0);
-    filter: blur(0px);
+    transform: translateX(0) skewX(0) scale(1);
+    filter: blur(0px) brightness(1);
+    opacity: 1;
   }
 
-  10% {
-    transform: translateX(-22px) skewX(-8deg);
-    filter: blur(2px);
+  8% {
+    transform: translateX(-28px) skewX(-12deg) scale(0.95);
+    filter: blur(3px) brightness(1.2);
+    opacity: 0.7;
   }
 
-  20% {
-    transform: translateX(18px) skewX(6deg);
+  15% {
+    transform: translateX(24px) skewX(10deg) scale(1.02);
+    filter: blur(4px) brightness(0.9);
+    opacity: 0.8;
   }
 
-  30% {
-    transform: translateX(-14px);
+  25% {
+    transform: translateX(-18px) skewX(-6deg) scale(0.98);
+    filter: blur(2px) brightness(1.1);
   }
 
-  40% {
-    transform: translateX(10px);
+  35% {
+    transform: translateX(14px) skewX(4deg) scale(1.01);
+    filter: blur(2px) brightness(0.95);
+  }
+
+  45% {
+    transform: translateX(-10px) skewX(-3deg);
     filter: blur(1px);
+    opacity: 0.9;
   }
 
-  55% {
-    transform: translateX(-6px);
+  60% {
+    transform: translateX(6px) skewX(2deg);
+    filter: blur(0.5px);
   }
 
-  70% {
-    transform: translateX(4px);
+  75% {
+    transform: translateX(-3px) skewX(-1deg);
+    opacity: 0.95;
   }
 
   100% {
-    transform: translateX(0);
-    filter: blur(0px);
+    transform: translateX(0) skewX(0) scale(1);
+    filter: blur(0px) brightness(1);
+    opacity: 1;
+  }
+}
+
+@keyframes afterimage {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px) scale(1);
+  }
+
+  10% {
+    opacity: 0.9;
+    transform: translateX(-35px) scale(0.98);
+    filter: blur(8px);
+  }
+
+  25% {
+    opacity: 0.7;
+    transform: translateX(28px) scale(1.01);
+    filter: blur(10px);
+  }
+
+  40% {
+    opacity: 0.5;
+    transform: translateX(-20px);
+    filter: blur(12px);
+  }
+
+  60% {
+    opacity: 0.3;
+    transform: translateX(12px);
+    filter: blur(14px);
+  }
+
+  80% {
+    opacity: 0.1;
+    filter: blur(16px);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-8px);
+    filter: blur(18px);
   }
 }
 
