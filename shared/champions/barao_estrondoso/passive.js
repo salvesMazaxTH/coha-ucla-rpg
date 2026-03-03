@@ -18,7 +18,7 @@ export default {
 
     Armazena ${this.storageBasePercent}% do dano sofrido (máx. ${this.storageCap}). Com Blindagem Reforçada, armazena ${this.storageShieldPercent}% em vez disso.
 
-    ${stored > 0 ? `Dano armazenado: ${stored}` : ""}
+   Dano armazenado: <b>${stored > 0 ? stored : 0}</b>
 
     Sobrecarga do Reator:
     Após usar uma habilidade (exceto Ataque Básico), fica Atordoado no próximo turno.
@@ -31,7 +31,10 @@ export default {
   onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
-    const bonus = Math.max(this.damageTakenBonusFlatMin, Math.floor(damage * (this.damageTakenBonusPercent / 100)));
+    const bonus = Math.max(
+      this.damageTakenBonusFlatMin,
+      Math.floor(damage * (this.damageTakenBonusPercent / 100)),
+    );
     const modifiedDamage = damage + bonus;
 
     return {
@@ -48,7 +51,9 @@ export default {
       `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
     );
 
-    const storageRate = owner.hasKeyword?.("blindagem_reforcada") ? this.storageShieldPercent / 100 : this.storageBasePercent / 100;
+    const storageRate = owner.hasKeyword?.("blindagem_reforcada")
+      ? this.storageShieldPercent / 100
+      : this.storageBasePercent / 100;
 
     const stored = Math.floor(damage * storageRate);
 

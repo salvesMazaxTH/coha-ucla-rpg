@@ -1044,7 +1044,7 @@ function createOverlay(champion) {
     </div>
   `;
 
-  const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
+  const toParagraphs = (text) => String(text ?? "").replace(/\n/g, "<br>");
 
   // --- Passiva ---
   const passive = champion?.passive;

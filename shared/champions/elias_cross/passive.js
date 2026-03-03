@@ -4,8 +4,8 @@ export default {
   name: "O Raio Pode Cair Duas Vezes",
   initialChance: 1,
   chanceIncreasePerTurn: 5,
-  description() {
-    return `As habilidades de dano ${formatChampionName("Elias Cross")} têm ${this.initialChance}% de chance de se repetirem. A cada turno, ele ganha +${this.chanceIncreasePerTurn}% de chance. `;
+  description(champion) {
+    return `As habilidades de dano Elias Cross têm <b>${champion.runtime.passiveChance ?? this.initialChance}%</b> de chance de se repetirem. A cada turno, ele ganha <b>+${this.chanceIncreasePerTurn}%</b> de chance. `;
   },
   
   onAfterDmgDealing({
