@@ -1413,6 +1413,13 @@ socket.on("turnUpdate", (turn) => {
   combatAnimations.handleTurnUpdate(turn);
 });
 
+socket.on("gameOver", (data) => {
+  combatAnimations.handleGameOver(data);
+  gameEnded = true;
+
+  disableChampionActions();
+});
+
 /** Aplica a transição de turno no client: reseta ações e atualiza a UI. */
 function applyTurnUpdate(turn) {
   currentTurn = turn;

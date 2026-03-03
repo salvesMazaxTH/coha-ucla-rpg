@@ -625,12 +625,12 @@ function emitSystemEnvelopesFromContext({ user, skill, context }) {
       dialogEvents.length;
 
     if (hasVisualChanges) {
-      emitGameAction(mainEnvelope);
+      emitCombatAction(mainEnvelope);
     }
   }
 
   for (const envelope of reactionEnvelopes) {
-    emitGameAction(envelope);
+    emitCombatAction(envelope);
   }
 }
 
@@ -808,7 +808,7 @@ function snapshotChampions(ids) {
  *   log     — texto verboso para o log de combate
  *   state   — snapshots do estado final dos campeões afetados
  */
-function emitGameAction(envelope) {
+function emitCombatAction(envelope) {
   if (!envelope) return;
 
   io.emit("combatAction", envelope);
@@ -1216,12 +1216,9 @@ function processChampionsDeaths() {
     const winnerTeam = winnerSlot + 1;
     const winnerName = playerNames.get(winnerSlot);
 
-    emitGameAction({
-      action: null,
-      type: "gameOver",
-      effect: {winnerTeam, winnerName},
-      log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-      state: null,
+    io.emit("gameOver", {
+      winnerTeam,
+      winnerName,
     });
   }
 }
@@ -1345,7 +1342,7 @@ function processTurnStartKeywords({ activeChampions, context }) {
     if (r.log) logs.push(r.log);
   });
 
-  emitGameAction({
+  emitCombatAction({
     action: null,
     effects,
     log: logs.join("\n") || null,
@@ -1874,11 +1871,9 @@ io.on("connection", (socket) => {
       player2: playerScores[1],
     });
 
-    emitGameAction({
-      action: null,
-      effects: [{ type: "gameOver", winnerTeam, winnerName }],
-      log: `${formatPlayerName(surrendererName, surrenderingTeam)} se rendeu! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
-      state: null,
+    io.emit("gameOver", {
+      winnerTeam,
+      winnerName,
     });
   });
 

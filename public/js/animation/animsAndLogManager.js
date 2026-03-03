@@ -681,6 +681,7 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function handleGameOver(effect) {
+    console.log("Game over effect received:", effect);
     const { winnerTeam } = effect;
 
     window.gameEnded = true;
@@ -1147,6 +1148,9 @@ export function createCombatAnimationManager(deps) {
     },
     handleChampionRemoved(championId) {
       enqueue("championRemoved", championId);
+    },
+    handleGameOver(data) {
+      enqueue("gameOver", data);
     },
     appendToLog,
     reset,
