@@ -108,7 +108,7 @@ const editMode = {
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
-  executionOverride: 0.75, // null = normal
+  executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
   freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };

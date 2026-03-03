@@ -140,7 +140,8 @@ const eliasCrossSkills = [
         if (target === user) continue;
 
         const affinities = target.elementalAffinities || [];
-        if (affinities.includes("lightning") || affinities.includes("earth"))
+        // só os aliados que possuem afinidade com raio ou terra ficam imunes
+        if (target.team === user.team && (affinities.includes("lightning") || affinities.includes("earth")))
           continue;
 
         const result = CombatResolver.processDamageEvent({
