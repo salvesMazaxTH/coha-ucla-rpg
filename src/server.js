@@ -606,7 +606,27 @@ function emitSystemEnvelopesFromContext({ user, skill, context }) {
         ult: c.ultMeter,
       })),
     );
-    emitGameAction(mainEnvelope);
+
+    const {
+      damageEvents = [],
+      healEvents = [],
+      shieldEvents = [],
+      buffEvents = [],
+      resourceEvents = [],
+      dialogEvents = [],
+    } = mainEnvelope;
+
+    const hasVisualChanges =
+      damageEvents.length ||
+      healEvents.length ||
+      shieldEvents.length ||
+      buffEvents.length ||
+      resourceEvents.length ||
+      dialogEvents.length;
+
+    if (hasVisualChanges) {
+      emitGameAction(mainEnvelope);
+    }
   }
 
   for (const envelope of reactionEnvelopes) {

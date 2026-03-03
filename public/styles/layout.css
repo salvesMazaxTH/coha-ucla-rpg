@@ -1,0 +1,233 @@
+/* ============================================
+   LAYOUT - MAIN STRUCTURE & CONTAINERS
+   ============================================ */
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 12px 20px;
+  margin: 10px auto;
+
+  width: 90%;
+  max-width: 1200px;
+
+  background: linear-gradient(180deg, #151515, #0b0b0b);
+  border: 2px solid #333;
+  border-radius: 14px;
+
+  box-shadow: 0 0 20px rgba(0, 255, 150, 0.1);
+}
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #e6fff2;
+  margin: 0;
+}
+
+/* -------------------------------- */
+
+.turn-display {
+  background: #0f1f18;
+  border: 2px solid #00ff99;
+  border-radius: 999px;
+
+  padding: 6px 16px;
+
+  box-shadow: 0 0 10px rgba(0, 255, 150, 0.4);
+}
+
+.turn-display p {
+  margin: 0;
+  font-weight: bold;
+  color: #00ff99;
+  letter-spacing: 1px;
+}
+
+/* -------------------------------- */
+
+.arena {
+  display: flex;
+  flex-direction: column;
+  justify-self: center;
+  border: gray 5px double;
+  margin: 15px auto;
+  width: 75%;
+  min-height: 600px;
+  gap: 20px;
+  padding: 10px;
+}
+
+/* -------------------------------- */
+
+.team-container {
+  flex: 1;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border: 1px solid transparent;
+  padding: 10px;
+  position: relative;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.2s ease;
+}
+
+/* Team selection mode styles */
+body.team-selection-active .team-container {
+  cursor: pointer;
+  border-color: rgba(0, 255, 150, 0.6);
+  box-shadow: 0 0 20px rgba(0, 255, 150, 0.3);
+}
+
+body.team-selection-active .team-container:hover {
+  transform: scale(1.02);
+  border-color: #00ff99;
+  box-shadow: 0 0 30px rgba(0, 255, 150, 0.6);
+}
+
+.team-container::before {
+  content: "Time " attr(data-team);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 6rem;
+  color: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  z-index: 0;
+  white-space: nowrap;
+}
+
+.player-name-display {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 4px;
+  text-shadow: 0 0 8px rgba(0, 255, 150, 0.5);
+  text-align: center;
+  padding: 5px;
+  border-bottom: 1px solid rgba(0, 255, 150, 0.3);
+}
+
+.player-name-display[data-team="1"] {
+  color: #0096ff;
+}
+
+.player-name-display[data-team="2"] {
+  color: #ff0000;
+}
+
+.team-container .champion {
+  z-index: 1;
+}
+
+.team-1 {
+  border-color: rgba(0, 150, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 150, 255, 0.1);
+  background: rgba(0, 150, 255, 0.05);
+}
+
+.team-1::before {
+  color: rgba(0, 150, 255, 0.1);
+}
+
+.team-2 {
+  border-color: rgba(255, 0, 0, 0.4);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
+  background: linear-gradient(transparent, rgba(255, 0, 0, 0.05));
+}
+
+.team-2::before {
+  color: rgba(255, 0, 0, 0.1);
+}
+
+/* -------------------------------- */
+
+.main-content.hidden {
+  display: none;
+}
+
+.main-content.visible {
+  display: block;
+}
+
+/* ============================================
+   DISCONNECTION MESSAGE
+   ============================================ */
+
+#disconnection-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #ffcc00;
+  padding: 20px 30px;
+  border-radius: 10px;
+  font-size: 1.2em;
+  z-index: 1000;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+  transition: opacity 0.3s ease;
+}
+
+#disconnection-message.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#disconnection-message.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ============================================
+   BACK CHAMPION DISPLAY
+   ============================================ */
+
+.back-champion-display {
+  position: absolute;
+  bottom: 20px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 15px rgba(0, 255, 150, 0.3);
+  z-index: 500;
+}
+
+.back-champion-display[data-team="1"] {
+  left: 20px;
+  border: 2px solid rgba(0, 150, 255, 0.4);
+}
+
+.back-champion-display[data-team="2"] {
+  right: 20px;
+  border: 2px solid rgba(255, 0, 0, 0.4);
+}
+
+.back-champion-display.hidden {
+  display: none;
+}
+
+.back-champion-display img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #00ff99;
+}
+
+.back-champion-display p {
+  margin: 0;
+  font-size: 0.9em;
+  color: #e6fff2;
+}

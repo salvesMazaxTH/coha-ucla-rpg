@@ -1,6 +1,7 @@
 import { formatChampionName } from "/shared/core/formatters.js";
 
 import { syncChampionVFX } from "./vfx/vfxManager.js";
+import { playExecuteEffect } from "./vfx/execute.js";
 
 // ============================================================
 //  animsAndLogManager.js — Combat Animation & Log System (v2)
@@ -144,10 +145,10 @@ export function createCombatAnimationManager(deps) {
       case "combatLog":
         await processCombatLog(item.data);
         break;
-       
+
       case "gameOver":
         await handleGameOver(item.data);
-        break;  
+        break;
 
       default:
         console.warn("[AnimManager] Unknown queue type:", item.type);
@@ -297,19 +298,23 @@ export function createCombatAnimationManager(deps) {
     }
 
     if (effect.execute) {
-      championEl.classList.add("damage");
+      /* championEl.classList.add("damage");
 
       const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
       if (portraitWrapper) {
         createFloatElement(portraitWrapper, "999", "damage-float", "execute");
-      }
+      } */
 
-      updateVisualHP(targetId, -champion.currentHp);
+      updateVisualHP(targetId, -champion.currentHp, 0);
 
-      await wait(700);
+      await playExecuteEffect(championEl);
 
-      championEl.classList.remove("damage");
+      championEl.dataset.executed = "true";
+
+      //await wait(700);
+
+      //championEl.classList.remove("damage");
       return;
     }
 
@@ -330,7 +335,7 @@ export function createCombatAnimationManager(deps) {
       );
     }
 
-    updateVisualHP(targetId, -amount);
+    updateVisualHP(targetId, -amount, champion.currentHp);
 
     if (isCritical) {
       await showBlockingDialog(
@@ -454,10 +459,7 @@ export function createCombatAnimationManager(deps) {
       championEl.classList.remove("evasion");
       await showBlockingDialog(`${name} CONSEGUIU esquivar o ataque!!`, true);
     } else {
-      await showBlockingDialog(
-        `...mas falhou em esquivar.`,
-        true,
-      );
+      await showBlockingDialog(`...mas falhou em esquivar.`, true);
     }
   }
 
@@ -753,7 +755,7 @@ export function createCombatAnimationManager(deps) {
   //  applyStateSnapshots() which calls champion.updateUI().
   // ============================================================
 
-  function updateVisualHP(championId, delta) {
+  function updateVisualHP(championId, delta, currentVisualHP = null) {
     const el = getChampionElement(championId);
     if (!el) return;
 
@@ -766,7 +768,9 @@ export function createCombatAnimationManager(deps) {
     const match = hpText.match(/^(\d+)\/(\d+)/);
     if (!match) return;
 
-    let currentVisualHP = parseInt(match[1], 10);
+    currentVisualHP =
+      currentVisualHP !== null ? currentVisualHP : parseInt(match[1], 10);
+
     const maxHP = parseInt(match[2], 10);
 
     // Apply delta and clamp
@@ -1054,17 +1058,25 @@ export function createCombatAnimationManager(deps) {
     if (!champion) return;
 
     const el = champion.el;
-    if (el) {
+
+    if (!el) {
+      console.log(
+        `[AnimManager] Champion ${championId} removed but no element found.`,
+      );
+      return;
+    }
+
+    if (!el.dataset.executed) {
       // Apply dying class — triggers CSS collapse animation
       el.classList.add("dying");
 
       // Wait for the death animation to play
       await wait(TIMING.DEATH_ANIM);
-
-      // Remove from DOM
-      el.remove();
-      champion.el = null;
     }
+
+    // Remove from DOM
+    el.remove();
+    champion.el = null;
 
     deps.activeChampions.delete(championId);
   }
