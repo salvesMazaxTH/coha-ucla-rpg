@@ -21,7 +21,7 @@ const nodeSparckina07Skills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       return CombatResolver.processDamageEvent({
         baseDamage,
@@ -87,7 +87,7 @@ const nodeSparckina07Skills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
       const paralyzed = enemy.applyKeyword(

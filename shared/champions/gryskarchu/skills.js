@@ -26,7 +26,7 @@ const gryskarchuSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
       const rooted = enemy.applyKeyword(
@@ -97,7 +97,7 @@ const gryskarchuSkills = [
     },
     targetSpec: ["select:ally"],
     resolve({ user, targets, context }) {
-      const { ally } = targets;
+      const [ally] = targets;
       let healAmount = Math.floor(ally.maxHP * (this.healPercent / 100));
       healAmount = Math.round(healAmount / 5) * 5;
 

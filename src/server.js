@@ -104,10 +104,12 @@ const editMode = {
   autoLogin: true,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
+  executionOverride: 0.75, // null = normal
+  // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
   freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
@@ -956,8 +958,15 @@ function executeSkillAction(action) {
   }
 
   const targetsArray = Object.values(roleTargets);
+  console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
 
-  performSkillExecution(user, skill, targetsArray, action.resourceCost, context);
+  performSkillExecution(
+    user,
+    skill,
+    targetsArray,
+    action.resourceCost,
+    context,
+  );
   return true;
 }
 
@@ -1011,7 +1020,7 @@ function createBaseContext({ sourceId = null } = {}) {
         evaded: flags?.evaded,
         immune: !!flags?.immune,
         shieldBlocked: !!flags?.shieldBlocked,
-        execute: !!flags?.execute,
+        execute: !!flags?.isExecute,
       });
     },
 
@@ -1189,7 +1198,8 @@ function processChampionsDeaths() {
 
     emitGameAction({
       action: null,
-      effects: [{ type: "gameOver", winnerTeam, winnerName }],
+      type: "gameOver",
+      effect: {winnerTeam, winnerName},
       log: `Fim de jogo! ${formatPlayerName(winnerName, winnerTeam)} venceu a partida!`,
       state: null,
     });

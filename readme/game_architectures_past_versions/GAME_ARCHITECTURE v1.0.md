@@ -970,7 +970,7 @@ const meu_campeao = {
       },
       targetSpec: ["enemy"], // ["enemy"], ["ally"], ["self"], ["any"], etc.
       resolve({ user, targets, context }) {
-        const { enemy } = targets;
+        const [enemy] = targets;
         const baseDamage = (user.Attack * 80) / 100 + 30;
         return CombatResolver.processDamageEvent({
           baseDamage,

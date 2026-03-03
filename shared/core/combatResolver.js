@@ -585,15 +585,23 @@ export const CombatResolver = {
     const rule = ctx.skill?.executeRule;
     if (!rule) return;
 
-    if (ctx.target.isDead) return;
+    if (ctx.target.alive === false) return;
 
-    const threshold = rule(ctx);
+    if (ctx.target.team === ctx.user.team) return;
+
+    let threshold = rule(ctx);
+
+    const override = ctx.context?.editMode?.executionOverride;
+
+    if (typeof override === "number") {
+      threshold = override;
+    }
 
     const hpPercent = ctx.target.HP / ctx.target.maxHP;
 
     if (hpPercent <= threshold && ctx.target.HP > 0) {
       ctx.target.HP = 0;
-      ctx.target.isDead = true;
+      ctx.target.alive = false;
 
       ctx.context.registerDamage({
         target: ctx.target,
@@ -1052,6 +1060,8 @@ export const CombatResolver = {
 
     const damageDepth = context.damageDepth ?? 0;
 
+    console.log("[_normalizeContext] target: ", target);
+
     if (damageDepth === 0) {
       console.group(`⚔️ ${user.name} → ${target.name}`);
     } else {
@@ -1094,24 +1104,41 @@ export const CombatResolver = {
       return this._buildImmuneResult(baseDamage, user, target, skill);
     }
 
-    // ABSOLUTE ignora escudo e evasão
-    if (mode !== "absolute") {
-      if (target._checkAndConsumeShieldBlock?.(context)) {
-        console.groupEnd();
-        return this._buildShieldBlockResult(baseDamage, user, target, skill);
-      }
-
+    // 2️⃣ HIT CHECK (evasão) absolute ignora esquiva, e skills com "cannotBeEvaded" também
+    if (mode !== "absolute" && !ctx.skill?.cannotBeEvaded) {
       const evasion = this._rollEvasion({ attacker: user, target, context });
 
-      if (evasion) {
-        if (evasion.evaded) {
-          return { evaded: true };
-        }
+      if (evasion?.evaded) {
+        context.registerDamage({
+          target,
+          amount: 0,
+          sourceId: user?.id,
+          flags: { evaded: true },
+        });
 
-        // falhou → apenas marca tentativa
-        ctx.evasionAttempt = true;
+        return {
+          totalDamage: 0,
+          evaded: true,
+          targetId: target.id,
+          userId: user.id,
+        };
       }
     }
+
+    // 3️⃣ SHIELD (ABSOLUTE ignora escudo, e skills com "cannotBeBlocked" também)
+    if (mode !== "absolute" && !ctx.skill?.cannotBeBlocked) {
+      if (target._checkAndConsumeShieldBlock?.(context)) {
+        context.registerDamage({
+          target,
+          amount: 0,
+          sourceId: user?.id,
+          flags: { shieldBlocked: true },
+        });
+
+        return this._buildShieldBlockResult(baseDamage, user, target, skill);
+      }
+    }
+
     return null;
   },
   // ==========================================================

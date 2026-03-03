@@ -14,7 +14,7 @@ const blyskartriSkills = [
     },
     targetSpec: ["select:ally"],
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
       // Removido: addResource mana
       return {
         log: `${formatChampionName(user)} restaurou recurso de ${formatChampionName(ally)}.`,
@@ -37,7 +37,7 @@ const blyskartriSkills = [
     },
     targetSpec: ["select:ally"],
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
 
       ally.modifyStat({
         statName: "Speed",
@@ -91,7 +91,7 @@ const blyskartriSkills = [
     targetSpec: ["select:ally"],
 
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
 
       // 🔹 1️⃣ Duplica o MP atual
       // Removido: cálculo de manaBuff

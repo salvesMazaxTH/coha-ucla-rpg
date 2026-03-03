@@ -68,7 +68,7 @@ const tharoxSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage =
         (user.Attack * this.bf) / 100 + user.Defense * (this.defScaling / 100);
       const result = CombatResolver.processDamageEvent({

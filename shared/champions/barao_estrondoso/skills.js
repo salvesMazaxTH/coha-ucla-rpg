@@ -23,7 +23,7 @@ const baraoEstrondosoSkills = [
       return `Causa dano ao inimigo.`;
     },
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
       const result = CombatResolver.processDamageEvent({
@@ -86,7 +86,7 @@ const baraoEstrondosoSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const storedDamage = user.runtime?.storedDamage || 0;
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;
       const damageResult = CombatResolver.processDamageEvent({

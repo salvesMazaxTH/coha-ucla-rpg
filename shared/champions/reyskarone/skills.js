@@ -30,7 +30,7 @@ const reyskaroneSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
 
       const hpSacrifice =
         Math.round((user.maxHP * (this.hpSacrificePercent / 100)) / 5) * 5;
@@ -124,7 +124,7 @@ const reyskaroneSkills = [
     },
     targetSpec: ["select:ally"],
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
 
       ally.modifyStat({
         statName: "Attack",
@@ -167,7 +167,7 @@ const reyskaroneSkills = [
     },
     targetSpec: ["select:ally"],
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
 
       ally.modifyStat({
         statName: "Attack",

@@ -71,7 +71,7 @@ const voltexzSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
       const damageResult = CombatResolver.processDamageEvent({
@@ -122,7 +122,7 @@ const voltexzSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
       const damageResult = CombatResolver.processDamageEvent({

@@ -1,5 +1,6 @@
 import { startShield } from "./shieldCanvas.js";
 import { startFireStance } from "./fireStanceCanvas.js";
+
 // no futuro:
 // import { startBurn } from "./burnCanvas.js";
 // import { startFreeze } from "./freezeCanvas.js";
@@ -7,58 +8,75 @@ import { startFireStance } from "./fireStanceCanvas.js";
 const activeEffects = new WeakMap();
 
 export function syncChampionVFX(champion) {
-  console.log("Syncing VFX for champion:", champion.id);
-
   if (!champion?.el) return;
-
-  const canvas = champion.el.querySelector(".vfx-layer");
-  if (!canvas) return;
+  if (!champion.el.isConnected) return;
 
   const runtime = champion.runtime || {};
 
-  const currentState = {
-    shield: Array.isArray(runtime.shields) && runtime.shields.length > 0,
-    fireStance: runtime.fireStance || null, // agora pode ser string
-  };
-
   champion._vfxState ??= {};
+  champion._vfxCanvases ??= {};
 
   // =========================
-  // SHIELD (continua boolean)
+  // 🛡 SHIELD
   // =========================
-  if (currentState.shield && !champion._vfxState.shield) {
+  const hasShield =
+    Array.isArray(runtime.shields) && runtime.shields.length > 0;
+
+  if (hasShield && !champion._vfxState.shield) {
+    const canvas = createVFXCanvas("shield", champion);
+    champion._vfxCanvases.shield = canvas;
     playVFX("shield", canvas);
   }
 
-  if (!currentState.shield && champion._vfxState.shield) {
-    stopVFX(canvas);
+  if (!hasShield && champion._vfxState.shield) {
+    removeVFXCanvas(champion, "shield");
   }
 
-  champion._vfxState.shield = currentState.shield;
+  champion._vfxState.shield = hasShield;
 
   // =========================
-  // FIRE STANCE (agora faseada)
+  // 🔥 FIRE STANCE
   // =========================
+  const previousFire = champion._vfxState.fireStance || null;
+  const newFire = runtime.fireStance || null;
 
-  const previousFireState = champion._vfxState.fireStance;
-  const newFireState = currentState.fireStance;
+  if (previousFire !== newFire) {
+    removeVFXCanvas(champion, "fireStance");
 
-  if (previousFireState !== newFireState) {
-    // Sempre para o anterior se existir
-    if (previousFireState) {
-      stopVFX(canvas);
-    }
-
-    if (newFireState === "postura") {
+    if (newFire === "postura") {
+      const canvas = createVFXCanvas("fireStanceIdle", champion);
+      champion._vfxCanvases.fireStance = canvas;
       playVFX("fireStanceIdle", canvas);
     }
 
-    if (newFireState === "brasa_viva") {
+    if (newFire === "brasa_viva") {
+      const canvas = createVFXCanvas("fireStanceActive", champion);
+      champion._vfxCanvases.fireStance = canvas;
       playVFX("fireStanceActive", canvas);
     }
   }
 
-  champion._vfxState.fireStance = newFireState;
+  champion._vfxState.fireStance = newFire;
+}
+
+function createVFXCanvas(type, champion) {
+  const container = champion.el.querySelector(".portrait-wrapper");
+  if (!container) return null;
+
+  const canvas = document.createElement("canvas");
+
+  // 🔒 GARANTIA ABSOLUTA DE CLASSES
+  canvas.classList.add(
+    "vfx-canvas", // ← obrigatória
+    "vfx-layer", // ← camada base
+    `vfx-${type}`, // ← específica
+  );
+
+  canvas.style.zIndex = "10";
+
+  container.appendChild(canvas);
+
+  return canvas;
 }
 
 export function playVFX(type, canvas, data = {}) {
@@ -88,6 +106,16 @@ export function playVFX(type, canvas, data = {}) {
   }
 
   activeEffects.set(canvas, controller);
+}
+
+function removeVFXCanvas(champion, key) {
+  const canvas = champion._vfxCanvases?.[key];
+  if (!canvas) return;
+
+  stopVFX(canvas);
+  canvas.remove();
+
+  delete champion._vfxCanvases[key];
 }
 
 export function stopVFX(canvas) {

@@ -7,7 +7,6 @@ export class Champion {
 
     // IDENTIDADE
     this.id = identity.id;
-    console.log("🔥 NEW CHAMPION INSTANCE:", this.name, this.id);
     this.name = identity.name;
     this.portrait = identity.portrait;
     this.team = identity.team;
@@ -56,8 +55,6 @@ export class Champion {
   }
 
   static fromBaseData(baseData, id, team) {
-    console.log("🔥 NEW CHAMPION INSTANCE:", baseData.name);
-
     return new Champion({
       identity: {
         id,
@@ -843,7 +840,6 @@ export class Champion {
           >
         </div>
         
-        <canvas class="vfx-layer"></canvas>
       </div> 
 
         <h3 class="champion-name">${this.name}</h3>

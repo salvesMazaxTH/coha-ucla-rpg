@@ -49,7 +49,7 @@ const raliaSkills = [
       console.log("AFTER SELF ATK BUFF:", user.Attack);
 
       // Ataque básico imediato
-      const { enemy } = targets;
+      const [enemy] = targets;
 
       console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
@@ -89,7 +89,7 @@ const raliaSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const result = CombatResolver.processDamageEvent({
         baseDamage,

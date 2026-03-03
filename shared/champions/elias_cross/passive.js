@@ -7,6 +7,7 @@ export default {
   description() {
     return `As habilidades de dano ${formatChampionName("Elias Cross")} têm ${this.initialChance}% de chance de se repetirem. A cada turno, ele ganha +${this.chanceIncreasePerTurn}% de chance. `;
   },
+  
   onAfterDmgDealing({
     dmgSrc,
     dmgReceiver,
@@ -22,7 +23,10 @@ export default {
 
     owner.runtime.passiveChance ??= this.initialChance;
 
-    const chance = owner.runtime.passiveChance / 100;
+    const baseChance = owner.runtime.passiveChance ?? this.initialChance;
+    const bonus = owner.runtime.passiveBonusNextTurn ?? 0;
+
+    const chance = Math.min(100, baseChance + bonus) / 100;
 
     const roll = Math.random();
 
@@ -38,11 +42,16 @@ export default {
       });
     }
   },
+
   onTurnStart({ owner }) {
     //if (owner.id !== this.ownerId) return;
     owner.runtime.passiveChance = Math.min(
       100,
-      (owner.runtime.passiveChance || 0) + this.chanceIncreasePerTurn,
+      (owner.runtime.passiveChance || this.initialChance) +
+        this.chanceIncreasePerTurn,
     );
+
+    // Limpa o bônus de chance do próximo turno, se houver
+    owner.runtime.passiveBonusNextTurn = 0;
   },
 };

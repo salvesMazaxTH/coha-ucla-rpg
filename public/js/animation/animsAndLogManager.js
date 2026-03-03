@@ -144,6 +144,10 @@ export function createCombatAnimationManager(deps) {
       case "combatLog":
         await processCombatLog(item.data);
         break;
+       
+      case "gameOver":
+        await handleGameOver(item.data);
+        break;  
 
       default:
         console.warn("[AnimManager] Unknown queue type:", item.type);
@@ -269,6 +273,8 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
 
     if (!championEl) return;
+
+    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
     if (effect.evaded !== undefined) {
       await animateEvasion(effect);
@@ -673,7 +679,7 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function handleGameOver(effect) {
-    const { winnerTeam, winnerName } = effect;
+    const { winnerTeam } = effect;
 
     window.gameEnded = true;
 

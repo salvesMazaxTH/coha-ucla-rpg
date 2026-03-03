@@ -26,7 +26,7 @@ const sereneSkills = [
     targetSpec: ["select:ally"],
 
     resolve({ user, targets, context = {} }) {
-      const { ally } = targets;
+      const [ally] = targets;
 
       let shieldAmount = this.shieldFull;
 
@@ -60,7 +60,7 @@ const sereneSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
 
       const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
 

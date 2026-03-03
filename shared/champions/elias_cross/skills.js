@@ -19,13 +19,14 @@ const eliasCrossSkills = [
     damageBonus: 15,
     damageBonusMode: "absolute",
     priority: 0,
+    cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Se o alvo tiver "Sobrecarga", causa ${this.damageBonus} de dano absoluto a mais`;
+      return `Se o alvo tiver "Sobrecarga", causa ${this.damageBonus} de dano absoluto a mais. Esse ataque não pode ser esquivado.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
       const isOverloaded = enemy.hasKeyword("sobrecarga");
@@ -40,8 +41,8 @@ const eliasCrossSkills = [
         else if (r) results.push(r);
       };
 
-      const firstResult = CombatResolver.processDamageEvent({
-        baseDamage,
+      const result = CombatResolver.processDamageEvent({
+        baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
         user,
         target: enemy,
         skill: this,
@@ -49,28 +50,15 @@ const eliasCrossSkills = [
         allChampions: context?.allChampions,
       });
 
-      pushResult(firstResult);
-
-      if (isOverloaded) {
-        const extraDamage = this.damageBonus;
-        context.extraDamageQueue.push({
-          baseDamage: extraDamage,
-          mode: "absolute",
-          user,
-          target: enemy,
-          skill: this,
-          context,
-          allChampions: context?.allChampions,
-        });
-      }
+      pushResult(result);
 
       return results;
     },
   },
 
   {
-    key: "2nd_skill",
-    name: "2nd Skill",
+    key: "carga_latente",
+    name: "Carga Latente",
     bf: 25,
     contact: false,
     damageMode: "standard",
@@ -83,8 +71,10 @@ const eliasCrossSkills = [
     },
     targetSpec: ["enemy", "self"],
     resolve({ user, targets, context }) {
-      const { enemy } = targets;
-      //user.addBuff({ lógica do buff aqui, duração: 1 turno, tipo: "chancePassiva" });
+      const [enemy] = targets;
+
+      // Aplica bônus temporário
+      user.runtime.passiveBonusNextTurn = 35;
 
       const baseDamage = (user.Attack * this.bf) / 100;
       const isOverloaded = enemy.hasKeyword("sobrecarga");
@@ -96,8 +86,8 @@ const eliasCrossSkills = [
         else if (r) results.push(r);
       };
 
-      const firstResult = CombatResolver.processDamageEvent({
-        baseDamage,
+      const result = CombatResolver.processDamageEvent({
+        baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
         user,
         target: enemy,
         skill: this,
@@ -105,21 +95,7 @@ const eliasCrossSkills = [
         allChampions: context?.allChampions,
       });
 
-      pushResult(firstResult);
-
-      if (isOverloaded) {
-        const extraDamage = this.damageBonus;
-        const secondResult = CombatResolver.processDamageEvent({
-          baseDamage: extraDamage,
-          mode: "absolute",
-          user,
-          target: enemy,
-          skill: this,
-          context,
-          allChampions: context?.allChampions,
-        });
-        pushResult(secondResult);
-      }
+      pushResult(result);
 
       return results;
     },
@@ -136,9 +112,10 @@ const eliasCrossSkills = [
     recoilDamageMode: "absolute",
     contact: false,
     priority: 0,
+    cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são executados, e caso tenham "Sobrecarga", o percentual necessário é apenas 25%.`;
+      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são executados, e caso tenham "Sobrecarga", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
     executeRule(ctx) {
@@ -163,7 +140,7 @@ const eliasCrossSkills = [
         if (target === user) continue;
 
         const affinities = target.elementalAffinities || [];
-        if (affinities.includes("raio") || affinities.includes("terra"))
+        if (affinities.includes("lightning") || affinities.includes("earth"))
           continue;
 
         const result = CombatResolver.processDamageEvent({

@@ -636,17 +636,29 @@
 }
 
 /* ========================= */
-/* SHIELD CONTAINER         */
+/* CONTAINER CANVAS FOR SEVERAL VFX */
 /* ========================= */
-
-.vfx-layer {
+.vfx-canvas {
   position: absolute;
   inset: -20px; /* escudo maior que o retrato */
   width: calc(100% + 40px);
   height: calc(100% + 40px);
   pointer-events: none;
-  z-index: 10;
+  z-index: 5;
 }
+
+.vfx-fireStanceIdle,
+.vfx-fireStanceActive {
+  z-index: 8;
+}
+
+.vfx-shield {
+  z-index: 20; /* máxima precedência */
+}
+
+/* ========================= */
+/* SHIELD CONTAINER         */
+/* ========================= */
 
 /* .champion.has-shield .portrait-wrapper::before,
 .champion.has-shield .portrait-wrapper::after {

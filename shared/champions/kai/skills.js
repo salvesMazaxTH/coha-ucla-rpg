@@ -16,7 +16,7 @@ const kaiSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const { enemy } = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       return CombatResolver.processDamageEvent({
         baseDamage,
