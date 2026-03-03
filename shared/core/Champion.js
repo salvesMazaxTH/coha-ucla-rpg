@@ -342,6 +342,10 @@ export class Champion {
     return this.keywords.has(this.normalizeKeywordName(keywordName));
   }
 
+  getKeywordData(name) {
+    const normalized = this.normalizeKeywordName(name);
+    return this.keywords.get(normalized) || null;
+  }
   /**
    * Get keyword data
    * @param {string} keywordName - Name of the keyword
@@ -1077,6 +1081,21 @@ export class Champion {
   syncActionStateUI() {
     if (!this.el) return;
 
+    const blockingKeywords = [
+      "congelado",
+      "paralisado",
+      // futuras paralisantes aqui
+    ];
+
+    const hasHardBlock = blockingKeywords.some((keyword) =>
+      this.hasKeyword(keyword),
+    );
+
+    const inerteData = this.getKeywordData("inerte");
+    const isInerteBlocking = inerteData && !inerteData.canBeInterruptedByAction;
+
+    const hasBlockingKeywords = hasHardBlock || isInerteBlocking;
+
     this.el.querySelectorAll(".skill-btn").forEach((btn) => {
       const disabledByResource = btn.dataset.disabledByResource === "true";
       const disabledByAction = this.hasActedThisTurn;
@@ -1084,7 +1103,8 @@ export class Champion {
       btn.dataset.disabledByAction = disabledByAction ? "true" : "false";
 
       // 🔥 DECISÃO FINAL CENTRALIZADA
-      const shouldDisable = disabledByResource || disabledByAction;
+      const shouldDisable =
+        disabledByResource || disabledByAction || hasBlockingKeywords;
 
       btn.disabled = shouldDisable;
     });
