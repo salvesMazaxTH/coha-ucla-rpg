@@ -46,6 +46,33 @@
   }
 }
 
+/* Execute: overlay de crack — div injetado via JS com SVG inline */
+.execute-crack {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 51;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: inherit;
+  animation: crackAppear 600ms ease-out forwards;
+}
+
+@keyframes crackAppear {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* ========================= */
 /* SHIELD CONTAINER STYLES   */
 /* ========================= */

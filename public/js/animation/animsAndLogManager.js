@@ -697,7 +697,7 @@ export function createCombatAnimationManager(deps) {
     const playerTeam = window.playerTeam;
     const isWinner = playerTeam === winnerTeam;
 
-    gameOverMessage.textContent = isWinner ? `Vitória!!` : `Derrota.`;
+    gameOverMessage.textContent = isWinner ? `Vitória!!` : `Derrota`;
 
     gameOverContent.classList.remove("hidden", "win", "lose");
     gameOverContent.classList.add(isWinner ? "win" : "lose");
