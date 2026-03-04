@@ -12,7 +12,7 @@ export class DamageEvent {
 
   static GLOBAL_DMG_CAP = 999;
 
-  static debugMode = true;
+  static debugMode = false;
 
   static DEFAULT_CRIT_BONUS = 55;
   static MAX_CRIT_CHANCE = 95;
@@ -35,6 +35,7 @@ export class DamageEvent {
     this.allChampions = Array.isArray(params.allChampions)
       ? params.allChampions
       : [];
+    console.log("DEBUG allChampions in DamageEvent:", this.allChampions);
     this.critOptions = params.critOptions ?? [];
 
     this.damageDepth = this.context.damageDepth ?? 0;
@@ -83,6 +84,8 @@ export class DamageEvent {
     // 8. Reações (Reflect, Thorns, Chain)
     this.processExtraQueue();
 
+    this.context.ignoreMinimumFloor = false;
+
     // 9. Construção do Pacote Final
     return this.buildFinalResult();
   }
@@ -91,8 +94,8 @@ export class DamageEvent {
   // FLUXO PRINCIPAL
   // ==========================================================
   preChecks() {
-    console.log("DEBUG ATTACKER:", this.attacker);
-    console.log("DEBUG TARGET:", this.target);
+    /*     console.log("DEBUG ATTACKER:", this.attacker);
+    console.log("DEBUG TARGET:", this.target); */
     // 1️⃣ IMUNIDADE
     if (this.target.hasKeyword?.("imunidade absoluta")) {
       return this._buildImmuneResult();
@@ -899,6 +902,16 @@ export class DamageEvent {
 
   // Helper privado para evitar duplicar o loop de logs/effects/damage
   _processHook(eventName, payload) {
+    // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
+    console.log(
+      `🔍 DEBUG SEGURO [${eventName}]:`,
+      JSON.stringify(this.allChampions),
+    );
+
+    // Verifique se o this.allChampions não foi redefinido por acidente
+    if (!this.allChampions || this.allChampions.length === 0) {
+      console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!");
+    }
     const results =
       emitCombatEvent(eventName, payload, this.allChampions) || [];
     const summary = { logs: [], effects: [] };

@@ -242,6 +242,7 @@ export function createCombatAnimationManager(deps) {
               await showBlockingDialog(message);
             } else {
               showNonBlockingDialog(message);
+              await wait(770);
             }
 
             break;
