@@ -94,7 +94,6 @@ const kaiSkills = [
             message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(dmgSrc)}!`,
             sourceId: owner.id,
             targetId: owner.id,
-            html: true,
           });
 
           dmgSrc.applyKeyword("queimando", 2, context, {

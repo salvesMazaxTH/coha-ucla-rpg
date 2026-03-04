@@ -24,7 +24,7 @@ const voltexzSkills = [
     targetSpec: [{ type: "enemy" }, { type: "enemy" }],
 
     resolve({ user, targets, context = {} }) {
-      const { enemy: primary, enemy2: secondary } = targets;
+      const [primary, secondary] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
 

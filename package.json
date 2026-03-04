@@ -9,6 +9,7 @@
     "socket.io": "^4.8.3"
   },
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "export-champions": "node exportChampionsToJson.js"
   }
 }

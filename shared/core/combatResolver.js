@@ -23,6 +23,11 @@ export const CombatResolver = {
   processDamageEvent(params) {
     const ctx = this._normalizeContext(params);
 
+    console.log(
+      "🔥 processDamageEvent chamado. Fila extraDamageQueue atual:",
+      ctx.context.extraDamageQueue,
+    );
+
     const early = this._handlePreChecks(ctx);
 
     if (early) {
@@ -458,79 +463,80 @@ export const CombatResolver = {
     return "neutral";
   },
 
-  _composeFinalDamage(mode, damage, crit, direct, target, context) {
+  _composeFinalDamage(
+    mode,
+    damage,
+    crit,
+    piercingPortion = 0,
+    target,
+    context,
+  ) {
     if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
+
+    crit ??= { didCrit: false, critExtra: 0 };
+
+    let finalDamage = damage;
+
+    const damageOverride = context?.editMode?.damageOutput;
+    if (damageOverride != null) {
+      if (debugMode) console.groupEnd();
+      return damageOverride;
+    }
+
+    // ---------------- ABSOLUTE ----------------
+    if (mode === "absolute") {
+      finalDamage = damage;
+
+      if (debugMode) {
+        console.log("⚡ ABSOLUTE DAMAGE");
+        console.log("➡️ ignora crítico, defesa e reduções");
+        console.log(`📈 Final: ${finalDamage}`);
+        console.groupEnd();
+      }
+
+      return finalDamage;
+    }
+
+    // aplica crítico
+    if (crit.didCrit) {
+      finalDamage += crit.critExtra;
+    }
 
     const baseDefense = target.baseDefense ?? target.Defense;
     const currentDefense = target.Defense;
 
-    // ⭐ crítico ignora buffs de defesa
-    crit ??= { didCrit: false, critExtra: 0, critBonusFactor: 0 };
     const defenseUsed = crit.didCrit
       ? Math.min(baseDefense, currentDefense)
       : currentDefense;
 
-    if (debugMode) {
-      console.log(`📍 Damage Base: ${damage}`);
-      console.log(`🎯 Mode: ${mode}`);
-      console.log(`🛡️ Defesa base: ${baseDefense}`);
-      console.log(`🛡️ Defesa atual: ${currentDefense}`);
-      console.log(`➡️ Defesa usada: ${defenseUsed}`);
-
-      if (crit.didCrit) {
-        console.log(`💥 Crítico ativo`);
-        console.log(`➡️ Buffs de defesa ignorados`);
-        console.log(`   Crit Extra: ${crit.critExtra}`);
-        console.log(`   Crit Bonus Factor: ${crit.critBonusFactor}`);
-      }
-
-      console.log(`📦 Direct Damage solicitado: ${direct}`);
-    }
-
-    // --- aplica crítico ---
-    let finalDamage = crit.didCrit ? damage + crit.critExtra : damage;
-
-    // damageOutput: override de dano para testes, injetado via context pelo server
-    const damageOverride = context?.editMode?.damageOutput;
-    if (damageOverride != null) {
-      if (debugMode) {
-        console.log(`🔴 EDIT MODE → damageOutput: ${damageOverride}`);
-        console.groupEnd();
-      }
-      return damageOverride;
-    }
-
     const defensePercent = this.defenseToPercent(defenseUsed);
     const flatReduction = target.getTotalDamageReduction?.() || 0;
 
-    // ---------- STANDARD ----------
-    if (mode === "standard") {
-      finalDamage = Math.max(
-        finalDamage - finalDamage * defensePercent - flatReduction,
-        0,
-      );
-    }
-    // ---------- HYBRID ----------
-    else {
-      const directPortion = Math.min(direct, finalDamage);
-      const standardPortion = finalDamage - directPortion;
-
-      const directAfterReduction = Math.max(directPortion - flatReduction, 0);
-
-      const standardAfterReduction = Math.max(
-        standardPortion - standardPortion * defensePercent - flatReduction,
-        0,
-      );
-
-      finalDamage = directAfterReduction + standardAfterReduction;
+    // ---------------- STANDARD ----------------
+    if (mode === "standard" || piercingPortion <= 0) {
+      finalDamage = finalDamage - finalDamage * defensePercent - flatReduction;
     }
 
-    // ---------- FINALIZAÇÃO ----------
-    if (context?.ignoreMinimumFloor) {
-      finalDamage = Math.max(finalDamage, 0);
-    } else {
+    // ---------------- PIERCING/PIERCING HYBRID ----------------
+    else if (piercingPortion > 0) {
+      const piercing = Math.min(piercingPortion, finalDamage);
+      const standard = finalDamage - piercing;
+
+      let standardAfter = standard - standard * defensePercent - flatReduction;
+
+      let piercingAfter = piercing - flatReduction;
+
+      standardAfter = Math.max(standardAfter, 0);
+      piercingAfter = Math.max(piercingAfter, 0);
+
+      finalDamage = standardAfter + piercingAfter;
+    }
+
+    // -------- FLOOR (piso mínimo)-------- 
+    if (!context?.ignoreMinimumFloor) {
       finalDamage = Math.max(finalDamage, 10);
     }
+
     finalDamage = this.roundToFive(finalDamage);
 
     if (debugMode) {
@@ -1060,7 +1066,7 @@ export const CombatResolver = {
 
     const damageDepth = context.damageDepth ?? 0;
 
-    console.log("[_normalizeContext] target: ", target);
+    //console.log("[_normalizeContext] target: ", target);
 
     if (damageDepth === 0) {
       console.group(`⚔️ ${user.name} → ${target.name}`);
@@ -1232,6 +1238,13 @@ export const CombatResolver = {
   // ==========================================================
 
   _processExtraQueue(ctx) {
+    console.log(
+      "🔥 _processExtraQueue chamado. Itens na fila:",
+      ctx.context.extraDamageQueue.length,
+      "objetos extraDamageQueue:",
+      ctx.context.extraDamageQueue,
+    );
+
     const { context, allChampions } = ctx;
     if (!context.extraDamageQueue.length) return [];
 

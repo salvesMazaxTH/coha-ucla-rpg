@@ -234,14 +234,14 @@ export function createCombatAnimationManager(deps) {
             break;
 
           case "dialogEvents": {
-            const { message, blocking = true, html = false } = event;
+            const { message, blocking = true } = event;
 
             if (!message) break;
 
             if (blocking) {
-              await showBlockingDialog(message, html);
+              await showBlockingDialog(message);
             } else {
-              showNonBlockingDialog(message, html);
+              showNonBlockingDialog(message);
             }
 
             break;
@@ -385,6 +385,8 @@ export function createCombatAnimationManager(deps) {
 
     if (!championEl) return;
 
+    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
     const champion = deps.activeChampions.get(targetId);
@@ -434,6 +436,8 @@ export function createCombatAnimationManager(deps) {
     const { targetId, evaded } = effect;
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
+
+    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
 
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
@@ -886,16 +890,12 @@ export function createCombatAnimationManager(deps) {
     await showBlockingDialog(dialogText, true);
   }
 
-  async function showBlockingDialog(text, isHtml = false) {
+  async function showBlockingDialog(text) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
 
-    if (isHtml) {
-      dialogText.innerHTML = text;
-    } else {
-      dialogText.textContent = text;
-    }
+    dialogText.innerHTML = text;
 
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");
@@ -909,16 +909,12 @@ export function createCombatAnimationManager(deps) {
     dialog.classList.add("hidden");
   }
 
-  async function showNonBlockingDialog(text, isHtml = false) {
+  async function showNonBlockingDialog(text) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
 
-    if (isHtml) {
-      dialogText.innerHTML = text;
-    } else {
-      dialogText.textContent = text;
-    }
+    dialogText.innerHTML = text;
 
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");

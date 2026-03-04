@@ -165,7 +165,6 @@ const sereneSkills = [
                   type: "dialog",
                   message: `${formatChampionName(self)} recusou a morte e tornou-se imune!`,
                   blocking: true,
-                  html: true,
                 },
               ],
             };

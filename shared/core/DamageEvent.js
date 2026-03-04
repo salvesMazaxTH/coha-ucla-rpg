@@ -5,10 +5,12 @@ class DamageEvent {
     ABSOLUTE: "absolute",
   };
 
+  static ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
+
   constructor(params) {
     this.mode = params.mode ?? DamageEvent.Modes.STANDARD;
 
-    this.baseDamage = Number(params.baseDamage) || 0;
+    this.baseDamage = Number(params.baseDamage ?? 0);
     this.damage = this.baseDamage;
 
     this.piercingPortion = params.piercingPortion || 0;
@@ -18,14 +20,15 @@ class DamageEvent {
     this.skill = params.skill;
 
     this.context = params.context ?? {};
-    this.allChampions = params.allChampions ?? [];
-    this.critOptions = params.critOptions ?? {};
+    this.allChampions = Array.isArray(params.allChampions)
+      ? params.allChampions
+      : [];
+    this.critOptions = params.critOptions ?? [];
 
     this.damageDepth = this.context.damageDepth ?? 0;
 
     // 🔥 ESTADO INTERNO
     this.crit = { didCrit: false };
-    this.finalDamage = 0;
     this.actualDmg = 0;
     this.hpAfter = null;
 
@@ -40,22 +43,258 @@ class DamageEvent {
   }
 
   execute() {
-    if (this._preChecks()) {
-      return this._buildEarlyResult();
+    const early = this.preChecks();
+    if (early) {
+      return early;
     }
-
-    this._prepareDamage();
-    this._runBeforeHooks();
-    this._composeFinalDamage();
-    this._applyDamage();
-    this._processExecuteIfNeeded();
-    this._runAfterHooks();
-    this._processExtraQueue();
+    this.prepareDamage();
+    this.runBeforeHooks();
+    this.composeFinalDamage();
+    this.applyDamage();
+    this.processExecuteIfNeeded();
+    this.runAfterHooks();
+    this.processExtraQueue();
 
     return this._buildFinalResult();
   }
 
-  _defenseToPercent(defense) {
+  // ==========================================================
+  // FLUXO PRINCIPAL
+  // ==========================================================
+  preChecks() {
+    // 1️⃣ IMUNIDADE
+    const immunityResult = _preCheckImmunity();
+    if (immunityResult) {
+      return immunityResult;
+    }
+
+    function _preCheckImmunity() {
+      const isImmune = this.target.hasKeyword?.("imunidade absoluta");
+      if (isImmune) {
+        return this._buildImmuneResult();
+      }
+    }
+    // --------------------------------------------
+    // 2️⃣ ESQUIVA
+    const evasionResult = _preCheckEvasion();
+    if (evasionResult) {
+      return evasionResult;
+    }
+
+    function _preCheckEvasion() {
+      if (
+        this.mode !== DamageEvent.Modes.ABSOLUTE &&
+        !this.skill?.cannotBeEvaded
+      ) {
+        const evasion = DamageEvent._rollEvasion({
+          attacker: this.user,
+          target: this.target,
+          context: this.context,
+        });
+
+        if (evasion?.evaded) {
+          this.context.registerDamage({
+            target: this.target,
+            amount: 0,
+            sourceId: this.user?.id,
+            flags: { evaded: true },
+          });
+
+          return {
+            totalDamage: 0,
+            evaded: true,
+            targetId: this.target.id,
+            userId: this.user.id,
+          };
+        }
+      }
+    }
+    // --------------------------------------------
+    // 3️⃣ SHIELD
+    const shieldResult = _preCheckShield();
+
+    if (shieldResult) {
+      return shieldResult;
+    }
+
+    function _preCheckShield() {
+      if (
+        this.mode !== DamageEvent.Modes.ABSOLUTE &&
+        !this.skill?.cannotBeBlocked
+      ) {
+        if (this.target._checkAndConsumeShieldBlock?.(this.context)) {
+          this.context.registerDamage({
+            target: this.target,
+            amount: 0,
+            sourceId: this.user?.id,
+            flags: { shieldBlocked: true },
+          });
+
+          return this._buildShieldBlockResult();
+        }
+      }
+
+      return null;
+    }
+  }
+
+  prepareDamage() {
+    if (this.mode === DamageEvent.Modes.ABSOLUTE) return;
+    // ordem importa
+    // crit -> modifiers -> affinity
+    this._processCrit();
+
+    this._applyDamageModifiers();
+
+    this._applyAffinity();
+  }
+
+  runBeforeHooks() {
+    if (this.mode === DamageEvent.Modes.ABSOLUTE) return;
+
+    const deal = this._applyBeforeDealingPassive();
+    const take = this._applyBeforeTakingPassive();
+
+    if (deal.logs) this.beforeLogs.push(...deal.logs);
+    if (take.logs) this.beforeLogs.push(...take.logs);
+
+    if (deal.effects) this.context.extraEffects.push(...deal.effects);
+    if (take.effects) this.context.extraEffects.push(...take.effects);
+  }
+
+  composeFinalDamage() {
+    if (debugMode) console.group(`⚙️ [DAMAGE COMPOSITION]`);
+
+    this.crit ??= { didCrit: false, critExtra: 0 };
+
+    const damageOverride = this.context?.editMode?.damageOutput;
+
+    if (damageOverride != null) {
+      this.damage = damageOverride;
+      if (debugMode) console.groupEnd();
+      return;
+    }
+
+    // ---------------- ABSOLUTE ----------------
+    if (this.mode === DamageEvent.Modes.ABSOLUTE) {
+      this.damage = this.damage;
+
+      if (debugMode) {
+        console.log("⚡ ABSOLUTE DAMAGE");
+        console.log("➡️ ignora crítico, defesa e reduções");
+        console.log(`📈 Final: ${this.damage}`);
+        console.groupEnd();
+      }
+
+      return;
+    }
+
+    // aplica crítico
+    if (this.crit.didCrit) {
+      this.damage += this.crit.critExtra;
+    }
+
+    const baseDefense = this.target.baseDefense ?? this.target.Defense;
+    const currentDefense = this.target.Defense;
+
+    const defenseUsed = this.crit.didCrit
+      ? Math.min(baseDefense, currentDefense)
+      : currentDefense;
+
+    const defensePercent = DamageEvent._defenseToPercent(defenseUsed);
+
+    const flatReduction = this.target.getTotalDamageReduction?.() || 0;
+
+    // ---------------- STANDARD ----------------
+    if (this.mode === DamageEvent.Modes.STANDARD || this.piercingPortion <= 0) {
+      this.damage = this.damage - this.damage * defensePercent - flatReduction;
+    }
+
+    // ------------ PIERCING / HYBRID ------------
+    else if (this.piercingPortion > 0) {
+      const piercing = Math.min(this.piercingPortion, this.damage);
+      const standard = this.damage - piercing;
+
+      let standardAfter = standard - standard * defensePercent - flatReduction;
+
+      let piercingAfter = piercing - flatReduction;
+
+      standardAfter = Math.max(standardAfter, 0);
+      piercingAfter = Math.max(piercingAfter, 0);
+
+      this.damage = standardAfter + piercingAfter;
+    }
+
+    // -------- FLOOR --------
+    if (!this.context?.ignoreMinimumFloor) {
+      this.damage = Math.max(this.damage, 10);
+    }
+
+    this.damage = DamageEvent._roundToFive(this.damage);
+
+    if (debugMode) {
+      console.log(`📈 Final: ${this.damage}`);
+      console.groupEnd();
+    }
+  }
+
+  // ==========================================================
+  // UTILITÁRIOS INTERNOS
+  // ==========================================================
+
+  // ===============================
+  // UTILITÁRIOS MATEMÁTICOS (ESTÁTICOS)
+  // ===============================
+  static _roundToFive(x) {
+    return Math.round(x / 5) * 5;
+  }
+
+  static _rollCrit(user, context, critOptions = {}) {
+    const { force = false, disable = false } = critOptions;
+
+    const chance = Math.min(user?.Critical || 0, MAX_CRIT_CHANCE);
+    const bonus = user?.critBonusOverride || DEFAULT_CRIT_BONUS;
+
+    if (disable) {
+      return {
+        didCrit: false,
+        bonus: 0,
+        roll: null,
+        forced: false,
+        disabled: true,
+      };
+    }
+
+    if (force) {
+      return {
+        didCrit: true,
+        bonus,
+        roll: null,
+        forced: true,
+        disabled: false,
+      };
+    }
+
+    const roll = Math.random() * 100;
+
+    const didCrit = context?.editMode?.alwaysCrit ? true : roll < chance;
+
+    if (debugMode) {
+      console.log(`🎯 Roll: ${roll.toFixed(2)}`);
+      console.log(`🎲 Chance necessária: ${chance}%`);
+      console.log(didCrit ? "✅ CRÍTICO!" : "❌ Sem crítico");
+    }
+
+    return {
+      didCrit,
+      bonus: didCrit ? bonus : 0,
+      roll,
+      forced: false,
+      disabled: false,
+    };
+  }
+
+  static _defenseToPercent(defense) {
     if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
     if (!defense) {
@@ -133,69 +372,14 @@ class DamageEvent {
     return effective;
   }
 
-  _preChecks() {
-    // 1️⃣ IMUNIDADE
-    if (this._isImmune()) {
-      console.groupEnd();
-      return this._buildImmuneResult();
-    }
-
-    // 2️⃣ EVASÃO
-    if (
-      this.mode !== DamageEvent.Modes.ABSOLUTE &&
-      !this.skill?.cannotBeEvaded
-    ) {
-      const evasion = this._rollEvasion({
-        attacker: this.user,
-        target: this.target,
-        context: this.context,
-      });
-
-      if (evasion?.evaded) {
-        this.context.registerDamage({
-          target: this.target,
-          amount: 0,
-          sourceId: this.user?.id,
-          flags: { evaded: true },
-        });
-
-        return {
-          totalDamage: 0,
-          evaded: true,
-          targetId: this.target.id,
-          userId: this.user.id,
-        };
-      }
-    }
-
-    // 3️⃣ SHIELD
-    if (
-      this.mode !== DamageEvent.Modes.ABSOLUTE &&
-      !this.skill?.cannotBeBlocked
-    ) {
-      if (this.target._checkAndConsumeShieldBlock?.(this.context)) {
-        this.context.registerDamage({
-          target: this.target,
-          amount: 0,
-          sourceId: this.user?.id,
-          flags: { shieldBlocked: true },
-        });
-
-        return this._buildShieldBlockResult();
-      }
-    }
-
-    return null;
-  }
-
-  _rollEvasion() {
-    const editMode = this.context?.editMode ?? {};
-    const chance = Number(this.target.Evasion) || 0;
+  static _rollEvasion({ attacker, target, context }) {
+    const editMode = context?.editMode ?? {};
+    const chance = Number(target.Evasion) || 0;
 
     if (debugMode) {
       console.log("🔥 _rollEvasion chamado:", {
-        attacker: this.attacker.name,
-        target: this.target.name,
+        attacker: attacker.name,
+        target: target.name,
         evasion: chance,
         editMode,
       });
@@ -206,7 +390,7 @@ class DamageEvent {
       return {
         attempted: true,
         evaded: true,
-        log: `\n${formatChampionName(this.target)} evadiu automaticamente.`,
+        log: `\n${formatChampionName(target)} evadiu automaticamente.`,
       };
     }
 
@@ -229,9 +413,13 @@ class DamageEvent {
     return {
       evaded,
       attempted: true,
-      log: `\n${formatChampionName(this.target)} tentou esquivar o ataque... !`,
+      log: `\n${formatChampionName(target)} tentou esquivar o ataque... !`,
     };
   }
+
+  // ===============================
+  // MÉTODOS UTILITÁRIOS DE PROCESSAMENTO DE DANO
+  // ===============================
 
   _processCrit() {
     if (debugMode) {
@@ -240,7 +428,7 @@ class DamageEvent {
 
     const chance = Math.min(this.user?.Critical || 0, MAX_CRIT_CHANCE);
 
-    let crit = {
+    this.crit = {
       chance,
       didCrit: false,
       bonus: 0,
@@ -249,16 +437,22 @@ class DamageEvent {
     };
 
     if (chance > 0 || this.critOptions?.force || this.critOptions?.disable) {
-      crit = this._rollCrit();
+      const rolled = DamageEvent._rollCrit(
+        this.user,
+        this.context,
+        this.critOptions,
+      );
+
+      if (rolled) Object.assign(this.crit, rolled);
     }
 
-    const critBonusFactor = crit.bonus / 100;
+    const critBonusFactor = this.crit.bonus / 100;
     const critExtra = this.damage * critBonusFactor;
 
-    crit.critBonusFactor = critBonusFactor;
-    crit.critExtra = critExtra;
+    this.crit.critBonusFactor = critBonusFactor;
+    this.crit.critExtra = critExtra;
 
-    if (crit.didCrit) {
+    if (this.crit.didCrit) {
       emitCombatEvent(
         "onCriticalHit",
         {
@@ -266,13 +460,11 @@ class DamageEvent {
           critSrc: this.user,
           target: this.target,
           context: this.context,
-          forced: crit.forced,
+          forced: this.crit.forced,
         },
         this.allChampions,
       );
     }
-
-    this.crit = crit;
 
     if (debugMode) console.groupEnd();
   }
@@ -335,61 +527,182 @@ class DamageEvent {
     }
   }
 
-  _runBeforeHooks() {
-    if (this.mode === DamageEvent.Modes.ABSOLUTE) return;
+  _applyAffinity() {
+    const skillElement = this.skill?.element;
 
-    const beforeDeal = this._applyBeforeDealingPassive({
-      mode: this.mode,
-      skill: this.skill,
-      damage: this.damage,
-      crit: this.crit,
-      attacker: this.user,
-      target: this.target,
-      context: this.context,
-      allChampions: this.allChampions,
-    });
+    if (!skillElement) return;
+    if (!this.target?.elementalAffinities?.length) return;
 
-    if (beforeDeal?.damage !== undefined) {
-      this.damage = beforeDeal.damage;
+    if (debugMode) {
+      console.log("🔥 _applyAffinity chamado:", {
+        skillElement,
+        target: this.target.name,
+        affinities: this.target.elementalAffinities,
+        damage: this.damage,
+      });
     }
 
-    if (beforeDeal?.crit !== undefined) {
-      this.crit = beforeDeal.crit;
+    let strongestRelation = "neutral";
+
+    for (const affinity of this.target.elementalAffinities) {
+      const relation = this._getElementalRelation(skillElement, affinity);
+
+      if (relation === "weak") {
+        this.damage = Math.floor(this.damage * 1.2 + 25);
+        strongestRelation = "weak";
+        break;
+      }
+
+      if (relation === "resist" && strongestRelation !== "weak") {
+        this.damage = Math.max(this.damage - 40, 0);
+        strongestRelation = "resist";
+        break;
+      }
     }
 
-    if (beforeDeal?.logs?.length) {
-      this.beforeLogs.push(...beforeDeal.logs);
+    if (strongestRelation !== "neutral") {
+      const message =
+        strongestRelation === "weak"
+          ? "✨ É SUPER-EFETIVO!"
+          : "🛡️ Não é muito efetivo...";
+
+      this.context.dialogEvents ??= [];
+      this.context.dialogEvents.push({
+        type: "dialog",
+        message,
+        blocking: false,
+      });
     }
 
-    const beforeTake = this._applyBeforeTakingPassive({
-      mode: this.mode,
-      skill: this.skill,
-      damage: this.damage,
-      crit: this.crit,
-      dmgSrc: this.user,
-      dmgReceiver: this.target,
-      context: this.context,
-      allChampions: this.allChampions,
-    });
-
-    if (beforeTake?.damage !== undefined) {
-      this.damage = beforeTake.damage;
-    }
-
-    if (beforeTake?.crit !== undefined) {
-      this.crit = beforeTake.crit;
-    }
-
-    if (beforeTake?.logs?.length) {
-      this.beforeLogs.push(...beforeTake.logs);
-    }
+    this.context.ignoreMinimumFloor = true;
   }
 
-  _prepareDamage() {
-    if (this.mode === DamageEvent.Modes.ABSOLUTE) return;
+  _getElementalRelation(attackingElement, defendingElement) {
+    const cycle = DamageEvent.ELEMENT_CYCLE;
 
-    this._processCrit();
+    const index = cycle.indexOf(attackingElement);
 
-    this._applyDamageModifiers();
+    if (index === -1) return "neutral";
+
+    const strongAgainst = cycle[(index + 1) % cycle.length];
+    const weakAgainst = cycle[(index - 1 + cycle.length) % cycle.length];
+
+    if (defendingElement === strongAgainst) return "weak";
+
+    if (defendingElement === weakAgainst) return "resist";
+
+    return "neutral";
+  }
+
+  _applyBeforeDealingPassive() {
+    const results = emitCombatEvent(
+      "onBeforeDmgDealing",
+      {
+        mode: this.mode,
+        damage: this.damage,
+        crit: this.crit,
+        skill: this.skill,
+        attacker: this.user,
+        target: this.target,
+        dmgSrc: this.user,
+        dmgReceiver: this.target,
+        context: this.context,
+      },
+      this.allChampions,
+    );
+
+    const logs = [];
+    const effects = [];
+
+    for (const r of results || []) {
+      if (!r) continue;
+
+      // compatibilidade com hooks antigos
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      // overrides
+      if (r.damage !== undefined) {
+        this.damage = r.damage;
+      }
+
+      if (r.crit !== undefined) {
+        this.crit = r.crit;
+      }
+
+      // logs
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      // effects
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
+
+    return { logs, effects };
+  }
+
+  _applyBeforeTakingPassive() {
+    const results = emitCombatEvent(
+      "onBeforeDmgTaking",
+      {
+        mode: this.mode,
+        damage: this.damage,
+        crit: this.crit,
+        skill: this.skill,
+        attacker: this.user,
+        target: this.target,
+        dmgSrc: this.user,
+        dmgReceiver: this.target,
+        context: this.context,
+      },
+      this.allChampions,
+    );
+
+    const logs = [];
+    const effects = [];
+
+    for (const r of results || []) {
+      if (!r) continue;
+
+      if (Array.isArray(r)) {
+        logs.push(...r);
+        continue;
+      }
+
+      if (r.damage !== undefined) {
+        this.damage = r.damage;
+      }
+
+      if (r.crit !== undefined) {
+        this.crit = r.crit;
+      }
+
+      if (r.log) {
+        if (Array.isArray(r.log)) logs.push(...r.log);
+        else logs.push(r.log);
+      }
+
+      if (r.logs) {
+        if (Array.isArray(r.logs)) logs.push(...r.logs);
+        else logs.push(r.logs);
+      }
+
+      if (r.effects?.length) {
+        effects.push(...r.effects);
+      }
+    }
+
+    return { logs, effects };
   }
 }

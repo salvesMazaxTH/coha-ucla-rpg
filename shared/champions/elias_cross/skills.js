@@ -136,13 +136,49 @@ const eliasCrossSkills = [
           ? [targets]
           : [];
 
-      for (const target of targetList) {
+      let lastValidTargetIndex = -1;
+
+      for (let i = 0; i < targetList.length; i++) {
+        const target = targetList[i];
+
         if (target === user) continue;
 
         const affinities = target.elementalAffinities || [];
         // só os aliados que possuem afinidade com raio ou terra ficam imunes
-        if (target.team === user.team && (affinities.includes("lightning") || affinities.includes("earth")))
+        if (
+          target.team === user.team &&
+          (affinities.includes("lightning") || affinities.includes("earth"))
+        )
           continue;
+
+        lastValidTargetIndex = i;
+      }
+
+      for (let i = 0; i < targetList.length; i++) {
+        const target = targetList[i];
+
+        if (target === user) continue;
+
+        const affinities = target.elementalAffinities || [];
+
+        if (
+          target.team === user.team &&
+          (affinities.includes("lightning") || affinities.includes("earth"))
+        )
+          continue;
+
+        // se o alvo é o último, injeta recoil
+        if (i === lastValidTargetIndex) {
+          context.extraDamageQueue ??= [];
+
+          context.extraDamageQueue.push({
+            baseDamage: this.recoilDamage,
+            mode: this.recoilDamageMode,
+            user,
+            target: user,
+            skill: this,
+          });
+        }
 
         const result = CombatResolver.processDamageEvent({
           baseDamage,
@@ -152,19 +188,10 @@ const eliasCrossSkills = [
           context,
           allChampions: context?.allChampions,
         });
+
         if (Array.isArray(result)) results.push(...result);
         else if (result) results.push(result);
       }
-
-      context.extraDamageQueue ??= [];
-
-      context.extraDamageQueue.push({
-        baseDamage: this.recoilDamage,
-        mode: "absolute",
-        user,
-        target: user,
-        skill: this,
-      });
 
       return results;
     },
