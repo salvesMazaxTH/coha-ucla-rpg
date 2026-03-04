@@ -261,8 +261,6 @@ O envelope é o contrato principal entre servidor e cliente. Em vez de um único
 
 > **Reações como envelopes separados**: cada `damageDepth > 0` gera um **segundo `combatAction` distinto** (emitido por `buildReactionEnvelopesFromContext`). O cliente os recebe e anima sequencialmente como ações independentes, com `skillName: "X (Reação N)"`.
 
-
-
 ---
 
 ## 6. Classe Champion
@@ -507,26 +505,26 @@ performSkillExecution(user, skill, targets, cost, context)
   │
   ├── applyUltMeterFromContext({ user, context })   ← ganha ult por ação
   │
-  └── emitSystemEnvelopesFromContext({ user, skill, context })
+  └── emitCombatEnvelopesFromContext({ user, skill, context })
         ├── buildMainEnvelopeFromContext()    → damageDepth===0 → 1º combatAction
         └── buildReactionEnvelopesFromContext() → damageDepth>0 → combatAction por depth
 ```
 
-> **Nota**: as funções `buildEffectsFromContext` e `emitCombatEnvelopesFromResults` não existem. Os nomes reais são `buildMainEnvelopeFromContext`, `buildReactionEnvelopesFromContext` e `emitSystemEnvelopesFromContext`.
+> **Nota**: as funções `buildEffectsFromContext` e `emitCombatEnvelopesFromResults` não existem. Os nomes reais são `buildMainEnvelopeFromContext`, `buildReactionEnvelopesFromContext` e `emitCombatEnvelopesFromContext`.
 
 ### `processDamageEvent(params)` — Parâmetros
 
 ```js
 {
-  mode,              // "standard" | "absolute" | (hybrid via piercingPortion)
-  baseDamage,        // dano base antes de qualquer cálculo
-  piercingPortion,   // porção do dano que ignora defesa (modo híbrido, padrão: 0)
-  user,              // Champion atacante
-  target,            // Champion alvo
-  skill,             // objeto Skill (pode ter: cannotBeEvaded, cannotBeBlocked, executeRule)
-  context,           // contexto do turno — context.visual acumula os eventos
-  critOptions,       // { force: bool, disable: bool }
-  allChampions       // Map de todos os campeões vivos
+  (mode, // "standard" | "absolute" | (hybrid via piercingPortion)
+    baseDamage, // dano base antes de qualquer cálculo
+    piercingPortion, // porção do dano que ignora defesa (modo híbrido, padrão: 0)
+    user, // Champion atacante
+    target, // Champion alvo
+    skill, // objeto Skill (pode ter: cannotBeEvaded, cannotBeBlocked, executeRule)
+    context, // contexto do turno — context.visual acumula os eventos
+    critOptions, // { force: bool, disable: bool }
+    allChampions); // Map de todos os campeões vivos
 }
 ```
 
@@ -578,11 +576,11 @@ performSkillExecution(user, skill, targets, cost, context)
 
 ### Damage Modes
 
-| Mode | Comportamento |
-|---|---|
-| `"standard"` | Dano passa pela curva de defesa completa |
+| Mode         | Comportamento                                                                 |
+| ------------ | ----------------------------------------------------------------------------- |
+| `"standard"` | Dano passa pela curva de defesa completa                                      |
 | `"absolute"` | Bypassa pré-checagens, crit, hooks before, defesa — dano aplicado diretamente |
-| `"hybrid"` | `piercingPortion` do dano ignora defesa; o restante é reduzido normalmente |
+| `"hybrid"`   | `piercingPortion` do dano ignora defesa; o restante é reduzido normalmente    |
 
 ### `damageDepth` — Ações Principais vs Reações
 
@@ -604,17 +602,15 @@ Cada depth > 0 gera um **`combatAction` separado** no cliente (via `buildReactio
 
 ### Flags de Skill
 
-| Flag | Efeito |
-|---|---|
-| `cannotBeEvaded: true` | Pula a checagem de evasão na pré-checagem |
-| `cannotBeBlocked: true` | Pula a checagem de shield block |
+| Flag                        | Efeito                                                              |
+| --------------------------- | ------------------------------------------------------------------- |
+| `cannotBeEvaded: true`      | Pula a checagem de evasão na pré-checagem                           |
+| `cannotBeBlocked: true`     | Pula a checagem de shield block                                     |
 | `executeRule(ctx) → number` | Se HP do alvo / maxHP ≤ threshold retornado → mata instantaneamente |
 
 ### `isDot` — Supressão de After Hooks
 
 `context.isDot = true` suprime o disparo de `onAfterDmgDealing`. Use em DoTs (dano de keyword por turno) para evitar que passivas de "após causar dano" disparem em ticks de queimadura/veneno.
-
-
 
 ---
 
@@ -698,10 +694,10 @@ context.registerResourceChange({ target, amount, sourceId });
 
 ### Como os Envelopes São Construídos
 
-Após `skill.resolve()`, o servidor chama `emitSystemEnvelopesFromContext`:
+Após `skill.resolve()`, o servidor chama `emitCombatEnvelopesFromContext`:
 
 ```
-emitSystemEnvelopesFromContext({ user, skill, context })
+emitCombatEnvelopesFromContext({ user, skill, context })
   ├── buildMainEnvelopeFromContext()
   │     → filtra context.visual.* onde damageDepth === 0
   │     → resolve targetName/targetId via activeChampions
@@ -719,8 +715,6 @@ emitSystemEnvelopesFromContext({ user, skill, context })
 ### Por que `context.visual` e não `context.*Events`?
 
 O objeto `context` é passado para o `CombatResolver` (que fica em `/shared/`) e também vive no servidor. Manter os buffers visuais em `context.visual` separa claramente o que é "dado de combate" (damageDepth, extraDamageQueue, flags) do que é "intenção de animação" (eventos de UI).
-
-
 
 ---
 
@@ -1055,18 +1049,18 @@ O envelope chega com **arrays tipados separados**. O cliente itera sobre cada gr
 
 ### Efeitos Animados
 
-| Chave no envelope | Animação CSS | Float |
-|---|---|---|
-| `damageEvents` | `.damage` + shake | `.damage-float` tier 1–6 |
-| `healEvents` | `.heal` + brilho verde | `.heal-float` |
-| `shieldEvents` | VFX canvas (shieldCanvas) via `syncChampionVFX` | `.shield-float` |
-| `buffEvents` | `.buff` + brilho dourado | `.buff-float` |
-| `resourceEvents` | — | `.resource-float-ult-gain` ou `.resource-float-ult-spend` |
-| `dialogEvents` | `showBlockingDialog` ou `showNonBlockingDialog` | — |
-| `damageEvents.evaded=true` | `.evasion` + slide | — |
-| `damageEvents.immune=true` | Dialog "Imunidade Absoluta!" | — |
-| `damageEvents.shieldBlocked=true` | Dialog "bloqueou o ataque!" | — |
-| `damageEvents.execute=true` | `.damage` | Float "999" |
+| Chave no envelope                 | Animação CSS                                    | Float                                                     |
+| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| `damageEvents`                    | `.damage` + shake                               | `.damage-float` tier 1–6                                  |
+| `healEvents`                      | `.heal` + brilho verde                          | `.heal-float`                                             |
+| `shieldEvents`                    | VFX canvas (shieldCanvas) via `syncChampionVFX` | `.shield-float`                                           |
+| `buffEvents`                      | `.buff` + brilho dourado                        | `.buff-float`                                             |
+| `resourceEvents`                  | —                                               | `.resource-float-ult-gain` ou `.resource-float-ult-spend` |
+| `dialogEvents`                    | `showBlockingDialog` ou `showNonBlockingDialog` | —                                                         |
+| `damageEvents.evaded=true`        | `.evasion` + slide                              | —                                                         |
+| `damageEvents.immune=true`        | Dialog "Imunidade Absoluta!"                    | —                                                         |
+| `damageEvents.shieldBlocked=true` | Dialog "bloqueou o ataque!"                     | —                                                         |
+| `damageEvents.execute=true`       | `.damage`                                       | Float "999"                                               |
 
 ### Damage Tier (Tamanho do Float)
 
@@ -1094,8 +1088,6 @@ BETWEEN_ACTIONS:    60ms  // gap entre ações
 
 Após todas as animações de uma ação, os snapshots do servidor são aplicados ao estado local. Para cada campeão do snapshot, `syncChampionVFX(champion)` é chamado para manter os canvas de VFX sincronizados com o novo `runtime`.
 
-
-
 ---
 
 ## 17. Sistema de VFX — vfxManager
@@ -1119,11 +1111,11 @@ Cada canvas é criado dentro de `.portrait-wrapper` com classes `vfx-canvas vfx-
 
 ### VFX Disponíveis
 
-| VFX | Arquivo | Ativa quando | Aparência |
-|---|---|---|---|
-| `shield` | `shieldCanvas.js` | `runtime.shields.length > 0` | Bolha hexagonal azul ciano rotativa |
-| `fireStanceIdle` | `fireStanceCanvas.js` | `runtime.fireStance === "postura"` | Partículas de fogo contidas |
-| `fireStanceActive` | `fireStanceCanvas.js` | `runtime.fireStance === "brasa_viva"` | Partículas + forma de chama grande |
+| VFX                | Arquivo               | Ativa quando                          | Aparência                           |
+| ------------------ | --------------------- | ------------------------------------- | ----------------------------------- |
+| `shield`           | `shieldCanvas.js`     | `runtime.shields.length > 0`          | Bolha hexagonal azul ciano rotativa |
+| `fireStanceIdle`   | `fireStanceCanvas.js` | `runtime.fireStance === "postura"`    | Partículas de fogo contidas         |
+| `fireStanceActive` | `fireStanceCanvas.js` | `runtime.fireStance === "brasa_viva"` | Partículas + forma de chama grande  |
 
 ### API Pública
 
@@ -1255,9 +1247,9 @@ const meu_campeao = {
   Attack: 80,
   Defense: 40,
   Speed: 70,
-  Evasion: 0,     // % chance de evadir
-  Critical: 10,   // % chance de crítico
-  LifeSteal: 0,   // % de roubo de vida
+  Evasion: 0, // % chance de evadir
+  Critical: 10, // % chance de crítico
+  LifeSteal: 0, // % de roubo de vida
 
   // === ULTÔMETRO (opcional) ===
   // ultCap: 15,  // capacidade máxima em unidades internas (padrão: 15 = 5 barras)
@@ -1271,10 +1263,10 @@ const meu_campeao = {
     {
       key: "minha_skill_1",
       name: "Nome da Skill",
-      priority: 0,        // maior = age primeiro no turno
-      contact: true,      // ataque físico (relevante para passivas)
-      element: "fire",    // opcional — ativa sistema de afinidade elemental
-      cannotBeEvaded: false,  // true = ignora checagem de evasão
+      priority: 0, // maior = age primeiro no turno
+      contact: true, // ataque físico (relevante para passivas)
+      element: "fire", // opcional — ativa sistema de afinidade elemental
+      cannotBeEvaded: false, // true = ignora checagem de evasão
       cannotBeBlocked: false, // true = ignora shield block
       description() {
         return `Descrição da skill.`;
@@ -1363,8 +1355,6 @@ export default championDB;
 - **Keywords**: Use `champion.keywords.set("nome", { duration: N })` para aplicar. Para animar no cliente, adicione um `dialogEvent` ou `buffEvent` no contexto.
 - **Escudos**: `champion.runtime.shields.push({ amount: X, type: "regular", source: skill.key })`. Use `context.registerShield({ target, amount })` para notificar o cliente visualmente.
 - **Ultimates**: Declare `isUltimate: true` e `ultCost: N` (em barras). O servidor valida e debita automaticamente via `spendUlt()`.
-
-
 
 ---
 

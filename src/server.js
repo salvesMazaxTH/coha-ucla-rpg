@@ -104,7 +104,7 @@ const editMode = {
   autoLogin: true,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: true,
+  unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
@@ -585,7 +585,7 @@ function buildEmitTargetInfo(realTargetIds) {
   };
 }
 
-function emitSystemEnvelopesFromContext({ user, skill, context }) {
+function emitCombatEnvelopesFromContext({ user, skill, context }) {
   const mainEnvelope = buildMainEnvelopeFromContext({
     user,
     skill,
@@ -898,7 +898,7 @@ function performSkillExecution(
   }
 
   // 🔹 7. Emitir envelopes
-  emitSystemEnvelopesFromContext({
+  emitCombatEnvelopesFromContext({
     results,
     user,
     skill,
@@ -1278,7 +1278,7 @@ function handleStartTurn() {
   });
 
   // 🔹 7. Emit envelope (novo modelo)
-  emitSystemEnvelopesFromContext({
+  emitCombatEnvelopesFromContext({
     user: null,
     skill: { key: "turn_start", name: "Início do Turno" },
     context: turnStartContext,

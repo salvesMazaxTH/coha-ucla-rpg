@@ -22,14 +22,8 @@ const vaelSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      console.log("Vael skill1 - targets:", targets);
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-
-      console.log([
-        "Vael skill1, através de server: ",
-        { user, enemy, context },
-      ]);
 
       return CombatResolver.processDamageEvent({
         baseDamage,
@@ -55,7 +49,7 @@ const vaelSkills = [
     targetSpec: [{ type: "enemy" }, { type: "enemy", unique: true }],
 
     resolve({ user, targets, context = {} }) {
-      const [ primary, secondary ] = targets;
+      const [primary, secondary] = targets;
 
       const baseDamage = (user.Attack * this.bfPrimary) / 100;
       const results = [];
@@ -104,7 +98,7 @@ const vaelSkills = [
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
-      const [ enemy ] = targets;
+      const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
       return CombatResolver.processDamageEvent({

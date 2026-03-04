@@ -1,4 +1,4 @@
-import { formatChampionName } from "./formatters.js";
+/* import { formatChampionName } from "./formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
 const debugMode = false;
@@ -7,21 +7,31 @@ const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
 
 const ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
+ */
+
+import { DamageEvent } from "./DamageEvent.js";
 
 export const CombatResolver = {
   // ==========================================================
   // UTILITÁRIOS BÁSICOS
   // ==========================================================
-  roundToFive(x) {
+  /* roundToFive(x) {
     return Math.round(x / 5) * 5;
-  },
+  }, */
 
   // ==========================================================
   // FLUXO PRINCIPAL (ORQUESTRADOR)
   // ==========================================================
 
   processDamageEvent(params) {
-    const ctx = this._normalizeContext(params);
+    const event = new DamageEvent(params);
+
+    // 2. Dispara a pipeline que montamos
+    // O retorno aqui será o objeto (ou array) vindo do buildFinalResult()
+    return event.execute();
+
+    /// ANTIGO processDamageEvent:
+    /*  const ctx = this._normalizeContext(params);
 
     console.log(
       "🔥 processDamageEvent chamado. Fila extraDamageQueue atual:",
@@ -92,14 +102,14 @@ export const CombatResolver = {
 
     const extraResults = this._processExtraQueue(ctx);
 
-    return this._buildFinalResult(ctx, extraResults);
+    return this._buildFinalResult(ctx, extraResults); */
   },
 
   // ==========================================================
   // PRÉ-CHECAGENS
   // ==========================================================
 
-  _rollEvasion({ attacker, target, context }) {
+  /* _rollEvasion({ attacker, target, context }) {
     const editMode = context?.editMode ?? {};
     const chance = Number(target.Evasion) || 0;
 
@@ -142,13 +152,13 @@ export const CombatResolver = {
       attempted: true,
       log: `\n${formatChampionName(target)} tentou esquivar o ataque... !`,
     };
-  },
+  }, */
 
   // ==========================================================
   // CRÍTICO
   // ==========================================================
 
-  rollCrit(user, context, critOptions = {}) {
+  /*  rollCrit(user, context, critOptions = {}) {
     const { force = false, disable = false } = critOptions;
 
     const chance = Math.min(user.Critical || 0, MAX_CRIT_CHANCE);
@@ -257,13 +267,13 @@ export const CombatResolver = {
     if (debugMode) console.groupEnd();
 
     return crit;
-  },
+  }, */
 
   // ==========================================================
   // CÁLCULO E APLICAÇÃO DE DANO
   // ==========================================================
 
-  _applyDamageModifiers(damage, user, target, skill, context) {
+  /* _applyDamageModifiers(damage, user, target, skill, context) {
     if (!user?.getDamageModifiers) {
       if (debugMode)
         console.log(`⚠️ [MODIFIERS] Nenhum modificador de dano disponível`);
@@ -312,11 +322,11 @@ export const CombatResolver = {
     }
 
     return damage;
-  },
+  }, */
 
   // ================================
 
-  defenseToPercent(defense) {
+  /*   defenseToPercent(defense) {
     if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
     if (!defense) {
@@ -392,11 +402,11 @@ export const CombatResolver = {
     }
 
     return effective;
-  },
+  }, */
 
   // ------------------
 
-  _getAffinityDamage(damage, skillElement, target, context) {
+  /* _getAffinityDamage(damage, skillElement, target, context) {
     console.log("🔥 _getAffinityDamage chamado:", {
       skillElement,
       target: target.name,
@@ -923,11 +933,11 @@ export const CombatResolver = {
       effects,
     };
   },
-
+ */
   // ==========================================================
   // LOG E RECUPERAÇÃO
   // ==========================================================
-
+  /* 
   _buildLog(user, target, skill, dmg, crit, hpAfter) {
     const userName = formatChampionName(user);
     const targetName = formatChampionName(target);
@@ -1095,13 +1105,13 @@ export const CombatResolver = {
         extraEffects: context.extraEffects ?? [],
       },
     };
-  },
+  }, */
 
   // ==========================================================
   // FLUXO PRINCIPAL - ETAPA 1: PRE CHECKS
   // ==========================================================
 
-  _handlePreChecks(ctx) {
+  /*   _handlePreChecks(ctx) {
     const { mode, user, target, baseDamage, skill, context } = ctx;
 
     // IMUNE SEMPRE
@@ -1316,4 +1326,5 @@ export const CombatResolver = {
 
     return main;
   },
+  */
 };
