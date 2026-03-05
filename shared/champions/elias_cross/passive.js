@@ -7,7 +7,11 @@ export default {
   description(champion) {
     return `As habilidades de dano Elias Cross têm <b>${champion.runtime.passiveChance ?? this.initialChance}%</b> de chance de se repetirem. A cada turno, ele ganha <b>+${this.chanceIncreasePerTurn}%</b> de chance. `;
   },
-  
+
+  hookScope: {
+    onAfterDmgDealing: "source",
+  },
+
   onAfterDmgDealing({
     dmgSrc,
     dmgReceiver,
@@ -17,8 +21,6 @@ export default {
     damage,
     context,
   }) {
-    if (owner?.id !== dmgSrc?.id) return;
-
     if (context.damageDepth > 0) return;
 
     owner.runtime.passiveChance ??= this.initialChance;
@@ -44,7 +46,6 @@ export default {
   },
 
   onTurnStart({ owner }) {
-    //if (owner.id !== this.ownerId) return;
     owner.runtime.passiveChance = Math.min(
       100,
       (owner.runtime.passiveChance || this.initialChance) +

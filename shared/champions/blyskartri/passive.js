@@ -4,7 +4,11 @@ export default {
   description() {
     return `Blyskartri restura 20 MP adicional no início de cada turno. Sempre que mana for restaurada a ele ou por ele, ganha 1 Acúmulo (Máx.: ${this.maxPassiveStacks}).`;
   },
-  
+
+  hookScope: {
+    onResourceGain: "sourceOrTarget",
+  },
+
   onTurnStart({ owner, context }) {
     {
       owner.addResource(20);
@@ -17,8 +21,6 @@ export default {
     if (amount <= 0) return;
 
     if (resourceType !== "mana") return;
-
-    if (owner?.id !== target?.id && owner?.id !== source?.id) return; // Só ganha stack se ele ganhar ou conceder mana
 
     const currentStacks = owner.runtime?.passiveStacks || 0;
 

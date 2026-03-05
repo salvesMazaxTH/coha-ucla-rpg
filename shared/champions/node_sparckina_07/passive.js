@@ -8,6 +8,11 @@ export default {
   description() {
     return `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em ${this.speedBuff}%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem ${this.paralyzeChance}% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos (duração aumentada por sua passiva).`;
   },
+
+  hookScope: {
+    onAfterDmgDealing: "source",
+  },
+
   onTurnStart({ self, context }) {
     if (!self) return;
 
@@ -27,7 +32,6 @@ export default {
   },
 
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
-    if (owner?.id !== dmgSrc?.id) return;
     if (damage <= 0) return;
 
     const roll = Math.random();

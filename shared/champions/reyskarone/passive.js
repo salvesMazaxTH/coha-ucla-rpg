@@ -9,10 +9,21 @@ export default {
     return `Sempre que um aliado curar por Roubo de Vida, Reyskarone recupera ${this.lifeStealHealPercent}% desse valor.`;
   },
 
+  hookScope: {
+    onAfterLifeSteal: "allies",
+  },
+
   onAfterLifeSteal({ source, amount, owner, context }) {
     // ✔ Só aliados, ignorar o próprio Reyskarone
-    if (source.team !== owner.team || source === owner) return;
-
+    console.log(
+      "PASSIVA REYSKARONE DISPARADA",
+      "owner:",
+      owner?.name,
+      "source:",
+      source?.name,
+      "amount:",
+      amount,
+    );
     const heal =
       Math.round((amount * (this.lifeStealHealPercent / 100)) / 5) * 5;
     if (heal <= 0 || owner.HP >= owner.maxHP) return;

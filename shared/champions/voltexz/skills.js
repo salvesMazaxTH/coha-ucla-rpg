@@ -29,6 +29,7 @@ const voltexzSkills = [
       const results = [];
 
       if (primary) {
+        console.log("🌊 ALL-CHAMPIONS DEBUG, allChampions in context (Voltexz 1st skill):", context?.allChampions);
         const primaryResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,

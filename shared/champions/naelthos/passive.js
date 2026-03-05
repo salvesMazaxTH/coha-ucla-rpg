@@ -10,10 +10,21 @@ export default {
     ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
     (Máx. +${this.maxHeal} por acerto)`;
   },
+
+  hookScope: {
+    onAfterDmgTaking: "self",
+  },
+
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (damage <= 0) return;
 
-    if (owner?.id !== dmgReceiver?.id) return;
+    console.log(
+      "PASSIVA NAELTHOS DISPARADA",
+      "owner:",
+      owner?.name,
+      "receiver:",
+      dmgReceiver?.name,
+    );
 
     let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;
 

@@ -117,8 +117,8 @@ const blyskartriSkills = [
         },
       });
 
-      context.dialogEvents ??= [];
-      context.dialogEvents.push({
+      context.visual.dialogEvents ??= [];
+      context.visual.dialogEvents.push({
         type: "dialog",
         message: `${formatChampionName(user)} faz ${formatChampionName(ally)} florescer em poder vital.`,
         sourceId: user.id,

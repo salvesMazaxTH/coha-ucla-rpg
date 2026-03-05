@@ -12,10 +12,14 @@ export default {
         Se o alvo não tiver Afinidade: Terra, Água ou Fogo:
         → O alvo fica "Queimando".`;
   },
+
+  hookScope: {
+    onAfterDmgDealing: "source",
+  },
+
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, skill, context }) {
     //console.log("Skill dentro da passiva:", skill);
 
-    if (dmgSrc?.id !== owner.id) return;
     if (!skill) return;
     if (skill.key !== "ataque_basico") return;
     if (damage <= 0) return;

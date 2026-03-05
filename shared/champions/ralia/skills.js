@@ -124,6 +124,8 @@ const raliaSkills = [
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
+    isUltimate: true,
+    ultCost: 2,
 
     priority: 1,
     description() {

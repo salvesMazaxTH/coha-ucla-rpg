@@ -6,8 +6,12 @@ export default {
   description() {
     return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (aumenta a vida).`;
   },
+
+  hookScope: {
+    onAfterDmgTaking: "self",
+  },
+
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
-    if (owner?.id !== dmgReceiver?.id) return;
     if (damage <= 0) return;
 
     owner.runtime.tharoxInerciaStacks =

@@ -7,8 +7,12 @@ export default {
   description() {
     return `Cada acerto crítico aumenta a chance de crítico em +${this.critBuff}% (máx. ${this.critCap}%). Quando a chance de crítico ultrapassa ${this.critThreshold}%, o bônus de crítico sobe para 1,${this.enhancedCritBonus}x.`;
   },
-  onCriticalHit({ critSrc, target, context, owner }) {
-    if (critSrc !== owner) return; // só ativa para o próprio Vael
+
+  hookScope: {
+    onCriticalHit: "source",
+  },
+
+  onCriticalHit({ target, context, owner }) {
     owner.modifyStat({
       statName: "Critical",
       amount: this.critBuff,

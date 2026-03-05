@@ -10,10 +10,12 @@ export default {
   description() {
     return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
+  hookScope: {
+    onAfterDmgDealing: "source",
+    onBeforeDmgDealing: "source",
+  },
 
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, skill, damage, context }) {
-    if (owner?.id !== dmgSrc?.id) return;
-
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
 
     // Ataque Básico não aplica recuo nem Sobrecarga
@@ -83,15 +85,13 @@ export default {
     console.log("ALVO:", dmgReceiver?.name);
     console.log("HAS SOBRECARGA?", dmgReceiver?.hasKeyword?.("sobrecarga"));
 
-    if (owner?.id !== dmgSrc?.id) return;
-
     if (!dmgReceiver.hasKeyword?.("sobrecarga")) return;
 
     const bonusDamage = Math.ceil((damage * this.sobrecargaBonusPercent) / 100);
 
     dmgReceiver.removeKeyword("sobrecarga");
 
-    context.dialogEvents.push({
+    context.visual.dialogEvents.push({
       type: "dialog",
       message: `${formatChampionName(dmgReceiver)} foi consumido por "Sobrecarga"!`,
       sourceId: dmgSrc.id,

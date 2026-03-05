@@ -27,6 +27,11 @@ export default {
     Ao usar a Ultimate, causa dano adicional igual ao total armazenado e zera o acúmulo.`;
   },
 
+  hookScope: {
+    onAfterDmgTaking: "self",
+    onAfterDmgDealing: "source",
+  },
+
   // 🔴 Recebe 10% de dano adicional (mínimo +10)
   onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (!damage || damage <= 0) return;
@@ -44,7 +49,6 @@ export default {
 
   // 🔴 Armazena dano recebido (30% ou 40% se blindado)
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
-    if (owner?.id !== dmgReceiver?.id) return;
     if (!damage || damage <= 0) return;
 
     console.log(
@@ -74,8 +78,6 @@ export default {
   // 🔴 Após usar qualquer habilidade (exceto ataque básico), fica Atordoado
   onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context, skill }) {
     if (!skill?.key) return;
-
-    if (dmgSrc !== owner) return;
 
     // Ataque básico não causa stun
     if (skill.key === "basic_attack") return;

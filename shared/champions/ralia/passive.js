@@ -7,8 +7,12 @@ Sempre que Rália sofrer um Acerto Crítico ou receber dano de qualquer fonte qu
 O bônus de dano do crítico é reduzido em −${this.critReduction} (mínimo 0).
 Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico neste acerto.`;
   },
+
+  hookScope: {
+    onBeforeDmgTaking: "self",
+  },
+
   onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, crit, context }) {
-    if (owner?.id !== dmgReceiver?.id) return;
     console.log(
       `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${dmgSrc.name}`,
     );

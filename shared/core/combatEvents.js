@@ -3,8 +3,11 @@ const debugMode = true; // Set to true to enable detailed logging of combat even
 export function emitCombatEvent(eventName, payload, champions) {
   const results = [];
 
-  const ignoredEventsForDebug = new Set(['onActionResolved', 'onTurnEnd', 'onTurnStart']);
-
+  const ignoredEventsForDebug = new Set([
+    "onActionResolved",
+    "onTurnEnd",
+    "onTurnStart",
+  ]);
 
   if (!ignoredEventsForDebug.has(eventName)) {
     console.log(`🔥 Champions in emitCombatEvent:`, champions);
@@ -26,9 +29,8 @@ export function emitCombatEvent(eventName, payload, champions) {
   if (debugMode && !ignoredEventsForDebug.has(eventName)) {
     console.log(
       "🎯 Champions recebidos:",
-     champArray,
-     champArray.map((c) => c.name).join(", "
-      )
+      champArray,
+      champArray.map((c) => c.name).join(", "),
     );
   }
 
@@ -51,6 +53,49 @@ export function emitCombatEvent(eventName, payload, champions) {
 
       if (debugMode) {
         console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
+      }
+
+      const scope = source.hookScope?.[eventName];
+
+      const sourceActor =
+        payload.dmgSrc ??
+        payload.attacker ??
+        payload.source ??
+        payload.critSrc ??
+        payload.healSrc ??
+        null;
+
+      const targetActor =
+        payload.dmgReceiver ?? payload.target ?? payload.healTarget ?? null;
+
+      const selfActor =
+        payload.self ??
+        payload.owner ??
+        payload.dmgReceiver ??
+        payload.target ??
+        payload.healTarget ??
+        null;
+
+      if (scope === "self" && champ !== selfActor) continue;
+
+      if (scope === "source" && champ !== sourceActor) continue;
+
+      if (scope === "target" && champ !== targetActor) continue;
+
+      if (
+        scope === "sourceOrTarget" &&
+        champ !== sourceActor &&
+        champ !== targetActor
+      )
+        continue;
+
+      if (scope === "allies") {
+        if (
+          !sourceActor ||
+          champ.team !== sourceActor.team ||
+          champ === sourceActor
+        )
+          continue;
       }
 
       try {

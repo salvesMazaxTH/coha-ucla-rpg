@@ -8,8 +8,12 @@ export default {
   description() {
     return `Sempre que Gryskarchu curar um aliado, ele próprio recupera ${this.selfHeal} HP (o excesso de cura é convertido em aumento do HP máximo para Gryskarchu). Se o aliado estava abaixo de ${this.hpThreshold}% do HP, Gryskarchu recebe +${this.defBonus} DEF.`;
   },
+
+  hookScope: {
+    onAfterHealing: "source",
+  },
+
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
-    if (healSrc?.id !== owner.id) return;
     if (healTarget.team !== owner.team) return;
     if (healTarget.id === owner.id) return; // impede auto-trigger, evita loop infinito
 

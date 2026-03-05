@@ -32,10 +32,14 @@ export class DamageEvent {
     this.skill = skill;
 
     this.context = context ?? {};
-    this.allChampions = Array.isArray(params.allChampions)
-      ? params.allChampions
-      : [];
-    console.log("DEBUG allChampions in DamageEvent:", this.allChampions);
+    this.allChampions =
+      params.allChampions instanceof Map
+        ? [...params.allChampions.values()]
+        : (params.allChampions ?? []);
+    console.log(
+      "[DamageEvent_constructor] ALL-CHAMPIONS DEBUG allChampions in DamageEvent:",
+      this.allChampions,
+    );
     this.critOptions = params.critOptions ?? [];
 
     this.damageDepth = this.context.damageDepth ?? 0;
@@ -903,14 +907,11 @@ export class DamageEvent {
   // Helper privado para evitar duplicar o loop de logs/effects/damage
   _processHook(eventName, payload) {
     // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
-    console.log(
-      `🔍 DEBUG SEGURO [${eventName}]:`,
-      JSON.stringify(this.allChampions),
-    );
+    console.log("[ALL CHAMPIONS DEBUG]", this.allChampions);
 
     // Verifique se o this.allChampions não foi redefinido por acidente
     if (!this.allChampions || this.allChampions.length === 0) {
-      console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!");
+      /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
     }
     const results =
       emitCombatEvent(eventName, payload, this.allChampions) || [];

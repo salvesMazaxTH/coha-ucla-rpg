@@ -7,9 +7,12 @@ export default {
     return `Sempre que Serene terminar um turno sem ter seu HP reduzido, ela cura ${this.healPercent}% do seu HP máximo no início do próximo turno.`;
   },
 
+  hookScope: {
+    onAfterDmgTaking: "self",
+  },
+
   // Marca dano recebido no turno
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, context }) {
-    if (owner?.id !== dmgReceiver?.id) return;
     owner.runtime = owner.runtime || {};
     owner.runtime.sereneDamagedTurn = context.currentTurn;
   },
