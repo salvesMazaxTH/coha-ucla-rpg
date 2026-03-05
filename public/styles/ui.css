@@ -619,6 +619,32 @@
   }
 }
 
+.glossary-keyword {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.skill-glossary-panel {
+  background: #111;
+  border: 1px solid #444;
+  padding: 6px 8px;
+  font-size: 12px;
+  max-width: 220px;
+}
+
+.glossary-item {
+  margin-top: 4px;
+}
+
+.glossary-title {
+  font-weight: bold;
+  color: #f4d03f;
+}
+
+.glossary-desc {
+  color: #ddd;
+}
+
 .quick-stats-overlay {
   background: linear-gradient(180deg, #181f1a 90%, #0a0a0a 100%);
   border: 2px solid #00ff99;

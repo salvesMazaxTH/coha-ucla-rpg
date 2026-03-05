@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../core/formatters.js";
+import { formatChampionName } from "../../ui/formatters.js";
 
 const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999), entre outras coisas.
 

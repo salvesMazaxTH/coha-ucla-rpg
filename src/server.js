@@ -86,14 +86,14 @@ import { fileURLToPath } from "url";
 
 import { championDB } from "../shared/data/championDB.js";
 import { Champion } from "../shared/core/Champion.js";
-import { generateId } from "../shared/core/id.js";
+import { generateId } from "../shared/utils/id.js";
 import {
   formatChampionName,
   formatPlayerName,
-} from "../shared/core/formatters.js";
-import { emitCombatEvent } from "../shared/core/combatEvents.js";
+} from "../shared/ui/formatters.js";
+import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 
-import { KeywordTurnEffects } from "../shared/core/keywordTurnEffects.js";
+import { KeywordTurnEffects } from "../shared/engine/keywordTurnEffects.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -104,7 +104,7 @@ const editMode = {
   autoLogin: true,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)

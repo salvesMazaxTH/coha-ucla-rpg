@@ -1,5 +1,5 @@
-import { CombatResolver } from "../../core/combatResolver.js";
-import { formatChampionName } from "../../core/formatters.js";
+import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
 const voltexzSkills = [
@@ -29,7 +29,10 @@ const voltexzSkills = [
       const results = [];
 
       if (primary) {
-        console.log("🌊 ALL-CHAMPIONS DEBUG, allChampions in context (Voltexz 1st skill):", context?.allChampions);
+        console.log(
+          "🌊 ALL-CHAMPIONS DEBUG, allChampions in context (Voltexz 1st skill):",
+          context?.allChampions,
+        );
         const primaryResult = CombatResolver.processDamageEvent({
           baseDamage,
           user,
@@ -68,7 +71,7 @@ const voltexzSkills = [
     priority: 1,
     element: "lightning",
     description() {
-      return `Causa dano (BF ${this.bf}) e paralisa o alvo por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
+      return `Causa dano (BF ${this.bf}) e deixa o alvo {paralisado} por ${this.paralyzeDuration} turno(s), fazendo-o perder a próxima ação.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {

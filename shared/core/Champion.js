@@ -1,6 +1,6 @@
-import { StatusIndicator } from "./statusIndicator.js";
-import { CombatResolver } from "./combatResolver.js";
-
+import { StatusIndicator } from "../ui/statusIndicator.js";
+/* import { CombatResolver } from "./combatResolver.js";
+ */
 export class Champion {
   constructor(data = {}) {
     const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;

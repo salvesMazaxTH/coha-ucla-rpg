@@ -1,0 +1,45 @@
+import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { formatChampionName } from "../../ui/formatters.js";
+import basicAttack from "../basicAttack.js";
+
+const nytheraSkills = [
+  basicAttack,
+  {
+    key: "lamina_boreal",
+    name: "Lâmina Boreal",
+    bf: 75,
+    contact: false,
+    chillDuration: 2,
+    freezeDuration: 1,
+    bonusIfFrozen: 50,
+    description() {
+      return `Causa dano e deixa o alvo {gelado} por ${this.chillDuration} turno(s). Se o alvo já estiver {gelado}, aplica {congelado} por ${this.freezeDuration} turno(s) e causa dano adicional igual a ${this.bonusIfFrozen} de dano ({perfurante}).`;
+    },
+    targetSpec: ["enemy"],
+    resolve({ user, targets, context = {} }) {
+      const [target] = targets;
+      const baseDamage = (user.Attack * this.bf) / 100;
+      let totalDamage = baseDamage;
+
+      const isFrozen = target.hasKeyword("frozen");
+
+      if (isFrozen) {
+        totalDamage += (baseDamage * this.bonusIfFrozen) / 100;
+        target.applyKeyword("frozen", this.freezeDuration, context);
+      } else {
+        target.applyKeyword("chill", this.chillDuration, context);
+      }
+
+      return CombatResolver.processDamageEvent({
+        baseDamage: totalDamage,
+        user,
+        target,
+        skill,
+        context,
+        allChampions: context?.allChampions,
+      });
+    },
+  },
+];
+
+export default nytheraSkills;

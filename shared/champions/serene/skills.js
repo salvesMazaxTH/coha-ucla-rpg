@@ -1,5 +1,5 @@
-import { CombatResolver } from "../../core/combatResolver.js";
-import { formatChampionName } from "../../core/formatters.js";
+import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
 const sereneSkills = [
@@ -56,7 +56,7 @@ const sereneSkills = [
     damageMode: "piercing",
     priority: 1,
     description() {
-      return `Causa dano (piercing) igual a ${this.hpDamagePercent}% do HP máximo do alvo e atordoa por ${this.stunDuration} turno(s).`;
+      return `Causa dano (piercing) igual a ${this.hpDamagePercent}% do HP máximo do alvo e deixa o alvo {atordoado} por ${this.stunDuration} turno(s).`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {

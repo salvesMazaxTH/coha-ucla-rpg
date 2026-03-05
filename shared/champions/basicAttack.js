@@ -1,5 +1,5 @@
 // Centralização do Ataque Básico idêntico ao dos skills dos campeões
-import { CombatResolver } from "../core/combatResolver.js";
+import { CombatResolver } from "../engine/combat/combatResolver.js";
 
 const basicAttack = {
   key: "ataque_basico",

@@ -1,34 +1,90 @@
 // ============================================================
-//  OVERLAY DE SKILL (HOVER/TOUCH NOS BOTÕES DE SKILL)
+//  OVERLAYS (DE SKILL, HOVER/TOUCH NOS BOTÕES DE SKILL, E DE CLIQUE NO PORTRAIT)
 // ============================================================
 
 import elementEmoji from "../../shared/champions/elementEmoji.js";
 
 let skillOverlay = null;
-let skillOverlayTimeout = null;
+
+function extractGlossaryKeys(text) {
+  const matches = [...text.matchAll(/\{(.*?)\}/g)];
+  return [...new Set(matches.map((m) => m[1]))];
+}
+
+function renderGlossaryKeywords(text) {
+  return text.replace(/\{(.*?)\}/g, (match, key) => {
+    return `<span class="glossary-keyword">${key}</span>`;
+  });
+}
+
+function renderGlossaryPanel(keys) {
+  const container = document.createElement("div");
+  container.className = "skill-glossary-panel";
+
+  keys.forEach((key) => {
+    const entry = GAME_GLOSSARY[key];
+    if (!entry) return;
+
+    const item = document.createElement("div");
+    item.className = "glossary-item";
+
+    item.innerHTML = `
+      <span class="glossary-title">${entry.title}:</span>
+      <span class="glossary-desc">${entry.description}</span>
+    `;
+
+    container.appendChild(item);
+  });
+
+  return container;
+}
+
+// =========================
+// Helpers (fora da função)
+// =========================
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function toParagraphs(text) {
+  return String(text ?? "").replace(/\n/g, "<br>");
+}
+
+// =========================
+// Skill Overlay
+// =========================
 
 function showSkillOverlay(button, skill, champion) {
   removeSkillOverlay();
   if (!button || !skill) return;
 
-  // Overlay element
   const overlay = document.createElement("div");
   overlay.className = "skill-hover-overlay";
 
-  // Helper: escape HTML
-  const escapeHtml = (value) =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+  // =========================
+  // Dados da skill
+  // =========================
 
-  // Helper: paragraphs
-  const toParagraphs = (text) => escapeHtml(text).replace(/\n/g, "<br>");
+  const rawDesc =
+    typeof skill.description === "function"
+      ? skill.description(champion)
+      : skill.description || "";
+
+  const parsedDesc = renderGlossaryKeywords(rawDesc);
+  const glossaryKeys = extractGlossaryKeys(rawDesc);
 
   const ultCostBars =
     skill.isUltimate && Number.isInteger(skill.ultCost) ? skill.ultCost : null;
+
+  // =========================
+  // HTML
+  // =========================
 
   overlay.innerHTML = `
   <div class="skill-overlay-content">
@@ -38,16 +94,20 @@ function showSkillOverlay(button, skill, champion) {
     </div>
 
     <div class="skill-overlay-meta-primary">
-    ${
-      ultCostBars
-        ? `
-    <div class="skill-meta-item">
-      <span class="meta-label">Custo: </span>
-      <span class="meta-value">${ultCostBars} barra${ultCostBars > 1 ? "s" : ""}</span>
-    </div>
-  `
-        : ""
-    }
+
+      ${
+        ultCostBars
+          ? `
+        <div class="skill-meta-item">
+          <span class="meta-label">Custo:</span>
+          <span class="meta-value">
+            ${ultCostBars} ${ultCostBars === 1 ? "barra" : "barras"}
+          </span>
+        </div>
+      `
+          : ""
+      }
+
       ${
         skill.damageMode != null
           ? `
@@ -65,19 +125,20 @@ function showSkillOverlay(button, skill, champion) {
         skill.bf
           ? `
         <div class="skill-meta-item">
-          <span class="meta-label">BF: </span>
+          <span class="meta-label">BF:</span>
           <span class="meta-value">${skill.bf}%</span>
         </div>
       `
           : ""
       }
+
     </div>
 
     ${
       skill.element
         ? `
       <div class="skill-overlay-element-row">
-        <span class="meta-label">Elemento: </span>
+        <span class="meta-label">Elemento:</span>
         <span class="meta-value">
           ${elementEmoji[skill.element] || skill.element}
         </span>
@@ -87,27 +148,25 @@ function showSkillOverlay(button, skill, champion) {
     }
 
     <div class="skill-overlay-contact-row">
-      <span class="meta-label">Contato: </span>
+      <span class="meta-label">Contato:</span>
       <span class="meta-value">${skill.contact ? "✅" : "❌"}</span>
     </div>
 
     <div class="skill-overlay-content-priority-row">
-      <span class="meta-label">Prioridade: </span>
-      <span class="meta-value">${
-        skill.priority != null
-          ? skill.priority > 0
-            ? `+${skill.priority}`
-            : skill.priority
-          : "-"
-      }</span>
+      <span class="meta-label">Prioridade:</span>
+      <span class="meta-value">
+        ${
+          skill.priority != null
+            ? skill.priority > 0
+              ? `+${skill.priority}`
+              : skill.priority
+            : "-"
+        }
+      </span>
     </div>
 
     <div class="skill-overlay-desc">
-      ${toParagraphs(
-        typeof skill.description === "function"
-          ? skill.description.call(skill)
-          : skill.description || "",
-      )}
+      ${toParagraphs(parsedDesc)}
     </div>
 
   </div>
@@ -116,37 +175,75 @@ function showSkillOverlay(button, skill, champion) {
   document.body.appendChild(overlay);
   skillOverlay = overlay;
 
-  // Position overlay near button (above or below depending on space)
-  const rect = button.getBoundingClientRect();
-  const overlayRect = overlay.getBoundingClientRect();
-  let top = rect.bottom + 8;
-  let left = rect.left + rect.width / 2 - overlayRect.width / 2;
-  // If not enough space below, show above
-  if (top + overlayRect.height > window.innerHeight) {
-    top = rect.top - overlayRect.height - 8;
+  // =========================
+  // Glossário
+  // =========================
+
+  let glossaryPanel = null;
+
+  if (glossaryKeys.length) {
+    glossaryPanel = renderGlossaryPanel(glossaryKeys);
+    document.body.appendChild(glossaryPanel);
   }
-  // Clamp left
+
+  // =========================
+  // Posicionamento do overlay
+  // =========================
+
+  const buttonRect = button.getBoundingClientRect();
+  const overlayRect = overlay.getBoundingClientRect();
+
+  let top = buttonRect.bottom + 8;
+  let left = buttonRect.left + buttonRect.width / 2 - overlayRect.width / 2;
+
+  if (top + overlayRect.height > window.innerHeight) {
+    top = buttonRect.top - overlayRect.height - 8;
+  }
+
   left = Math.max(8, Math.min(left, window.innerWidth - overlayRect.width - 8));
+
   overlay.style.position = "fixed";
   overlay.style.top = `${Math.max(8, top)}px`;
   overlay.style.left = `${left}px`;
   overlay.style.zIndex = 15000;
 
+  // =========================
+  // Posicionamento do glossário
+  // =========================
+
+  if (glossaryPanel) {
+    const overlayBox = overlay.getBoundingClientRect();
+
+    glossaryPanel.style.position = "fixed";
+    glossaryPanel.style.top = `${overlayBox.bottom + 6}px`;
+    glossaryPanel.style.left = `${overlayBox.left}px`;
+    glossaryPanel.style.zIndex = 15000;
+  }
+
+  // =========================
   // Fade in
+  // =========================
+
   requestAnimationFrame(() => overlay.classList.add("active"));
 }
+
+// =========================
+// Remove overlay
+// =========================
 
 function removeSkillOverlay() {
   if (skillOverlay) {
     skillOverlay.classList.remove("active");
+
     const toRemove = skillOverlay;
     skillOverlay = null;
+
     setTimeout(() => toRemove.remove(), 150);
   }
-  if (skillOverlayTimeout) {
-    clearTimeout(skillOverlayTimeout);
-    skillOverlayTimeout = null;
-  }
+
+  document
+    .querySelectorAll(".skill-glossary-panel")
+    .forEach((el) => el.remove());
 }
 
 function getDamageModeLabel(mode) {
@@ -160,14 +257,162 @@ function getDamageModeLabel(mode) {
   }
 }
 
+function openChampionOverlay(champion) {
+  if (!champion) return;
+  if (portraitOverlay) closeOverlay();
+
+  portraitOverlay = createChampionOverlay(champion);
+  document.body.appendChild(portraitOverlay);
+  requestAnimationFrame(() => portraitOverlay.classList.add("active"));
+}
+
+function createChampionOverlay(champion) {
+  const overlay = document.createElement("div");
+  overlay.classList.add("portrait-overlay");
+
+  // --- Helpers de sanitização ---
+  const escapeHtml = (value) =>
+    String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  overlay.innerHTML = `
+    <div class="portrait-overlay-content" role="dialog" aria-modal="true">
+      <img class="portrait-overlay-img"
+          src="${escapeHtml(champion.portrait)}"
+          alt="${escapeHtml(champion.name)}">
+
+      <h3 class="portrait-overlay-name">
+        ${escapeHtml(champion.name)}
+      </h3>
+    </div>
+  `;
+
+  const toParagraphs = (text) => String(text ?? "").replace(/\n/g, "<br>");
+
+  // --- Passiva ---
+  const passive = champion?.passive;
+  const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
+
+  const rawPassiveDesc =
+    typeof passive?.description === "function"
+      ? passive.description(champion)
+      : typeof passive?.description === "string"
+        ? passive.description
+        : "";
+
+  const parsedPassiveDesc = renderGlossaryKeywords(rawPassiveDesc);
+  const passiveGlossaryKeys = extractGlossaryKeys(rawPassiveDesc);
+
+  let passiveItemHtml = "";
+
+  if (parsedPassiveDesc) {
+    passiveItemHtml = `
+    <div class="portrait-overlay-passive">
+      <h4 class="portrait-overlay-passive-name">
+        ${escapeHtml(passiveName)}
+      </h4>
+      <p class="portrait-overlay-passive-desc">
+        ${toParagraphs(parsedPassiveDesc)}
+      </p>
+    </div>
+  `;
+  }
+
+  // atributos do campeão (p.Ex: ATQ, DEF ,etc...)
+  const statsItemHtml = [
+    { name: "Ataque", value: champion.Attack },
+    { name: "Defesa", value: champion.Defense },
+    { name: "Velocidade", value: champion.Speed },
+    { name: "Esquiva", value: champion.Evasion ?? 0 },
+    { name: "Crítico", value: champion.Critical ?? 0 },
+    { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
+  ]
+    .filter((item) => item.value !== undefined)
+    .map(
+      (item) => `
+        <div class="portrait-overlay-stat">
+          <h4 class="portrait-overlay-stat-name">${escapeHtml(item.name)}: </h4>
+          <p class="portrait-overlay-stat-value">${escapeHtml(item.value)}</p>
+        </div>
+      `,
+    )
+    .join("");
+
+  const details = document.createElement("div");
+  details.classList.add("portrait-overlay-details");
+  details.innerHTML = `
+    <div class="portrait-overlay-details-content">
+      <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
+      <div class="portrait-overlay-passive-list">
+        ${passiveItemHtml}
+      </div>
+      <div class="portrait-overlay-stats-list">
+        ${statsItemHtml}
+      </div>
+    </div>
+  `;
+
+  overlay.appendChild(details);
+  
+  // =========================
+  // Glossário da passiva
+  // =========================
+
+  if (passiveGlossaryKeys.length) {
+    const glossaryPanel = renderGlossaryPanel(passiveGlossaryKeys);
+    document.body.appendChild(glossaryPanel);
+
+    requestAnimationFrame(() => {
+      const rect = overlay.getBoundingClientRect();
+
+      glossaryPanel.style.position = "fixed";
+      glossaryPanel.style.top = `${rect.bottom + 6}px`;
+      glossaryPanel.style.left = `${rect.left}px`;
+      glossaryPanel.style.zIndex = 15000;
+    });
+  }
+
+  // Fechar ao clicar no backdrop
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeChampionOverlay();
+  });
+
+  // Fechar com Escape
+  const handleEsc = (e) => {
+    if (e.key === "Escape") closeChampionOverlay();
+  };
+  overlay._escHandler = handleEsc;
+  document.addEventListener("keydown", handleEsc);
+
+  return overlay;
+}
+
+function closeChampionOverlay() {
+  if (!portraitOverlay) return;
+
+  portraitOverlay.classList.remove("active");
+  if (portraitOverlay._escHandler) {
+    document.removeEventListener("keydown", portraitOverlay._escHandler);
+  }
+
+  const toRemove = portraitOverlay;
+  portraitOverlay = null;
+  setTimeout(() => toRemove.remove(), 200);
+}
+
 // ============================================================
 //  IMPORTS
 // ============================================================
 
 import { championDB } from "/shared/data/championDB.js";
 import { Champion } from "/shared/core/Champion.js";
-import { StatusIndicator } from "/shared/core/statusIndicator.js";
+import { StatusIndicator } from "../../shared/ui/statusIndicator.js";
 import { createCombatAnimationManager } from "./animation/animsAndLogManager.js";
+import { GAME_GLOSSARY } from "./gameGlossary.js";
 
 // ============================================================
 //  SOCKET
@@ -820,7 +1065,7 @@ function createNewChampion(championData) {
   champion.render(teamContainer, {
     onSkillClick: handleSkillUsage,
     onDelete: deleteChampion,
-    onPortraitClick: handlePortraitClick,
+    onPortraitClick: openChampionOverlay,
     // Adiciona overlay de hover/touch no retrato
     onPortraitHover: (champ) => showQuickStatsOverlay(champ),
     onPortraitHoverOut: hideQuickStatsOverlay,
@@ -1004,135 +1249,6 @@ function deleteChampion(championId) {
   if (confirm("Tem certeza que deseja remover este campeão?")) {
     socket.emit("removeChampion", { championId });
   }
-}
-
-// ============================================================
-//  OVERLAY DE RETRATO / INFORMAÇÕES DO CAMPEÃO
-// ============================================================
-
-function handlePortraitClick(champion) {
-  if (!champion) return;
-  if (portraitOverlay) closeOverlay();
-
-  portraitOverlay = createOverlay(champion);
-  document.body.appendChild(portraitOverlay);
-  requestAnimationFrame(() => portraitOverlay.classList.add("active"));
-}
-
-function createOverlay(champion) {
-  const overlay = document.createElement("div");
-  overlay.classList.add("portrait-overlay");
-
-  // --- Helpers de sanitização ---
-  const escapeHtml = (value) =>
-    String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-  overlay.innerHTML = `
-    <div class="portrait-overlay-content" role="dialog" aria-modal="true">
-      <img class="portrait-overlay-img"
-          src="${escapeHtml(champion.portrait)}"
-          alt="${escapeHtml(champion.name)}">
-
-      <h3 class="portrait-overlay-name">
-        ${escapeHtml(champion.name)}
-      </h3>
-    </div>
-  `;
-
-  const toParagraphs = (text) => String(text ?? "").replace(/\n/g, "<br>");
-
-  // --- Passiva ---
-  const passive = champion?.passive;
-  const passiveName = passive?.name ? `PASSIVA — ${passive.name}` : "PASSIVA";
-  const passiveDesc =
-    typeof passive?.description === "function"
-      ? passive.description(champion)
-      : typeof passive?.description === "string"
-        ? passive.description
-        : "";
-
-  let passiveItemHtml = "";
-
-  if (passiveDesc) {
-    passiveItemHtml = `
-    <div class="portrait-overlay-passive">
-      <h4 class="portrait-overlay-passive-name">
-        ${escapeHtml(passiveName)}
-      </h4>
-      <p class="portrait-overlay-passive-desc">
-        ${toParagraphs(passiveDesc)}
-      </p>
-    </div>
-  `;
-  }
-
-  // atributos do campeão (p.Ex: ATQ, DEF ,etc...)
-  const statsItemHtml = [
-    { name: "Ataque", value: champion.Attack },
-    { name: "Defesa", value: champion.Defense },
-    { name: "Velocidade", value: champion.Speed },
-    { name: "Esquiva", value: champion.Evasion ?? 0 },
-    { name: "Crítico", value: champion.Critical ?? 0 },
-    { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
-  ]
-    .filter((item) => item.value !== undefined)
-    .map(
-      (item) => `
-        <div class="portrait-overlay-stat">
-          <h4 class="portrait-overlay-stat-name">${escapeHtml(item.name)}: </h4>
-          <p class="portrait-overlay-stat-value">${escapeHtml(item.value)}</p>
-        </div>
-      `,
-    )
-    .join("");
-
-  const details = document.createElement("div");
-  details.classList.add("portrait-overlay-details");
-  details.innerHTML = `
-    <div class="portrait-overlay-details-content">
-      <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
-      <div class="portrait-overlay-passive-list">
-        ${passiveItemHtml}
-      </div>
-      <div class="portrait-overlay-stats-list">
-        ${statsItemHtml}
-      </div>
-    </div>
-  `;
-
-  overlay.appendChild(details);
-
-  // Fechar ao clicar no backdrop
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeOverlay();
-  });
-
-  // Fechar com Escape
-  const handleEsc = (e) => {
-    if (e.key === "Escape") closeOverlay();
-  };
-  overlay._escHandler = handleEsc;
-  document.addEventListener("keydown", handleEsc);
-
-  return overlay;
-}
-
-function closeOverlay() {
-  if (!portraitOverlay) return;
-
-  portraitOverlay.classList.remove("active");
-  if (portraitOverlay._escHandler) {
-    document.removeEventListener("keydown", portraitOverlay._escHandler);
-  }
-
-  const toRemove = portraitOverlay;
-  portraitOverlay = null;
-  setTimeout(() => toRemove.remove(), 200);
 }
 
 // ============================================================

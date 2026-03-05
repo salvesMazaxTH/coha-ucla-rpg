@@ -1,4 +1,4 @@
-import { formatChampionName } from "/shared/core/formatters.js";
+import { formatChampionName } from "../../../shared/ui/formatters.js";
 
 import { syncChampionVFX } from "./vfx/vfxManager.js";
 import { playExecuteEffect } from "./vfx/execute.js";

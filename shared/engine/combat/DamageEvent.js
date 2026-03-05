@@ -1,4 +1,4 @@
-import { formatChampionName } from "./formatters.js";
+import { formatChampionName } from "../../ui/formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 
 export class DamageEvent {

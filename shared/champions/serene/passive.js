@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../core/formatters.js";
+import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
   name: "Calmaria Protetora",

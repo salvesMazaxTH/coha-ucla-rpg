@@ -32,7 +32,12 @@ export const CombatResolver = {
       context = {},
       allChampions,
     } = params;
-    console.log("ALL-CHAMPIONS DEBUG processDamageEvent chamado com params:", params, "allChampions:", allChampions);
+    console.log(
+      "ALL-CHAMPIONS DEBUG processDamageEvent chamado com params:",
+      params,
+      "allChampions:",
+      allChampions,
+    );
     const event = new DamageEvent(params);
 
     // 2. Dispara a pipeline que montamos

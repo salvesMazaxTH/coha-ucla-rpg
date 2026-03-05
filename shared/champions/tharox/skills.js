@@ -1,5 +1,5 @@
-import { CombatResolver } from "../../core/combatResolver.js";
-import { formatChampionName } from "../../core/formatters.js";
+import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
 const tharoxSkills = [

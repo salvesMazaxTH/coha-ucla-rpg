@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../core/formatters.js";
+import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
   name: "Energia Pulsante",
@@ -6,7 +6,7 @@ export default {
   paralyzeChance: 33,
   paralyzeDuration: 2,
   description() {
-    return `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em ${this.speedBuff}%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem ${this.paralyzeChance}% de chance de aplicar "Paralisado" por ${this.paralyzeDuration} turnos (duração aumentada por sua passiva).`;
+    return `Node-SPARCKINA-07 gera uma onda de energia a cada turno, aumentando sua velocidade em ${this.speedBuff}%. As paralisias aplicadas por Node-SPARCKINA-07 duram um turno a mais. Sempre que ele causar dano, tem ${this.paralyzeChance}% de chance de aplicar {Paralisado} {paraliasdo} por ${this.paralyzeDuration} turnos (duração aumentada por sua passiva).`;
   },
 
   hookScope: {
