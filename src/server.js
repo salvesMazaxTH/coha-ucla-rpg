@@ -977,6 +977,10 @@ function executeSkillAction(action) {
     return false;
   }
 
+  // injetar ação e alvos resolvidos no contexto para uso durante a execução
+  context.currentAction = action;
+  context.turnActions = turnActions;
+
   const targetsArray = Object.values(roleTargets);
   console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
 
@@ -1040,7 +1044,7 @@ function createBaseContext({ sourceId = null } = {}) {
         evaded: flags?.evaded,
         immune: !!flags?.immune,
         shieldBlocked: !!flags?.shieldBlocked,
-        execute: !!flags?.isExecute,
+        obliterate: !!flags?.isObliterate,
       });
     },
 
@@ -1171,16 +1175,36 @@ function createBaseContext({ sourceId = null } = {}) {
 function resolveSkillActions() {
   pendingActions.forEach((a) => {
     a._tieBreaker = Math.random();
+
+    const champ = activeChampions.get(a.championId);
+
+    // default
+    a.priorityBias = 0;
+
+    if (champ?.ignoreEnemyPriority) {
+      a.priorityBias = 1000;
+    }
   });
 
   pendingActions.sort((a, b) => {
-    if (b.priority !== a.priority) return b.priority - a.priority;
+    const aPriority = (a.priority || 0) + (a.priorityBias || 0);
+    const bPriority = (b.priority || 0) + (b.priorityBias || 0);
+
+    if (bPriority !== aPriority) return bPriority - aPriority;
+
     if (b.speed !== a.speed) return b.speed - a.speed;
+
     return b._tieBreaker - a._tieBreaker;
   });
 
+  pendingActions.forEach((action, index) => {
+    action.initiativeIndex = index;
+  });
+
+  const turnActions = [...pendingActions];
+
   for (const action of pendingActions) {
-    executeSkillAction(action);
+    executeSkillAction(action, turnActions);
   }
 
   pendingActions = [];

@@ -146,7 +146,8 @@ const raliaSkills = [
       enemies.forEach((enemy) => {
         const damageResult = CombatResolver.processDamageEvent({
           baseDamage,
-          mode: "piercing",
+          mode: "hybrid",
+          piercingPortion: baseDamage, // todo: talvez queira ser uma porção diferente do dano total
           user,
           target: enemy,
           skill: this,

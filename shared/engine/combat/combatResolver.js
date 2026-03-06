@@ -99,10 +99,10 @@ export const CombatResolver = {
       },
     });
 
-    const hasExecution = typeof ctx.skill?.executeRule === "function";
+    const hasExecution = typeof ctx.skill?.obliterateRule === "function";
     console.log("🔥 hasExecution:", hasExecution);
     if (hasExecution) {
-      this._processExecuteIfNeeded(ctx);
+      this._processObliterateIfNeeded(ctx);
     }
 
     const lifesteal = this._applyLifeSteal(
@@ -606,13 +606,13 @@ export const CombatResolver = {
     return { hpAfter, actualDmg };
   },
 
-  _processExecuteIfNeeded(ctx) {
-    console.log("🔥 _processExecuteIfNeeded chamado:", {
+  _processObliterateIfNeeded(ctx) {
+    console.log("🔥 _processObliterateIfNeeded chamado:", {
       target: ctx.target.name,
       hp: ctx.target.HP,
       maxHP: ctx.target.maxHP,
     });
-    const rule = ctx.skill?.executeRule;
+    const rule = ctx.skill?.obliterateRule;
     if (!rule) return;
 
     if (ctx.target.alive === false) return;
@@ -637,7 +637,7 @@ export const CombatResolver = {
         target: ctx.target,
         amount: 999,
         sourceId: ctx.user?.id,
-        flags: { isExecute: true },
+        flags: { isObliterate: true },
       });
     }
   },

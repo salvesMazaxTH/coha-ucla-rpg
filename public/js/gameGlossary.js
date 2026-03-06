@@ -39,6 +39,12 @@ export const GAME_GLOSSARY = {
     description: "O campeão fica temporariamente incapacitado de agir. Velocidade e Ataque são zerados."
   },
 
+  obliterar: {
+    title: "Obliterar",
+    aliases: ["obliterado", "obliterados", "obliterada", "obliteradas", "obliteração"],
+    description: "O campeão é instantaneamente derrotado ao chegar abaixo de certa quantidade de HP e/ou ao cumprir alguma outra condição."
+  },
+
   perfurante: {
     title: "Dano Perfurante",
     description: "Ignora Defesa, mas ainda pode critar e sofrer bônus ou reduções."

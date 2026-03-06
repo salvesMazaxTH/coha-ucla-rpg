@@ -82,6 +82,10 @@ const nodeSparckina07Skills = [
     damageMode: "standard",
     priority: 0,
     element: "lightning",
+
+    isUltimate: true,
+    ultCost: 3,
+
     description() {
       return `Causa alto dano ao inimigo (BF ${this.bf}) e aplica paralisia por ${this.paralyzeDuration} turnos.`;
     },

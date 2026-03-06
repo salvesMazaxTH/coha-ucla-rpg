@@ -1,7 +1,7 @@
 import { formatChampionName } from "../../../shared/ui/formatters.js";
 
 import { syncChampionVFX } from "./vfx/vfxManager.js";
-import { playExecuteEffect } from "./vfx/execute.js";
+import { playObliterateEffect } from "./vfx/obliterate.js";
 
 // ============================================================
 //  animsAndLogManager.js — Combat Animation & Log System (v2)
@@ -268,7 +268,7 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
-    const { targetId, amount, isCritical, isDot, execute } = effect;
+    const { targetId, amount, isCritical, isDot, obliterate } = effect;
     const champion = deps.activeChampions.get(targetId);
     const championEl = getChampionElement(targetId);
 
@@ -282,7 +282,7 @@ export function createCombatAnimationManager(deps) {
     }
     if (effect.immune) return await animateImmune(effect);
     if (effect.shieldBlocked) return await animateShieldBlock(effect);
-    if (!execute && (!amount || amount <= 0)) return;
+    if (!obliterate && (!amount || amount <= 0)) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
@@ -294,9 +294,9 @@ export function createCombatAnimationManager(deps) {
     championEl.classList.add("damage");
 
     if (portraitWrapper) {
-      const floatValue = execute ? "999" : `-${amount}`;
-      const extraClass = execute
-        ? "execute"
+      const floatValue = obliterate ? "999" : `-${amount}`;
+      const extraClass = obliterate
+        ? "obliterate"
         : `damage-tier-${getDamageTier(amount)}`;
       createFloatElement(
         portraitWrapper,
@@ -307,10 +307,10 @@ export function createCombatAnimationManager(deps) {
     }
 
     // 4. Atualização de Estado e Animações Específicas
-    if (execute) {
+    if (obliterate) {
       updateVisualHP(targetId, -champion.currentHp, 0);
-      await playExecuteEffect(championEl);
-      championEl.dataset.executed = "true";
+      await playObliterateEffect(championEl);
+      championEl.dataset.obliterated = "true";
     } else {
       updateVisualHP(targetId, -amount, champion.currentHp);
       if (isCritical) {
@@ -492,7 +492,7 @@ export function createCombatAnimationManager(deps) {
   }
 
   function getUltBarDelta(deltaUnits) {
-    const UNITS_PER_BAR = 3;
+    const UNITS_PER_BAR = 4; // Deve ser consistente com Champion.js
     return (deltaUnits / UNITS_PER_BAR).toFixed(2);
   }
 
@@ -1014,7 +1014,7 @@ export function createCombatAnimationManager(deps) {
       return;
     }
 
-    if (!el.dataset.executed) {
+    if (!el.dataset.obliterated) {
       // Apply dying class — triggers CSS collapse animation
       el.classList.add("dying");
 

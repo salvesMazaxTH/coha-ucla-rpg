@@ -2,7 +2,7 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function playExecuteEffect(championEl) {
+export async function playObliterateEffect(championEl) {
   const wrapper = championEl.querySelector(".portrait-wrapper");
   if (!wrapper) return;
 
@@ -16,13 +16,13 @@ export async function playExecuteEffect(championEl) {
 
   // Crack overlay dentro do .portrait (respeita overflow:hidden e border-radius)
   const crackOverlay = document.createElement("div");
-  crackOverlay.classList.add("execute-crack");
+  crackOverlay.classList.add("obliterate-crack");
   crackOverlay.style.backgroundImage = `url("${generateCrackSVG(portraitRect.width, portraitRect.height)}")`;
   portraitEl.appendChild(crackOverlay);
 
   // Canvas dentro do .portrait também
   const canvas = document.createElement("canvas");
-  canvas.classList.add("execute-canvas");
+  canvas.classList.add("obliterate-canvas");
   canvas.width = portraitRect.width;
   canvas.height = portraitRect.height;
   portraitEl.appendChild(canvas);
@@ -32,7 +32,7 @@ export async function playExecuteEffect(championEl) {
   // ✅ Desenha a imagem no canvas — canvas agora É a imagem visualmente
   ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
 
-  portraitEl.classList.add("execute-flash");
+  portraitEl.classList.add("obliterate-flash");
   await wait(80);
 
   // ✅ Esconde img SÓ agora — sem salto visível pois o canvas já a está renderizando
@@ -40,7 +40,7 @@ export async function playExecuteEffect(championEl) {
 
   await wait(320); // rachaduras aparecem sobre o canvas
 
-  portraitEl.classList.remove("execute-flash");
+  portraitEl.classList.remove("obliterate-flash");
 
   // ✅ Estilhaça o canvas em fragmentos com pixels reais da imagem
   await playCutEffect(canvas, ctx);

@@ -241,7 +241,7 @@ O envelope é o contrato principal entre servidor e cliente. Em vez de um único
       evaded?: boolean,
       immune?: boolean,
       shieldBlocked?: boolean,
-      execute?: boolean,       // true = morte instantânea via executeRule
+      obliterate?: boolean,       // true = morte instantânea via obliterateRule
     }
   ],
   healEvents:     [{ type:"heal",         targetId, sourceId, amount }],
@@ -498,7 +498,7 @@ performSkillExecution(user, skill, targets, cost, context)
   │           ├── Afinidade elemental
   │           ├── _applyDamage()  → target.takeDamage()
   │           ├── context.registerDamage({ target, amount, isCritical, flags })
-  │           ├── executeRule?  → registra execute=true
+  │           ├── obliterateRule?  → registra obliterate=true
   │           ├── _applyLifeSteal()
   │           ├── After hooks
   │           └── _processExtraQueue() → processDamageEvent() recursivo com damageDepth+1
@@ -521,7 +521,7 @@ performSkillExecution(user, skill, targets, cost, context)
     piercingPortion, // porção do dano que ignora defesa (modo híbrido, padrão: 0)
     user, // Champion atacante
     target, // Champion alvo
-    skill, // objeto Skill (pode ter: cannotBeEvaded, cannotBeBlocked, executeRule)
+    skill, // objeto Skill (pode ter: cannotBeEvaded, cannotBeBlocked, obliterateRule)
     context, // contexto do turno — context.visual acumula os eventos
     critOptions, // { force: bool, disable: bool }
     allChampions); // Map de todos os campeões vivos
@@ -557,8 +557,8 @@ performSkillExecution(user, skill, targets, cost, context)
 4. APLICAÇÃO
    ├── _applyDamage()       → target.takeDamage(finalDamage, context)
    ├── context.registerDamage({ target, amount: finalDamage, isCritical, flags })
-   └── _processExecuteIfNeeded()   ← se skill.executeRule existe
-         → executeRule(ctx) retorna threshold; se target.HP/maxHP ≤ threshold → HP=0
+   └── _processObliterateIfNeeded()   ← se skill.obliterateRule existe
+         → obliterateRule(ctx) retorna threshold; se target.HP/maxHP ≤ threshold → HP=0
 
 5. EFEITOS SECUNDÁRIOS
    ├── _applyLifeSteal()    → user.heal(); context.registerHeal()
@@ -602,11 +602,11 @@ Cada depth > 0 gera um **`combatAction` separado** no cliente (via `buildReactio
 
 ### Flags de Skill
 
-| Flag                        | Efeito                                                              |
-| --------------------------- | ------------------------------------------------------------------- |
-| `cannotBeEvaded: true`      | Pula a checagem de evasão na pré-checagem                           |
-| `cannotBeBlocked: true`     | Pula a checagem de shield block                                     |
-| `executeRule(ctx) → number` | Se HP do alvo / maxHP ≤ threshold retornado → mata instantaneamente |
+| Flag                           | Efeito                                                              |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `cannotBeEvaded: true`         | Pula a checagem de evasão na pré-checagem                           |
+| `cannotBeBlocked: true`        | Pula a checagem de shield block                                     |
+| `obliterateRule(ctx) → number` | Se HP do alvo / maxHP ≤ threshold retornado → mata instantaneamente |
 
 ### `isDot` — Supressão de After Hooks
 
@@ -631,7 +631,7 @@ context = {
   // EVENT BUFFERS (onde os eventos se acumulam)
   // ========================
   visual: {
-    damageEvents: [],    // { type:"damage", targetId, sourceId, amount, isCritical, damageDepth, evaded, immune, shieldBlocked, execute }
+    damageEvents: [],    // { type:"damage", targetId, sourceId, amount, isCritical, damageDepth, evaded, immune, shieldBlocked, obliterate }
     healEvents: [],      // { type:"heal",   targetId, sourceId, amount }
     buffEvents: [],      // { type:"buff",   targetId, sourceId, amount, statName }
     resourceEvents: [],  // { type:"resourceGain"|"resourceSpend", targetId, sourceId, amount, resourceType:"ult" }
@@ -668,8 +668,8 @@ context.registerDamage({
     evaded?,       // true se evasão bem-sucedida
     immune?,       // true se imunidade absoluta
     shieldBlocked?,// true se escudo supremo/feitiço bloqueou
-    execute?,      // true se morte por executeRule
-    isExecute?,    // alias de execute
+    obliterate?,      // true se morte por obliterateRule
+    isObliterate?,    // alias de obliterate
   }
 });
 // → push em context.visual.damageEvents[]
@@ -1348,7 +1348,7 @@ export default championDB;
 
 - **IDs de skill com snake_case**: `"rajada_de_fogo"`.
 - **`description()` como função**: Permite exibir valores dinâmicos via `this`.
-- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente. O resolver lida com escudos, evasão, crítico, lifesteal, hooks, executeRule, etc.
+- **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente. O resolver lida com escudos, evasão, crítico, lifesteal, hooks, obliterateRule, etc.
 - **Sempre use `context.register*()`** para registrar curas, buffs, escudos e recursos — nunca modifique `context.visual` diretamente.
 - **Passivas devem verificar `damageDepth`** antes de enfileirar dano extra para evitar recursão: `if (context.damageDepth > 0) return;`.
 - **Use `context.isDot = true`** em danos de tick (keywords burn/poison) para suprimir `onAfterDmgDealing`.

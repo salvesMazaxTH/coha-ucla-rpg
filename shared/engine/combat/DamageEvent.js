@@ -80,7 +80,7 @@ export class DamageEvent {
     this.applyDamage();
 
     // 6. Mecânicas de Execução (Morte instantânea)
-    this.processExecuteIfNeeded();
+    this.processObliterateIfNeeded();
 
     // 7. Hooks de Pós-Dano (Lifesteal, On-Hit)
     this.runAfterHooks();
@@ -306,13 +306,13 @@ export class DamageEvent {
     }
   }
 
-  processExecuteIfNeeded() {
-    console.log("🔥 _processExecuteIfNeeded chamado:", {
+  processObliterateIfNeeded() {
+    console.log("🔥 _processObliterateIfNeeded chamado:", {
       target: this.target.name,
       hp: this.target.HP,
       maxHP: this.target.maxHP,
     });
-    const rule = this.skill?.executeRule;
+    const rule = this.skill?.obliterateRule;
     if (!rule) return;
 
     // caso já esteja morto
@@ -341,7 +341,7 @@ export class DamageEvent {
         target: this.target,
         amount: dmg,
         sourceId: this.attacker?.id,
-        flags: { isExecute: true },
+        flags: { isObliterate: true },
       });
     }
   }

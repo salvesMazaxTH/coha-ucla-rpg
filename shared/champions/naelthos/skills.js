@@ -112,6 +112,9 @@ const naelthosSkills = [
     maxBonus: 160,
     damageMode: "standard",
     contact: false,
+    isUltimate: true,
+    ultCost: 3,
+
     element: "water",
 
     priority: 0,

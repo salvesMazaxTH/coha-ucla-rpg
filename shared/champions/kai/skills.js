@@ -77,9 +77,9 @@ const kaiSkills = [
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
-            mode: "piercing",
+            mode: "hybrid",
             baseDamage: counterAtkDmg,
-            directDamage: counterAtkDmg,
+            piercingPortion: counterAtkDmg,
             user: owner,
             target: dmgSrc,
             skill: {

@@ -115,10 +115,10 @@ const eliasCrossSkills = [
     cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são executados, e caso tenham "Sobrecarga", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
+      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são {obliterados}, e caso tenham "Sobrecarga", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
-    executeRule(ctx) {
+    obliterateRule(ctx) {
       const target = ctx.target;
       const hasOverload = target.hasKeyword("sobrecarga");
       return hasOverload ? 0.25 : 0.17;

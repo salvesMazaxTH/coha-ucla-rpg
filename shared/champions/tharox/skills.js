@@ -94,7 +94,7 @@ const tharoxSkills = [
     maxDamageBonus: 80,
     modifierDuration: 3,
     contact: false,
-    ultCost: 2,
+    ultCost: 3,
     isUltimate: true,
     priority: 0,
     description() {

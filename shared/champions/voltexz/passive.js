@@ -8,7 +8,7 @@ export default {
   sobrecargaDuration: 2,
   sobrecargaBonusPercent: 15,
   description() {
-    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
+    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
   hookScope: {
     onAfterDmgDealing: "source",
@@ -36,9 +36,9 @@ export default {
     if (recoilDamage > 0) {
       context.extraDamageQueue.push({
         type: "recuo_dano",
-        mode: "piercing",
+        mode: "absolute",
         baseDamage: recoilDamage,
-        directDamage: recoilDamage,
+        piercingPortion: recoilDamage,  
         user: owner,
         source: owner,
         target: owner,

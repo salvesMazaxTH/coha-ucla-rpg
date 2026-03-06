@@ -34,7 +34,7 @@ export class Champion {
 
     this.ultCap = Number.isFinite(stats.ultCap)
       ? Math.max(1, Math.round(stats.ultCap))
-      : 15;
+      : 24; // Padrão de 6 barras (24 unidades internas)
     this.ultMeter = 0;
 
     this.initializeResources(stats);
@@ -164,13 +164,13 @@ export class Champion {
     if (!skill) return 0;
     if (skill.isUltimate !== true) return 0;
     if (!Number.isInteger(skill.ultCost) || skill.ultCost <= 0) return 0;
-    return skill.ultCost * 3; // Converte barras para unidades internas
+    return skill.ultCost * 4; // Converte barras para unidades internas
   }
 
   applyRegenFromDamage(context) {
     if (!context) return 0;
 
-    const regenAmount = 2;
+    const regenAmount = 3;
     const applied = this.addUlt({ amount: regenAmount, context });
 
     return applied;
@@ -808,8 +808,6 @@ export class Champion {
     const buildChampionHTML = ({ editMode } = {}) => {
       const isEditModeEnabled = editMode?.enabled === true;
 
-      const resourceState = this.getResourceState();
-
       const buildSkillsHTML = () => {
         return this.skills
           .map((skill, index) => {
@@ -994,9 +992,9 @@ export class Champion {
     const ultSegments = this.el.querySelector(".ult-segments");
 
     const currentUnits = this.ultMeter || 0;
-    const totalUnits = 15; // total
-    const unitsPerSegment = 3; // 3 unidades por barra grande
-    const segmentCount = totalUnits / unitsPerSegment; // 5 segmentos grandes
+    const totalUnits = 24; // total
+    const unitsPerSegment = 4; // 4 unidades por barra grande
+    const segmentCount = totalUnits / unitsPerSegment; // 6 segmentos grandes
 
     if (ultValueEl) {
       ultValueEl.textContent = `${currentUnits}/${totalUnits}`;

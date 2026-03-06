@@ -12,9 +12,24 @@ function extractGlossaryKeys(text) {
 }
 
 function renderGlossaryKeywords(text) {
-  return text.replace(/\{(.*?)\}/g, (match, key) => {
-    return `<span class="glossary-keyword">${key}</span>`;
-  });
+  if (!text) return text;
+
+  let result = text;
+
+  for (const [key, data] of Object.entries(GAME_GLOSSARY)) {
+    const terms = [key, ...(data.aliases || [])];
+
+    for (const term of terms) {
+      const regex = new RegExp(`\\b${term}\\b`, "gi");
+
+      result = result.replace(
+        regex,
+        `<span class="glossary-keyword" data-key="${key}">$&</span>`,
+      );
+    }
+  }
+
+  return result;
 }
 
 function renderGlossaryPanel(keys) {
@@ -357,7 +372,7 @@ function createChampionOverlay(champion) {
   `;
 
   overlay.appendChild(details);
-  
+
   // =========================
   // Glossário da passiva
   // =========================

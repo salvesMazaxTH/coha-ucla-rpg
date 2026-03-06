@@ -160,6 +160,8 @@ const reyskaroneSkills = [
     buffDuration: 2,
     pactDuration: 3,
     contact: false,
+    isUltimate: true,
+    ultCost: 2,
 
     priority: 5,
     description() {

@@ -26,14 +26,14 @@
   z-index: 20;
 }
 
-.execute-canvas {
+.obliterate-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 50;
 }
 
-.execute-flash {
+.obliterate-flash {
   animation: execFlash 120ms ease-out;
 }
 
@@ -46,8 +46,8 @@
   }
 }
 
-/* Execute: overlay de crack — div injetado via JS com SVG inline */
-.execute-crack {
+/* Obliterate: overlay de crack — div injetado via JS com SVG inline */
+.obliterate-crack {
   position: absolute;
   inset: 0;
   pointer-events: none;
