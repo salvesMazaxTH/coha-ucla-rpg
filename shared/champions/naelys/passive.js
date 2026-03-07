@@ -4,8 +4,12 @@ export default {
     healPerHit: 10,
     dmgPerStack: 15,
     maxStacks: 8,
-    description() {
-        return `Ao causar dano, cura ${this.healPerHit} HP. Cada cura concede 1 acúmulo de Maré. Cada stack concede +${this.dmgPerStack} de dano flat. Máx ${this.maxStacks} acúmulos. Os acúmulos são permanentes. Máximo bônus total: +${this.dmgPerStack * this.maxStacks} de dano.`;
+    description(champion) {
+        return `Ao causar dano, cura ${this.healPerHit} HP. Cada cura concede 1 acúmulo de Maré. 
+        
+        Stacks de Maré:
+
+        Cada stack concede +${this.dmgPerStack} de dano flat. Máx ${this.maxStacks} acúmulos. Os acúmulos são permanentes. Máximo bônus total: +${this.dmgPerStack * this.maxStacks} de dano.`;
     }
     // IMPLEMENTAR A LÓGICA PROPRIAMENTE DITA AQUI, POR ENQUANTO É SÓ A DESCRIÇÃO E OS VALORES onAfterDmgDealing e onAfterHealing
 };
