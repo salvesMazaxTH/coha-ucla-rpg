@@ -15,7 +15,7 @@ const tharoxSkills = [
     key: "provocação_primeva",
     name: "Provocação Primeva",
     tauntDuration: 1,
-    damageReductionAmount: 20,
+    damageReductionAmount: 10,
     damageReductionDuration: 2,
     contact: false,
     priority: 2,

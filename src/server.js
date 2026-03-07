@@ -1,6 +1,6 @@
 // ============================================================
 //  HELPERS DE MANIPULAÇÃO DE ULTÔMETRO
-// ============================================================ 
+// ============================================================
 /**
  * Aplica regeneração global de ultMeter (+2 unidades por turno)
  */
@@ -624,7 +624,9 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
       resourceEvents.length ||
       dialogEvents.length;
 
-    if (hasVisualChanges) {
+    const shouldEmit = mainEnvelope.action || hasVisualChanges;
+
+    if (shouldEmit) {
       emitCombatAction(mainEnvelope);
     }
   }
@@ -978,7 +980,7 @@ function executeSkillAction(action) {
   }
 
   // injetar ação e alvos resolvidos no contexto para uso durante a execução
-/*   context.currentAction = action;
+  /*   context.currentAction = action;
   context.turnActions = turnActions; */
 
   const targetsArray = Object.values(roleTargets);
@@ -1030,6 +1032,7 @@ function createBaseContext({ sourceId = null } = {}) {
       sourceId,
       isCritical = false,
       damageDepth = 0,
+      isDot = false,
       flags,
     } = {}) {
       if (!target?.id) return;
@@ -1040,6 +1043,7 @@ function createBaseContext({ sourceId = null } = {}) {
         targetId: target.id,
         amount,
         isCritical: !!isCritical,
+        isDot: !!isDot,
         damageDepth: damageDepth || 0,
         evaded: flags?.evaded,
         immune: !!flags?.immune,
@@ -1314,7 +1318,8 @@ function handleStartTurn() {
 
 /** Processa keywords que disparam no início do turno (DoTs, etc). */
 function processTurnStartKeywords({ activeChampions, context }) {
-  const dotResults = [];
+  const affectedIds = new Set();
+  const logs = [];
 
   activeChampions.forEach((champion) => {
     if (!champion.alive) return;
@@ -1332,48 +1337,28 @@ function processTurnStartKeywords({ activeChampions, context }) {
       if (!result) continue;
 
       if (result.type === "damage") {
-        const before = champion.HP;
         const damage = Math.max(0, Number(result.amount) || 0);
 
         champion.takeDamage(damage, context);
 
-        dotResults.push({
-          targetId: champion.id,
-          userId: champion.id,
-          totalDamage: damage,
-          log: `${formatChampionName(champion)} sofreu ${damage} de ${result.skill?.name || "efeito"} (${before} → ${champion.HP}).`,
+        context.registerDamage({
+          target: champion,
+          amount: damage,
+          sourceId: result.sourceId ?? null,
+          isDot: true,
         });
+
+        affectedIds.add(champion.id);
       }
+
+      if (result.log) logs.push(result.log);
     }
   });
 
-  if (dotResults.length === 0) return;
+  const { damageEvents = [] } = context.visual || {};
 
-  const effects = [];
-  const logs = [];
-  const affectedIds = new Set();
-
-  dotResults.forEach((r) => {
-    effects.push({
-      type: "damage",
-      targetId: r.targetId,
-      sourceId: r.userId,
-      amount: r.totalDamage,
-      isDot: true,
-    });
-
-    affectedIds.add(r.targetId);
-    if (r.log) logs.push(r.log);
-  });
-
-  emitCombatAction({
-    action: null,
-    effects,
-    log: logs.join("\n") || null,
-    state: snapshotChampions([...affectedIds]),
-  });
+  if (damageEvents.length === 0) return;
 }
-
 // ============================================================
 //  RESET DO ESTADO DO JOGO
 // ============================================================

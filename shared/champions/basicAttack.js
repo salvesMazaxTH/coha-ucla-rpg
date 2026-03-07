@@ -1,5 +1,5 @@
 // Centralização do Ataque Básico idêntico ao dos skills dos campeões
-import { CombatResolver } from "../engine/combat/combatResolver.js";
+import { DamageEvent } from "../engine/combat/DamageEvent.js";
 
 const basicAttack = {
   key: "ataque_basico",
@@ -16,14 +16,14 @@ const basicAttack = {
   resolve({ user, targets, context = {} }) {
     const [enemy] = targets;
     const baseDamage = (user.Attack * this.bf) / 100 + this.bonusFlat;
-    return CombatResolver.processDamageEvent({
+    return new DamageEvent({
       baseDamage,
       user,
       target: enemy,
       skill: this,
       context,
       allChampions: context?.allChampions,
-    });
+    }).execute();
   },
 };
 

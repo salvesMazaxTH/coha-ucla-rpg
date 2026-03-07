@@ -721,10 +721,17 @@ export class Champion {
     return this.tauntEffects.some((effect) => effect.taunterId === taunterId);
   }
 
-  applyDamageReduction({ amount, duration, source = "unknown", context }) {
+  applyDamageReduction({
+    amount,
+    duration,
+    type = "flat",
+    source = "unknown",
+    context,
+  }) {
     this.damageReductionModifiers.push({
       amount: amount,
       expiresAtTurn: context.currentTurn + duration,
+      type: type,
       source: source,
     });
     console.log(
@@ -733,10 +740,18 @@ export class Champion {
   }
 
   getTotalDamageReduction() {
-    return this.damageReductionModifiers.reduce(
-      (total, mod) => total + mod.amount,
-      0,
-    );
+    let flat = 0;
+    let percent = 0;
+
+    for (const mod of this.damageReductionModifiers) {
+      if (mod.type === "percent") {
+        percent += mod.amount;
+      } else {
+        flat += mod.amount;
+      }
+    }
+
+    return { flat, percent };
   }
 
   purgeExpiredStatModifiers(currentTurn) {

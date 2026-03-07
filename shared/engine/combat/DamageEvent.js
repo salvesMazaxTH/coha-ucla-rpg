@@ -12,7 +12,7 @@ export class DamageEvent {
 
   static GLOBAL_DMG_CAP = 999;
 
-  static debugMode = false;
+  static debugMode = true;
 
   static DEFAULT_CRIT_BONUS = 55;
   static MAX_CRIT_CHANCE = 95;
@@ -213,14 +213,48 @@ export class DamageEvent {
 
     const defensePercent = DamageEvent._defenseToPercent(defenseUsed);
 
-    const flatReduction = this.target.getTotalDamageReduction?.() || 0;
+    const { flat, percent } = this.target.getTotalDamageReduction?.() || {
+      flat: 0,
+      percent: 0,
+    };
 
     // ---------------- STANDARD ----------------
     if (this.mode === DamageEvent.Modes.STANDARD || this.piercingPortion <= 0) {
-      this.damage = Math.max(
-        this.damage - this.damage * defensePercent - flatReduction,
-        0,
-      );
+      const debug = DamageEvent.debugMode;
+
+      if (debug) {
+        console.log(`[DAMAGE COMPOSITION] 📸 Base damage: ${this.damage}`);
+      }
+
+      // Defesa
+      const defenseMitigation = this.damage * defensePercent;
+      this.damage = Math.max(this.damage - defenseMitigation, 0);
+
+      if (debug) {
+        console.log(
+          `[DAMAGE COMPOSITION] 🛡️ Após defesa (${(
+            defensePercent * 100
+          ).toFixed(1)}%): ${this.damage}`,
+        );
+      }
+
+      // Redução percentual
+      this.damage *= 1 - percent / 100;
+
+      if (debug) {
+        console.log(
+          `[DAMAGE COMPOSITION] 📉 Após redução percentual (${percent}%): ${this.damage}`,
+        );
+      }
+
+      // Redução flat
+      this.damage = Math.max(this.damage - flat, 0);
+
+      if (debug) {
+        console.log(
+          `[DAMAGE COMPOSITION] 🧱 Após redução flat (${flat}): ${this.damage}`,
+        );
+      }
     }
 
     // ------------ PIERCING / HYBRID ------------
@@ -228,9 +262,10 @@ export class DamageEvent {
       const piercing = Math.min(this.piercingPortion, this.damage);
       const standard = this.damage - piercing;
 
-      let standardAfter = standard - standard * defensePercent - flatReduction;
+      let standardAfter =
+        (standard - standard * defensePercent - flat) * (1 - percent / 100);
 
-      let piercingAfter = piercing - flatReduction;
+      let piercingAfter = piercing - flat; // redução flat afeta o dano perfurante, mas não a redução percentual
 
       standardAfter = Math.max(standardAfter, 0);
       piercingAfter = Math.max(piercingAfter, 0);
@@ -251,11 +286,15 @@ export class DamageEvent {
     // 2. Tira a foto do dano matemático final, pronto para ser aplicado
 
     const damageOverride = this.context?.editMode?.damageOutput;
-    console.log(`📸 [DAMAGE COMPOSITION] Dano final calculado (antes de overrides): ${this.damage}`);
+    console.log(
+      `📸 [DAMAGE COMPOSITION] Dano final calculado (antes de overrides): ${this.damage}`,
+    );
 
     if (damageOverride != null) {
       this.damage = damageOverride;
-      console.log(`⚡ [DAMAGE COMPOSITION] Override de dano ativado! Dano forçado para: ${this.damage}`);
+      console.log(
+        `⚡ [DAMAGE COMPOSITION] Override de dano ativado! Dano forçado para: ${this.damage}`,
+      );
       if (DamageEvent.debugMode) console.groupEnd();
     }
 
