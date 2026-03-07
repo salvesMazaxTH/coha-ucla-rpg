@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -60,14 +60,14 @@ const raliaSkills = [
         return { log: selfLog };
       }
 
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
       // colocar dentro de result.log
       result.log = selfLog + " " + result.log;
       return result;
@@ -91,14 +91,14 @@ const raliaSkills = [
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
       const effectiveDamage = result.totalDamage || 0;
       const healingAmount = Math.max(
         this.minHeal,
@@ -144,7 +144,7 @@ const raliaSkills = [
 
       // Aplicar dano em cada inimigo
       enemies.forEach((enemy) => {
-        const damageResult = CombatResolver.processDamageEvent({
+        const damageResult = new DamageEvent({
           baseDamage,
           mode: "hybrid",
           piercingPortion: baseDamage, // todo: talvez queira ser uma porção diferente do dano total
@@ -153,7 +153,7 @@ const raliaSkills = [
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
         enemy.modifyStat({
           statName: "Attack",
           amount: -this.atkDebuff,

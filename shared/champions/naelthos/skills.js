@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -35,14 +35,14 @@ const naelthosSkills = [
 
       // 🗡️ Dano no inimigo (se ainda vivo)
       if (enemy) {
-        const damageResult = CombatResolver.processDamageEvent({
+        const damageResult = new DamageEvent({
           baseDamage,
           user,
           target: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
         logs.push(damageResult);
       }
       let allyLog = "";

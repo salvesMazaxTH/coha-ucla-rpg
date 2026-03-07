@@ -1,4 +1,5 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+/* import { CombatResolver } from "../../engine/combat/combatResolver.js"; */
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -33,27 +34,27 @@ const voltexzSkills = [
           "🌊 ALL-CHAMPIONS DEBUG, allChampions in context (Voltexz 1st skill):",
           context?.allChampions,
         );
-        const primaryResult = CombatResolver.processDamageEvent({
+        const primaryResult = new DamageEvent({
           baseDamage,
           user,
           target: primary,
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
         console.log("🌊 Target affinities:", primary.elementalAffinities);
         results.push(primaryResult);
       }
 
       if (secondary) {
-        const secondaryResult = CombatResolver.processDamageEvent({
+        const secondaryResult = new DamageEvent({
           baseDamage,
           user,
           target: secondary,
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
         console.log("🌊 Target affinities:", secondary.elementalAffinities);
         results.push(secondaryResult);
       }
@@ -78,14 +79,14 @@ const voltexzSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = CombatResolver.processDamageEvent({
+      const damageResult = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
 
       results.push(damageResult);
       // Aplica o efeito de paralisia
@@ -129,14 +130,14 @@ const voltexzSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
-      const damageResult = CombatResolver.processDamageEvent({
+      const damageResult = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
 
       results.push(damageResult);
 

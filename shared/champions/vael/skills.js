@@ -1,5 +1,5 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
 import { formatChampionName } from "../../ui/formatters.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import basicAttack from "../basicAttack.js";
 
 const vaelSkills = [
@@ -25,14 +25,14 @@ const vaelSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      return CombatResolver.processDamageEvent({
+      return new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
     },
   },
   {
@@ -55,7 +55,7 @@ const vaelSkills = [
       const results = [];
 
       if (primary) {
-        const primaryResult = CombatResolver.processDamageEvent({
+        const primaryResult = new DamageEvent({
           baseDamage,
           user,
           target: primary,
@@ -63,12 +63,12 @@ const vaelSkills = [
           context,
           critOptions: { disable: true }, // sem crítico
           allChampions: context?.allChampions,
-        });
+        }).execute();
         results.push(primaryResult);
       }
 
       if (secondary) {
-        const secondaryResult = CombatResolver.processDamageEvent({
+        const secondaryResult = new DamageEvent({
           baseDamage: (user.Attack * this.bfSecondary) / 100,
           user,
           target: secondary,
@@ -76,7 +76,7 @@ const vaelSkills = [
           context,
           critOptions: { force: true }, // crítico garantido
           allChampions: context?.allChampions,
-        });
+        }).execute();
         results.push(secondaryResult);
       }
 
@@ -101,14 +101,14 @@ const vaelSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      return CombatResolver.processDamageEvent({
+      return new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
     },
   },
 ];

@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -35,14 +35,14 @@ const gryskarchuSkills = [
         context,
       );
 
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
       if (rooted && result?.log) {
         result.log += `\n${enemy.name} foi Enraizado!`;
       }

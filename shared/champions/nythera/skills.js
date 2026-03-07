@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -30,14 +30,14 @@ const nytheraSkills = [
         target.applyKeyword("chill", this.chillDuration, context);
       }
 
-      return CombatResolver.processDamageEvent({
+      return new DamageEvent({
         baseDamage: totalDamage,
         user,
         target,
-        skill,
+        skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
     },
   },
 ];

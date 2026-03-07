@@ -185,14 +185,6 @@ export class DamageEvent {
 
     this.crit ??= { didCrit: false, critExtra: 0 };
 
-    const damageOverride = this.context?.editMode?.damageOutput;
-
-    if (damageOverride != null) {
-      this.damage = damageOverride;
-      if (DamageEvent.debugMode) console.groupEnd();
-      return;
-    }
-
     // ---------------- ABSOLUTE ----------------
     if (this.mode === DamageEvent.Modes.ABSOLUTE) {
       // dano absoluto ignora tudo: defesa, crítico, modificadores, afinidade, etc
@@ -257,10 +249,20 @@ export class DamageEvent {
     );
 
     // 2. Tira a foto do dano matemático final, pronto para ser aplicado
+
+    const damageOverride = this.context?.editMode?.damageOutput;
+    console.log(`📸 [DAMAGE COMPOSITION] Dano final calculado (antes de overrides): ${this.damage}`);
+
+    if (damageOverride != null) {
+      this.damage = damageOverride;
+      console.log(`⚡ [DAMAGE COMPOSITION] Override de dano ativado! Dano forçado para: ${this.damage}`);
+      if (DamageEvent.debugMode) console.groupEnd();
+    }
+
     this.finalDamage = this.damage;
 
     if (DamageEvent.debugMode) {
-      console.log(`📈 Final: ${this.finalDamage}`);
+      console.log(`[DAMAGE COMPOSITION] 📈 Final: ${this.finalDamage}`);
       console.groupEnd();
     }
   }

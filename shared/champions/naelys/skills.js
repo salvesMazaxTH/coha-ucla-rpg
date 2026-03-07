@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -25,21 +25,21 @@ const naelysSkills = [
     },
     targetSpec: ["enemy", "self", { type: "select:ally", excludesSelf: true }],
     resolve({ user, targets, context = {} }) {
-      const [ ally, enemy ] = targets;
+      const [ally, enemy] = targets;
 
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
 
       // DANO
       if (enemy) {
-        const damageResult = CombatResolver.processDamageEvent({
+        const damageResult = new DamageEvent({
           baseDamage,
           user,
           target: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
 
         results.push(damageResult);
       }

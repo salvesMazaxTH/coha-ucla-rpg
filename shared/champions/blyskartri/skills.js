@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -222,14 +222,14 @@ const blyskartriSkills = [
 
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      return CombatResolver.processDamageEvent({
+      return new DamageEvent({
         baseDamage,
         user,
         target: highestAtk,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
     },
   },
 

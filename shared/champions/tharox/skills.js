@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -71,14 +71,14 @@ const tharoxSkills = [
       const [enemy] = targets;
       const baseDamage =
         (user.Attack * this.bf) / 100 + user.Defense * (this.defScaling / 100);
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         user,
         baseDamage,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
       return result;
     },
   },

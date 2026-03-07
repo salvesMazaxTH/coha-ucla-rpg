@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -18,14 +18,14 @@ const kaiSkills = [
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return CombatResolver.processDamageEvent({
+      return new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
     },
   },
 
@@ -208,7 +208,7 @@ const kaiSkills = [
         const target = enemies[Math.floor(Math.random() * enemies.length)];
         const isBurning = target.hasKeyword("queimando");
         const directBonus = isBurning ? this.burningBonus : 0;
-        const result = CombatResolver.processDamageEvent({
+        const result = new DamageEvent({
           baseDamage: this.damagePerHit,
           user,
           target,
@@ -216,7 +216,7 @@ const kaiSkills = [
           context,
           allChampions: context?.allChampions,
           directDamage: directBonus,
-        });
+        }).execute();
         results.push({ ...result, targetId: target.id });
       }
       return results;

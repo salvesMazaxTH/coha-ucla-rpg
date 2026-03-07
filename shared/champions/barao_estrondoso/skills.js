@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -26,14 +26,14 @@ const baraoEstrondosoSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
       if (result.totalDamage > 0 && user.runtime) {
         user.runtime.storedDamage = 0; // Zera o dano armazenado após o ataque
       }
@@ -89,7 +89,7 @@ const baraoEstrondosoSkills = [
       const [enemy] = targets;
       const storedDamage = user.runtime?.storedDamage || 0;
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;
-      const damageResult = CombatResolver.processDamageEvent({
+      const damageResult = new DamageEvent({
         baseDamage,
         user,
         target: enemy,
@@ -97,7 +97,7 @@ const baraoEstrondosoSkills = [
         context,
         critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,
-      });
+      }).execute();
       // Zera o dano armazenado após o ataque
       user.runtime.storedDamage = 0;
       return damageResult;

@@ -1,4 +1,4 @@
-import { CombatResolver } from "../../engine/combat/combatResolver.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -41,14 +41,14 @@ const eliasCrossSkills = [
         else if (r) results.push(r);
       };
 
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
 
       pushResult(result);
 
@@ -86,14 +86,14 @@ const eliasCrossSkills = [
         else if (r) results.push(r);
       };
 
-      const result = CombatResolver.processDamageEvent({
+      const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
         user,
         target: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
-      });
+      }).execute();
 
       pushResult(result);
 
@@ -180,14 +180,14 @@ const eliasCrossSkills = [
           });
         }
 
-        const result = CombatResolver.processDamageEvent({
+        const result = new DamageEvent({
           baseDamage,
           user,
           target,
           skill: this,
           context,
           allChampions: context?.allChampions,
-        });
+        }).execute();
 
         if (Array.isArray(result)) results.push(...result);
         else if (result) results.push(result);
