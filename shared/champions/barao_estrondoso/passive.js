@@ -85,7 +85,7 @@ export default {
     // Evita loop se alguma skill futura aplicar stun interno
     if (owner.hasKeyword?.("atordoado")) return;
 
-    owner.applyKeyword?.("atordoado", 1, context);
+    owner.applyKeyword?.("atordoado", 2, context);
 
     return {
       log: `${owner.name} sofreu sobrecarga do núcleo e ficará Atordoado!`,

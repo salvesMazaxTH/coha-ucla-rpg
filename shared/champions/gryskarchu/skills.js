@@ -17,7 +17,7 @@ const gryskarchuSkills = [
     name: "Raízes da Terra",
     bf: 75,
     damageMode: "standard",
-    rootDuration: 1,
+    rootDuration: 2,
     contact: false,
 
     priority: 0,

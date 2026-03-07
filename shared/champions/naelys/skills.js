@@ -25,7 +25,7 @@ const naelysSkills = [
     },
     targetSpec: ["enemy", "self", { type: "select:ally", excludesSelf: true }],
     resolve({ user, targets, context = {} }) {
-      const { ally, enemy } = targets;
+      const [ ally, enemy ] = targets;
 
       const baseDamage = (user.Attack * this.bf) / 100;
       const results = [];
@@ -168,6 +168,9 @@ const naelysSkills = [
     stacksPerHPLost: 30,
     bonusPerStack: 15,
     element: "water",
+
+    isUltimate: true,
+    ultCost: 3,
 
     description() {
       return `Por ${this.duration} turnos, Naelys causa dano adicional baseado no HP perdido (até +${this.maxBonus}).`;
