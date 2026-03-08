@@ -30,9 +30,11 @@ export default {
       return;
     }
 
-    if (skill.key !== "ataque_basico") {
-      console.log("[KAI] Abortado: skill não é ataque básico");
-      return;
+    if (owner.runtime?.fireStance !== "brasa_viva") {
+      if (skill.key !== "ataque_basico") {
+        console.log("[KAI] Abortado: skill não é ataque básico");
+        return;
+      }
     }
 
     if (damage <= 0) {
@@ -40,7 +42,7 @@ export default {
       return;
     }
 
-    const impactDamage = this.flamingFistsDamage;
+    const impactDamage = owner.runtime?.fireStance !== "brasa_viva" ? 35 : this.flamingFistsDamage;
 
     console.log("[KAI] Impacto térmico ativado");
     console.log("[KAI] Dano adicional:", impactDamage);
@@ -68,10 +70,16 @@ export default {
 
       console.log("[KAI] Afinidade do alvo:", affinities);
 
-      if (!affinities.some((a) => ["earth", "water", "fire"].includes(a))) {
+      if (
+        owner.runtime?.fireStance !== "brasa_viva" &&
+        !affinities.some((a) => ["earth", "water", "fire"].includes(a))
+      ) {
         console.log("[KAI] Alvo elegível para QUEIMANDO");
 
-        dmgReceiver.applyKeyword("queimando", this.burnDuration, context, {
+        const burnDuration =
+          owner.runtime?.fireStance === "brasa_viva" ? 2 : this.burnDuration;
+
+        dmgReceiver.applyKeyword("queimando", burnDuration, context, {
           source: owner.name,
         });
 

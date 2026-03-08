@@ -35,14 +35,14 @@ const kaiSkills = [
     contact: false,
     damageReduction: 25,
     counterAtkDmg: 15,
-    flamingFistsBonus: 15,
+    flamingFistsBonus: 35,
     priority: 2,
     element: "fire",
 
     description() {
       return `Kai assume uma postura incandescente até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. 
       Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano perfurante e aplica queimadura. 
-      Se causar dano, ativa Brasa Viva por 2 turnos: seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada.`;
+      Se causar dano, ativa Brasa Viva por 2 turnos: todos seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada independente da afinidade elemental do alvo.`;
     },
 
     targetSpec: ["self"],
@@ -73,6 +73,7 @@ const kaiSkills = [
           if (!skill?.contact) return;
           if (damage <= 0) return;
           if (skill?.key === "postura_da_brasa_viva_counter") return;
+          if (!dmgSrc?.alive) return;
 
           context.extraDamageQueue ??= [];
 

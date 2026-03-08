@@ -70,11 +70,11 @@ export class DamageEvent {
     // 2. Cálculos de Atacante (Crit, Afinidade, Modificadores)
     this.prepareDamage();
 
-    // 3. Hooks de Pré-Dano (Passivas que alteram valor)
-    this.runBeforeHooks();
-
-    // 4. Mitigação e Defesa (Cálculo matemático final)
+    // 3. Mitigação e Defesa (Cálculo matemático final)
     this.composeFinalDamage();
+
+    // 4. Hooks Pré-Aplicação do Dano (Passivas que alteram valor)
+    this.runBeforeHooks();
 
     // 5. Aplicação no HP
     this.applyDamage();
@@ -316,12 +316,12 @@ export class DamageEvent {
 
     const hpBefore = this.target.HP;
 
-    const val = this.damage;
+    const damageToApply = this.damage;
 
-    this.target.takeDamage(val, this.context);
+    this.target.takeDamage(damageToApply, this.context);
 
     console.log(
-      `➡️ [applyDamage] Dano aplicado, após takeDamage: ${val}, HP de ${this.target.name}: ${this.target.HP}/${this.target.maxHP}`,
+      `➡️ [applyDamage] Dano aplicado, após takeDamage: ${damageToApply}, HP de ${this.target.name}: ${this.target.HP}/${this.target.maxHP}`,
     );
 
     this.hpAfter = this.target.HP;
@@ -329,7 +329,7 @@ export class DamageEvent {
 
     this.context.registerDamage({
       target: this.target,
-      amount: this.finalDamage,
+      amount: damageToApply,
       sourceId: this.attacker?.id,
       isCritical: this.crit?.didCrit,
       flags: {
@@ -361,6 +361,11 @@ export class DamageEvent {
 
     // aliados não se executam
     if (this.target.team === this.attacker.team) return;
+
+    if (this.target.runtime?.preventObliterate) {
+      console.log("[OBLITERATE] Cancelado por efeito de sobrevivência");
+      return;
+    }
 
     let threshold = rule(this);
 

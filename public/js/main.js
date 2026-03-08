@@ -1337,8 +1337,6 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   const user = activeChampions.get(userId);
   if (!user) return;
 
-  user.syncActionStateUI();
-
   const skill = user.skills.find((s) => s.key === skillKey);
   if (!skill) return;
 
@@ -1352,8 +1350,10 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   }
 
   // Marca a ação somente após resolução de alvos
-  user.markActionTaken();
-  user.updateUI(currentTurn);
+  if (!editMode.actMultipleTimesPerTurn) {
+    user.markActionTaken();
+    user.updateUI(currentTurn);
+  }
 
   socket.emit("useSkill", { userId, skillKey, targetIds });
 });

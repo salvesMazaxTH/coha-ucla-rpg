@@ -99,7 +99,7 @@ const sereneSkills = [
     name: "Epifania do Limiar",
     damageReduction: 30,
     reductionDuration: 2,
-    surviveHP: 50,
+    surviveHP: 75,
     contact: false,
 
     isUltimate: true,
@@ -107,25 +107,42 @@ const sereneSkills = [
 
     priority: 4,
     description() {
-      return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com pelo menos ${this.surviveHP} de HP e tornam-se imunes até a próxima ação de Serene.`;
+      return `Aliados recebem redução de dano de ${this.damageReduction} por ${this.reductionDuration} turnos. Se receberem dano letal, sobrevivem com ${this.surviveHP} de HP e recebem imunidade absoluta até a próxima ação de Serene (quaisquer tipos de execuções são impedidas).`;
     },
     targetSpec: ["self"],
     resolve({ user, context = {} }) {
       const activationSkillId = this.key;
+
+      console.log("══════════════════════════════════");
+      console.log("[SERENE ULT] Epifania do Limiar ativada");
+      console.log("[SERENE ULT] Usuária:", user.name);
+      console.log("[SERENE ULT] Turno:", context.currentTurn);
 
       // dona do efeito é a Serene, mas o efeito é aplicado em tds aliados.
       const ownerId = user.id;
 
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
 
+      console.log(
+        "[SERENE ULT] Aliados afetados:",
+        allies.map((a) => a.name),
+      );
+
       // 1️⃣ Proteção de Campo
       allies.forEach((ally) => {
+        console.log("──────────────");
+        console.log("[SERENE ULT] Aplicando proteção em:", ally.name);
+
         ally.applyDamageReduction({
           amount: this.damageReduction,
           duration: this.reductionDuration,
           source: "epifania",
           context,
         });
+
+        console.log(
+          `[SERENE ULT] ${ally.name} recebeu ${this.damageReduction}% redução por ${this.reductionDuration} turnos`,
+        );
 
         ally.runtime.hookEffects ??= [];
 
@@ -137,30 +154,54 @@ const sereneSkills = [
           ownerId,
 
           onBeforeDmgTaking({ dmgSrc, dmgReceiver, self, damage, context }) {
-            console.log("HOOK DE ANTES DE TOMAR DANO DA EPIFANIA DISPAROU!!");
-
-            console.log("Damage recebido:", {
-              dmgSrc,
-              dmgReceiver,
-              self,
-              damage,
-            });
+            console.log("════════ EPIFANIA CHECK ════════");
+            console.log("[EPIFANIA] Hook disparado");
+            console.log("[EPIFANIA] Alvo:", self.name);
+            console.log("[EPIFANIA] HP atual:", self.HP);
+            console.log("[EPIFANIA] Dano recebido:", damage);
+            console.log("[EPIFANIA] Atacante:", dmgSrc?.name);
 
             if (dmgReceiver?.id !== self.id) return;
-            if (self.HP - damage > 0) return;
-            if (self.hasKeyword("imunidade_absoluta")) return;
 
-            const lockedHP = Math.max(self.HP, surviveHP);
+            // Previne morte por qualquer meio (dano, efeitos, etc)
+            self.runtime.preventObliterate = true;
 
-            const adjustedDamage = Math.max(0, self.HP - lockedHP);
+            if (self.HP - damage > 0) {
+              console.log("[EPIFANIA] Abortado → dano não é letal");
+              return;
+            }
 
-            self.applyKeyword("imunidade_absoluta", 1, context, {
+            if (self.hasKeyword("imunidade_absoluta")) {
+              console.log("[EPIFANIA] Abortado → já possui imunidade absoluta");
+              return;
+            }
+
+            console.log("[EPIFANIA] DANO LETAL DETECTADO");
+
+            const lockedHP = surviveHP;
+
+            const adjustedDamage = Math.max(self.HP - lockedHP, 0);
+
+            console.log("[EPIFANIA] HP final desejado:", lockedHP);
+            console.log("[EPIFANIA] Dano ajustado:", adjustedDamage);
+
+            self.applyKeyword("imunidade absoluta", 1, context, {
               source: "epifania",
+            });
+
+            console.log("[EPIFANIA] Imunidade absoluta aplicada em", self.name);
+
+            context.visual.dialogEvents = context.visual.dialogEvents || [];
+            context.visual.dialogEvents.push({
+              type: "dialog",
+              message: `${formatChampionName(self)} escapou da morte graças à Epifania do Limiar!`,
+              sourceId: self.id,
+              targetId: self.id,
+              blocking: false,
             });
 
             return {
               damage: adjustedDamage,
-              ignoreMinimumFloor: true,
               log: `${formatChampionName(self)} recusou a morte e tornou-se imune, permanecendo com ${lockedHP} de HP!`,
               effects: [
                 {
@@ -173,20 +214,34 @@ const sereneSkills = [
           },
 
           onActionResolved({ user, skill, context, self }) {
-            if (user.id !== this.ownerId) return;
-            // a ativação da própria skill não PODE remover o efeito
-            if (skill?.key === activationSkillId) {
+            console.log("════════ EPIFANIA CLEANUP ════════");
+            console.log("[EPIFANIA] ActionResolved disparado");
+            console.log("[EPIFANIA] Usuário da ação:", user?.name);
+            console.log("[EPIFANIA] Skill:", skill?.key);
+            if (user.id !== this.ownerId) {
+              console.log("[EPIFANIA] Ignorado → ação não é da Serene");
               return;
             }
+            // a ativação da própria skill não PODE remover o efeito
+            if (skill?.key === activationSkillId) {
+              console.log("[EPIFANIA] Ignorado → é a própria ult");
+              return;
+            }
+
+            console.log("[EPIFANIA] Serene agiu → removendo proteção");
 
             // remove o efeito de todos os aliados
             context.aliveChampions.forEach((champ) => {
               if (champ.team !== user.team) return;
+              console.log("[EPIFANIA] Removendo proteção de:", champ.name);
+
               champ.runtime.hookEffects = champ.runtime.hookEffects.filter(
                 (e) => e.key !== "epifania_limiar",
               );
 
-              champ.damageReductionModifiers =
+              console.log("[EPIFANIA] Efeito removido de", champ.name);
+
+              champ.damageReductionModifiers = champ.damageReductionModifiers =
                 champ.damageReductionModifiers.filter(
                   (mod) => mod.source !== "epifania",
                 );
@@ -201,10 +256,14 @@ const sereneSkills = [
         ally.runtime.hookEffects = ally.runtime.hookEffects.filter(
           (e) => e.group !== "epifania",
         );
+        console.log("[SERENE ULT] Limpando efeitos anteriores de Epifania");
 
         ally.runtime.hookEffects.push(effect);
+        console.log("[SERENE ULT] Hook registrado em", ally.name);
       });
 
+      console.log("[SERENE ULT] Proteção aplicada a todos os aliados");
+      console.log("══════════════════════════════════");
       return {
         log: `${formatChampionName(user)} alcança o Limiar da Existência.
         Aliados recebem proteção de campo!`,

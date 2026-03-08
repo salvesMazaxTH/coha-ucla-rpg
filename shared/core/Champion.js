@@ -398,7 +398,6 @@ export class Champion {
   // Method to mark that the champion has acted
   markActionTaken() {
     this.hasActedThisTurn = true;
-    this.syncActionStateUI();
   }
 
   // Method to reset the action status for a new turn
