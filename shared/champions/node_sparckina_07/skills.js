@@ -94,7 +94,7 @@ const nodeSparckina07Skills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const paralyzed = enemy.applyKeyword(
+      const paralyzed = enemy.applyStatusEffect(
         "paralisado",
         this.paralyzeDuration,
         context,

@@ -935,9 +935,9 @@ export function createCombatAnimationManager(deps) {
       };
     }
 
-    // Keywords
-    if (Array.isArray(snap.keywords)) {
-      champion.keywords = new Map(snap.keywords);
+    // StatusEffects
+    if (Array.isArray(snap.statusEffects)) {
+      champion.statusEffects = new Map(snap.statusEffects);
     }
 
     // Alive

@@ -90,7 +90,7 @@ const voltexzSkills = [
 
       results.push(damageResult);
       // Aplica o efeito de paralisia
-      const paralyzed = enemy.applyKeyword(
+      const paralyzed = enemy.applyStatusEffect(
         "paralisado",
         this.paralyzeDuration,
         context,

@@ -1,6 +1,7 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
-/* import { CombatResolver } from "./combatResolver.js";
- */
+import { StatusEffectRegistry } from "../data/statusEffects/effectsRegistry.js";
+import { emitCombatEvent } from "../engine/combat/combatEvents.js";
+
 export class Champion {
   constructor(data = {}) {
     const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
@@ -46,7 +47,7 @@ export class Champion {
     this.statModifiers = [];
     this.tauntEffects = [];
     this.damageReductionModifiers = [];
-    this.keywords = new Map();
+    this.statusEffects = new Map();
     this.alive = true;
     this.hasActedThisTurn = false;
 
@@ -118,18 +119,20 @@ export class Champion {
         return clone;
       })(),
 
-      keywords: Array.from(this.keywords.entries()).map(([key, value]) => {
-        const safeValue = { ...value };
+      statusEffects: Array.from(this.statusEffects.entries()).map(
+        ([key, value]) => {
+          const safeValue = { ...value };
 
-        if (safeValue.source && typeof safeValue.source === "object") {
-          safeValue.source = {
-            id: safeValue.source.id,
-            name: safeValue.source.name,
-          };
-        }
+          if (safeValue.source && typeof safeValue.source === "object") {
+            safeValue.source = {
+              id: safeValue.source.id,
+              name: safeValue.source.name,
+            };
+          }
 
-        return [key, safeValue];
-      }),
+          return [key, safeValue];
+        },
+      ),
     };
   }
 
@@ -262,60 +265,45 @@ export class Champion {
     };
   }
 
-  // ======== Keyword System ========
-  normalizeKeywordName(keywordName) {
-    if (typeof keywordName !== "string") return "";
-    return keywordName.trim().toLowerCase();
+  // ======== StatusEffect System ========
+  normalizeStatusEffectName(statusEffectName) {
+    if (typeof statusEffectName !== "string") return "";
+    return statusEffectName.trim().toLowerCase();
   }
   /**
-   * Apply a keyword effect to this champion
-   * @param {string} keywordName - Name of the keyword (e.g., 'inerte', 'imunidade absoluta')
-   * @param {number} duration - Number of turns the keyword lasts
+   * Apply a statusEffect effect to this champion
+   * @param {string} statusEffectName - Name of the statusEffect (e.g., 'inerte', 'imunidade absoluta')
+   * @param {number} duration - Number of turns the statusEffect lasts
    * @param {object} context - Context with currentTurn
-   * @param {object} metadata - Additional data to store with the keyword
+   * @param {object} metadata - Additional data to store with the statusEffect
    */
-  applyKeyword(keywordName, duration, context, metadata = {}) {
-    const normalizedName = this.normalizeKeywordName(keywordName);
+  applyStatusEffect(statusEffectName, duration, context, metadata = {}) {
+    const normalizedName = this.normalizeStatusEffectName(statusEffectName);
+    if (!normalizedName) return false;
+
+    if (!this._canApplyStatusEffect(normalizedName, context)) return false;
 
     const { currentTurn } = context || {};
-
     const isStackable = normalizedName === "poison";
 
-    if (!normalizedName) {
-      return false;
-    }
-
-    if (
-      this.hasKeyword("imunidade absoluta") &&
-      normalizedName !== "imunidade absoluta"
-    ) {
-      console.log(
-        `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber a keyword "${keywordName}".`,
-      );
-      return false;
-    }
-
-    if (this.hasKeyword(normalizedName)) {
-      // sobrescrever a antiga com a nova (reseta duração e metadata)
-      if (!isStackable) {
-        this.keywords.delete(normalizedName);
-      }
-    }
-
-    // 🛡️ Ação já foi bloqueada por Escudo Supremo/Feitiço nesta execução
-    if (context?.shieldBlockedTargets?.has(this.id)) {
-      console.log(
-        `[Champion] ${this.name}: keyword "${keywordName}" bloqueada (ação já negada por escudo).`,
-      );
-      return false;
-    }
-
-    duration = Number.isFinite(duration) ? duration : 1; // Duração padrão de 1 turno
+    duration = Number.isFinite(duration) ? duration : 1;
 
     const persistent = metadata?.persistent || false;
-    if (persistent) duration = Infinity; // Se for persistente, ignora a duração
+    if (persistent) duration = Infinity;
 
-    this.keywords.set(normalizedName, {
+    emitCombatEvent("onStatusEffectIncoming", {
+      target: this,
+      statusEffect: normalizedName,
+      duration,
+      metadata,
+    }, context?.allChampions);
+
+    // sobrescreve statusEffect existente se não for stackable
+    if (this.hasStatusEffect(normalizedName) && !isStackable) {
+      this.statusEffects.delete(normalizedName);
+    }
+
+    this.statusEffects.set(normalizedName, {
       expiresAtTurn: Number.isFinite(currentTurn)
         ? currentTurn + Number(duration || 0)
         : NaN,
@@ -323,9 +311,12 @@ export class Champion {
       appliedAtTurn: currentTurn,
       ...metadata,
     });
+
     console.log(
-      `[Champion] ${this.name} aplicou keyword "${normalizedName}" até o turno ${currentTurn + duration}.`,
+      `[Champion] ${this.name} aplicou statusEffect "${normalizedName}" até o turno ${currentTurn + duration}.`,
     );
+
+    this._attachStatusEffectBehavior(normalizedName, duration, context);
 
     // 🎨 Atualiza os indicadores visuais
     StatusIndicator.animateIndicatorAdd(this, normalizedName);
@@ -333,38 +324,114 @@ export class Champion {
     return true;
   }
 
+  _canApplyStatusEffect(normalizedName, context) {
+    if (
+      this.hasStatusEffect("imunidade absoluta") &&
+      normalizedName !== "imunidade absoluta"
+    ) {
+      console.log(
+        `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber "${normalizedName}".`,
+      );
+      return false;
+    }
+
+    if (context?.shieldBlockedTargets?.has(this.id)) {
+      console.log(
+        `[Champion] ${this.name}: statusEffect "${normalizedName}" bloqueada por escudo.`,
+      );
+      return false;
+    }
+
+    const behavior = StatusEffectRegistry[normalizedName];
+
+    if (behavior?.subtypes.includes("hardCC")) {
+      for (const [existingStatusEffect] of this.statusEffects) {
+        const existingBehavior = StatusEffectRegistry[existingStatusEffect];
+
+        if (existingBehavior?.subtypes.includes("hardCC")) {
+          console.log(
+            `[Champion] ${this.name} já possui status bloqueante (${existingStatusEffect}).`,
+          );
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  _attachStatusEffectBehavior(normalizedName, duration, context) {
+    const behavior = StatusEffectRegistry[normalizedName];
+    if (!behavior) return;
+
+    const isStackable = normalizedName === "poison";
+
+    const effectInstance = {
+      key: normalizedName,
+      group: "statusEffect",
+      source: normalizedName,
+      ownerId: this.id,
+      ...behavior,
+    };
+
+    this.runtime ??= {};
+    this.runtime.hookEffects ??= [];
+    // remove efeitos anteriores do mesmo statusEffect se não for stackable
+    if (!isStackable) {
+      this.runtime.hookEffects = this.runtime.hookEffects.filter(
+        (e) => e.key !== normalizedName,
+      );
+    }
+
+    this.runtime.hookEffects.push(effectInstance);
+
+    if (behavior.onStatusEffectAdded) {
+      behavior.onStatusEffectAdded({
+        self: this,
+        duration,
+        context,
+      });
+    }
+  }
+
   /**
-   * Check if champion has an active keyword
-   * @param {string} keywordName - Name of the keyword
+   * Check if champion has an active statusEffect
+   * @param {string} statusEffectName - Name of the statusEffect
    * @returns {boolean}
    */
-  hasKeyword(keywordName) {
-    return this.keywords.has(this.normalizeKeywordName(keywordName));
+  hasStatusEffect(statusEffectName) {
+    return this.statusEffects.has(
+      this.normalizeStatusEffectName(statusEffectName),
+    );
   }
 
-  getKeywordData(name) {
-    const normalized = this.normalizeKeywordName(name);
-    return this.keywords.get(normalized) || null;
+  getStatusEffectData(name) {
+    const normalized = this.normalizeStatusEffectName(name);
+    return this.statusEffects.get(normalized) || null;
   }
   /**
-   * Get keyword data
-   * @param {string} keywordName - Name of the keyword
+   * Get statusEffect data
+   * @param {string} statusEffectName - Name of the statusEffect
    * @returns {object|null}
    */
-  getKeyword(keywordName) {
-    return this.keywords.get(this.normalizeKeywordName(keywordName)) || null;
+  getStatusEffect(statusEffectName) {
+    return (
+      this.statusEffects.get(
+        this.normalizeStatusEffectName(statusEffectName),
+      ) || null
+    );
   }
 
   /**
-   * Remove a keyword immediately
-   * @param {string} keywordName - Name of the keyword to remove
+   * Remove a statusEffect immediately
+   * @param {string} statusEffectName - Name of the statusEffect to remove
    */
-  removeKeyword(keywordName) {
-    const normalizedName = this.normalizeKeywordName(keywordName);
-    if (this.keywords.has(normalizedName)) {
-      this.keywords.delete(normalizedName);
+  removeStatusEffect(statusEffectName) {
+    const normalizedName = this.normalizeStatusEffectName(statusEffectName);
+    if (this.statusEffects.has(normalizedName)) {
+      this.statusEffects.delete(normalizedName);
       console.log(
-        `[Champion] Keyword "${normalizedName}" removido de ${this.name}.`,
+        `[Champion] StatusEffect "${normalizedName}" removido de ${this.name}.`,
       );
 
       // 🎨 Anima a remoção do indicador
@@ -373,27 +440,34 @@ export class Champion {
   }
 
   /**
-   * Purge all expired keywords at turn end
+   * Purge all expired statusEffects at turn end
    * @param {number} currentTurn - Current turn number
-   * @returns {array} List of removed keyword names
+   * @returns {array} List of removed statusEffect names
    */
-  purgeExpiredKeywords(currentTurn) {
-    const removedKeywords = [];
-    for (const [keywordName, keywordData] of this.keywords.entries()) {
-      if (keywordData.expiresAtTurn <= currentTurn) {
-        this.keywords.delete(keywordName);
-        removedKeywords.push(keywordName);
+  purgeExpiredStatusEffects(currentTurn) {
+    const removedStatusEffects = [];
+    for (const [
+      statusEffectName,
+      statusEffectData,
+    ] of this.statusEffects.entries()) {
+      if (statusEffectData.expiresAtTurn <= currentTurn) {
+        this.statusEffects.delete(statusEffectName);
+        removedStatusEffects.push(statusEffectName);
         console.log(
-          `[Champion] Keyword "${keywordName}" expirou para ${this.name}.`,
+          `[Champion] StatusEffect "${statusEffectName}" expirou para ${this.name}.`,
+        );
+
+        this.runtime.hookEffects = this.runtime.hookEffects.filter(
+          (e) => !(e.group === "statusEffect" && e.key === statusEffectName),
         );
 
         // 🎨 Anima a remoção do indicador com delay visual
-        StatusIndicator.animateIndicatorRemove(this, keywordName);
+        StatusIndicator.animateIndicatorRemove(this, statusEffectName);
       }
     }
-    return removedKeywords;
+    return removedStatusEffects;
   }
-  // ======== End Keyword System ========
+  // ======== End StatusEffect System ========
 
   // Method to mark that the champion has acted
   markActionTaken() {
@@ -410,6 +484,14 @@ export class Champion {
     return Math.round(x / 5) * 5;
   }
 
+  /* params = { statName, amount, duration, context, isPermanent, isPercent }
+   * statName: string (e.g., "Attack", "Defense")
+   * amount: number (positive for buff, negative for debuff)
+   * duration: number (number of turns the effect lasts)
+   * context: object (additional context for the modification)
+   * isPermanent: boolean (whether the modification is permanent)
+   * isPercent: boolean (whether the amount is a percentage)
+   */
   modifyStat({
     statName,
     amount,
@@ -554,17 +636,31 @@ export class Champion {
     duration = 1,
     context,
     isPermanent = false,
+    isPercent = false,
   } = {}) {
     if (!(statName in this)) {
       console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
       return;
     }
 
-    const normalizedAmount = -Math.abs(Number(amount) || 0);
+    let effectiveAmount = amount;
+
+    if (isPercent) {
+      const usesBase = statName !== "HP" && statName !== "maxHP";
+      const baseKey = `base${statName}`;
+      const baseValue = usesBase ? this[baseKey] : this[statName];
+      const percentBase = Number.isFinite(baseValue)
+        ? baseValue
+        : Number.isFinite(this[statName])
+          ? this[statName]
+          : 0;
+
+      effectiveAmount = (percentBase * amount) / 100;
+    }
 
     return this.applyStatModifier({
       statName,
-      amount: normalizedAmount,
+      amount: effectiveAmount,
       duration,
       context,
       isPermanent,
@@ -1093,20 +1189,20 @@ export class Champion {
   syncActionStateUI() {
     if (!this.el) return;
 
-    const blockingKeywords = [
+    const blockingStatusEffects = [
       "congelado",
       "paralisado",
       // futuras paralisantes aqui
     ];
 
-    const hasHardBlock = blockingKeywords.some((keyword) =>
-      this.hasKeyword(keyword),
+    const hasHardBlock = blockingStatusEffects.some((statusEffect) =>
+      this.hasStatusEffect(statusEffect),
     );
 
-    const inerteData = this.getKeywordData("inerte");
+    const inerteData = this.getStatusEffectData("inerte");
     const isInerteBlocking = inerteData && !inerteData.canBeInterruptedByAction;
 
-    const hasBlockingKeywords = hasHardBlock || isInerteBlocking;
+    const hasBlockingStatusEffects = hasHardBlock || isInerteBlocking;
 
     this.el.querySelectorAll(".skill-btn").forEach((btn) => {
       const disabledByResource = btn.dataset.disabledByResource === "true";
@@ -1116,7 +1212,7 @@ export class Champion {
 
       // 🔥 DECISÃO FINAL CENTRALIZADA
       const shouldDisable =
-        disabledByResource || disabledByAction || hasBlockingKeywords;
+        disabledByResource || disabledByAction || hasBlockingStatusEffects;
 
       btn.disabled = shouldDisable;
     });

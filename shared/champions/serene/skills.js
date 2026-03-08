@@ -65,7 +65,7 @@ const sereneSkills = [
       const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
 
       // aplica status
-      const stunned = enemy.applyKeyword(
+      const stunned = enemy.applyStatusEffect(
         "atordoado",
         this.stunDuration,
         context,
@@ -171,7 +171,7 @@ const sereneSkills = [
               return;
             }
 
-            if (self.hasKeyword("imunidade_absoluta")) {
+            if (self.hasStatusEffect("imunidade_absoluta")) {
               console.log("[EPIFANIA] Abortado → já possui imunidade absoluta");
               return;
             }
@@ -185,7 +185,7 @@ const sereneSkills = [
             console.log("[EPIFANIA] HP final desejado:", lockedHP);
             console.log("[EPIFANIA] Dano ajustado:", adjustedDamage);
 
-            self.applyKeyword("imunidade absoluta", 1, context, {
+            self.applyStatusEffect("imunidade absoluta", 1, context, {
               source: "epifania",
             });
 

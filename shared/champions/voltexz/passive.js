@@ -38,7 +38,7 @@ export default {
         type: "recuo_dano",
         mode: "absolute",
         baseDamage: recoilDamage,
-        piercingPortion: recoilDamage,  
+        piercingPortion: recoilDamage,
         user: owner,
         source: owner,
         target: owner,
@@ -57,14 +57,19 @@ export default {
       });
     }
 
-    if (dmgReceiver.hasKeyword?.("sobrecarga")) {
-      dmgReceiver.removeKeyword("sobrecarga");
+    if (dmgReceiver.hasStatusEffect?.("sobrecarga")) {
+      dmgReceiver.removeStatusEffect("sobrecarga");
       return;
     }
 
-    dmgReceiver.applyKeyword("sobrecarga", this.sobrecargaDuration, context, {
-      sourceSkill: skill,
-    });
+    dmgReceiver.applyStatusEffect(
+      "sobrecarga",
+      this.sobrecargaDuration,
+      context,
+      {
+        sourceSkill: skill,
+      },
+    );
 
     return { log };
   },
@@ -83,13 +88,16 @@ export default {
     console.log("OWNER:", owner?.name);
     console.log("DMG SRC:", dmgSrc?.name);
     console.log("ALVO:", dmgReceiver?.name);
-    console.log("HAS SOBRECARGA?", dmgReceiver?.hasKeyword?.("sobrecarga"));
+    console.log(
+      "HAS SOBRECARGA?",
+      dmgReceiver?.hasStatusEffect?.("sobrecarga"),
+    );
 
-    if (!dmgReceiver.hasKeyword?.("sobrecarga")) return;
+    if (!dmgReceiver.hasStatusEffect?.("sobrecarga")) return;
 
     const bonusDamage = Math.ceil((damage * this.sobrecargaBonusPercent) / 100);
 
-    dmgReceiver.removeKeyword("sobrecarga");
+    dmgReceiver.removeStatusEffect("sobrecarga");
 
     context.visual.dialogEvents.push({
       type: "dialog",

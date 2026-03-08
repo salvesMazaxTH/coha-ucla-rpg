@@ -37,7 +37,7 @@ const reyskaroneSkills = [
 
       user.takeDamage(hpSacrifice);
 
-      const tributeApplied = enemy.applyKeyword(
+      const tributeApplied = enemy.applyStatusEffect(
         "tributo",
         this.tributeDuration,
         context,
@@ -68,7 +68,7 @@ const reyskaroneSkills = [
           if (damage <= 0) return;
 
           // alvo não tem tributo
-          if (!dmgReceiver.hasKeyword?.("tributo")) return;
+          if (!dmgReceiver.hasStatusEffect?.("tributo")) return;
 
           const bonus = 10; //this.tributeBonusDamage;
 
@@ -186,7 +186,7 @@ const reyskaroneSkills = [
         context,
       });
 
-      ally.applyKeyword("pacto_carmesim", this.pactDuration, context, {
+      ally.applyStatusEffect("pacto_carmesim", this.pactDuration, context, {
         source: user.id,
       });
 

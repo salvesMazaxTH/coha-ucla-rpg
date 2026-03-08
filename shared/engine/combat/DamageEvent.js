@@ -101,8 +101,24 @@ export class DamageEvent {
     /*     console.log("DEBUG ATTACKER:", this.attacker);
     console.log("DEBUG TARGET:", this.target); */
     // 1️⃣ IMUNIDADE
-    if (this.target.hasKeyword?.("imunidade absoluta")) {
-      return this._buildImmuneResult();
+    const results = emitCombatEvent(
+      "onDamageIncoming",
+      {
+        dmgReceiver: this.target,
+        dmgSrc: this.attacker,
+        damage: this.damage,
+      },
+      this.allChampions,
+    );
+
+    for (const r of results) {
+      if (r?.message) {
+        this.context?.logs?.push?.(r.message);
+      }
+
+      if (r?.cancel) {
+        return this._buildImmuneResult();
+      }
     }
 
     // 2️⃣ ESQUIVA

@@ -11,7 +11,7 @@ function extractGlossaryKeys(text) {
   return [...new Set(matches.map((m) => m[1]))];
 }
 
-function renderGlossaryKeywords(text) {
+function renderGlossaryStatusEffects(text) {
   if (!text) return text;
 
   let result = text;
@@ -24,7 +24,7 @@ function renderGlossaryKeywords(text) {
 
       result = result.replace(
         regex,
-        `<span class="glossary-keyword" data-key="${key}">$&</span>`,
+        `<span class="glossary-statusEffect" data-key="${key}">$&</span>`,
       );
     }
   }
@@ -91,7 +91,7 @@ function showSkillOverlay(button, skill, champion) {
       ? skill.description(champion)
       : skill.description || "";
 
-  const parsedDesc = renderGlossaryKeywords(rawDesc);
+  const parsedDesc = renderGlossaryStatusEffects(rawDesc);
   const glossaryKeys = extractGlossaryKeys(rawDesc);
 
   const ultCostBars =
@@ -319,7 +319,7 @@ function createChampionOverlay(champion) {
         ? passive.description
         : "";
 
-  const parsedPassiveDesc = renderGlossaryKeywords(rawPassiveDesc);
+  const parsedPassiveDesc = renderGlossaryStatusEffects(rawPassiveDesc);
   const passiveGlossaryKeys = extractGlossaryKeys(rawPassiveDesc);
 
   let passiveItemHtml = "";

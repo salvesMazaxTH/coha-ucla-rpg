@@ -13,14 +13,14 @@ export default {
   onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
     if (damage <= 0 || dmgSrc.team === owner.team) return;
 
-    const alreadyFrozen = dmgSrc.hasKeyword("congelado");
-    const alreadyChilled = dmgSrc.hasKeyword("gelado");
+    const alreadyFrozen = dmgSrc.hasStatusEffect("congelado");
+    const alreadyChilled = dmgSrc.hasStatusEffect("gelado");
 
     if (alreadyFrozen) return;
     if (alreadyChilled) {
-      dmgSrc.applyKeyword("congelado", this.freezeDuration, context);
+      dmgSrc.applyStatusEffect("congelado", this.freezeDuration, context);
     } else {
-      dmgSrc.applyKeyword("gelado", this.chillDuration, context);
+      dmgSrc.applyStatusEffect("gelado", this.chillDuration, context);
     }
   },
 };

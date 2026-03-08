@@ -88,11 +88,15 @@ const naelthosSkills = [
     resolve({ user, context = {} }) {
       const { currentTurn } = context;
 
-      // Apply keywords
-      user.applyKeyword("inerte", this.effectDuration, context, {
+      // Apply statusEffects
+      user.applyStatusEffect("inerte", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
-      user.applyKeyword("imunidade absoluta", this.effectDuration, context);
+      user.applyStatusEffect(
+        "imunidadeAbsoluta",
+        this.effectDuration,
+        context,
+      );
 
       const userName = formatChampionName(user);
       return {

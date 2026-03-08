@@ -42,7 +42,8 @@ export default {
       return;
     }
 
-    const impactDamage = owner.runtime?.fireStance !== "brasa_viva" ? 35 : this.flamingFistsDamage;
+    const impactDamage =
+      owner.runtime?.fireStance !== "brasa_viva" ? 35 : this.flamingFistsDamage;
 
     console.log("[KAI] Impacto térmico ativado");
     console.log("[KAI] Dano adicional:", impactDamage);
@@ -79,11 +80,11 @@ export default {
         const burnDuration =
           owner.runtime?.fireStance === "brasa_viva" ? 2 : this.burnDuration;
 
-        dmgReceiver.applyKeyword("queimando", burnDuration, context, {
+        dmgReceiver.applyStatusEffect("queimando", burnDuration, context, {
           source: owner.name,
         });
 
-        console.log("[KAI] Keyword 'queimando' aplicada por", owner.name);
+        console.log("[KAI] StatusEffect 'queimando' aplicada por", owner.name);
       } else {
         console.log(
           "[KAI] Alvo possui afinidade elemental resistente → queimadura NÃO aplicada",

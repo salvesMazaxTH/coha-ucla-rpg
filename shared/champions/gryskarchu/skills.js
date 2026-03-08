@@ -29,7 +29,7 @@ const gryskarchuSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const rooted = enemy.applyKeyword(
+      const rooted = enemy.applyStatusEffect(
         "enraizado",
         this.rootDuration,
         context,

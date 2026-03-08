@@ -97,7 +97,7 @@ const kaiSkills = [
             targetId: owner.id,
           });
 
-          dmgSrc.applyKeyword("queimando", 2, context, {
+          dmgSrc.applyStatusEffect("queimando", 2, context, {
             source: owner,
           });
 
@@ -137,9 +137,9 @@ const kaiSkills = [
 
           // 🔥 EFEITO ATIVO
           if (this.state === "brasa_viva") {
-            if (!dmgReceiver?.applyKeyword) return;
+            if (!dmgReceiver?.applyStatusEffect) return;
 
-            dmgReceiver.applyKeyword("queimando", 2, context, {
+            dmgReceiver.applyStatusEffect("queimando", 2, context, {
               source: owner,
             });
 
@@ -207,7 +207,7 @@ const kaiSkills = [
       // Distribui aleatoriamente os socos entre os inimigos
       for (let i = 0; i < this.hits; i++) {
         const target = enemies[Math.floor(Math.random() * enemies.length)];
-        const isBurning = target.hasKeyword("queimando");
+        const isBurning = target.hasStatusEffect("queimando");
         const directBonus = isBurning ? this.burningBonus : 0;
         const result = new DamageEvent({
           baseDamage: this.damagePerHit,

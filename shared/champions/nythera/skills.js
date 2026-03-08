@@ -21,13 +21,13 @@ const nytheraSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       let totalDamage = baseDamage;
 
-      const isFrozen = target.hasKeyword("frozen");
+      const isFrozen = target.hasStatusEffect("congelado");
 
       if (isFrozen) {
         totalDamage += (baseDamage * this.bonusIfFrozen) / 100;
-        target.applyKeyword("frozen", this.freezeDuration, context);
+        target.applyStatusEffect("congelado", this.freezeDuration, context);
       } else {
-        target.applyKeyword("chill", this.chillDuration, context);
+        target.applyStatusEffect("gelado", this.chillDuration, context);
       }
 
       return new DamageEvent({

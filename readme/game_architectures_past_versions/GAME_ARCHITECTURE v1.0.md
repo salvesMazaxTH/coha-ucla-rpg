@@ -17,7 +17,7 @@
 9. [Fórmulas de Dano e Defesa](#9-fórmulas-de-dano-e-defesa)
 10. [Sistema de Afinidades Elementais](#10-sistema-de-afinidades-elementais)
 11. [Sistema de Hooks — CombatEvents](#11-sistema-de-hooks--combatevents)
-12. [Sistema de Keywords](#12-sistema-de-keywords)
+12. [Sistema de StatusEffects](#12-sistema-de-statusEffects)
 13. [Sistema de Escudos (Shields)](#13-sistema-de-escudos-shields)
 14. [Sistema de Modificadores de Dano](#14-sistema-de-modificadores-de-dano)
 15. [Gerenciador de Animações — AnimsAndLogManager](#15-gerenciador-de-animações--animsandlogmanager)
@@ -74,7 +74,7 @@
 │   │   ├── Champion.js         # Classe central do campeão
 │   │   ├── combatResolver.js   # Motor de cálculo de dano
 │   │   ├── combatEvents.js     # Sistema de hooks de evento
-│   │   ├── keywordTurnEffects.js  # Efeitos de status por turno (burn, poison…)
+│   │   ├── statusEffectTurnEffects.js  # Efeitos de status por turno (burn, poison…)
 │   │   ├── statusIndicator.js  # Gerenciador visual de ícones de status
 │   │   ├── formatters.js       # HTML formatters (nomes com cor de time)
 │   │   ├── id.js               # Gerador de IDs únicos
@@ -147,7 +147,7 @@ Ambos os jogadores confirmam o fim do turno. O servidor então:
    - Executa `skill.resolve({ user, targets, context })` → obtém resultado.
    - Constrói envelope `combatAction` com `{ action, effects[], log, state[] }`.
    - Emite para todos via `io.emit("combatAction", envelope)`.
-3. Aplica efeitos de início de turno (keywords: `queimando`, `envenenado`).
+3. Aplica efeitos de início de turno (statusEffects: `queimando`, `envenenado`).
 4. Aplica regen de recurso global (`BASE_REGEN = 80`) para todos os campeões vivos.
 5. Aplica eventos do hook `onTurnStart` de passivas.
 6. Limpa ações pendentes, incrementa `currentTurn`, emite `turnUpdate`.
@@ -228,7 +228,7 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
   effects: [                // Lista de efeitos visuais, em ordem
     {
       type: "damage" | "heal" | "shield" | "buff" | "evasion" | "resourceGain"
-            | "keywordApplied" | "keywordRemoved" | "immune" | "gameOver"
+            | "statusEffectApplied" | "statusEffectRemoved" | "immune" | "gameOver"
             | "shieldBlock" | "taunt" | "bonusAttack"
             | "dialog",     // 🔥 diálogo customizado vindo de hook/passiva
       targetId: string,     // Campeão afetado (não usado em "dialog")
@@ -242,7 +242,7 @@ O envelope é o contrato principal entre servidor e cliente para comunicar o res
   ],
   log: string,              // Texto completo HTML do log de combate
   state: [                  // Snapshots de estado dos campeões afetados
-    { id, HP, maxHP, mana?, energy?, runtime, keywords, ... }
+    { id, HP, maxHP, mana?, energy?, runtime, statusEffects, ... }
   ]
 }
 ```
@@ -286,7 +286,7 @@ champion.resourceCap // limite máximo (padrão 999)
 // Combate
 champion.skills      // Skill[] — habilidades do campeão
 champion.passive     // objeto passivo com hooks, ou null
-champion.keywords    // Map<string, { duration?, stacks?, ... }>
+champion.statusEffects    // Map<string, { duration?, stacks?, ... }>
 champion.alive       // boolean
 champion.hasActedThisTurn  // boolean (reset a cada turno)
 champion.elementalAffinities // string[] — elementos do campeão (ex: ["lightning"])
@@ -618,7 +618,7 @@ Hooks podem retornar um objeto estruturado com qualquer combinação das seguint
 
 Os `effects[]` retornados por hooks são **agregados pelo `CombatResolver`** ao longo de toda a pipeline e propagados no campo `extraEffects` do resultado de `processDamageEvent()`. O servidor então os mescla com os demais effects do envelope `combatAction` antes de emitir ao cliente. O cliente os processa sequencialmente via `animateEffect()`, exatamente como effects gerados diretamente pelo servidor.
 
-Isso permite que passivas e efeitos temporários gerem eventos visuais completamente customizados — incluindo diálogos, buffs, keywords, ou qualquer outro tipo de effect — sem necessitar de lógica especial fora do próprio hook.
+Isso permite que passivas e efeitos temporários gerem eventos visuais completamente customizados — incluindo diálogos, buffs, statusEffects, ou qualquer outro tipo de effect — sem necessitar de lógica especial fora do próprio hook.
 
 ### Hooks Disponíveis — Payloads
 
@@ -651,39 +651,39 @@ Estes são avaliados junto às passivas permanentes em cada `emitCombatEvent`.
 
 ---
 
-## 12. Sistema de Keywords
+## 12. Sistema de StatusEffects
 
-Keywords são **status de combate** aplicados aos campeões, armazenados em `champion.keywords` como um `Map<string, object>`.
+StatusEffects são **status de combate** aplicados aos campeões, armazenados em `champion.statusEffects` como um `Map<string, object>`.
 
 ### Estrutura
 
 ```js
 // Adicionar
-champion.keywords.set("queimando", { duration: 2, stacks: 1 });
+champion.statusEffects.set("queimando", { duration: 2, stacks: 1 });
 
 // Remover
-champion.keywords.delete("queimando");
+champion.statusEffects.delete("queimando");
 
 // Verificar
-champion.keywords.has("paralisado");
+champion.statusEffects.has("paralisado");
 ```
 
-### Efeitos de Turno (`keywordTurnEffects.js`)
+### Efeitos de Turno (`statusEffectTurnEffects.js`)
 
-O servidor chama os efeitos de keywords no início de cada turno via `KeywordTurnEffects`:
+O servidor chama os efeitos de statusEffects no início de cada turno via `StatusEffectTurnEffects`:
 
 ```js
 // queimando → 15 de dano direto por turno
 // envenenado → 15 de dano direto por turno
 ```
 
-Cada keyword registrada em `KeywordTurnEffects` tem um hook `onTurnStart` que retorna um objeto de efeito `{ type, mode, amount, skill }`.
+Cada statusEffect registrada em `StatusEffectTurnEffects` tem um hook `onTurnStart` que retorna um objeto de efeito `{ type, mode, amount, skill }`.
 
-### Keywords com Indicador Visual
+### StatusEffects com Indicador Visual
 
-Apenas keywords com entrada em `StatusIndicator.keywordIcons` terão ícone exibido:
+Apenas statusEffects com entrada em `StatusIndicator.statusEffectIcons` terão ícone exibido:
 
-| Keyword              | Ícone         | Cor de fundo     |
+| StatusEffect         | Ícone         | Cor de fundo     |
 | -------------------- | ------------- | ---------------- |
 | `paralisado`         | ⚡🚫⚡        | Laranja          |
 | `atordoado`          | 💫            | Branco           |
@@ -694,7 +694,7 @@ Apenas keywords com entrada em `StatusIndicator.keywordIcons` terão ícone exib
 | `queimando`          | 🔥            | Laranja-vermelho |
 | `enraizado`          | 🌱            | Verde            |
 
-Para adicionar uma nova keyword com ícone, basta adicionar entrada em `StatusIndicator.keywordIcons`.
+Para adicionar uma nova statusEffect com ícone, basta adicionar entrada em `StatusIndicator.statusEffectIcons`.
 
 ---
 
@@ -779,20 +779,20 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 
 ### Efeitos Animados
 
-| Tipo de Effect   | Animação CSS                                        | Float                                     |
-| ---------------- | --------------------------------------------------- | ----------------------------------------- |
-| `damage`         | `.damage` + shake                                   | `.damage-float` + tier 1-6 por quantidade |
-| `heal`           | `.heal` + brilho verde                              | `.heal-float`                             |
-| `shield`         | `.has-shield` + bolha                               | `.shield-float`                           |
-| `buff`           | `.buff` + brilho dourado                            | `.buff-float`                             |
-| `evasion`        | `.evasion` + slide                                  | "Esquiva!" como float                     |
-| `resourceGain`   | —                                                   | `.resource-float-mana` ou `-energy`       |
-| `keywordApplied` | `animateIndicatorAdd()`                             | `.taunt-float` se taunt                   |
-| `keywordRemoved` | `animateIndicatorRemove()`                          | —                                         |
-| `immune`         | —                                                   | "IMUNE!" como float                       |
-| `shieldBlock`    | —                                                   | "BLOQUEADO!" como float                   |
-| `gameOver`       | overlay de vitória                                  | —                                         |
-| `dialog`         | `showBlockingDialog()` ou `showNonBlockingDialog()` | —                                         |
+| Tipo de Effect        | Animação CSS                                        | Float                                     |
+| --------------------- | --------------------------------------------------- | ----------------------------------------- |
+| `damage`              | `.damage` + shake                                   | `.damage-float` + tier 1-6 por quantidade |
+| `heal`                | `.heal` + brilho verde                              | `.heal-float`                             |
+| `shield`              | `.has-shield` + bolha                               | `.shield-float`                           |
+| `buff`                | `.buff` + brilho dourado                            | `.buff-float`                             |
+| `evasion`             | `.evasion` + slide                                  | "Esquiva!" como float                     |
+| `resourceGain`        | —                                                   | `.resource-float-mana` ou `-energy`       |
+| `statusEffectApplied` | `animateIndicatorAdd()`                             | `.taunt-float` se taunt                   |
+| `statusEffectRemoved` | `animateIndicatorRemove()`                          | —                                         |
+| `immune`              | —                                                   | "IMUNE!" como float                       |
+| `shieldBlock`         | —                                                   | "BLOQUEADO!" como float                   |
+| `gameOver`            | overlay de vitória                                  | —                                         |
+| `dialog`              | `showBlockingDialog()` ou `showNonBlockingDialog()` | —                                         |
 
 ### Tipo `dialog` — Diálogos Customizados de Hooks
 
@@ -848,12 +848,12 @@ Singleton responsável por criar, atualizar, animar e remover os ícones de stat
 
 ```js
 StatusIndicator.updateChampionIndicators(champion);
-// Remove todos e recria com base em champion.keywords
+// Remove todos e recria com base em champion.statusEffects
 
-StatusIndicator.animateIndicatorAdd(champion, keywordName);
+StatusIndicator.animateIndicatorAdd(champion, statusEffectName);
 // Atualiza indicators + pulsa o novo ícone
 
-StatusIndicator.animateIndicatorRemove(champion, keywordName);
+StatusIndicator.animateIndicatorRemove(champion, statusEffectName);
 // Fade out + remoção após VISUAL_DELAY (1500ms)
 
 StatusIndicator.startRotationLoop(champions);
@@ -867,7 +867,7 @@ StatusIndicator.clearIndicators(champion);
 ### Estrutura do Ícone
 
 ```js
-keywordIcons["nome"] = {
+statusEffectIcons["nome"] = {
   type: "emoji" | "image" | "text",
   value: string,         // emoji, path de imagem, ou texto
   background: string,    // cor rgba do fundo circular
@@ -1031,7 +1031,7 @@ export default championDB;
 - **`description()` como função**: Permite exibir valores dinâmicos (custo, BF, etc.) via `this`.
 - **Sempre use `CombatResolver.processDamageEvent()`** para dano — nunca debite HP diretamente em skills, pois o resolver lida com escudos, Esquiva, crítico, lifesteal, hooks, log, etc.
 - **Passivas devem verificar `damageDepth`** antes de gerar dano extra para evitar recursão infinita: `if (context.damageDepth > 0) return;`.
-- **Keywords**: Use `champion.keywords.set("nome", { duration: N })` para aplicar. O servidor deve emitir `keywordApplied` no array de effects para que o cliente anime.
+- **StatusEffects**: Use `champion.statusEffects.set("nome", { duration: N })` para aplicar. O servidor deve emitir `statusEffectApplied` no array de effects para que o cliente anime.
 - **Escudos**: Adicione em `champion.runtime.shields.push({ amount: X, type: "regular", source: skill.key })`.
 
 ---

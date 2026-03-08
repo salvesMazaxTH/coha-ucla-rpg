@@ -55,7 +55,7 @@ export default {
       `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
     );
 
-    const storageRate = owner.hasKeyword?.("blindagem_reforcada")
+    const storageRate = owner.hasStatusEffect?.("blindagem_reforcada")
       ? this.storageShieldPercent / 100
       : this.storageBasePercent / 100;
 
@@ -83,9 +83,9 @@ export default {
     if (skill.key === "basic_attack") return;
 
     // Evita loop se alguma skill futura aplicar stun interno
-    if (owner.hasKeyword?.("atordoado")) return;
+    if (owner.hasStatusEffect?.("atordoado")) return;
 
-    owner.applyKeyword?.("atordoado", 2, context);
+    owner.applyStatusEffect?.("atordoado", 2, context);
 
     return {
       log: `${owner.name} sofreu sobrecarga do núcleo e ficará Atordoado!`,

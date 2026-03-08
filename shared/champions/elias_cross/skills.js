@@ -29,9 +29,9 @@ const eliasCrossSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const isOverloaded = enemy.hasKeyword("sobrecarga");
+      const isOverloaded = enemy.hasStatusEffect("sobrecarga");
       console.log(
-        `Impacto Relâmpago: ${formatChampionName(enemy)} ${isOverloaded ? "está" : "não está"} sobrecarregado. Keywords do alvo: ${[...enemy.keywords.keys()].join(", ")}`,
+        `Impacto Relâmpago: ${formatChampionName(enemy)} ${isOverloaded ? "está" : "não está"} sobrecarregado. StatusEffects do alvo: ${[...enemy.statusEffects.keys()].join(", ")}`,
       );
 
       const results = [];
@@ -77,7 +77,7 @@ const eliasCrossSkills = [
       user.runtime.passiveBonusNextTurn = 35;
 
       const baseDamage = (user.Attack * this.bf) / 100;
-      const isOverloaded = enemy.hasKeyword("sobrecarga");
+      const isOverloaded = enemy.hasStatusEffect("sobrecarga");
 
       const results = [];
 
@@ -120,7 +120,7 @@ const eliasCrossSkills = [
 
     obliterateRule(ctx) {
       const target = ctx.target;
-      const hasOverload = target.hasKeyword("sobrecarga");
+      const hasOverload = target.hasStatusEffect("sobrecarga");
       return hasOverload ? 0.25 : 0.17;
     },
 

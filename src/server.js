@@ -93,7 +93,7 @@ import {
 } from "../shared/ui/formatters.js";
 import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 
-import { KeywordTurnEffects } from "../shared/engine/keywordTurnEffects.js";
+import { StatusEffectTurnEffects } from "../outdated/statusEffectTurnEffects.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -309,42 +309,10 @@ function validateActionIntent(user, skill, socket) {
     return false;
   }
 
-  // Keywords bloqueantes completas
-  if (user.hasKeyword?.("paralisado")) {
-    socket.emit("skillDenied", `${user.name} está Paralisado e não pode agir!`);
-    return false;
-  }
+  const result = emitCombatEvent("onValidateAction", { user, skill });
 
-  if (user.hasKeyword?.("atordoado")) {
-    socket.emit("skillDenied", `${user.name} está Atordoado e não pode agir!`);
-    return false;
-  }
-
-  // Inerte — pode ser interrompido por ação se permitido
-  if (user.hasKeyword?.("inerte")) {
-    const k = user.getKeyword("inerte");
-
-    if (k?.canBeInterruptedByAction) {
-      user.removeKeyword("inerte");
-      io.emit(
-        "combatLog",
-        `O efeito "Inerte" de ${formatChampionName(user)} foi interrompido!`,
-      );
-      return true;
-    }
-
-    socket.emit("skillDenied", `${user.name} está Inerte e não pode agir!`);
-    return false;
-  }
-
-  // Enraizado bloqueia apenas habilidades de contato
-  if (user.hasKeyword?.("enraizado") && skill.contact) {
-    const skillName = skill && typeof skill === "object" ? skill.name : skill;
-    socket.emit(
-      "skillDenied",
-      `${user.name} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
-    );
-    return false;
+  if (result?.messages?.length) {
+    result.messages.forEach((msg) => socket.emit("skillDenied", msg));
   }
 
   return true;
@@ -355,42 +323,27 @@ function validateActionIntent(user, skill, socket) {
  * Diferente de validateActionIntent — aqui o estado pode ter mudado.
  */
 function canExecuteAction(user, action) {
-  const userName = formatChampionName(user);
-  if (!user || !user.alive) {
+  if (!user || !user.alive) return false;
+
+  const result = emitCombatEvent(
+    "onValidateAction",
+    {
+      user,
+      skill: action?.skill,
+      action,
+      phase: "execution",
+    },
+    activeChampions,
+  );
+
+  if (!result) return true;
+
+  if (result?.messages?.length) {
+    result.messages.forEach((msg) => io.emit("combatLog", msg));
+  }
+
+  if (result.deny) {
     return false;
-  }
-
-  // Keywords bloqueantes
-  const blockingKeywords = [
-    ["paralisado", "Paralisado"],
-    ["atordoado", "Atordoado"],
-    ["congelado", "Congelado"],
-  ];
-
-  for (const [key, label] of blockingKeywords) {
-    if (user.hasKeyword?.(key)) {
-      io.emit(
-        "combatLog",
-        `${userName} tentou agir mas estava ${label}! Ação cancelada.`,
-      );
-      return false;
-    }
-  }
-
-  // Inerte — tratamento especial
-  if (user.hasKeyword?.("inerte")) {
-    const k = user.getKeyword("inerte");
-
-    if (!k?.canBeInterruptedByAction) {
-      io.emit(
-        "combatLog",
-        `${userName} tentou agir mas estava Inerte! Ação cancelada.`,
-      );
-      return false;
-    }
-
-    user.removeKeyword("inerte");
-    io.emit("combatLog", `O efeito "Inerte" de ${userName} foi interrompido!`);
   }
 
   return true;
@@ -1265,16 +1218,17 @@ function handleStartTurn() {
     champ.runtime.currentContext = turnStartContext;
   });
 
-  // 2. Tick DoTs e outras keywords de início de turno
-  processTurnStartKeywords({
+  /*   POSSIVELMENTE OBSOLETO com novo modelo de hooks e .js de cada statusEffect
+// 2. Tick DoTs e outras statusEffects de início de turno
+  processTurnStartStatusEffects({
     activeChampions: Array.from(activeChampions.values()),
     context: turnStartContext,
-  });
+  }); */
 
   // 3. Limpar expirados
   activeChampions.forEach((champion) => {
     champion.purgeExpiredStatModifiers(currentTurn);
-    champion.purgeExpiredKeywords(currentTurn);
+    champion.purgeExpiredStatusEffects(currentTurn);
   });
 
   // 4. Hooks onTurnStart
@@ -1316,16 +1270,17 @@ function handleStartTurn() {
   io.emit("gameStateUpdate", getGameState());
 }
 
-/** Processa keywords que disparam no início do turno (DoTs, etc). */
-function processTurnStartKeywords({ activeChampions, context }) {
+// POSSIVELMENTE OBSOLETO com novo modelo de hooks e .js de cada statusEffect
+/** Processa statusEffects que disparam no início do turno (DoTs, etc). */
+/* function processTurnStartStatusEffects({ activeChampions, context }) {
   const affectedIds = new Set();
   const logs = [];
 
   activeChampions.forEach((champion) => {
     if (!champion.alive) return;
 
-    for (const [keywordName] of champion.keywords) {
-      const effect = KeywordTurnEffects?.[keywordName];
+    for (const [statusEffectName] of champion.statusEffects) {
+      const effect = StatusEffectTurnEffects?.[statusEffectName];
       if (!effect?.onTurnStart) continue;
 
       const result = effect.onTurnStart({
@@ -1358,7 +1313,7 @@ function processTurnStartKeywords({ activeChampions, context }) {
   const { damageEvents = [] } = context.visual || {};
 
   if (damageEvents.length === 0) return;
-}
+} */
 // ============================================================
 //  RESET DO ESTADO DO JOGO
 // ============================================================

@@ -1,10 +1,10 @@
 /**
  * Sistema de indicadores visuais para status de campeões
- * Gerencia exibição de ícones e efeitos visuais baseados em keywords
+ * Gerencia exibição de ícones e efeitos visuais baseados em statusEffects
  */
 export const StatusIndicator = {
-  // Mapeamento de keywords -> ícones e cores
-  keywordIcons: {
+  // Mapeamento de statusEffects -> ícones e cores
+  statusEffectIcons: {
     paralisado: {
       type: "image",
       value: "/assets/paralisado_indicator.png",
@@ -35,7 +35,7 @@ export const StatusIndicator = {
       value: "TRIB.",
       color: "#ff2a2a",
     },
-    queimando:{
+    queimando: {
       type: "emoji",
       value: "🔥",
       background: "rgba(255, 69, 0, 0.8)",
@@ -44,7 +44,7 @@ export const StatusIndicator = {
       type: "emoji",
       value: "🌱",
       background: "rgba(34, 139, 34, 0.8)",
-    }
+    },
   },
 
   // Duração mínima visual para indicadores (em ms)
@@ -57,7 +57,7 @@ export const StatusIndicator = {
   _rotationIndex: 0,
 
   /**
-   * Atualiza os indicadores visuais de um campeão com base em seus keywords
+   * Atualiza os indicadores visuais de um campeão com base em seus statusEffects
    * @param {Champion} champion - Instância do campeão
    */
   updateChampionIndicators(champion) {
@@ -71,17 +71,17 @@ export const StatusIndicator = {
       .querySelectorAll(".status-indicator:not(.visual-delay)")
       .forEach((el) => el.remove());
 
-    for (const [keywordName] of champion.keywords.entries()) {
-      const icon = this.keywordIcons[keywordName.toLowerCase()];
+    for (const [statusEffectName] of champion.statusEffects.entries()) {
+      const icon = this.statusEffectIcons[statusEffectName.toLowerCase()];
       if (!icon) continue;
 
       const indicator = document.createElement("span");
       indicator.className = "status-indicator";
-      indicator.dataset.keyword = keywordName;
-      indicator.title = keywordName;
+      indicator.dataset.statusEffect = statusEffectName;
+      indicator.title = statusEffectName;
 
       // Safe class
-      const safe = keywordName
+      const safe = statusEffectName
         .toLowerCase()
         .replace(/\s+/g, "_")
         .normalize("NFD")
@@ -103,7 +103,7 @@ export const StatusIndicator = {
       } else {
         const img = document.createElement("img");
         img.src = icon.value;
-        img.alt = keywordName;
+        img.alt = statusEffectName;
         img.className = "indicator-image";
         indicator.appendChild(img);
       }
@@ -137,9 +137,9 @@ export const StatusIndicator = {
   /**
    * Remove indicador específico de um campeão com visual delay
    * @param {Champion} champion - Instância do campeão
-   * @param {string} keywordName - Nome do keyword
+   * @param {string} statusEffectName - Nome do statusEffect
    */
-  removeIndicator(champion, keywordName) {
+  removeIndicator(champion, statusEffectName) {
     if (!champion.el) return;
 
     const portraitElement = champion.el.querySelector(".portrait");
@@ -147,7 +147,7 @@ export const StatusIndicator = {
     if (!portraitElement) return;
 
     const indicator = portraitElement.querySelector(
-      `[data-keyword="${keywordName}"]`,
+      `[data-statusEffect="${statusEffectName}"]`,
     );
     if (indicator) {
       indicator.remove();
@@ -173,9 +173,9 @@ export const StatusIndicator = {
   /**
    * Anima a adição de um novo indicador
    * @param {Champion} champion - Instância do campeão
-   * @param {string} keywordName - Nome do keyword
+   * @param {string} statusEffectName - Nome do statusEffect
    */
-  animateIndicatorAdd(champion, keywordName) {
+  animateIndicatorAdd(champion, statusEffectName) {
     this.updateChampionIndicators(champion);
 
     const portraitElement = champion.el?.querySelector(".portrait");
@@ -184,7 +184,7 @@ export const StatusIndicator = {
     if (!portraitElement) return;
 
     const indicator = portraitElement.querySelector(
-      `[data-keyword="${keywordName}"]`,
+      `[data-statusEffect="${statusEffectName}"]`,
     );
 
     if (indicator) {
@@ -198,16 +198,16 @@ export const StatusIndicator = {
   /**
    * Anima a remoção de um indicador com delay visual
    * @param {Champion} champion - Instância do campeão
-   * @param {string} keywordName - Nome do keyword
+   * @param {string} statusEffectName - Nome do statusEffect
    */
-  animateIndicatorRemove(champion, keywordName) {
+  animateIndicatorRemove(champion, statusEffectName) {
     const portraitElement = champion.el?.querySelector(".portrait");
     console.log("[animateIndicatorRemove] portraitElement:", portraitElement);
 
     if (!portraitElement) return;
 
     const indicator = portraitElement.querySelector(
-      `[data-keyword="${keywordName}"]`,
+      `[data-statusEffect="${statusEffectName}"]`,
     );
 
     if (indicator) {

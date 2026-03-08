@@ -44,7 +44,7 @@ export default {
       return;
     }
 
-    const paralyzed = dmgReceiver.applyKeyword(
+    const paralyzed = dmgReceiver.applyStatusEffect(
       "paralisado",
       this.paralyzeDuration,
       context,
