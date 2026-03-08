@@ -1,5 +1,5 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
-import { StatusEffectRegistry } from "../data/statusEffects/effectsRegistry.js";
+import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
 import { emitCombatEvent } from "../engine/combat/combatEvents.js";
 
 export class Champion {
@@ -275,35 +275,57 @@ export class Champion {
    * @param {string} statusEffectName - Name of the statusEffect (e.g., 'inerte', 'imunidade absoluta')
    * @param {number} duration - Number of turns the statusEffect lasts
    * @param {object} context - Context with currentTurn
-   * @param {object} metadata - Additional data to store with the statusEffect
+   * @param {object} metadata - Additional data to store with the statusEffect, for example: persistent
    */
-  applyStatusEffect(statusEffectName, duration, context, metadata = {}) {
-    const normalizedName = this.normalizeStatusEffectName(statusEffectName);
-    if (!normalizedName) return false;
+  applyStatusEffect(statusEffectKey, duration, context, metadata = {}) {
+    if (!statusEffectKey) return false;
+    if (!StatusEffectsRegistry[statusEffectKey]) {
+      console.error(
+        `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
+      );
+      return false;
+    }
 
-    if (!this._canApplyStatusEffect(normalizedName, context)) return false;
+    if (
+      !this._canApplyStatusEffect(statusEffectKey, duration, metadata, context)
+    ) {
+      context.visual ??= {};
+      context.visual.dialogEvents ??= [];
+
+      const alreadyHasDialog = context.visual.dialogEvents.some(
+        (e) => e.type === "dialog" && e.targetId === this.id,
+      );
+
+      if (!alreadyHasDialog) {
+        context.visual.dialogEvents.push({
+          type: "dialog",
+          message: `${this.name} não pode receber o efeito "${statusEffectKey}"`,
+          sourceId: this.id,
+          targetId: this.id,
+          blocking: true,
+        });
+      }
+
+      return false;
+    }
 
     const { currentTurn } = context || {};
-    const isStackable = normalizedName === "poison";
+    const isStackable = statusEffectKey === "poison";
+
+    console.log(
+      `[STATUS APPLY] ${this.name} tentando receber "${statusEffectKey}" (duration=${duration})`,
+    );
 
     duration = Number.isFinite(duration) ? duration : 1;
 
     const persistent = metadata?.persistent || false;
     if (persistent) duration = Infinity;
 
-    emitCombatEvent("onStatusEffectIncoming", {
-      target: this,
-      statusEffect: normalizedName,
-      duration,
-      metadata,
-    }, context?.allChampions);
-
-    // sobrescreve statusEffect existente se não for stackable
-    if (this.hasStatusEffect(normalizedName) && !isStackable) {
-      this.statusEffects.delete(normalizedName);
+    if (this.hasStatusEffect(statusEffectKey) && !isStackable) {
+      this.statusEffects.delete(statusEffectKey);
     }
 
-    this.statusEffects.set(normalizedName, {
+    this.statusEffects.set(statusEffectKey, {
       expiresAtTurn: Number.isFinite(currentTurn)
         ? currentTurn + Number(duration || 0)
         : NaN,
@@ -313,77 +335,106 @@ export class Champion {
     });
 
     console.log(
-      `[Champion] ${this.name} aplicou statusEffect "${normalizedName}" até o turno ${currentTurn + duration}.`,
+      `[STATUS APPLY] ${this.name} recebeu "${statusEffectKey}" até turno ${currentTurn + duration}`,
     );
 
-    this._attachStatusEffectBehavior(normalizedName, duration, context);
+    this._attachStatusEffectBehavior(statusEffectKey, duration, context);
 
-    // 🎨 Atualiza os indicadores visuais
-    StatusIndicator.animateIndicatorAdd(this, normalizedName);
+    StatusIndicator.animateIndicatorAdd(this, statusEffectKey);
 
     return true;
   }
 
-  _canApplyStatusEffect(normalizedName, context) {
-    if (
-      this.hasStatusEffect("imunidade absoluta") &&
-      normalizedName !== "imunidade absoluta"
-    ) {
-      console.log(
-        `[Champion] ${this.name} possui "Imunidade Absoluta" e não pode receber "${normalizedName}".`,
-      );
-      return false;
-    }
-
+  _canApplyStatusEffect(statusEffectKey, duration, metadata, context) {
     if (context?.shieldBlockedTargets?.has(this.id)) {
       console.log(
-        `[Champion] ${this.name}: statusEffect "${normalizedName}" bloqueada por escudo.`,
+        `[STATUS BLOCKED] ${this.name}: statusEffect "${statusEffectKey}" bloqueado por escudo.`,
       );
       return false;
     }
 
-    const behavior = StatusEffectRegistry[normalizedName];
+    const behavior = StatusEffectsRegistry[statusEffectKey];
 
-    if (behavior?.subtypes.includes("hardCC")) {
+    if (!behavior) {
+      console.warn(
+        `[STATUS ERROR] StatusEffect "${statusEffectKey}" não encontrado no registry.`,
+      );
+      return false;
+    }
+
+    const eventResults = emitCombatEvent(
+      "onStatusEffectIncoming",
+      {
+        target: this,
+        statusEffect: behavior,
+        duration,
+        metadata,
+      },
+      context?.allChampions,
+    );
+
+    const cancelled = eventResults.find((r) => r?.cancel);
+
+    if (cancelled) {
+      console.log(
+        `[STATUS BLOCKED] ${this.name} → "${statusEffectKey}" cancelado por status-effect`,
+      );
+      return false;
+    }
+
+    if (behavior?.subtypes?.includes("hardCC")) {
       for (const [existingStatusEffect] of this.statusEffects) {
-        const existingBehavior = StatusEffectRegistry[existingStatusEffect];
+        const existingBehavior = StatusEffectsRegistry[existingStatusEffect];
 
-        if (existingBehavior?.subtypes.includes("hardCC")) {
+        if (existingBehavior?.subtypes?.includes("hardCC")) {
           console.log(
-            `[Champion] ${this.name} já possui status bloqueante (${existingStatusEffect}).`,
+            `[STATUS BLOCKED] ${this.name} já possui status bloqueante (${existingStatusEffect}).`,
           );
           return false;
         }
       }
     }
 
+    console.log(
+      `[STATUS APPLY] ${this.name} não possui impedimento a receber "${statusEffectKey}"`,
+    );
+
     return true;
   }
 
-  _attachStatusEffectBehavior(normalizedName, duration, context) {
-    const behavior = StatusEffectRegistry[normalizedName];
+  _attachStatusEffectBehavior(statusEffectKey, duration, context) {
+    console.log(
+      `[STATUS HOOK] Instalando hooks de "${statusEffectKey}" em ${this.name}`,
+    );
+
+    const behavior = StatusEffectsRegistry[statusEffectKey];
     if (!behavior) return;
 
-    const isStackable = normalizedName === "poison";
+    const isStackable = statusEffectKey === "poison";
 
     const effectInstance = {
-      key: normalizedName,
+      key: statusEffectKey,
       group: "statusEffect",
-      source: normalizedName,
+      source: statusEffectKey,
       ownerId: this.id,
       ...behavior,
     };
 
     this.runtime ??= {};
     this.runtime.hookEffects ??= [];
-    // remove efeitos anteriores do mesmo statusEffect se não for stackable
+
     if (!isStackable) {
       this.runtime.hookEffects = this.runtime.hookEffects.filter(
-        (e) => e.key !== normalizedName,
+        (e) => e.key !== statusEffectKey,
       );
     }
 
     this.runtime.hookEffects.push(effectInstance);
+
+    console.log(
+      `[STATUS HOOK] Hooks ativos de ${this.name}:`,
+      this.runtime.hookEffects.map((e) => e.key),
+    );
 
     if (behavior.onStatusEffectAdded) {
       behavior.onStatusEffectAdded({
@@ -431,7 +482,7 @@ export class Champion {
     if (this.statusEffects.has(normalizedName)) {
       this.statusEffects.delete(normalizedName);
       console.log(
-        `[Champion] StatusEffect "${normalizedName}" removido de ${this.name}.`,
+        `[STATUS REMOVE] ${this.name}: StatusEffect "${normalizedName}" removido.`,
       );
 
       // 🎨 Anima a remoção do indicador
@@ -454,7 +505,7 @@ export class Champion {
         this.statusEffects.delete(statusEffectName);
         removedStatusEffects.push(statusEffectName);
         console.log(
-          `[Champion] StatusEffect "${statusEffectName}" expirou para ${this.name}.`,
+          `[STATUS EXPIRE] ${this.name}: StatusEffect "${statusEffectName}" expirou.`,
         );
 
         this.runtime.hookEffects = this.runtime.hookEffects.filter(

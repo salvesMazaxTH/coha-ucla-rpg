@@ -93,8 +93,6 @@ import {
 } from "../shared/ui/formatters.js";
 import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 
-import { StatusEffectTurnEffects } from "../outdated/statusEffectTurnEffects.js";
-
 // ============================================================
 //  CONFIGURAÇÃO
 // ============================================================

@@ -7,7 +7,7 @@ const gelado = {
   onStatusEffectAdded({ self, duration, context }) {
     self.modifyStat({
       statName: "Attack",
-      amount: -35,
+      amount: -20,
       duration,
       context,
       isPercent: true,
@@ -15,7 +15,7 @@ const gelado = {
 
     self.modifyStat({
       statName: "Speed",
-      amount: -35,
+      amount: -50,
       duration,
       context,
       isPercent: true,

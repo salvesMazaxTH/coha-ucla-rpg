@@ -78,7 +78,7 @@ const naelthosSkills = [
     effectDuration: 2,
     contact: false,
 
-    priority: 1,
+    priority: 2,
     element: "water",
     description() {
       return `Transforma-se em água pura, ficando "Inerte" e com "Imunidade Absoluta" por ${this.effectDuration} turnos. Pode ser interrompido se executar uma ação.`;

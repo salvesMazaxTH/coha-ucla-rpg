@@ -117,6 +117,9 @@ export class DamageEvent {
       }
 
       if (r?.cancel) {
+        console.log(
+          `[DAMAGE CANCEL] ${this.target.name} teve o dano cancelado por status-effect`,
+        );
         return this._buildImmuneResult();
       }
     }
@@ -729,6 +732,13 @@ export class DamageEvent {
     const targetName = formatChampionName(this.target);
     const username = formatChampionName(this.attacker);
     const skillName = this.skill?.name || "habilidade";
+
+    this.context.registerDamage({
+      target: this.target,
+      amount: 0,
+      sourceId: this.attacker?.id,
+      flags: { immune: true },
+    });
 
     return {
       baseDamage: this.baseDamage,

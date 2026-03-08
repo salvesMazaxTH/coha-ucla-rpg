@@ -3,22 +3,27 @@ const debugMode = true; // Set to true to enable detailed logging of combat even
 export function emitCombatEvent(eventName, payload, champions) {
   const results = [];
 
-  const ignoredEventsForDebug = new Set([
+  /*   const ignoredEventsForDebug = new Set([
     "onActionResolved",
     "onTurnEnd",
     "onTurnStart",
   ]);
+ */
 
-  if (!ignoredEventsForDebug.has(eventName)) {
-    console.log(`🔥 Champions in emitCombatEvent:`, champions);
+  if (/* !ignoredEventsForDebug.has(eventName) */ debugMode) {
+    console.log(`[EVENT EMIT] 🔥 Champions in emitCombatEvent:`, champions);
   }
 
   if (debugMode) {
     console.group(`📡 EVENT: ${eventName}`);
+    console.log(`[EVENT EMIT] ${eventName}`, {
+      source: payload?.dmgSrc?.name,
+      target: payload?.dmgReceiver?.name,
+    });
   }
 
   if (!champions) {
-    if (debugMode) console.log("⚠️ No champions provided");
+    if (debugMode) console.log(`[EVENT EMIT] ⚠️ No champions provided`);
     return results;
   }
 
@@ -26,9 +31,9 @@ export function emitCombatEvent(eventName, payload, champions) {
     ? champions
     : Array.from(champions.values());
 
-  if (debugMode && !ignoredEventsForDebug.has(eventName)) {
+  if (debugMode /* && !ignoredEventsForDebug.has(eventName) */) {
     console.log(
-      "🎯 Champions recebidos:",
+      `[EVENT EMIT] 🎯 Champions recebidos:`,
       champArray,
       champArray.map((c) => c.name).join(", "),
     );
@@ -99,6 +104,7 @@ export function emitCombatEvent(eventName, payload, champions) {
       }
 
       try {
+        console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);
         const res = hook.call(source, {
           ...payload,
           self: champ, // alias enquanto refatora e migra tudo para consistência com os outros hooks
@@ -106,12 +112,12 @@ export function emitCombatEvent(eventName, payload, champions) {
         });
 
         if (res) {
-          if (debugMode) console.log(`⬅️ Result:`, res);
+          if (debugMode) console.log(`[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`, res);
           results.push(res);
         }
       } catch (err) {
         console.error(
-          `[HOOK ERROR] ${champ.name} (${source.key || "passive"})`,
+          `[HOOK ERROR] ${champ.name} → ${source.key || "passive"}.${eventName}`,
           err,
         );
       }
@@ -119,7 +125,7 @@ export function emitCombatEvent(eventName, payload, champions) {
   }
 
   if (debugMode) {
-    console.log("📦 Aggregated results:", results);
+    console.log(`[EVENT EMIT] 📦 Aggregated results:`, results);
     console.groupEnd();
   }
 
