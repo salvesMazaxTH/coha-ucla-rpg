@@ -1,5 +1,5 @@
 // Centralização do Ataque Básico idêntico ao dos skills dos campeões
-import { DamageEvent } from "../engine/combat/DamageEvent.js";
+import { DamageEvent } from "../engine/combat/damagePipeline/DamageEvent.js";
 
 const basicAttack = {
   key: "ataque_basico",

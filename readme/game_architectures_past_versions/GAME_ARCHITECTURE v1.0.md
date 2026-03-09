@@ -20,7 +20,7 @@
 12. [Sistema de StatusEffects](#12-sistema-de-statusEffects)
 13. [Sistema de Escudos (Shields)](#13-sistema-de-escudos-shields)
 14. [Sistema de Modificadores de Dano](#14-sistema-de-modificadores-de-dano)
-15. [Gerenciador de Animações — AnimsAndLogManager](#15-gerenciador-de-animações--animsandlogmanager)
+15. [Gerenciador de Animações — AnimsAndLogManager](#15-gerenciador-de-animações--AnimsAndLogManager)
 16. [Indicadores de Status — StatusIndicator](#16-indicadores-de-status--statusindicator)
 17. [Histórico de Turnos](#17-histórico-de-turnos)
 18. [Modo de Edição / Debug](#18-modo-de-edição--debug)
@@ -64,7 +64,7 @@
 │   ├── js/
 │   │   ├── main.js             # Ponto de entrada do cliente; toda lógica de UI e socket
 │   │   └── animation/
-│   │       └── animsAndLogManager.js   # Fila de animações e log de combate
+│   │       └── AnimsAndLogManager.js   # Fila de animações e log de combate
 │   └── styles/
 │       ├── style.css           # Layout, componentes, telas
 │       └── animations.css      # Keyframes, classes de efeito (damage, heal, buff…)
@@ -745,7 +745,7 @@ Existe também `champion.damageReductionModifiers` para redução de dano recebi
 
 ## 15. Gerenciador de Animações — AnimsAndLogManager
 
-**Arquivo**: `public/js/animation/animsAndLogManager.js`
+**Arquivo**: `public/js/animation/AnimsAndLogManager.js`
 
 Exporta uma factory function `createCombatAnimationManager(deps)` que retorna o gerenciador. É instanciado em `main.js` com injeção de dependências.
 

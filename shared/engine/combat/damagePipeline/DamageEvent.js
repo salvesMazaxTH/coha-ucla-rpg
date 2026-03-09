@@ -1,5 +1,9 @@
-import { formatChampionName } from "../../ui/formatters.js";
-import { emitCombatEvent } from "./combatEvents.js";
+import { formatChampionName } from "../../../ui/formatters.js";
+import { emitCombatEvent } from "../combatEvents.js";
+import { applyAffinity } from "./damageSystems/affinitySystem.js";
+import { processCrit } from "./damageSystems/critSystem.js";
+import { applyDamageModifiers } from "./damageSystems/modifierSystem.js";
+import { defenseToPercent } from "./damageSystems/defenseSystem.js";
 
 export class DamageEvent {
   static Modes = {
@@ -8,14 +12,9 @@ export class DamageEvent {
     ABSOLUTE: "absolute",
   };
 
-  static ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
-
   static GLOBAL_DMG_CAP = 999;
 
   static debugMode = true;
-
-  static DEFAULT_CRIT_BONUS = 55;
-  static MAX_CRIT_CHANCE = 95;
 
   constructor(params) {
     const { user, attacker, target, skill, context, baseDamage } = params;
@@ -175,11 +174,11 @@ export class DamageEvent {
     if (this.mode === DamageEvent.Modes.ABSOLUTE) return;
     // ordem importa
     // crit -> modifiers -> affinity
-    this._processCrit();
+    processCrit(this, DamageEvent.debugMode);
 
-    this._applyDamageModifiers();
+    applyDamageModifiers(this, DamageEvent.debugMode);
 
-    this._applyAffinity();
+    applyAffinity(this, DamageEvent.debugMode);
   }
 
   runBeforeHooks() {
@@ -230,7 +229,7 @@ export class DamageEvent {
       ? Math.min(baseDefense, currentDefense)
       : currentDefense;
 
-    const defensePercent = DamageEvent._defenseToPercent(defenseUsed);
+    const defensePercent = defenseToPercent(defenseUsed, DamageEvent.debugMode);
 
     const { flat, percent } = this.target.getTotalDamageReduction?.() || {
       flat: 0,
@@ -336,6 +335,9 @@ export class DamageEvent {
     const hpBefore = this.target.HP;
 
     const damageToApply = this.damage;
+
+    console.log(`[DAMAGE COMPOSITION] damageToApply: ${damageToApply}`);
+    console.log(`[DAMAGE COMPOSITION] hpBefore: ${hpBefore}`);
 
     this.target.takeDamage(damageToApply, this.context);
 
@@ -539,129 +541,6 @@ export class DamageEvent {
     return Math.round(x / 5) * 5;
   }
 
-  static _rollCrit(user, context, critOptions = {}) {
-    const { force = false, disable = false } = critOptions;
-
-    const chance = Math.min(user?.Critical || 0, DamageEvent.MAX_CRIT_CHANCE);
-    const bonus = user?.critBonusOverride || DamageEvent.DEFAULT_CRIT_BONUS;
-
-    if (disable) {
-      return {
-        didCrit: false,
-        bonus: 0,
-        roll: null,
-        forced: false,
-        disabled: true,
-      };
-    }
-
-    if (force) {
-      return {
-        didCrit: true,
-        bonus,
-        roll: null,
-        forced: true,
-        disabled: false,
-      };
-    }
-
-    const roll = Math.random() * 100;
-
-    const didCrit = context?.editMode?.alwaysCrit ? true : roll < chance;
-
-    if (DamageEvent.debugMode) {
-      console.log(`🎯 Roll: ${roll.toFixed(2)}`);
-      console.log(`🎲 Chance necessária: ${chance}%`);
-      console.log(didCrit ? "✅ CRÍTICO!" : "❌ Sem crítico");
-    }
-
-    return {
-      didCrit,
-      bonus: didCrit ? bonus : 0,
-      roll,
-      forced: false,
-      disabled: false,
-    };
-  }
-
-  static _defenseToPercent(defense) {
-    if (DamageEvent.debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
-
-    if (!defense) {
-      if (DamageEvent.debugMode) {
-        console.log(`Defense: ${defense} (ou 0)`);
-        console.log(`Redução percentual: 0%`);
-        console.groupEnd();
-      }
-      return 0;
-    }
-
-    // --- Constantes globais do modelo ---
-    const BASE_DEF = 220;
-    const BASE_REDUCTION = 0.75;
-    const MAX_REDUCTION = 0.95;
-    const K = 0.0045;
-
-    // --- Curva base (até 150) ---
-    const curve = {
-      0: 0.0,
-      35: 0.25,
-      60: 0.4,
-      85: 0.53,
-      110: 0.6,
-      150: 0.65,
-      200: 0.72,
-      220: 0.78,
-    };
-
-    const keys = Object.keys(curve)
-      .map(Number)
-      .sort((a, b) => a - b);
-
-    let effective = 0;
-
-    // ================================
-    // Segmento 1 — interpolado
-    // ================================
-    if (defense <= BASE_DEF) {
-      if (defense <= keys[0]) {
-        effective = curve[keys[0]];
-      } else {
-        for (let i = 0; i < keys.length - 1; i++) {
-          const a = keys[i];
-          const b = keys[i + 1];
-
-          if (defense >= a && defense <= b) {
-            const t = (defense - a) / (b - a);
-            effective = curve[a] + t * (curve[b] - curve[a]);
-            break;
-          }
-        }
-      }
-    }
-    // ================================
-    // Segmento 2 — cauda assintótica
-    // ================================
-    else {
-      effective =
-        BASE_REDUCTION +
-        (MAX_REDUCTION - BASE_REDUCTION) *
-          (1 - Math.exp(-K * (defense - BASE_DEF)));
-    }
-
-    // Segurança numérica
-    effective = Math.min(effective, MAX_REDUCTION);
-
-    if (DamageEvent.debugMode) {
-      console.log(`Defense original: ${defense}`);
-      console.log(`Redução interpolada: ${(effective * 100).toFixed(2)}%`);
-      console.log(`Dano que PASSA: ${((1 - effective) * 100).toFixed(2)}%`);
-      console.groupEnd();
-    }
-
-    return effective;
-  }
-
   static _rollEvasion({ attacker, target, context }) {
     const editMode = context?.editMode ?? {};
     const chance = Number(target.Evasion) || 0;
@@ -769,182 +648,6 @@ export class DamageEvent {
       log: `${username} usou ${skillName} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
       crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
     };
-  }
-
-  _processCrit() {
-    if (DamageEvent.debugMode) {
-      console.group(`⚔️ [CRÍTICO PROCESSING] - Damage Base: ${this.damage}`);
-    }
-
-    const chance = Math.min(
-      this.attacker?.Critical || 0,
-      DamageEvent.MAX_CRIT_CHANCE,
-    );
-
-    this.crit = {
-      chance,
-      didCrit: false,
-      bonus: 0,
-      roll: null,
-      forced: false,
-    };
-
-    if (chance > 0 || this.critOptions?.force || this.critOptions?.disable) {
-      const rolled = DamageEvent._rollCrit(
-        this.attacker,
-        this.context,
-        this.critOptions,
-      );
-
-      if (rolled) Object.assign(this.crit, rolled);
-    }
-
-    const critBonusFactor = this.crit.bonus / 100;
-    const critExtra = this.damage * critBonusFactor;
-
-    this.crit.critBonusFactor = critBonusFactor;
-    this.crit.critExtra = critExtra;
-
-    if (this.crit.didCrit) {
-      emitCombatEvent(
-        "onCriticalHit",
-        {
-          attacker: this.attacker,
-          critSrc: this.attacker,
-          target: this.target,
-          context: this.context,
-          forced: this.crit.forced,
-        },
-        this.allChampions,
-      );
-    }
-
-    if (DamageEvent.debugMode) console.groupEnd();
-  }
-
-  _applyDamageModifiers() {
-    if (!this.attacker?.getDamageModifiers) {
-      if (DamageEvent.debugMode) {
-        console.log(`⚠️ [MODIFIERS] Nenhum modificador de dano disponível`);
-      }
-      return;
-    }
-
-    if (DamageEvent.debugMode) {
-      console.group(`🔧 [DAMAGE MODIFIERS]`);
-      console.log(`📍 Damage Inicial: ${this.damage}`);
-    }
-
-    this.attacker.purgeExpiredModifiers(this.context.currentTurn);
-
-    const modifiers = this.attacker.getDamageModifiers();
-
-    if (DamageEvent.debugMode) {
-      console.log(`🎯 Total de modificadores: ${modifiers.length}`);
-    }
-
-    for (let i = 0; i < modifiers.length; i++) {
-      const mod = modifiers[i];
-
-      if (DamageEvent.debugMode) {
-        console.log(
-          `  └─ Modifier ${i + 1}: name='${mod.name || "Unknown"}' | damage=${this.damage}`,
-        );
-      }
-
-      if (mod.apply) {
-        const oldDamage = this.damage;
-
-        const out = mod.apply({
-          baseDamage: this.damage,
-          user: this.attacker,
-          target: this.target,
-          skill: this.skill,
-        });
-
-        if (typeof out === "number") {
-          this.damage = out;
-
-          if (DamageEvent.debugMode) {
-            console.log(
-              `     ✏️ Aplicado: ${oldDamage} → ${this.damage} (Δ ${this.damage - oldDamage})`,
-            );
-          }
-        }
-      }
-    }
-
-    if (DamageEvent.debugMode) {
-      console.log(`📊 Damage Final: ${this.damage}`);
-      console.groupEnd();
-    }
-  }
-
-  _applyAffinity() {
-    const skillElement = this.skill?.element;
-
-    if (!skillElement) return;
-    if (!this.target?.elementalAffinities?.length) return;
-
-    if (DamageEvent.debugMode) {
-      console.log("🔥 _applyAffinity chamado:", {
-        skillElement,
-        target: this.target.name,
-        affinities: this.target.elementalAffinities,
-        damage: this.damage,
-      });
-    }
-
-    let strongestRelation = "neutral";
-
-    for (const affinity of this.target.elementalAffinities) {
-      const relation = this._getElementalRelation(skillElement, affinity);
-
-      if (relation === "weak") {
-        this.damage = Math.floor(this.damage * 1.2 + 25);
-        strongestRelation = "weak";
-        break;
-      }
-
-      if (relation === "resist" && strongestRelation !== "weak") {
-        this.damage = Math.max(this.damage - 40, 0);
-        strongestRelation = "resist";
-        break;
-      }
-    }
-
-    if (strongestRelation !== "neutral") {
-      const message =
-        strongestRelation === "weak"
-          ? "✨ É SUPER-EFETIVO!"
-          : "🛡️ Não é muito efetivo...";
-
-      this.context.visual.dialogEvents ??= [];
-      this.context.visual.dialogEvents.push({
-        type: "dialog",
-        message,
-        blocking: false,
-      });
-    }
-
-    this.context.ignoreMinimumFloor = true;
-  }
-
-  _getElementalRelation(attackingElement, defendingElement) {
-    const cycle = DamageEvent.ELEMENT_CYCLE;
-
-    const index = cycle.indexOf(attackingElement);
-
-    if (index === -1) return "neutral";
-
-    const strongAgainst = cycle[(index + 1) % cycle.length];
-    const weakAgainst = cycle[(index - 1 + cycle.length) % cycle.length];
-
-    if (defendingElement === strongAgainst) return "weak";
-
-    if (defendingElement === weakAgainst) return "resist";
-
-    return "neutral";
   }
 
   // --- HOOKS DE PRÉ-DANO (Before) ---

@@ -4,7 +4,7 @@ import { syncChampionVFX } from "./vfx/vfxManager.js";
 import { playObliterateEffect } from "./vfx/obliterate.js";
 
 // ============================================================
-//  animsAndLogManager.js — Combat Animation & Log System (v2)
+//  AnimsAndLogManager.js — Combat Animation & Log System (v2)
 //
 //  Queue-based, deterministic animation system.
 //  Receives structured combat action envelopes from the server

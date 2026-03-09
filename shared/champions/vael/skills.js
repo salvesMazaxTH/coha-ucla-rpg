@@ -1,5 +1,5 @@
 import { formatChampionName } from "../../ui/formatters.js";
-import { DamageEvent } from "../../engine/combat/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/damagePipeline/DamageEvent.js";
 import basicAttack from "../basicAttack.js";
 
 const vaelSkills = [

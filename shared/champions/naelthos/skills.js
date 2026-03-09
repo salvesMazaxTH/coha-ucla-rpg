@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/combat/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/damagePipeline/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -92,11 +92,7 @@ const naelthosSkills = [
       user.applyStatusEffect("inerte", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
-      user.applyStatusEffect(
-        "imunidadeAbsoluta",
-        this.effectDuration,
-        context,
-      );
+      user.applyStatusEffect("imunidadeAbsoluta", this.effectDuration, context);
 
       const userName = formatChampionName(user);
       return {

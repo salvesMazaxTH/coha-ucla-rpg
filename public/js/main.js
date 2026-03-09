@@ -530,7 +530,7 @@ const surrenderCancel = document.getElementById("surrender-cancel");
 const surrenderConfirm = document.getElementById("surrender-confirm");
 
 // ============================================================
-//  EXPORTS GLOBAIS (usados por animsAndLogManager e outros)
+//  EXPORTS GLOBAIS (usados por AnimsAndLogManager e outros)
 // ============================================================
 
 window.StatusIndicator = StatusIndicator;
