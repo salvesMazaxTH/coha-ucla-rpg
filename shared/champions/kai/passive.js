@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/combat/damagePipeline/DamageEvent.js";
+import { DamageEvent } from "../../engine/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
@@ -43,7 +43,7 @@ export default {
     }
 
     const impactDamage =
-      owner.runtime?.fireStance !== "brasa_viva" ? 35 : this.flamingFistsDamage;
+      owner.runtime?.fireStance === "brasa_viva" ? 35 : this.flamingFistsDamage;
 
     console.log("[KAI] Impacto térmico ativado");
     console.log("[KAI] Dano adicional:", impactDamage);

@@ -1,6 +1,6 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
 import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
-import { emitCombatEvent } from "../engine/combat/combatEvents.js";
+import { emitCombatEvent } from "../engine/combatEvents.js";
 
 export class Champion {
   constructor(data = {}) {

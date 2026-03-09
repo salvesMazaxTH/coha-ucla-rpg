@@ -14,7 +14,7 @@ export default {
     return `
     O Barão converte dano recebido em energia destrutiva.
 
-    Recebe +${this.damageTakenBonusPercent}% de dano adicional (mín. +${this.damageTakenBonusFlatMin}).
+    Recebe +${this.damageTakenBonusPercent}% de dano adicional (não vale para dano absoluto e DoT).
 
     Armazena ${this.storageBasePercent}% do dano sofrido (máx. ${this.storageCap}). Com Blindagem Reforçada, armazena ${this.storageShieldPercent}% em vez disso.
 

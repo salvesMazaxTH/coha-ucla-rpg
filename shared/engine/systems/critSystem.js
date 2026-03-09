@@ -1,7 +1,7 @@
 const DEFAULT_CRIT_BONUS = 55;
 const MAX_CRIT_CHANCE = 95;
 
-import { emitCombatEvent } from "../../combatEvents.js";
+import { emitCombatEvent } from "../combatEvents.js";
 
 export function processCrit(event, debugMode) {
   if (debugMode) {
@@ -19,7 +19,12 @@ export function processCrit(event, debugMode) {
   };
 
   if (chance > 0 || event.critOptions?.force || event.critOptions?.disable) {
-    const rolled = _rollCrit(event.attacker, event.context, event.critOptions, debugMode);
+    const rolled = _rollCrit(
+      event.attacker,
+      event.context,
+      event.critOptions,
+      debugMode,
+    );
 
     if (rolled) Object.assign(event.crit, rolled);
   }
@@ -30,7 +35,9 @@ export function processCrit(event, debugMode) {
   event.crit.critBonusFactor = critBonusFactor;
   event.crit.critExtra = critExtra;
   if (debugMode) {
-    console.log(`[DAMAGE COMPOSITION] 💥 Dano extra de crítico: ${critExtra.toFixed(2)}`);
+    console.log(
+      `[DAMAGE COMPOSITION] 💥 Dano extra de crítico: ${critExtra.toFixed(2)}`,
+    );
   }
 
   if (event.crit.didCrit) {

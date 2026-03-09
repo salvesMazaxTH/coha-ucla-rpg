@@ -1,5 +1,5 @@
 /* import { CombatResolver } from "../../engine/combat/combatResolver.js"; */
-import { DamageEvent } from "../../engine/combat/damagePipeline/DamageEvent.js";
+import { DamageEvent } from "../../engine/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 

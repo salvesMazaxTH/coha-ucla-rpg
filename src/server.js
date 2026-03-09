@@ -91,7 +91,7 @@ import {
   formatChampionName,
   formatPlayerName,
 } from "../shared/ui/formatters.js";
-import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
+import { emitCombatEvent } from "../shared/engine/combatEvents.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -1223,18 +1223,18 @@ function handleStartTurn() {
     context: turnStartContext,
   }); */
 
-  // 3. Limpar expirados
-  activeChampions.forEach((champion) => {
-    champion.purgeExpiredStatModifiers(currentTurn);
-    champion.purgeExpiredStatusEffects(currentTurn);
-  });
-
   // 4. Hooks onTurnStart
   emitCombatEvent(
     "onTurnStart",
     { context: turnStartContext },
     activeChampions,
   );
+
+  // 3. Limpar expirados
+  activeChampions.forEach((champion) => {
+    champion.purgeExpiredStatModifiers(currentTurn);
+    champion.purgeExpiredStatusEffects(currentTurn);
+  });
 
   // 5. Regen global
   activeChampions.forEach((champion) => {
