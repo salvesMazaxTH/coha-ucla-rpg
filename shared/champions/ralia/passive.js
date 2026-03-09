@@ -12,9 +12,9 @@ Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico n
     onBeforeDmgTaking: "self",
   },
 
-  onBeforeDmgTaking({ dmgSrc, dmgReceiver, owner, crit, context }) {
+  onBeforeDmgTaking({ source, target, owner, crit, context }) {
     console.log(
-      `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${dmgSrc.name}`,
+      `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${source.name}`,
     );
     let { critExtra } = crit;
     critExtra = Number(critExtra) || 0;

@@ -20,7 +20,15 @@ export class DamageEvent {
   static debugMode = true;
 
   constructor(params) {
-    const { user, attacker, target, skill, context, baseDamage } = params;
+    const { attacker, defender, skill, context, baseDamage } = params;
+
+    if (!attacker) {
+      throw new Error("DamageEvent precisa de attacker");
+    }
+
+    if (!defender) {
+      throw new Error("DamageEvent precisa de defender");
+    }
 
     this.mode = params.mode ?? DamageEvent.Modes.STANDARD;
 
@@ -29,8 +37,8 @@ export class DamageEvent {
 
     this.piercingPortion = params.piercingPortion || 0;
 
-    this.attacker = user ?? attacker;
-    this.target = target;
+    this.attacker = attacker;
+    this.defender = defender;
     this.skill = skill;
 
     this.context = context ?? {};

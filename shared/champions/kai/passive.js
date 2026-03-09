@@ -18,12 +18,12 @@ export default {
     onAfterDmgDealing: "source",
   },
 
-  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, skill, context }) {
+  onAfterDmgDealing({ source, target, owner, damage, skill, context }) {
     console.log("[KAI] Hook onAfterDmgDealing disparado");
     console.log("[KAI] Owner:", owner?.name);
     console.log("[KAI] Skill usada:", skill?.key);
     console.log("[KAI] Dano causado:", damage);
-    console.log("[KAI] Target:", dmgReceiver?.name);
+    console.log("[KAI] Target:", target?.name);
 
     if (!skill) {
       console.log("[KAI] Abortado: skill inexistente");
@@ -52,8 +52,8 @@ export default {
       mode: "hybrid",
       baseDamage: impactDamage,
       piercingPortion: impactDamage,
-      user: dmgSrc,
-      target: dmgReceiver,
+      attacker: source,
+      defender: target,
       skill: {
         key: "flaming_fists_bonus",
         name: this.name,
@@ -67,7 +67,7 @@ export default {
     if (result?.totalDamage > 0) {
       console.log("[KAI] Impacto causou dano, verificando afinidade elemental");
 
-      const affinities = dmgReceiver.elementalAffinities ?? [];
+      const affinities = target.elementalAffinities ?? [];
 
       console.log("[KAI] Afinidade do alvo:", affinities);
 
@@ -80,7 +80,7 @@ export default {
         const burnDuration =
           owner.runtime?.fireStance === "brasa_viva" ? 2 : this.burnDuration;
 
-        dmgReceiver.applyStatusEffect("queimando", burnDuration, context, {
+        target.applyStatusEffect("queimando", burnDuration, context, {
           source: owner.name,
         });
 
@@ -99,7 +99,7 @@ export default {
     console.log("[KAI] Hook finalizado");
 
     return {
-      log: `${formatChampionName(dmgSrc)} aplica ${impactDamage} de dano térmico a ${formatChampionName(dmgReceiver)} com ${owner.name}.`,
+      log: `${formatChampionName(source)} aplica ${impactDamage} de dano térmico a ${formatChampionName(target)} com ${owner.name}.`,
     };
   },
 };

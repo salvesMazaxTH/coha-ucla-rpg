@@ -2,12 +2,12 @@
 //  HELPERS DE MANIPULAÇÃO DE ULTÔMETRO
 // ============================================================
 /**
- * Aplica regeneração global de ultMeter (+2 unidades por turno)
+ * Aplica regeneração global de ultMeter (+3 unidades por turno)
  */
 function applyGlobalTurnRegen(champion, context) {
   if (!champion || !champion.alive) return 0;
 
-  const GLOBAL_ULT_REGEN = 2; // +2 unidades por turno (conforme spec)
+  const GLOBAL_ULT_REGEN = 3; // +3 unidades por turno (conforme spec)
 
   const applied = champion.addUlt({
     amount: GLOBAL_ULT_REGEN,
@@ -101,8 +101,8 @@ const editMode = {
   enabled: true,
   autoLogin: true,
   autoSelection: false,
-  actMultipleTimesPerTurn: true,
-  unavailableChampions: false,
+  actMultipleTimesPerTurn: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
@@ -820,6 +820,22 @@ function performSkillExecution(
   });
 
   context.currentSkill = skill;
+
+  if (!Array.isArray(targets)) {
+    throw new Error(
+      `[SKILL ERROR] ${skill.name} recebeu targets que não são array`,
+    );
+  }
+
+  if (targets.length === 0) {
+    throw new Error(`[SKILL ERROR] ${skill.name} recebeu targets vazio`);
+  }
+
+  for (const t of targets) {
+    if (!t || typeof t !== "object" || !t.id) {
+      throw new Error(`[SKILL ERROR] ${skill.name} recebeu target inválido`);
+    }
+  }
 
   // 🔹 3. Executar skill
   const result = skill.resolve({

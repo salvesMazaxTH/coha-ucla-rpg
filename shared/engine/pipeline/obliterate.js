@@ -1,19 +1,19 @@
 export function processObliterate(event) {
   console.log("🔥 _processObliterateIfNeeded chamado:", {
-    target: event.target.name,
-    hp: event.target.HP,
-    maxHP: event.target.maxHP,
+    defender: event.defender.name,
+    hp: event.defender.HP,
+    maxHP: event.defender.maxHP,
   });
   const rule = event.skill?.obliterateRule;
   if (!rule) return;
 
   // caso já esteja morto
-  if (event.target.alive === false) return;
+  if (event.defender.alive === false) return;
 
   // aliados não se executam
-  if (event.target.team === event.attacker.team) return;
+  if (event.defender.team === event.attacker.team) return;
 
-  if (event.target.runtime?.preventObliterate) {
+  if (event.defender.runtime?.preventObliterate) {
     console.log("[OBLITERATE] Cancelado por efeito de sobrevivência");
     return;
   }
@@ -26,16 +26,16 @@ export function processObliterate(event) {
     threshold = override;
   }
 
-  const hpPercent = event.target.HP / event.target.maxHP;
+  const hpPercent = event.defender.HP / event.defender.maxHP;
 
-  if (hpPercent <= threshold && event.target.HP > 0) {
-    const dmg = event.target.HP;
+  if (hpPercent <= threshold && event.defender.HP > 0) {
+    const dmg = event.defender.HP;
 
-    event.target.HP = 0;
-    event.target.alive = false;
+    event.defender.HP = 0;
+    event.defender.alive = false;
 
     event.context.registerDamage({
-      target: event.target,
+      target: event.defender,
       amount: dmg,
       sourceId: event.attacker?.id,
       flags: { isObliterate: true },

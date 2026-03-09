@@ -28,8 +28,8 @@ const baraoEstrondosoSkills = [
 
       const result = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -91,8 +91,8 @@ const baraoEstrondosoSkills = [
       const baseDamage = (user.Attack * this.bf) / 100 + storedDamage;
       const damageResult = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         critOptions: { force: true }, // crítico garantido

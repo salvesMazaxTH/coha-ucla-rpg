@@ -31,7 +31,7 @@ export default {
     };
   },
 
-  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgDealing({ source, target, owner, damage, context }) {
     if (damage <= 0) return;
 
     const roll = Math.random();
@@ -44,7 +44,7 @@ export default {
       return;
     }
 
-    const paralyzed = dmgReceiver.applyStatusEffect(
+    const paralyzed = target.applyStatusEffect(
       "paralisado",
       this.paralyzeDuration,
       context,
@@ -56,17 +56,17 @@ export default {
 
     if (!paralyzed) {
       console.log(
-        `[PASSIVA — Energia Pulsante] ${formatChampionName(dmgSrc)} tentou aplicar "Paralisado" em ${formatChampionName(dmgReceiver)}, mas falhou.`,
+        `[PASSIVA — Energia Pulsante] ${formatChampionName(source)} tentou aplicar "Paralisado" em ${formatChampionName(target)}, mas falhou.`,
       );
       return;
     }
 
     console.log(
-      `— [PASSIVA — Energia Pulsante] ${formatChampionName(dmgSrc)} aplicou "Paralisado" em ${formatChampionName(dmgReceiver)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
+      `— [PASSIVA — Energia Pulsante] ${formatChampionName(source)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
     );
 
     return {
-      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(dmgSrc)} aplicou "Paralisado" em ${formatChampionName(dmgReceiver)} por ${this.paralyzeDuration} turnos!`,
+      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(source)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos!`,
     };
   },
 };

@@ -22,7 +22,7 @@ export default {
     onAfterDmgDealing: "source",
   },
 
-  onAfterDmgDealing({ attacker, owner, damage, context }) {
+  onAfterDmgDealing({ source, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     owner.runtime = owner.runtime || {};

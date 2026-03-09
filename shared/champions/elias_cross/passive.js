@@ -12,15 +12,7 @@ export default {
     onAfterDmgDealing: "source",
   },
 
-  onAfterDmgDealing({
-    dmgSrc,
-    dmgReceiver,
-    owner,
-    target,
-    skill,
-    damage,
-    context,
-  }) {
+  onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
     if (context.damageDepth > 0) return;
 
     owner.runtime.passiveChance ??= this.initialChance;
@@ -38,8 +30,8 @@ export default {
       context.extraDamageQueue.push({
         mode: "standard",
         baseDamage: skill.baseDamage,
-        user: owner,
-        target: dmgReceiver,
+        attacker: owner,
+        target,
         skill,
       });
     }

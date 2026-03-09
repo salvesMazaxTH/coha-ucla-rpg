@@ -27,8 +27,8 @@ const vaelSkills = [
 
       return new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -57,8 +57,8 @@ const vaelSkills = [
       if (primary) {
         const primaryResult = new DamageEvent({
           baseDamage,
-          user,
-          target: primary,
+          attacker: user,
+          defender: primary,
           skill: this,
           context,
           critOptions: { disable: true }, // sem crítico
@@ -70,8 +70,8 @@ const vaelSkills = [
       if (secondary) {
         const secondaryResult = new DamageEvent({
           baseDamage: (user.Attack * this.bfSecondary) / 100,
-          user,
-          target: secondary,
+          attacker: user,
+          defender: secondary,
           skill: this,
           context,
           critOptions: { force: true }, // crítico garantido
@@ -103,8 +103,8 @@ const vaelSkills = [
 
       return new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,

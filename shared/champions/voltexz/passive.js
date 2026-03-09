@@ -15,7 +15,7 @@ export default {
     onBeforeDmgDealing: "source",
   },
 
-  onAfterDmgDealing({ dmgSrc, dmgReceiver, owner, skill, damage, context }) {
+  onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
 
     // Ataque Básico não aplica recuo nem Sobrecarga
@@ -39,9 +39,9 @@ export default {
         mode: "absolute",
         baseDamage: recoilDamage,
         piercingPortion: recoilDamage,
-        user: owner,
+        attacker: owner,
         source: owner,
-        target: owner,
+        defender: owner,
         skill: {
           key: "sobrecarga_instavel_recoil",
         },
@@ -57,57 +57,49 @@ export default {
       });
     }
 
-    if (dmgReceiver.hasStatusEffect?.("sobrecarga")) {
-      dmgReceiver.removeStatusEffect("sobrecarga");
+    if (target.hasStatusEffect?.("sobrecarga")) {
+      target.removeStatusEffect("sobrecarga");
       return;
     }
 
-    dmgReceiver.applyStatusEffect(
-      "sobrecarga",
-      this.sobrecargaDuration,
-      context,
-      {
-        sourceSkill: skill,
-      },
-    );
+    target.applyStatusEffect("sobrecarga", this.sobrecargaDuration, context, {
+      sourceSkill: skill,
+    });
 
     return { log };
   },
 
   onBeforeDmgDealing({
-    dmgSrc,
-    dmgReceiver,
+    source,
+    target,
     owner,
     crit,
     damage,
     context,
     skill,
   }) {
-    console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(dmgSrc));
+    console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(source));
 
     console.log("OWNER:", owner?.name);
-    console.log("DMG SRC:", dmgSrc?.name);
-    console.log("ALVO:", dmgReceiver?.name);
-    console.log(
-      "HAS SOBRECARGA?",
-      dmgReceiver?.hasStatusEffect?.("sobrecarga"),
-    );
+    console.log("DMG SRC:", source?.name);
+    console.log("ALVO:", target?.name);
+    console.log("HAS SOBRECARGA?", target?.hasStatusEffect?.("sobrecarga"));
 
-    if (!dmgReceiver.hasStatusEffect?.("sobrecarga")) return;
+    if (!target.hasStatusEffect?.("sobrecarga")) return;
 
     const bonusDamage = Math.ceil((damage * this.sobrecargaBonusPercent) / 100);
 
-    dmgReceiver.removeStatusEffect("sobrecarga");
+    target.removeStatusEffect("sobrecarga");
 
     context.visual.dialogEvents.push({
       type: "dialog",
-      message: `${formatChampionName(dmgReceiver)} foi consumido por "Sobrecarga"!`,
-      sourceId: dmgSrc.id,
-      targetId: dmgReceiver.id,
+      message: `${formatChampionName(target)} foi consumido por "Sobrecarga"!`,
+      sourceId: source.id,
+      targetId: target.id,
       blocking: false,
     });
 
-    let log = `⚡ ACERTO ! ${formatChampionName(dmgSrc)} explorou "Sobrecarga" de ${formatChampionName(dmgReceiver)} (+${this.sobrecargaBonusPercent}% dano)!`;
+    let log = `⚡ ACERTO ! ${formatChampionName(source)} explorou "Sobrecarga" de ${formatChampionName(target)} (+${this.sobrecargaBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

@@ -396,7 +396,7 @@ Todos os campeões usam o **ultômetro** como sistema unificado de recurso para 
 
 ```js
 champion.ultMeter = 0; // 0-15 unidades
-champion.ultCap = 15;  // máximo padrão
+champion.ultCap = 15; // máximo padrão
 ```
 
 ### Ganho de Ultômetro
@@ -428,24 +428,32 @@ A cada início de turno, todos os campeões vivos recebem `+2 unidades` automati
 
 ## 8. Pipeline de Combate — DamageEvent
 
-**Arquivo**: `shared/core/DamageEvent.js`
+**Arquivo**: `shared/engine/DamageEvent.js`
 
 `DamageEvent` é uma **classe** (não singleton). Cada evento de dano cria uma instância independente, executa a pipeline completa e retorna um resultado estruturado. É o substituto direto de `CombatResolver.processDamageEvent()`.
+
+### Convenção Oficial de Papéis (Contrato Rígido)
+
+- Skill layer: `user`, `targets`
+- Combat events layer: `source`, `target`, `owner`
+- Damage system: `attacker`, `defender`
+
+Regra: não usar aliases cruzados entre camadas.
 
 ### Uso
 
 ```js
-// Dentro de skill.resolve():
+// Dentro de skill.resolve({ user, targets, context }):
 const result = new DamageEvent({
   baseDamage,
-  user,            // alias: attacker
-  target,
+  attacker: user,
+  defender: target,
   skill,
   context,
-  mode,            // "standard" | "hybrid" | "absolute" (padrão: "standard")
+  mode, // "standard" | "hybrid" | "absolute" (padrão: "standard")
   piercingPortion, // porção que ignora defesa (modo hybrid)
-  critOptions,     // { force?, disable? }
-  allChampions,    // Map ou array de todos os campeões (necessário para hooks)
+  critOptions, // { force?, disable? }
+  allChampions, // Map ou array de todos os campeões (necessário para hooks)
 }).execute();
 ```
 
@@ -479,7 +487,7 @@ emitCombatEnvelopesFromContext({ user, skill, context })
 │     → se cancelado: context.registerDamage({ flags:{immune:true} }); retorna resultado imune
 │
 ├── Evasão? (saltado se mode === "absolute" ou skill.cannotBeEvaded)
-│     → DamageEvent._rollEvasion({ attacker, target, context })
+│     → DamageEvent._rollEvasion({ attacker, defender, context })
 │     → se evadido: context.registerDamage({ flags:{evaded:true} }); retorna
 │
 └── Shield Block? (saltado se mode === "absolute" ou skill.cannotBeBlocked)
@@ -491,7 +499,7 @@ emitCombatEnvelopesFromContext({ user, skill, context })
 ```
 ├── _processCrit()           → rola crítico; dispara onCriticalHit se acertou
 ├── _applyDamageModifiers()  → aplica mods do atacante (purge de expirados antes)
-└── _applyAffinity()         → verifica skill.element vs target.elementalAffinities
+└── _applyAffinity()         → verifica skill.element vs defender.elementalAffinities
                                 → +20%+25 flat (fraqueza) ou -40 flat (resistência)
                                 → injeta dialogEvent em context.visual.dialogEvents
                                 → seta context.ignoreMinimumFloor = true se não-neutro
@@ -582,11 +590,11 @@ Para cada extra em context.extraDamageQueue:
 
 ### Damage Modes
 
-| Mode         | Comportamento                                                                  |
-| ------------ | ------------------------------------------------------------------------------ |
-| `"standard"` | Pipeline completa com defesa, crit, hooks                                      |
+| Mode         | Comportamento                                                                    |
+| ------------ | -------------------------------------------------------------------------------- |
+| `"standard"` | Pipeline completa com defesa, crit, hooks                                        |
 | `"absolute"` | Bypassa preChecks, crit, prepareDamage, hooks before — dano aplicado diretamente |
-| `"hybrid"`   | `piercingPortion` do dano ignora defesa; o restante passa pela curva normal    |
+| `"hybrid"`   | `piercingPortion` do dano ignora defesa; o restante passa pela curva normal      |
 
 ### `damageDepth` e Reações
 
@@ -606,11 +614,11 @@ onAfterDmgTaking({ context }) {
 
 ### Flags de Skill
 
-| Flag                           | Efeito                                                                |
-| ------------------------------ | --------------------------------------------------------------------- |
-| `cannotBeEvaded: true`         | Pula a checagem de evasão em `preChecks`                              |
-| `cannotBeBlocked: true`        | Pula a checagem de shield block em `preChecks`                        |
-| `obliterateRule(dmgEvent) → number` | Se HP/maxHP ≤ threshold retornado → mata instantaneamente        |
+| Flag                                | Efeito                                                    |
+| ----------------------------------- | --------------------------------------------------------- |
+| `cannotBeEvaded: true`              | Pula a checagem de evasão em `preChecks`                  |
+| `cannotBeBlocked: true`             | Pula a checagem de shield block em `preChecks`            |
+| `obliterateRule(dmgEvent) → number` | Se HP/maxHP ≤ threshold retornado → mata instantaneamente |
 
 ### `isDot` — Supressão de After Hooks
 
@@ -794,10 +802,10 @@ Quando não-neutro: injeta um `dialogEvent` em `context.visual.dialogEvents` e s
 
 ```js
 // Campeão:
-elementalAffinities: ["lightning"]  // array — pode ter múltiplos
+elementalAffinities: ["lightning"]; // array — pode ter múltiplos
 
 // Skill:
-element: "lightning"  // elemento do dano desta skill
+element: "lightning"; // elemento do dano desta skill
 ```
 
 ---
@@ -813,20 +821,20 @@ element: "lightning"  // elemento do dano desta skill
 
 ### Tabela de Hooks
 
-| Hook                      | Quando dispara                         | Quem recebe tipicamente  |
-| ------------------------- | -------------------------------------- | ------------------------ |
-| `onDamageIncoming`        | Antes de qualquer cálculo de dano      | Alvo (imunidades)        |
-| `onStatusEffectIncoming`  | Antes de aplicar um status-effect      | Alvo (imunidades de CC)  |
-| `onValidateAction`        | Antes de o campeão executar uma ação   | Usuário (CC que bloqueia)|
-| `onBeforeDmgDealing`      | Antes do atacante causar dano          | Atacante                 |
-| `onBeforeDmgTaking`       | Antes do alvo receber dano             | Alvo                     |
-| `onAfterDmgDealing`       | Após o atacante causar dano            | Atacante                 |
-| `onAfterDmgTaking`        | Após o alvo receber dano               | Alvo                     |
-| `onAfterLifeSteal`        | Após lifesteal ser aplicado            | Atacante                 |
-| `onCriticalHit`           | Quando um crítico ocorre               | Atacante                 |
-| `onTurnStart`             | Início de turno                        | Todos (status-effects)   |
-| `onActionResolved`        | Após resolução completa de uma ação    | Todos                    |
-| `onChampionDeath`         | Quando um campeão morre                | Todos                    |
+| Hook                     | Quando dispara                       | Quem recebe tipicamente   |
+| ------------------------ | ------------------------------------ | ------------------------- |
+| `onDamageIncoming`       | Antes de qualquer cálculo de dano    | Alvo (imunidades)         |
+| `onStatusEffectIncoming` | Antes de aplicar um status-effect    | Alvo (imunidades de CC)   |
+| `onValidateAction`       | Antes de o campeão executar uma ação | Usuário (CC que bloqueia) |
+| `onBeforeDmgDealing`     | Antes do atacante causar dano        | Atacante                  |
+| `onBeforeDmgTaking`      | Antes do alvo receber dano           | Alvo                      |
+| `onAfterDmgDealing`      | Após o atacante causar dano          | Atacante                  |
+| `onAfterDmgTaking`       | Após o alvo receber dano             | Alvo                      |
+| `onAfterLifeSteal`       | Após lifesteal ser aplicado          | Atacante                  |
+| `onCriticalHit`          | Quando um crítico ocorre             | Atacante                  |
+| `onTurnStart`            | Início de turno                      | Todos (status-effects)    |
+| `onActionResolved`       | Após resolução completa de uma ação  | Todos                     |
+| `onChampionDeath`        | Quando um campeão morre              | Todos                     |
 
 ### Contrato de Retorno de Hooks
 
@@ -870,7 +878,7 @@ champion.runtime.hookEffects.push({
   expiresAtTurn: context.currentTurn + 2,
   onBeforeDmgTaking({ damage }) {
     return { damage: damage * 0.5 };
-  }
+  },
 });
 ```
 
@@ -909,14 +917,19 @@ export const StatusEffectsRegistry = {
 const queimando = {
   key: "queimando",
   name: "Queimando",
-  type: "debuff",          // "buff" | "debuff"
-  subtypes: ["dot"],       // categorias opcionais: "cc", "hardCC", "immunity", "dot", ...
+  type: "debuff", // "buff" | "debuff"
+  subtypes: ["dot"], // categorias opcionais: "cc", "hardCC", "immunity", "dot", ...
 
   // Hooks — mesma interface de qualquer hookEffect
   onTurnStart({ self, context }) {
     const damage = 20;
     self.takeDamage(damage, context);
-    context.registerDamage({ target: self, amount: damage, sourceId: null, isDot: true });
+    context.registerDamage({
+      target: self,
+      amount: damage,
+      sourceId: null,
+      isDot: true,
+    });
     return { log: `${self.name} sofre dano de Queimadura.` };
   },
 };
@@ -930,12 +943,19 @@ const imunidadeAbsoluta = {
   subtypes: ["immunity"],
 
   onDamageIncoming({ dmgReceiver }) {
-    return { cancel: true, immune: true, message: `${dmgReceiver.name} é imune a dano!` };
+    return {
+      cancel: true,
+      immune: true,
+      message: `${dmgReceiver.name} é imune a dano!`,
+    };
   },
 
   onStatusEffectIncoming({ target, statusEffect }) {
     if (statusEffect.type !== "debuff") return;
-    return { cancel: true, message: `${target.name} é imune a efeitos negativos!` };
+    return {
+      cancel: true,
+      message: `${target.name} é imune a efeitos negativos!`,
+    };
   },
 };
 ```
@@ -997,19 +1017,19 @@ champion.removeStatusEffect("atordoado");
 
 // Verificar
 champion.hasStatusEffect("paralisado"); // → boolean
-champion.getStatusEffect("gelado");     // → dados do map ou null
+champion.getStatusEffect("gelado"); // → dados do map ou null
 ```
 
 ### StatusEffects com Indicador Visual
 
-| StatusEffect         | Ícone         | Cor de fundo     |
-| -------------------- | ------------- | ---------------- |
-| `paralisado`         | ⚡🚫⚡        | Laranja          |
-| `atordoado`          | 💫            | Branco           |
-| `inerte`             | 🔒            | Cinza            |
-| `imunidadeAbsoluta`  | (imagem)      | Ciano            |
-| `queimando`          | 🔥            | Laranja-vermelho |
-| `enraizado`          | 🌱            | Verde            |
+| StatusEffect        | Ícone    | Cor de fundo     |
+| ------------------- | -------- | ---------------- |
+| `paralisado`        | ⚡🚫⚡   | Laranja          |
+| `atordoado`         | 💫       | Branco           |
+| `inerte`            | 🔒       | Cinza            |
+| `imunidadeAbsoluta` | (imagem) | Ciano            |
+| `queimando`         | 🔥       | Laranja-vermelho |
+| `enraizado`         | 🌱       | Verde            |
 
 Para adicionar ícone a um novo status-effect, adicione entry em `StatusIndicator.statusEffectIcons`.
 
@@ -1039,10 +1059,10 @@ Escudos são armazenados em `champion.runtime.shields` como array de objetos:
 
 ### Tipos de Escudo
 
-| Tipo                      | Comportamento                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------- |
-| `"regular"`               | Absorve HP de dano antes de chegar ao HP do campeão (dentro de `takeDamage`)            |
-| `"supremo"` / `"feitiço"` | Bloqueia a **ação inteiramente** (verificado em `preChecks`); não absorve HP             |
+| Tipo                      | Comportamento                                                                |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `"regular"`               | Absorve HP de dano antes de chegar ao HP do campeão (dentro de `takeDamage`) |
+| `"supremo"` / `"feitiço"` | Bloqueia a **ação inteiramente** (verificado em `preChecks`); não absorve HP |
 
 Escudos regulares são consumidos em ordem (FIFO). Escudos com `amount <= 0` são removidos em `updateUI()`.
 
@@ -1102,26 +1122,26 @@ Server emits → handler enqueues → drainQueue() processa um por vez → anima
 ```js
 const manager = createCombatAnimationManager(deps);
 
-manager.handleCombatAction(envelope);     // → enqueue("combatAction", envelope)
-manager.handleCombatLog(text);            // → enqueue("combatLog", text)
+manager.handleCombatAction(envelope); // → enqueue("combatAction", envelope)
+manager.handleCombatLog(text); // → enqueue("combatLog", text)
 manager.handleGameStateUpdate(gameState); // → enqueue("gameStateUpdate", gameState)
-manager.handleTurnUpdate(turn);           // → enqueue("turnUpdate", turn)
-manager.handleChampionRemoved(championId);// → enqueue("championRemoved", championId)
-manager.handleGameOver(data);             // → enqueue("gameOver", data)
-manager.appendToLog(text);               // Acrescenta ao log sem fila (uso pontual)
-manager.reset();                         // Limpa a fila e reseta estado
+manager.handleTurnUpdate(turn); // → enqueue("turnUpdate", turn)
+manager.handleChampionRemoved(championId); // → enqueue("championRemoved", championId)
+manager.handleGameOver(data); // → enqueue("gameOver", data)
+manager.appendToLog(text); // Acrescenta ao log sem fila (uso pontual)
+manager.reset(); // Limpa a fila e reseta estado
 ```
 
 ### Tipos na Fila
 
-| Tipo              | Handler                     |
-| ----------------- | --------------------------- |
-| `combatAction`    | `processCombatAction()`     |
-| `gameStateUpdate` | `processGameStateUpdate()`  |
-| `turnUpdate`      | `processTurnUpdate()`       |
-| `championRemoved` | `processChampionRemoved()`  |
-| `combatLog`       | `processCombatLog()`        |
-| `gameOver`        | `handleGameOver()`          |
+| Tipo              | Handler                    |
+| ----------------- | -------------------------- |
+| `combatAction`    | `processCombatAction()`    |
+| `gameStateUpdate` | `processGameStateUpdate()` |
+| `turnUpdate`      | `processTurnUpdate()`      |
+| `championRemoved` | `processChampionRemoved()` |
+| `combatLog`       | `processCombatLog()`       |
+| `gameOver`        | `handleGameOver()`         |
 
 ### Processamento de `combatAction`
 
@@ -1188,7 +1208,15 @@ Função auxiliar que aplica um snapshot de estado do servidor ao Champion local
 ```js
 function syncChampionFromSnapshot(champion, snap) {
   // Stats
-  champion.HP, maxHP, Attack, Defense, Speed, Evasion, Critical, LifeSteal, ultMeter
+  (champion.HP,
+    maxHP,
+    Attack,
+    Defense,
+    Speed,
+    Evasion,
+    Critical,
+    LifeSteal,
+    ultMeter);
 
   // Runtime (shields, hookEffects, fireStance, etc.)
   champion.runtime = { ...snap.runtime };
@@ -1211,18 +1239,18 @@ Após todas as animações de uma ação, para cada campeão no array `state`:
 
 ### Efeitos Animados — Referência Rápida
 
-| Grupo                             | CSS aplicado                                | Float               |
-| --------------------------------- | ------------------------------------------- | ------------------- |
-| `damageEvents` (normal)           | `.damage` no `.champion`                    | `-N` tier 1–6       |
-| `damageEvents.obliterate`         | `.damage` + `playObliterateEffect()`        | `999`               |
-| `damageEvents.evaded=true`        | `.evasion`                                  | —                   |
-| `damageEvents.immune`             | Dialog "Imunidade Absoluta!"                | —                   |
-| `damageEvents.shieldBlocked`      | Dialog "escudo bloqueou"                    | —                   |
-| `healEvents`                      | `.heal` no `.champion`                      | `+N` `.heal-float`  |
-| `shieldEvents`                    | `syncChampionVFX` → shieldCanvas            | `🛡️ N`             |
-| `buffEvents`                      | `.buff` no `.champion`                      | `+BUFF`             |
-| `resourceEvents`                  | —                                           | `±N` barras         |
-| `dialogEvents`                    | Dialog blocking ou non-blocking             | —                   |
+| Grupo                        | CSS aplicado                         | Float              |
+| ---------------------------- | ------------------------------------ | ------------------ |
+| `damageEvents` (normal)      | `.damage` no `.champion`             | `-N` tier 1–6      |
+| `damageEvents.obliterate`    | `.damage` + `playObliterateEffect()` | `999`              |
+| `damageEvents.evaded=true`   | `.evasion`                           | —                  |
+| `damageEvents.immune`        | Dialog "Imunidade Absoluta!"         | —                  |
+| `damageEvents.shieldBlocked` | Dialog "escudo bloqueou"             | —                  |
+| `healEvents`                 | `.heal` no `.champion`               | `+N` `.heal-float` |
+| `shieldEvents`               | `syncChampionVFX` → shieldCanvas     | `🛡️ N`             |
+| `buffEvents`                 | `.buff` no `.champion`               | `+BUFF`            |
+| `resourceEvents`             | —                                    | `±N` barras        |
+| `dialogEvents`               | Dialog blocking ou non-blocking      | —                  |
 
 ### Damage Tier (Tamanho do Float)
 
@@ -1253,11 +1281,14 @@ O dialog de anúncio de skill resolve nomes **sempre pelo estado local** quando 
 ```js
 // Preferência: activeChampions.get(userId) → formatChampionName()
 // Fallback:    action.userName (pré-formatado pelo servidor)
-const resolvedUserName = userChampion ? formatChampionName(userChampion) : userName;
+const resolvedUserName = userChampion
+  ? formatChampionName(userChampion)
+  : userName;
 
 // Para o alvo: activeChampions.get(targetId) → formatChampionName()
 // Fallback:    action.targetName
-const resolvedTargetName = targetName || (targetChampion ? formatChampionName(targetChampion) : "Alvo");
+const resolvedTargetName =
+  targetName || (targetChampion ? formatChampionName(targetChampion) : "Alvo");
 ```
 
 O `targetId` no cliente é usado **para encontrar o elemento DOM** e para resolver nomes no dialog — nunca para buscar stats ou outros dados.
@@ -1285,11 +1316,11 @@ Canvas é criado dentro de `.portrait-wrapper` com classes `vfx-canvas vfx-layer
 
 ### VFX Disponíveis
 
-| VFX                | Arquivo               | Ativa quando                          |
-| ------------------ | --------------------- | ------------------------------------- |
-| `shield`           | `shieldCanvas.js`     | `runtime.shields.length > 0`          |
-| `fireStanceIdle`   | `fireStanceCanvas.js` | `runtime.fireStance === "postura"`    |
-| `fireStanceActive` | `fireStanceCanvas.js` | `runtime.fireStance === "brasa_viva"` |
+| VFX                | Arquivo               | Ativa quando                                                              |
+| ------------------ | --------------------- | ------------------------------------------------------------------------- |
+| `shield`           | `shieldCanvas.js`     | `runtime.shields.length > 0`                                              |
+| `fireStanceIdle`   | `fireStanceCanvas.js` | `runtime.fireStance === "postura"`                                        |
+| `fireStanceActive` | `fireStanceCanvas.js` | `runtime.fireStance === "brasa_viva"`                                     |
 | (obliterate)       | `obliterate.js`       | `playObliterateEffect(el)` — chamado diretamente, não via syncChampionVFX |
 
 ### API Pública
@@ -1298,9 +1329,9 @@ Canvas é criado dentro de `.portrait-wrapper` com classes `vfx-canvas vfx-layer
 import { syncChampionVFX, playVFX, stopVFX } from "./vfx/vfxManager.js";
 import { playObliterateEffect } from "./vfx/obliterate.js";
 
-syncChampionVFX(champion);          // uso padrão — sincroniza baseado em runtime
-playVFX("shield", canvasElement);   // inicia VFX manualmente
-stopVFX(canvasElement);             // para e limpa canvas
+syncChampionVFX(champion); // uso padrão — sincroniza baseado em runtime
+playVFX("shield", canvasElement); // inicia VFX manualmente
+stopVFX(canvasElement); // para e limpa canvas
 
 // Para execução/instakill (chamado por animateDamage quando obliterate=true):
 await playObliterateEffect(championEl);
@@ -1324,11 +1355,11 @@ Singleton responsável por criar, atualizar e animar os ícones de status sobre 
 ### API Principal
 
 ```js
-StatusIndicator.updateChampionIndicators(champion);    // Recria todos com base em statusEffects
-StatusIndicator.animateIndicatorAdd(champion, key);    // Pulsa o novo ícone
+StatusIndicator.updateChampionIndicators(champion); // Recria todos com base em statusEffects
+StatusIndicator.animateIndicatorAdd(champion, key); // Pulsa o novo ícone
 StatusIndicator.animateIndicatorRemove(champion, key); // Fade out + remoção (1500ms)
-StatusIndicator.startRotationLoop(champions);          // Alterna ícones múltiplos a cada 1750ms
-StatusIndicator.clearIndicators(champion);             // Remove todos sem animação
+StatusIndicator.startRotationLoop(champions); // Alterna ícones múltiplos a cada 1750ms
+StatusIndicator.clearIndicators(champion); // Remove todos sem animação
 ```
 
 ### Estrutura do Ícone
@@ -1368,10 +1399,10 @@ const editMode = {
   autoSelection: false,
   actMultipleTimesPerTurn: false,
   unreleasedChampions: true,
-  damageOutput: null,          // força dano fixo (ex: 999). null = desativado
-  alwaysCrit: false,           // força crítico em todos os ataques
-  alwaysEvade: false,          // força evasão bem-sucedida
-  executionOverride: null,     // sobrescreve threshold de obliterateRule (number)
+  damageOutput: null, // força dano fixo (ex: 999). null = desativado
+  alwaysCrit: false, // força crítico em todos os ataques
+  alwaysEvade: false, // força evasão bem-sucedida
+  executionOverride: null, // sobrescreve threshold de obliterateRule (number)
 };
 ```
 
@@ -1400,8 +1431,13 @@ const meu_campeao = {
   unreleased: false,
 
   // === STATS BASE ===
-  HP: 500, Attack: 80, Defense: 40, Speed: 70,
-  Evasion: 0, Critical: 10, LifeSteal: 0,
+  HP: 500,
+  Attack: 80,
+  Defense: 40,
+  Speed: 70,
+  Evasion: 0,
+  Critical: 10,
+  LifeSteal: 0,
 
   // === AFINIDADES (opcional) ===
   elementalAffinities: ["lightning"], // "fire"|"ice"|"earth"|"lightning"|"water"
@@ -1413,10 +1449,12 @@ const meu_campeao = {
       name: "Nome da Skill",
       priority: 0,
       contact: true,
-      element: "fire",           // opcional
+      element: "fire", // opcional
       cannotBeEvaded: false,
       cannotBeBlocked: false,
-      description() { return `Descrição.`; },
+      description() {
+        return `Descrição.`;
+      },
       targetSpec: ["enemy"],
       resolve({ user, targets, context }) {
         const { enemy } = targets;
@@ -1425,8 +1463,8 @@ const meu_campeao = {
         // ← novo padrão: instanciar DamageEvent
         return new DamageEvent({
           baseDamage,
-          user,
-          target: enemy,
+          attacker: user,
+          defender: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,
@@ -1457,22 +1495,30 @@ const meu_campeao = {
       onAfterDmgTaking: "target",
     },
 
-    onAfterDmgDealing({ attacker, target, damage, crit, skill, context }) {
+    onAfterDmgDealing({ source, target, owner, damage, crit, skill, context }) {
       // chamado após causar dano (NÃO dispara se context.isDot)
     },
-    onAfterDmgTaking({ attacker, target, damage, context }) {
+    onAfterDmgTaking({ source, target, owner, damage, context }) {
       // chamado após receber dano
     },
-    onBeforeDmgDealing({ attacker, target, damage, crit, skill, context }) {
+    onBeforeDmgDealing({
+      source,
+      target,
+      owner,
+      damage,
+      crit,
+      skill,
+      context,
+    }) {
       return { damage: damage * 1.2 }; // pode retornar modificações
     },
-    onBeforeDmgTaking({ dmgSrc, dmgReceiver, damage, crit, skill, context }) {
+    onBeforeDmgTaking({ source, target, owner, damage, crit, skill, context }) {
       return { damage: damage * 0.8, ignoreMinimumFloor: false };
     },
-    onTurnStart({ self, owner, context, allChampions }) {
+    onTurnStart({ owner, context, allChampions }) {
       // chamado no início do turno
     },
-    onCriticalHit({ attacker, critSrc, target, context }) {
+    onCriticalHit({ source, target, owner, critSrc, context }) {
       // chamado quando este campeão acerta um crítico
     },
   },
@@ -1565,12 +1611,12 @@ Todos os valores de HP, dano, cura e recurso são arredondados para múltiplos d
 
 ### Aliases de hooks e migração de nomes
 
-| Nome antigo (legado)  | Nome canônico atual  |
-| --------------------- | -------------------- |
-| `onBeforeDealing`     | `onBeforeDmgDealing` |
-| `onBeforeTaking`      | `onBeforeDmgTaking`  |
-| `onAfterDealing`      | `onAfterDmgDealing`  |
-| `onAfterTaking`       | `onAfterDmgTaking`   |
+| Nome antigo (legado) | Nome canônico atual  |
+| -------------------- | -------------------- |
+| `onBeforeDealing`    | `onBeforeDmgDealing` |
+| `onBeforeTaking`     | `onBeforeDmgTaking`  |
+| `onAfterDealing`     | `onAfterDmgDealing`  |
+| `onAfterTaking`      | `onAfterDmgTaking`   |
 
 Migração incremental: `emitCombatEvent` suporta ambos os nomes enquanto campeões são atualizados individualmente. Novos campeões e status-effects sempre usam os nomes canônicos.
 

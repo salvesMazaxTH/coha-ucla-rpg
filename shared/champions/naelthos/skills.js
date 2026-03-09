@@ -37,8 +37,8 @@ const naelthosSkills = [
       if (enemy) {
         const damageResult = new DamageEvent({
           baseDamage,
-          user,
-          target: enemy,
+          attacker: user,
+          defender: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,
@@ -142,8 +142,8 @@ const naelthosSkills = [
         id: "mar-em-ascensao",
         expiresAtTurn: currentTurn + this.effectDuration,
 
-        apply: ({ baseDamage, user }) => {
-          const stacks = Math.floor(user.HP / this.hpPerStack);
+        apply: ({ baseDamage, source }) => {
+          const stacks = Math.floor(source.HP / this.hpPerStack);
           const bonus = Math.min(stacks * this.bonusPerStack, this.maxBonus);
 
           const total = baseDamage + bonus;

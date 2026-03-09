@@ -15,7 +15,7 @@ export default {
     onAfterDmgTaking: "self",
   },
 
-  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgTaking({ source, target, owner, damage, context }) {
     if (damage <= 0) return;
 
     console.log(
@@ -23,7 +23,7 @@ export default {
       "owner:",
       owner?.name,
       "receiver:",
-      dmgReceiver?.name,
+      target?.name,
     );
 
     let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;

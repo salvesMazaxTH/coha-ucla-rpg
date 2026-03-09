@@ -43,8 +43,8 @@ const eliasCrossSkills = [
 
       const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -88,8 +88,8 @@ const eliasCrossSkills = [
 
       const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -174,16 +174,16 @@ const eliasCrossSkills = [
           context.extraDamageQueue.push({
             baseDamage: this.recoilDamage,
             mode: this.recoilDamageMode,
-            user,
-            target: user,
+            attacker: user,
+            defender: user,
             skill: this,
           });
         }
 
         const result = new DamageEvent({
           baseDamage,
-          user,
-          target,
+          attacker: user,
+          defender: target,
           skill: this,
           context,
           allChampions: context?.allChampions,

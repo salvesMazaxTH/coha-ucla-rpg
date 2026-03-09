@@ -415,6 +415,16 @@ export function createCombatAnimationManager(deps) {
 
       championEl.classList.remove("evasion");
       await showBlockingDialog(`${name} CONSEGUIU esquivar o ataque!!`, true);
+      // meme/trollagem
+      await showBlockingDialog(`e conseguiu!`, true);
+      const randomTrollMessage = Math.random();
+      if (randomTrollMessage < 0.5) {
+      await showBlockingDialog(`e conseguiu!!`, true);
+      await showBlockingDialog(`e conseguiu!!! 🤗`, true);
+      await showBlockingDialog(`e conseguiu!!! 🥳`, true);
+      } else {
+        await showBlockingDialog(`...mas foi tão ruim que tropeçou e caiu no chão.`, true);
+      }
     } else {
       await showBlockingDialog(`...mas falhou em esquivar.`, true);
     }

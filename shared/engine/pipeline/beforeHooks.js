@@ -20,10 +20,8 @@ function _applyBeforeDealingPassive(event) {
     damage: event.damage,
     crit: event.crit,
     skill: event.skill,
-    attacker: event.attacker,
-    target: event.target,
-    dmgSrc: event.attacker,
-    dmgReceiver: event.target,
+    source: event.attacker,
+    target: event.defender,
     context: event.context,
   });
 }
@@ -34,10 +32,8 @@ function _applyBeforeTakingPassive(event) {
     damage: event.damage,
     crit: event.crit,
     skill: event.skill,
-    attacker: event.attacker,
-    target: event.target,
-    dmgSrc: event.attacker,
-    dmgReceiver: event.target,
+    source: event.attacker,
+    target: event.defender,
     context: event.context,
   });
 }

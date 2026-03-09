@@ -45,8 +45,8 @@ const reyskaroneSkills = [
 
       const result = new DamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -62,33 +62,33 @@ const reyskaroneSkills = [
         key: "tributo_de_sangue_effect",
         expiresAt: context.currentTurn + this.tributeDuration,
 
-        onBeforeDmgDealing({ dmgSrc, dmgReceiver, damage, owner, context }) {
-          if (dmgReceiver !== enemy) return;
-          if (dmgSrc.team !== owner.team) return;
+        onBeforeDmgDealing({ source, target, damage, owner, context }) {
+          if (target !== enemy) return;
+          if (source.team !== owner.team) return;
           if (damage <= 0) return;
 
           // alvo não tem tributo
-          if (!dmgReceiver.hasStatusEffect?.("tributo")) return;
+          if (!target.hasStatusEffect?.("tributo")) return;
 
           const bonus = 10; //this.tributeBonusDamage;
 
           return {
             damage: damage + bonus,
-            log: `🩸 Tributo amplificou o golpe de ${dmgSrc.name} (+${bonus} dano)`,
+            log: `🩸 Tributo amplificou o golpe de ${source.name} (+${bonus} dano)`,
           };
         },
 
-        onAfterDmgDealing({ dmgSrc, dmgReceiver, context, owner }) {
-          if (dmgReceiver !== enemy) return;
-          if (dmgSrc.team !== owner.team) return;
+        onAfterDmgDealing({ source, target, context, owner }) {
+          if (target !== enemy) return;
+          if (source.team !== owner.team) return;
 
           const heal = 15;
           if (heal <= 0) return;
 
-          dmgSrc.heal(heal, context);
+          source.heal(heal, context);
 
           return {
-            log: `🩸 Tributo: ${dmgSrc.name} recuperou ${heal} HP.`,
+            log: `🩸 Tributo: ${source.name} recuperou ${heal} HP.`,
           };
         },
 

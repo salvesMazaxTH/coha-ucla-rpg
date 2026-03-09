@@ -18,8 +18,8 @@ const basicAttack = {
     const baseDamage = (user.Attack * this.bf) / 100 + this.bonusFlat;
     return new DamageEvent({
       baseDamage,
-      user,
-      target: enemy,
+      attacker: user,
+      defender: enemy,
       skill: this,
       context,
       allChampions: context?.allChampions,

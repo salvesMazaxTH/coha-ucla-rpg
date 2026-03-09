@@ -3,14 +3,15 @@ import { emitCombatEvent } from "../combatEvents.js";
 
 export function preChecks(event) {
   /*     console.log("DEBUG ATTACKER:", event.attacker);
-  console.log("DEBUG TARGET:", event.target); */
+  console.log("DEBUG DEFENDER:", event.defender); */
   // 1️⃣ IMUNIDADE
   const results = emitCombatEvent(
     "onDamageIncoming",
     {
-      dmgReceiver: event.target,
-      dmgSrc: event.attacker,
+      source: event.attacker,
+      target: event.defender,
       damage: event.damage,
+      context: event.context,
     },
     event.allChampions,
   );
@@ -22,7 +23,7 @@ export function preChecks(event) {
 
     if (r?.cancel) {
       console.log(
-        `[DAMAGE CANCEL] ${event.target.name} teve o dano cancelado por status-effect`,
+        `[DAMAGE CANCEL] ${event.defender.name} teve o dano cancelado por status-effect`,
       );
       return _buildImmuneResult(event);
     }
@@ -35,14 +36,14 @@ export function preChecks(event) {
   ) {
     const evasion = _rollEvasion({
       attacker: event.attacker,
-      target: event.target,
+      defender: event.defender,
       context: event.context,
       debugMode: event.constructor.debugMode,
     });
 
     if (evasion?.evaded) {
       event.context.registerDamage({
-        target: event.target,
+        target: event.defender,
         amount: 0,
         sourceId: event.attacker?.id,
         flags: { evaded: true },
@@ -51,7 +52,7 @@ export function preChecks(event) {
       return {
         totalDamage: 0,
         evaded: true,
-        targetId: event.target.id,
+        targetId: event.defender.id,
         userId: event.attacker.id,
       };
     }
@@ -62,9 +63,9 @@ export function preChecks(event) {
     event.mode !== event.constructor.Modes.ABSOLUTE &&
     !event.skill?.cannotBeBlocked
   ) {
-    if (event.target._checkAndConsumeShieldBlock?.(event.context)) {
+    if (event.defender._checkAndConsumeShieldBlock?.(event.context)) {
       event.context.registerDamage({
-        target: event.target,
+        target: event.defender,
         amount: 0,
         sourceId: event.attacker?.id,
         flags: { shieldBlocked: true },
@@ -76,14 +77,14 @@ export function preChecks(event) {
   return null;
 }
 
-function _rollEvasion({ attacker, target, context, debugMode }) {
+function _rollEvasion({ attacker, defender, context, debugMode }) {
   const editMode = context?.editMode ?? {};
-  const chance = Number(target.Evasion) || 0;
+  const chance = Number(defender.Evasion) || 0;
 
   if (debugMode) {
     console.log("🔥 _rollEvasion chamado:", {
       attacker: attacker.name,
-      target: target.name,
+      defender: defender.name,
       evasion: chance,
       editMode,
     });
@@ -94,7 +95,7 @@ function _rollEvasion({ attacker, target, context, debugMode }) {
     return {
       attempted: true,
       evaded: true,
-      log: `\n${formatChampionName(target)} evadiu automaticamente.`,
+      log: `\n${formatChampionName(defender)} evadiu automaticamente.`,
     };
   }
 
@@ -117,18 +118,18 @@ function _rollEvasion({ attacker, target, context, debugMode }) {
   return {
     evaded,
     attempted: true,
-    log: `\n${formatChampionName(target)} tentou esquivar o ataque... !`,
+    log: `\n${formatChampionName(defender)} tentou esquivar o ataque... !`,
   };
 }
 
 function _buildImmuneResult(event) {
   // Usamos as propriedades que já existem na instância
-  const targetName = formatChampionName(event.target);
+  const targetName = formatChampionName(event.defender);
   const username = formatChampionName(event.attacker);
   const skillName = event.skill?.name || "habilidade";
 
   event.context.registerDamage({
-    target: event.target,
+    target: event.defender,
     amount: 0,
     sourceId: event.attacker?.id,
     flags: { immune: true },
@@ -137,8 +138,8 @@ function _buildImmuneResult(event) {
   return {
     baseDamage: event.baseDamage,
     totalDamage: 0,
-    finalHP: event.target.HP,
-    targetId: event.target.id,
+    finalHP: event.defender.HP,
+    targetId: event.defender.id,
     userId: event.attacker.id,
     evaded: false,
     immune: true, // Adicionado para facilitar a identificação no front
@@ -148,15 +149,15 @@ function _buildImmuneResult(event) {
 }
 
 /* function _buildShieldBlockResult(event) {
-  const targetName = formatChampionName(event.target);
+  const targetName = formatChampionName(event.defender);
   const username = formatChampionName(event.attacker);
   const skillName = event.skill?.name || "habilidade";
 
   return {
     baseDamage: event.baseDamage,
     totalDamage: 0,
-    finalHP: event.target.HP,
-    targetId: event.target.id,
+    finalHP: event.defender.HP,
+    targetId: event.defender.id,
     userId: event.attacker.id,
     shieldBlocked: true,
     evaded: false,

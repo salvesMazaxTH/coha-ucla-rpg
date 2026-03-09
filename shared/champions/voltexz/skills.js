@@ -36,8 +36,8 @@ const voltexzSkills = [
         );
         const primaryResult = new DamageEvent({
           baseDamage,
-          user,
-          target: primary,
+          attacker: user,
+          defender: primary,
           skill: this,
           context,
           allChampions: context?.allChampions,
@@ -49,8 +49,8 @@ const voltexzSkills = [
       if (secondary) {
         const secondaryResult = new DamageEvent({
           baseDamage,
-          user,
-          target: secondary,
+          attacker: user,
+          defender: secondary,
           skill: this,
           context,
           allChampions: context?.allChampions,
@@ -81,8 +81,8 @@ const voltexzSkills = [
       const results = [];
       const damageResult = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -132,8 +132,8 @@ const voltexzSkills = [
       const results = [];
       const damageResult = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,

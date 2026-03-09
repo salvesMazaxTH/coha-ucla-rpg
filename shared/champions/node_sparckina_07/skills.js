@@ -25,8 +25,8 @@ const nodeSparckina07Skills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       return new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -108,8 +108,8 @@ const nodeSparckina07Skills = [
 
       return new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,

@@ -76,8 +76,8 @@ const sereneSkills = [
         baseDamage,
         piercingPortion: baseDamage,
         mode: "hybrid",
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -153,15 +153,15 @@ const sereneSkills = [
           group: "epifania",
           ownerId,
 
-          onBeforeDmgTaking({ dmgSrc, dmgReceiver, self, damage, context }) {
+          onBeforeDmgTaking({ source, target, owner, damage, context }) {
             console.log("════════ EPIFANIA CHECK ════════");
             console.log("[EPIFANIA] Hook disparado");
             console.log("[EPIFANIA] Alvo:", self.name);
             console.log("[EPIFANIA] HP atual:", self.HP);
             console.log("[EPIFANIA] Dano recebido:", damage);
-            console.log("[EPIFANIA] Atacante:", dmgSrc?.name);
+            console.log("[EPIFANIA] Atacante:", source?.name);
 
-            if (dmgReceiver?.id !== self.id) return;
+            if (target?.id !== owner.id) return;
 
             // Previne morte por qualquer meio (dano, efeitos, etc)
             self.runtime.preventObliterate = true;

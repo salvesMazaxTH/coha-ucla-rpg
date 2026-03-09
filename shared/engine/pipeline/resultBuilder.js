@@ -10,7 +10,7 @@ export function buildFinalResult(event) {
 
   let finalLog = _buildLog(
     event.attacker,
-    event.target,
+    event.defender,
     event.skill,
     event.actualDmg,
     event.crit,
@@ -25,8 +25,8 @@ export function buildFinalResult(event) {
 
   const mainResult = {
     totalDamage: event.actualDmg,
-    finalHP: event.target.HP,
-    targetId: event.target.id,
+    finalHP: event.defender.HP,
+    targetId: event.defender.id,
     userId: event.attacker.id,
     log: finalLog,
     crit: event.crit,

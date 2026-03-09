@@ -62,8 +62,8 @@ const raliaSkills = [
 
       const result = new DamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -93,8 +93,8 @@ const raliaSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       const result = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -148,8 +148,8 @@ const raliaSkills = [
           baseDamage,
           mode: "hybrid",
           piercingPortion: baseDamage, // todo: talvez queira ser uma porção diferente do dano total
-          user,
-          target: enemy,
+          attacker: user,
+          defender: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,

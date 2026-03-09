@@ -12,7 +12,7 @@ export default {
   },
 
   // Marca dano recebido no turno
-  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, context }) {
+  onAfterDmgTaking({ source, target, owner, context }) {
     owner.runtime = owner.runtime || {};
     owner.runtime.sereneDamagedTurn = context.currentTurn;
   },

@@ -42,8 +42,8 @@ const naelysSkills = [
 
         const damageResult = new DamageEvent({
           baseDamage,
-          user,
-          target: enemy,
+          attacker: user,
+          defender: enemy,
           skill: this,
           context,
           allChampions: context?.allChampions,
@@ -115,14 +115,14 @@ const naelysSkills = [
         expiresAt: context.currentTurn + 2,
         lastTriggerTurn: null,
 
-        onAfterDmgTaking({ attacker, target, damage, skill, self, context }) {
+        onAfterDmgTaking({ source, target, damage, skill, owner, context }) {
           console.log("[NAELYS] Hook onAfterDmgTaking disparado.");
           console.log("[NAELYS] Target:", target?.name);
           console.log("[NAELYS] Damage:", damage);
           console.log("[NAELYS] Skill recebida:", skill?.key);
 
-          if (target !== self) {
-            console.log("[NAELYS] Ignorado: target !== self");
+          if (target !== owner) {
+            console.log("[NAELYS] Ignorado: target !== owner");
             return;
           }
 
@@ -142,22 +142,22 @@ const naelysSkills = [
 
           context.extraDamageQueue ??= [];
 
-          const basic = self.skills.find((s) => s.key === "ataque_basico");
+          const basic = owner.skills.find((s) => s.key === "ataque_basico");
 
           if (!basic) {
             console.log("[NAELYS] ERRO: ataque básico não encontrado.");
             return;
           }
 
-          const baseDamage = (self.Attack * basic.bf) / 100;
+          const baseDamage = (owner.Attack * basic.bf) / 100;
 
           console.log("[NAELYS] Contra-ataque baseDamage:", baseDamage);
 
           context.extraDamageQueue.push({
             mode: "standard",
             baseDamage,
-            user: self,
-            target: attacker,
+            attacker: owner,
+            defender: source,
             skill: {
               ...basic,
               key: "massa_do_mar_revolto_counter",
@@ -167,18 +167,18 @@ const naelysSkills = [
 
           console.log(
             "[NAELYS] Contra-ataque enfileirado contra:",
-            attacker?.name,
+            source?.name,
           );
 
           context.visual.dialogEvents.push({
             type: "dialog",
-            message: `${formatChampionName(self)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(attacker)}!`,
-            sourceId: self.id,
-            targetId: attacker.id,
+            message: `${formatChampionName(owner)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(source)}!`,
+            sourceId: owner.id,
+            targetId: source.id,
           });
 
           return {
-            log: `🌊 ${formatChampionName(self)} contra-ataca com a força do mar!`,
+            log: `🌊 ${formatChampionName(owner)} contra-ataca com a força do mar!`,
           };
         },
 
@@ -251,8 +251,8 @@ const naelysSkills = [
         id: "sobrefluxo",
         expiresAtTurn: currentTurn + this.duration,
 
-        apply: ({ baseDamage, user }) => {
-          const lostHP = user.maxHP - user.HP;
+        apply: ({ baseDamage, source }) => {
+          const lostHP = source.maxHP - source.HP;
 
           const stacks = Math.floor(lostHP / this.stacksPerHPLost);
 

@@ -37,8 +37,8 @@ const gryskarchuSkills = [
 
       const result = new DamageEvent({
         baseDamage,
-        user,
-        target: enemy,
+        attacker: user,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,

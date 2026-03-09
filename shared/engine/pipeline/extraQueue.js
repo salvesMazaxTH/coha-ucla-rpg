@@ -15,7 +15,7 @@ export function processExtraQueue(event) {
   for (const extra of itemsToProcess) {
     // 1. Criamos uma nova instância para o evento extra (Reflect, Thorns, etc)
     const extraEvent = new event.constructor({
-      ...extra, // baseDamage, user, target, skill, etc.
+      ...extra, // baseDamage, attacker, defender, skill, etc.
       allChampions: event.allChampions,
       context: {
         ...event.context,

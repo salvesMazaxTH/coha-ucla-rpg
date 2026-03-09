@@ -72,9 +72,9 @@ const tharoxSkills = [
       const baseDamage =
         (user.Attack * this.bf) / 100 + user.Defense * (this.defScaling / 100);
       const result = new DamageEvent({
-        user,
+        attacker: user,
         baseDamage,
-        target: enemy,
+        defender: enemy,
         skill: this,
         context,
         allChampions: context?.allChampions,
@@ -118,9 +118,9 @@ const tharoxSkills = [
         name: "Bônus de Apoteose do Monólito",
         expiresAtTurn: context.currentTurn + this.modifierDuration,
 
-        apply: ({ baseDamage, user }) => {
+        apply: ({ baseDamage, source }) => {
           const bonus = Math.min(
-            Math.floor(user.Defense * (this.defDamagePercent / 100)),
+            Math.floor(source.Defense * (this.defDamagePercent / 100)),
             this.maxDamageBonus,
           );
           return baseDamage + bonus;

@@ -10,17 +10,17 @@ export default {
   hookScope: {
     onAfterDmgTaking: "self",
   },
-  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
-    if (damage <= 0 || dmgSrc.team === owner.team) return;
+  onAfterDmgTaking({ source, target, owner, damage, context }) {
+    if (damage <= 0 || source.team === owner.team) return;
 
-    const alreadyFrozen = dmgSrc.hasStatusEffect("congelado");
-    const alreadyChilled = dmgSrc.hasStatusEffect("gelado");
+    const alreadyFrozen = source.hasStatusEffect("congelado");
+    const alreadyChilled = source.hasStatusEffect("gelado");
 
     if (alreadyFrozen) return;
     if (alreadyChilled) {
-      dmgSrc.applyStatusEffect("congelado", this.freezeDuration, context);
+      source.applyStatusEffect("congelado", this.freezeDuration, context);
     } else {
-      dmgSrc.applyStatusEffect("gelado", this.chillDuration, context);
+      source.applyStatusEffect("gelado", this.chillDuration, context);
     }
   },
 };

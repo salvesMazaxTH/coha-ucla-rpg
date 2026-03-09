@@ -24,7 +24,7 @@ export function applyStatusEffect(
 ) {
   if (!statusEffectKey) return false;
   if (!StatusEffectsRegistry[statusEffectKey]) {
-    console.error(
+    throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
     );
     return false;

@@ -9,7 +9,7 @@ const blyskartriSkills = [
     name: "Fluxo Restaurador",
     speedBuff: 5,
     evasionBuff: 10,
-    buffsDuration: 1,
+    buffsDuration: 2,
 
     contact: false,
     priority: 3,
@@ -31,14 +31,14 @@ const blyskartriSkills = [
       ally.modifyStat({
         statName: "Speed",
         amount: 5,
-        duration: 1,
+        duration: this.buffsDuration,
         context,
       });
 
       ally.modifyStat({
         statName: "Evasion",
         amount: 10,
-        duration: 1,
+        duration: this.buffsDuration,
         context,
       });
 
@@ -51,7 +51,7 @@ const blyskartriSkills = [
         console.log(
           "[BLYSKARTRI][fluxo_restaurador] speed already buffed → granting ult",
         );
-        ally.addUlt({ amount: 3, context });
+        ally.addUlt({ amount: 4, context });
       }
 
       return {
@@ -85,7 +85,7 @@ const blyskartriSkills = [
       Também causa dano ao inimigo com maior Ataque.`;
     },
 
-    targetSpec: ["ally"],
+    targetSpec: ["select:ally"],
 
     resolve({ user, targets, context = {} }) {
       const [ally] = targets;
@@ -133,7 +133,7 @@ const blyskartriSkills = [
         key: "condutancia_vital_counter",
         expiresAtTurn: context.currentTurn + this.buffsDuration,
 
-        onEvade({ dmgSrc, dmgReceiver, owner, damage, context }) {
+        onEvade({ source, target, owner, damage, context }) {
           // owner = aliado buffado
           console.log("[BLYSKARTRI][condutancia_vital] hook triggered", {
             owner: owner?.name,
@@ -156,20 +156,16 @@ const blyskartriSkills = [
             return;
           }
 
-          const attacker =
-            context?.allChampions?.get?.(damageEvent.sourceId) ??
-            context?.allChampions?.find?.((c) => c.id === damageEvent.sourceId);
-
           console.log(
-            "[BLYSKARTRI][condutancia_vital] attacker resolved",
-            attacker?.name,
+            "[BLYSKARTRI][condutancia_vital] source resolved",
+            source?.name,
           );
 
-          if (!attacker || !attacker.alive) return;
+          if (!source || !source.alive) return;
 
           const counterDamage = 60;
           console.log("[BLYSKARTRI][condutancia_vital] counter triggered", {
-            attacker: attacker.name,
+            attacker: source.name,
             damage: counterDamage,
           });
 
@@ -179,9 +175,8 @@ const blyskartriSkills = [
             mode: "hybrid",
             baseDamage: counterDamage,
             piercingPortion: counterDamage,
-            user: user, // Blyskartri é quem causa o dano
-            source: user,
-            target: attacker,
+            attacker: user, // Blyskartri é quem causa o dano
+            defender: source,
             skill: {
               key: "condutancia_vital_counter",
             },
@@ -192,13 +187,13 @@ const blyskartriSkills = [
             type: "dialog",
             message: `${formatChampionName(owner)} conduziu energia elétrica de Blyskartri!`,
             sourceId: owner.id,
-            targetId: attacker.id,
+            targetId: source.id,
             blocking: false,
           });
         },
       });
 
-      const enemies = context.allChampions.filter(
+      const enemies = Array.from(context.allChampions.values()).filter(
         (c) => c.team !== user.team && c.HP > 0,
       );
 
@@ -224,65 +219,14 @@ const blyskartriSkills = [
 
       return new DamageEvent({
         baseDamage,
-        user,
-        target: highestAtk,
+        attacker: user,
+        defender: highestAtk,
         skill: this,
         context,
         allChampions: context?.allChampions,
       }).execute();
     },
   },
-
-  /*   {
-    key: "blyskartri_hab_2",
-    name: "Blyskartri-Hab-2",
-    bf: 60,
-    damageMode: "standard",
-    speedBuff: 10,
-    evasionBuff: 2,
-    buffsDuration: 2,
-
-    contact: false,
-    description() {
-      return `Concede ${this.speedBuff} e aumenta a Esquiva em ${this.evasionBuff}x (ou concede +5 caso não possua Esquiva) por ${this.buffsDuration} turnos.`;
-    },
-    targetSpec: ["select:ally"],
-    resolve({ user, targets, context = {} }) {
-      const [ally] = targets;
-
-      ally.modifyStat({
-        statName: "Speed",
-        amount: this.speedBuff,
-        duration: this.buffsDuration,
-        context,
-      });
-
-      if (baseEvasion > 0) {
-        // 3x usando percentual da base
-        ally.modifyStat({
-          statName: "Evasion",
-          amount: (this.evasionBuff - 1) * 100,
-          duration: this.buffsDuration,
-          context,
-          isPercent: true,
-        });
-      } else {
-        // conceder pequeno bônus flat inicial
-        ally.modifyStat({
-          statName: "Evasion",
-          amount: 10,
-          duration: this.buffsDuration,
-          context,
-        });
-      }
-
-      // Removido: addResource mana
-
-      return {
-        log: `${formatChampionName(user)} concedeu buffs para ${formatChampionName(ally)}.`,
-      };
-    },
-  }, */
 
   {
     key: "horizonte_infinito",
@@ -322,12 +266,12 @@ const blyskartriSkills = [
 
         expiresAtTurn: context.currentTurn + this.effectDuration,
 
-        apply: ({ baseDamage, user }) => {
-          const bonusSpeed = Math.max(0, user.Speed - user.baseSpeed);
+        apply: ({ baseDamage, source }) => {
+          const bonusSpeed = Math.max(0, source.Speed - source.baseSpeed);
 
           const stacks = Math.floor(bonusSpeed / 5);
           console.log("[BLYSKARTRI][horizonte_infinito] damage modifier", {
-            user: user.name,
+            user: source.name,
             baseDamage,
             bonusSpeed,
             stacks,
@@ -354,17 +298,17 @@ const blyskartriSkills = [
 
         expiresAtTurn: context.currentTurn + this.effectDuration,
 
-        onAfterDmgDealing({ owner, dmgSrc, dmgReceiver, damage, context }) {
+        onAfterDmgDealing({ owner, source, target, damage, context }) {
           console.log("[BLYSKARTRI][horizonte_infinito] after damage hook", {
             attacker: owner?.name,
-            target: dmgReceiver?.name,
+            target: target?.name,
             damage,
           });
-          if (!dmgReceiver?.alive) return;
+          if (!target?.alive) return;
           const currentIndex = context.currentAction?.initiativeIndex;
 
           const targetAction = context.turnActions?.find(
-            (a) => a.championId === dmgReceiver.id,
+            (a) => a.championId === target.id,
           );
           console.log("[BLYSKARTRI][horizonte_infinito] initiative check", {
             currentIndex,
@@ -389,9 +333,9 @@ const blyskartriSkills = [
             mode: "hybrid",
             baseDamage: this.piercingDamageBonus,
             piercingPortion: this.piercingDamageBonus,
-            user: owner,
+            attacker: owner,
             source: owner,
-            target: dmgReceiver,
+            target,
             skill: {
               key: "horizonte_infinito_bonus",
             },

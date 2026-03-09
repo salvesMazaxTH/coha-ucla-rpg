@@ -1,29 +1,29 @@
 export function applyDamage(event) {
   if (event.constructor.debugMode) console.group(`❤️ [APLICANDO DANO]`);
   if (event.constructor.debugMode) {
-    console.log(`👤 Target: ${event.target.name}`);
-    console.log(`📍 HP Antes: ${event.target.HP}/${event.target.maxHP}`);
+    console.log(`👤 Defender: ${event.defender.name}`);
+    console.log(`📍 HP Antes: ${event.defender.HP}/${event.defender.maxHP}`);
     console.log(`💥 Dano: ${event.damage}`);
   }
 
-  const hpBefore = event.target.HP;
+  const hpBefore = event.defender.HP;
 
   const damageToApply = event.damage;
 
   console.log(`[DAMAGE COMPOSITION] damageToApply: ${damageToApply}`);
   console.log(`[DAMAGE COMPOSITION] hpBefore: ${hpBefore}`);
 
-  event.target.takeDamage(damageToApply, event.context);
+  event.defender.takeDamage(damageToApply, event.context);
 
   console.log(
-    `➡️ [applyDamage] Dano aplicado, após takeDamage: ${damageToApply}, HP de ${event.target.name}: ${event.target.HP}/${event.target.maxHP}`,
+    `➡️ [applyDamage] Dano aplicado, após takeDamage: ${damageToApply}, HP de ${event.defender.name}: ${event.defender.HP}/${event.defender.maxHP}`,
   );
 
-  event.hpAfter = event.target.HP;
+  event.hpAfter = event.defender.HP;
   event.actualDmg = hpBefore - event.hpAfter;
 
   event.context.registerDamage({
-    target: event.target,
+    target: event.defender,
     amount: damageToApply,
     sourceId: event.attacker?.id,
     isCritical: event.crit?.didCrit,
@@ -33,11 +33,11 @@ export function applyDamage(event) {
   });
 
   if (event.constructor.debugMode) {
-    console.log(`📍 HP Depois: ${event.hpAfter}/${event.target.maxHP}`);
+    console.log(`📍 HP Depois: ${event.hpAfter}/${event.defender.maxHP}`);
     console.log(`✅ Dano efetivo: ${event.actualDmg}`);
-    if (event.hpAfter <= event.target.maxHP * 0.2)
-      console.log(`🚨 ALERTA: Target em perigo! (<20% HP)`);
-    if (event.hpAfter <= 0) console.log(`💀 Target DERROTADO!`);
+    if (event.hpAfter <= event.defender.maxHP * 0.2)
+      console.log(`🚨 ALERTA: Defender em perigo! (<20% HP)`);
+    if (event.hpAfter <= 0) console.log(`💀 Defender DERROTADO!`);
     console.groupEnd();
   }
 }

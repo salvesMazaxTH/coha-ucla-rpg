@@ -17,8 +17,8 @@ export function emitCombatEvent(eventName, payload, champions) {
   if (debugMode) {
     console.group(`📡 EVENT: ${eventName}`);
     console.log(`[EVENT EMIT] ${eventName}`, {
-      source: payload?.dmgSrc?.name,
-      target: payload?.dmgReceiver?.name,
+      source: payload?.source?.name,
+      target: payload?.target?.name,
     });
   }
 
@@ -63,25 +63,14 @@ export function emitCombatEvent(eventName, payload, champions) {
       const scope = source.hookScope?.[eventName];
 
       const sourceActor =
-        payload.dmgSrc ??
-        payload.attacker ??
-        payload.source ??
-        payload.critSrc ??
-        payload.healSrc ??
-        null;
+        payload.source ?? payload.critSrc ?? payload.healSrc ?? null;
 
-      const targetActor =
-        payload.dmgReceiver ?? payload.target ?? payload.healTarget ?? null;
+      const targetActor = payload.target ?? payload.healTarget ?? null;
 
-      const selfActor =
-        payload.self ??
-        payload.owner ??
-        payload.dmgReceiver ??
-        payload.target ??
-        payload.healTarget ??
-        null;
+      const ownerActor =
+        payload.owner ?? payload.target ?? payload.healTarget ?? null;
 
-      if (scope === "self" && champ !== selfActor) continue;
+      if (scope === "self" && champ !== ownerActor) continue;
 
       if (scope === "source" && champ !== sourceActor) continue;
 
@@ -107,12 +96,15 @@ export function emitCombatEvent(eventName, payload, champions) {
         console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);
         const res = hook.call(source, {
           ...payload,
-          self: champ, // alias enquanto refatora e migra tudo para consistência com os outros hooks
           owner: champ,
         });
 
         if (res) {
-          if (debugMode) console.log(`[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`, res);
+          if (debugMode)
+            console.log(
+              `[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`,
+              res,
+            );
           results.push(res);
         }
       } catch (err) {

@@ -11,7 +11,7 @@ export default {
     onAfterDmgTaking: "self",
   },
 
-  onAfterDmgTaking({ dmgSrc, dmgReceiver, owner, damage, context }) {
+  onAfterDmgTaking({ source, target, owner, damage, context }) {
     if (damage <= 0) return;
 
     owner.runtime.tharoxInerciaStacks =
