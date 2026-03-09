@@ -11,7 +11,7 @@ const naelysSkills = [
     contact: false,
     bf: 80,
     damageMode: "standard",
-    priority: 1,
+    priority: 0,
     element: "water",
     selfHealAmount: 50,
     allyHealAmount: 20,
