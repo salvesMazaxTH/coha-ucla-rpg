@@ -30,6 +30,12 @@ header h1 {
 
 /* -------------------------------- */
 
+.turn-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .turn-display {
   background: #0f1f18;
   border: 2px solid #00ff99;

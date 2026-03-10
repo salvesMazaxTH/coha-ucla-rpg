@@ -213,7 +213,7 @@ const sereneSkills = [
             };
           },
 
-          onActionResolved({ user, skill, context, self }) {
+          onActionResolved({ user, skill, context, owner }) {
             console.log("════════ EPIFANIA CLEANUP ════════");
             console.log("[EPIFANIA] ActionResolved disparado");
             console.log("[EPIFANIA] Usuário da ação:", user?.name);

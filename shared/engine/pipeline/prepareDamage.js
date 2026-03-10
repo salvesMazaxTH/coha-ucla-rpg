@@ -122,7 +122,6 @@ function processCrit(event, debugMode) {
       "onCriticalHit",
       {
         source: event.attacker,
-        critSrc: event.attacker,
         target: event.defender,
         context: event.context,
         forced: event.crit.forced,

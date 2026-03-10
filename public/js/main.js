@@ -1356,6 +1356,8 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   }
 
   socket.emit("useSkill", { userId, skillKey, targetIds });
+
+  document.getElementById("undo-actions-btn").disabled = false;
 });
 
 // --- Coleta de alvos no client ---
@@ -1540,6 +1542,12 @@ socket.on("gameStateUpdate", (gameState) => {
   combatAnimations.handleGameStateUpdate(gameState);
 });
 
+socket.on("turnLocked", () => {
+  document.getElementById("undo-actions-btn").disabled = true;
+
+  hasConfirmedEndTurn = false;
+});
+
 socket.on("turnUpdate", (turn) => {
   combatAnimations.handleTurnUpdate(turn);
 });
@@ -1549,6 +1557,21 @@ socket.on("gameOver", (data) => {
   gameEnded = true;
 
   disableChampionActions();
+});
+
+socket.on("actionsCanceled", () => {
+  document.getElementById("undo-actions-btn").disabled = true;
+
+  hasConfirmedEndTurn = false;
+  endTurnBtn.disabled = false;
+
+  activeChampions.forEach((champion) => {
+    champion.resetActionStatus();
+    const context = {
+        freeCostSkills: editMode?.freeCostSkills === true,
+      };
+    champion.updateUI(context);
+  });
 });
 
 /** Aplica a transição de turno no client: reseta ações e atualiza a UI. */
@@ -1561,7 +1584,10 @@ function applyTurnUpdate(turn) {
 
   activeChampions.forEach((champion) => champion.resetActionStatus());
   activeChampions.forEach((champion) => {
-    champion.updateUI(currentTurn);
+    const context = {
+      freeCostSkills: editMode?.freeCostSkills === true,
+    };
+    champion.updateUI(context);
     requestAnimationFrame(() =>
       StatusIndicator.updateChampionIndicators(champion),
     );
@@ -1590,6 +1616,9 @@ function endTurn() {
   endTurnBtn.disabled = true;
   disableChampionActions();
   logCombat("Você confirmou o fim do turno. Aguardando o outro jogador...");
+
+  document.getElementById("undo-actions-btn").disabled = false;
+
 }
 
 socket.on("playerConfirmedEndTurn", (playerSlot) => {
@@ -1670,6 +1699,8 @@ function enableChampionActions() {
   });
 }
 
+/* window.enableChampionActions = enableChampionActions; */
+
 // ============================================================
 //  SURRENDER (Render-se)
 // ============================================================
@@ -1713,4 +1744,8 @@ document.addEventListener("keydown", (e) => {
   ) {
     closeSurrenderDialog();
   }
+});
+
+document.getElementById("undo-actions-btn").addEventListener("click", () => {
+  socket.emit("requestUndoActions");
 });

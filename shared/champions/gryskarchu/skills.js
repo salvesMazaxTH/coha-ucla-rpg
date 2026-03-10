@@ -68,7 +68,7 @@ const gryskarchuSkills = [
         if (!champ.alive) continue;
         if (champ.team !== user.team) continue;
 
-        champ.heal(this.healAmount, context);
+        champ.heal(this.healAmount, context, user);
       }
 
       return {
@@ -101,7 +101,7 @@ const gryskarchuSkills = [
       let healAmount = Math.floor(ally.maxHP * (this.healPercent / 100));
       healAmount = Math.round(healAmount / 5) * 5;
 
-      ally.heal(healAmount, context);
+      ally.heal(healAmount, context, user);
       ally.modifyStat({
         statName: "Defense",
         amount: this.defBuff,

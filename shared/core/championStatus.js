@@ -199,7 +199,7 @@ function _attachStatusEffectBehavior(
 
   if (behavior.onStatusEffectAdded) {
     behavior.onStatusEffectAdded({
-      self: champion,
+      owner: champion,
       duration,
       context,
     });

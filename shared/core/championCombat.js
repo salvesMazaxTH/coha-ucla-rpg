@@ -470,7 +470,7 @@ export function takeDamage(champion, amount, context) {
  * @param {object} context - Combat context
  * @returns {number} Amount healed
  */
-export function heal(champion, amount, context) {
+export function heal(champion, amount, context, source = champion) {
   if (!champion.alive) return 0;
 
   const before = champion.HP;
@@ -479,7 +479,7 @@ export function heal(champion, amount, context) {
 
   const ctx = context || champion.runtime?.currentContext;
   if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
-    ctx.registerHeal({ target: champion, amount: healed });
+    ctx.registerHeal({ target: champion, amount: healed, sourceId: source?.id });
   }
 
   return healed;

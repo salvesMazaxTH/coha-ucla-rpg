@@ -28,7 +28,7 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "self",
+    onAfterDmgTaking: "target",
     onAfterDmgDealing: "source",
   },
 

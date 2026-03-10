@@ -61,14 +61,7 @@ const kaiSkills = [
         expiresAt: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE
-        onAfterDmgTaking({
-          source,
-          target,
-          skill,
-          damage,
-          owner,
-          context,
-        }) {
+        onAfterDmgTaking({ source, target, skill, damage, owner, context }) {
           if (target !== owner) return;
           if (!skill?.contact) return;
           if (damage <= 0) return;
@@ -211,12 +204,13 @@ const kaiSkills = [
         const directBonus = isBurning ? this.burningBonus : 0;
         const result = new DamageEvent({
           baseDamage: this.damagePerHit,
+          mode: "hybrid",
+          piercingPortion: (directBonus > 0 ? directBonus : 0),
           attacker: user,
           defender: target,
           skill: this,
           context,
           allChampions: context?.allChampions,
-          directDamage: directBonus,
         }).execute();
         results.push({ ...result, targetId: target.id });
       }

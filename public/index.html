@@ -43,13 +43,19 @@
       <!-- New disconnection message element -->
       <header>
         <h1>Arena dos Campeões - UCLA RPG</h1>
-        <button id="end-turn-btn">Finalizar Turno</button>
-        <div class="turn-display">
-          <p>Turno 1</p>
+
+        <div class="turn-controls">
+          <button id="undo-actions-btn" disabled>Desfazer ações</button>
+          <button id="end-turn-btn">Finalizar Turno</button>
+
+          <div class="turn-display">
+            <p>Turno 1</p>
+          </div>
+
+          <button id="surrender-btn" class="surrender-btn" title="Render-se">
+            Render-se
+          </button>
         </div>
-        <button id="surrender-btn" class="surrender-btn" title="Render-se">
-          Render-se
-        </button>
       </header>
 
       <!-- Surrender Confirmation Overlay -->
@@ -155,5 +161,6 @@
         <p id="combat-dialog-text"></p>
       </div>
     </div>
+    <button id="undo-actions-btn" hidden>Desfazer ações</button>
   </body>
 </html>

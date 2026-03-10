@@ -62,15 +62,13 @@ export function emitCombatEvent(eventName, payload, champions) {
 
       const scope = source.hookScope?.[eventName];
 
-      const sourceActor =
-        payload.source ?? payload.critSrc ?? payload.healSrc ?? null;
+      const sourceActor = payload.source || payload.healSrc || null;
 
-      const targetActor = payload.target ?? payload.healTarget ?? null;
+      const targetActor = payload.target || payload.healTarget || null;
 
-      const ownerActor =
-        payload.owner ?? payload.target ?? payload.healTarget ?? null;
+    /*   const ownerActor = payload.owner ?? null;
 
-      if (scope === "self" && champ !== ownerActor) continue;
+      if (scope === "self" && champ !== ownerActor) continue; */
 
       if (scope === "source" && champ !== sourceActor) continue;
 

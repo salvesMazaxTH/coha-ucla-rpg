@@ -5,21 +5,21 @@ const congelado = {
   type: "debuff",
   subtypes: ["cc", "hardCC"],
 
-  onStatusEffectAdded({ user }) {
-    user.modifyStat({
+  onStatusEffectAdded({ owner }) {
+    owner.modifyStat({
       statName: "Speed",
       amount: -100,
       duration: 1,
       isPercent: true,
     });
-    user.modifyStat({
+    owner.modifyStat({
       statName: "Attack",
       amount: -100,
       duration: 1,
       isPercent: true,
     });
     return {
-      message: `${user.name} foi Congelado!`,
+      message: `${owner.name} foi Congelado!`,
     };
   },
 

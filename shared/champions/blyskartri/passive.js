@@ -16,7 +16,6 @@ export default {
   },
 
   hookScope: {
-    onTurnStart: "self",
     onStatGain: "ally",
     onEvade: "ally",
   },

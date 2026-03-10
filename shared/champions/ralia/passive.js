@@ -9,7 +9,7 @@ Se o bônus for reduzido a 0, o atacante não ativa efeitos ligados a crítico n
   },
 
   hookScope: {
-    onBeforeDmgTaking: "self",
+    onBeforeDmgTaking: "target",
   },
 
   onBeforeDmgTaking({ source, target, owner, crit, context }) {

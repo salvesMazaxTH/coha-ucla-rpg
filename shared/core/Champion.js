@@ -1,5 +1,3 @@
-
-
 // Import status effect methods
 import {
   normalizeStatusEffectName,
@@ -204,15 +202,6 @@ export class Champion {
     if (skill.isUltimate !== true) return 0;
     if (!Number.isInteger(skill.ultCost) || skill.ultCost <= 0) return 0;
     return skill.ultCost * 4; // Converte barras para unidades internas
-  }
-
-  applyRegenFromDamage(context) {
-    if (!context) return 0;
-
-    const regenAmount = 3;
-    const applied = this.addUlt({ amount: regenAmount, context });
-
-    return applied;
   }
 
   addUlt(input) {

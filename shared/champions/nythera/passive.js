@@ -8,7 +8,7 @@ export default {
     Se já estiver {Gelado}: → torna-se {Congelado}.`;
   },
   hookScope: {
-    onAfterDmgTaking: "self",
+    onAfterDmgTaking: "target",
   },
   onAfterDmgTaking({ source, target, owner, damage, context }) {
     if (damage <= 0 || source.team === owner.team) return;

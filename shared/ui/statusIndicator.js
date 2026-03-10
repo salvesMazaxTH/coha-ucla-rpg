@@ -15,6 +15,11 @@ export const StatusIndicator = {
       value: "💫",
       background: "rgba(241, 241, 241, 0.8)",
     },
+    gelado: {
+      type: "emoji",
+      value: "❄️",
+      background: "rgba(173, 216, 230, 0.8)",
+    },
     inerte: {
       type: "emoji",
       value: "🔒",

@@ -49,6 +49,17 @@ export function preChecks(event) {
         flags: { evaded: true },
       });
 
+      emitCombatEvent(
+        "onEvade",
+        {
+          source: event.attacker,
+          target: event.defender,
+          damage: event.damage,
+          context: event.context,
+        },
+        event.allChampions,
+      );
+
       return {
         totalDamage: 0,
         evaded: true,

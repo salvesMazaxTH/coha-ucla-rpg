@@ -20,6 +20,7 @@ export default {
 
   hookScope: {
     onAfterDmgDealing: "source",
+    onAfterHealing: "source",
   },
 
   onAfterDmgDealing({ source, owner, damage, context }) {
@@ -33,7 +34,15 @@ export default {
 
     if (healed <= 0) return;
 
+    return {
+      log: `[Coração das Marés] ${formatChampionName(owner)} recuperou ${healed} HP e ganhou 1 stack de Maré (${owner.runtime.mareStacks}/${this.maxStacks}).`,
+    };
+  },
+
+  onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
     // stack
+    if (healSrc.id !== owner?.id) return;
+    
     if (owner.runtime.mareStacks < this.maxStacks) {
       owner.runtime.mareStacks++;
 
@@ -47,9 +56,5 @@ export default {
         },
       });
     }
-
-    return {
-      log: `[Coração das Marés] ${formatChampionName(owner)} recuperou ${healed} HP e ganhou 1 stack de Maré (${owner.runtime.mareStacks}/${this.maxStacks}).`,
-    };
   },
 };

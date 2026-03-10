@@ -1,5 +1,6 @@
 export default {
-  name: "Sede de Sangue",
+  key: "lamina_que_procura_a_falha",
+  name: "Lâmina que Procura a Falha",
   critBuff: 15,
   critCap: 95,
   critThreshold: 50,

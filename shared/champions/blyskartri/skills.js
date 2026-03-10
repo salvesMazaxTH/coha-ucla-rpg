@@ -5,8 +5,8 @@ import basicAttack from "../basicAttack.js";
 const blyskartriSkills = [
   basicAttack,
   {
-    key: "fluxo_restaurador",
-    name: "Fluxo Restaurador",
+    key: "fluxo_amplificador",
+    name: "Fluxo Amplificador",
     speedBuff: 5,
     evasionBuff: 10,
     buffsDuration: 2,
@@ -106,22 +106,12 @@ const blyskartriSkills = [
       const evasionAmount =
         ally.Evasion > 0 ? ally.Evasion * this.evasionBuff : 10;
 
-      if (ally.evasionAmount === 0) {
-        // conceder um pequeno bônus flat inicial
-        ally.modifyStat({
-          statName: "Evasion",
-          amount: 10,
-          duration: this.buffsDuration,
-          context,
-        });
-      } else {
-        ally.modifyStat({
-          statName: "Evasion",
-          amount: evasionAmount,
-          duration: this.buffsDuration,
-          context,
-        });
-      }
+      ally.modifyStat({
+        statName: "Evasion",
+        amount: evasionAmount,
+        duration: this.buffsDuration,
+        context,
+      });
 
       console.log("[BLYSKARTRI][condutancia_vital] buffs applied", {
         speedBuff: 10,
@@ -129,6 +119,11 @@ const blyskartriSkills = [
       });
 
       ally.runtime.hookEffects ??= [];
+
+      console.log("[BLYSKARTRI][condutancia_vital] hookEffects initialized", {
+        hookEffects: ally.runtime.hookEffects,
+      });
+
       ally.runtime.hookEffects.push({
         key: "condutancia_vital_counter",
         expiresAtTurn: context.currentTurn + this.buffsDuration,
@@ -185,7 +180,7 @@ const blyskartriSkills = [
           context.visual.dialogEvents ??= [];
           context.visual.dialogEvents.push({
             type: "dialog",
-            message: `${formatChampionName(owner)} conduziu energia elétrica de Blyskartri!`,
+            message: `${formatChampionName(user)} Blyskartri revidou o ataque de ${formatChampionName(source)} em seu aliado!`,
             sourceId: owner.id,
             targetId: source.id,
             blocking: false,
@@ -247,7 +242,7 @@ const blyskartriSkills = [
     ultCost: 3,
 
     description() {
-      return `Escolhe um aliado. Por ${this.effectDuration} turnos completos, ele recebe +${this.dmgBonusPerStack}% de dano bruto para cada ${this.speedPerStack} de Velocidade acima da base.  
+      return `Escolhe um aliado. Por ${this.effectDuration} turno(s), ele recebe +${this.dmgBonusPerStack}% de dano bruto para cada ${this.speedPerStack} de Velocidade acima da base.  
       Sempre que agir antes do alvo direto, causa +${this.piercingDamageBonus} de dano {perfurante} adicional.`;
     },
 

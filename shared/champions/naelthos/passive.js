@@ -13,7 +13,7 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "self",
+    onAfterDmgTaking: "target",
   },
 
   onAfterDmgTaking({ source, target, owner, damage, context }) {

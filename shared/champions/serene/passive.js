@@ -8,7 +8,7 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "self",
+    onAfterDmgTaking: "target",
   },
 
   // Marca dano recebido no turno

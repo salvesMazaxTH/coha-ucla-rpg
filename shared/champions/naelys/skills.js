@@ -55,12 +55,14 @@ const naelysSkills = [
       }
 
       console.log("[NAELYS] Cura própria:", this.selfHealAmount);
-      const selfHealApplied = user.heal(this.selfHealAmount, context);
+      const selfHealApplied = user.heal(this.selfHealAmount, context, user);
       console.log("[NAELYS] Cura aplicada na Naelys:", selfHealApplied);
 
       if (ally) {
         console.log("[NAELYS] Cura no aliado:", ally.name, this.allyHealAmount);
-        const allyHealApplied = ally.heal(this.allyHealAmount, context);
+
+        const allyHealApplied = ally.heal(this.allyHealAmount, context, user);
+
         console.log("[NAELYS] Cura aplicada no aliado:", allyHealApplied);
       } else {
         console.log("[NAELYS] Nenhum aliado selecionado.");
@@ -182,7 +184,9 @@ const naelysSkills = [
           };
         },
 
-        onTurnEnd({ self, currentTurn }) {
+        onTurnEnd({ self, context }) {
+          const currentTurn = context.currentTurn;
+          
           console.log("[NAELYS] Hook onTurnEnd verificado.");
           console.log(
             "[NAELYS] currentTurn:",

@@ -14,6 +14,10 @@ function applyGlobalTurnRegen(champion, context) {
     context,
   });
 
+  console.log(
+    ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
+  );
+
   return applied;
 }
 
@@ -41,7 +45,7 @@ function applyUltMeterFromContext({ user, context }) {
   // =========================
 
   if (damageEvents.length > 0) {
-    const regenAmount = context.currentSkill?.isUltimate ? 1 : 2;
+    const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
     const applied = user.addUlt({ amount: regenAmount, context });
 
     console.log("[ULT - DEALER]", user.name, applied);
@@ -298,6 +302,7 @@ function removeChampionFromGame(championId, playerTeam) {
  * Chamada em "requestSkillUse" — rejeita imediatamente via socket.
  */
 function validateActionIntent(user, skill, socket) {
+  console.log("[VALIDATE ACTION CALLED]", user?.name);
   if (!user.alive) {
     socket.emit("skillDenied", "Campeão morto.");
     return false;
@@ -308,14 +313,28 @@ function validateActionIntent(user, skill, socket) {
     return false;
   }
 
-  const results = emitCombatEvent("onValidateAction", { user, skill });
+  console.log(
+    "[VALIDATE ACTION] [HOOK EFFECTS DO USER]",
+    user.runtime?.hookEffects?.map((e) => e.key),
+  );
+
+  const results = emitCombatEvent(
+    "onValidateAction",
+    { user, skill },
+    activeChampions,
+  );
+
+  console.log("[VALIDATE ACTION] Results from onValidateAction:", results);
 
   for (const res of results) {
+    console.log("[VALIDATE ACTION RESULT]", res);
     if (res?.message) {
       socket.emit("skillDenied", res.message);
+      console.log(`[VALIDATE ACTION] Action denied: ${res.message}`);
     }
 
     if (res?.deny) {
+      console.log(`[VALIDATE ACTION] Action explicitly denied by a hook.`);
       return false;
     }
   }
@@ -335,8 +354,6 @@ function canExecuteAction(user, action) {
     {
       user,
       skill: action?.skill,
-      action,
-      phase: "execution",
     },
     activeChampions,
   );
@@ -345,7 +362,10 @@ function canExecuteAction(user, action) {
     if (res?.deny) {
       return {
         denied: true,
-        message: res.message || res.log || `${formatChampionName(user)} não pode agir.`,
+        message:
+          res.message ||
+          res.log ||
+          `${formatChampionName(user)} não pode agir.`,
       };
     }
   }
@@ -1199,6 +1219,8 @@ function resolveSkillActions() {
 }
 
 function handleEndTurn() {
+  io.emit("turnLocked");
+
   resolveSkillActions();
   processChampionsDeaths();
 
@@ -1209,7 +1231,7 @@ function handleEndTurn() {
     ),
   };
 
-  emitCombatEvent("onTurnEnd", context, activeChampions);
+  emitCombatEvent("onTurnEnd", { context }, activeChampions);
 
   // NÃO chama início de turno aqui.
   // Espera confirmação do client.
@@ -1276,8 +1298,6 @@ function handleStartTurn() {
     console.log(
       "[ULT REGEN]",
       champion.name,
-      "antes:",
-      champion.ultMeter,
       "aplicado:",
       applied,
       "depois:",
@@ -1301,50 +1321,6 @@ function handleStartTurn() {
   io.emit("gameStateUpdate", getGameState());
 }
 
-// POSSIVELMENTE OBSOLETO com novo modelo de hooks e .js de cada statusEffect
-/** Processa statusEffects que disparam no início do turno (DoTs, etc). */
-/* function processTurnStartStatusEffects({ activeChampions, context }) {
-  const affectedIds = new Set();
-  const logs = [];
-
-  activeChampions.forEach((champion) => {
-    if (!champion.alive) return;
-
-    for (const [statusEffectName] of champion.statusEffects) {
-      const effect = StatusEffectTurnEffects?.[statusEffectName];
-      if (!effect?.onTurnStart) continue;
-
-      const result = effect.onTurnStart({
-        champion,
-        context,
-        allChampions: activeChampions,
-      });
-
-      if (!result) continue;
-
-      if (result.type === "damage") {
-        const damage = Math.max(0, Number(result.amount) || 0);
-
-        champion.takeDamage(damage, context);
-
-        context.registerDamage({
-          target: champion,
-          amount: damage,
-          sourceId: result.sourceId ?? null,
-          isDot: true,
-        });
-
-        affectedIds.add(champion.id);
-      }
-
-      if (result.log) logs.push(result.log);
-    }
-  });
-
-  const { damageEvents = [] } = context.visual || {};
-
-  if (damageEvents.length === 0) return;
-} */
 // ============================================================
 //  RESET DO ESTADO DO JOGO
 // ============================================================
@@ -1680,82 +1656,6 @@ io.on("connection", (socket) => {
   });
 
   // =============================
-  //  changeChampionHp (edit mode / debug)
-  // =============================
-
-  socket.on("changeChampionHp", ({ championId, amount }) => {
-    const playerSlot = connectedSockets.get(socket.id);
-    const player = players[playerSlot];
-    const champion = activeChampions.get(championId);
-
-    if (!player || !champion || champion.team !== player.team) {
-      socket.emit(
-        "actionFailed",
-        "Você não tem permissão para alterar o HP deste campeão.",
-      );
-      return;
-    }
-
-    const oldHP = champion.HP;
-    champion.HP += amount;
-
-    logTurnEvent("hpChanged", {
-      championId,
-      championName: champion.name,
-      oldHP,
-      newHP: champion.HP,
-      amount,
-    });
-
-    if (champion.HP <= 0) {
-      removeChampionFromGame(championId, champion.team);
-    } else if (amount > 0 && champion.HP > champion.maxHP) {
-      champion.maxHP += amount;
-    }
-
-    io.emit("gameStateUpdate", getGameState());
-  });
-
-  // =============================
-  //  changeChampionStat (edit mode / debug)
-  // =============================
-
-  socket.on("changeChampionStat", ({ championId, stat, action }) => {
-    const playerSlot = connectedSockets.get(socket.id);
-    const player = players[playerSlot];
-    const champion = activeChampions.get(championId);
-
-    if (!player || !champion || champion.team !== player.team) {
-      socket.emit(
-        "actionFailed",
-        "Você não tem permissão para alterar os stats deste campeão.",
-      );
-      return;
-    }
-
-    const statSteps = { Attack: 5, Defense: 5, Speed: 5, Critical: 1 };
-    const step = statSteps[stat] || 5;
-    const delta = action === "up" ? step : -step;
-    const oldValue = champion[stat];
-
-    if (stat in champion) {
-      champion[stat] += delta;
-      if (champion[stat] < 0) champion[stat] = 0;
-
-      logTurnEvent("statChanged", {
-        championId,
-        championName: champion.name,
-        stat,
-        oldValue,
-        newValue: champion[stat],
-        delta,
-      });
-    }
-
-    io.emit("gameStateUpdate", getGameState());
-  });
-
-  // =============================
   //  requestSkillUse → skillApproved / skillDenied
   // =============================
 
@@ -1784,6 +1684,50 @@ io.on("connection", (socket) => {
     }
 
     socket.emit("skillApproved", { userId, skillKey });
+  });
+
+  // =============================
+  //  requestUndoActions (cancela ações pendentes do time do jogador)
+  // =============================
+  socket.on("requestUndoActions", () => {
+    if (!pendingActions.length) {
+      console.warn("Pedido de undo sem ações pendentes.");
+      return;
+    }
+
+    const playerSlot = connectedSockets.get(socket.id);
+
+    if (playerSlot === undefined) return;
+
+    const playerTeam = playerSlot + 1;
+
+    console.log("[UNDO] Player team:", playerTeam);
+
+    for (let i = pendingActions.length - 1; i >= 0; i--) {
+      const action = pendingActions[i];
+      const champ = activeChampions.get(action.championId);
+
+      if (!champ) continue;
+
+      if (champ.team !== playerTeam) continue;
+
+      // reverter estado
+      champ.hasActedThisTurn = false;
+
+      if (action.ultCost > 0) {
+        champ.addUlt(action.ultCost);
+      }
+
+      pendingActions.splice(i, 1);
+    }
+
+    // 🔥 remover confirmação de fim de turno
+    if (playersReadyToEndTurn.has(playerSlot)) {
+      playersReadyToEndTurn.delete(playerSlot);
+      io.emit("playerCanceledEndTurn", playerSlot);
+    }
+
+    socket.emit("actionsCanceled");
   });
 
   // =============================

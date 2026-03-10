@@ -55,7 +55,7 @@ const naelthosSkills = [
 
       // 💧 Cura no aliado (se existir)
       if (ally) {
-        ally.heal(healAmount, context);
+        ally.heal(healAmount, context, user);
         const userName = formatChampionName(user);
         const allyName = formatChampionName(ally);
         allyLog = `${userName} cura ${allyName} em ${healAmount} de HP. HP final de ${allyName}: ${ally.HP}/${ally.maxHP}`;

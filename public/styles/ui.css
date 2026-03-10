@@ -1334,6 +1334,59 @@
   text-shadow: 0 0 10px rgba(0, 255, 150, 0.25);
 }
 
+/* ============================================ 
+   UNDO ACTIONS BUTTON
+   ============================================ */
+
+#undo-actions-btn {
+  background: linear-gradient(180deg, #4a4a4a, #2c2c2c);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+
+  color: #d8d8d8;
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  padding: 8px 16px;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+
+  box-shadow:
+    inset 0 0 6px rgba(255, 255, 255, 0.05),
+    0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+/* hover */
+
+#undo-actions-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  box-shadow:
+    inset 0 0 8px rgba(255, 255, 255, 0.08),
+    0 0 10px rgba(0, 0, 0, 0.5);
+
+  filter: brightness(1.1);
+}
+
+/* click */
+
+#undo-actions-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* disabled */
+
+#undo-actions-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ============================================
    PORTRAIT OVERLAY
    ============================================ */

@@ -4,8 +4,8 @@ const gelado = {
   type: "debuff",
   subtypes: ["statMod"],
 
-  onStatusEffectAdded({ self, duration, context }) {
-    self.modifyStat({
+  onStatusEffectAdded({ owner, duration, context }) {
+    owner.modifyStat({
       statName: "Attack",
       amount: -20,
       duration,
@@ -13,7 +13,7 @@ const gelado = {
       isPercent: true,
     });
 
-    self.modifyStat({
+    owner.modifyStat({
       statName: "Speed",
       amount: -50,
       duration,

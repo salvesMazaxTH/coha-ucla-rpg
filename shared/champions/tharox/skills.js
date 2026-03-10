@@ -18,10 +18,11 @@ const tharoxSkills = [
     damageReductionAmount: 10,
     damageReductionDuration: 2,
     contact: false,
-    priority: 2,
+    priority: 3,
     description() {
-      return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e recebe redução de dano de ${this.damageReductionAmount} por ${this.damageReductionDuration} turnos.`;
+      return `Provoca todos os inimigos por ${this.tauntDuration} turno(s) e ganha ${this.damageReductionAmount} de redução de dano por ${this.damageReductionDuration} turnos. Usos consecutivos têm chance de sucesso exponencialmente menor (reset ao falhar ou usar outra habilidade).`;
     },
+
     targetSpec: ["self"],
     resolve({ user, targets, context = {} }) {
       user.applyDamageReduction({
@@ -29,6 +30,48 @@ const tharoxSkills = [
         duration: this.damageReductionDuration,
         context,
       });
+
+      user.runtime.tauntStreak ??= 0;
+      console.log(
+        `[Skill - Provocação Primeva] ${user.name} usou Provocação Primeva. Taunt Streak atual: ${user.runtime.tauntStreak}`,
+      );
+
+      const chance = 1 / Math.pow(3, user.runtime.tauntStreak); // Chance diminui exponencialmente a cada uso
+      const sucess = Math.random() < chance;
+      console.log(
+        `[Skill - Provocação Primeva] ${user.name} tentou Provocação Primeva. Chance: ${chance}, Sucesso?: ${sucess}`,
+      );
+
+      if (!sucess) {
+        user.runtime.tauntStreak = 0; // Reset streak se a provocação for mal-sucedida
+
+        context.visual.dialogEvents ??= [];
+        context.visual.dialogEvents.push({
+          type: "dialog",
+          message: `Mas falhou.`,
+          sourceId: user.id,
+          targetId: user.id,
+          blocking: true,
+        });
+
+        return {
+          log: `${user.name} executou Provocação Primeva. Mas falhou. Taunt Streak resetada.`,
+        };
+      }
+
+      user.runtime.lastTauntTurn = context.currentTurn;
+
+      if (!context.currentTurn) {
+        throw new Error(
+          "Context must include currentTurn for Provocação Primeva.",
+        );
+      }
+
+      // se foi bem-sucedida, incrementa a tauntStreak para a próxima tentativa
+      user.runtime.tauntStreak += 1;
+      console.log(
+        `[Skill - Provocação Primeva] ${user.name} usou Provocação Primeva. Taunt Streak atual: ${user.runtime.tauntStreak}`,
+      );
 
       // Get all active champions on the opposing team
       const enemyChampions = Array.from(
@@ -79,6 +122,7 @@ const tharoxSkills = [
         context,
         allChampions: context?.allChampions,
       }).execute();
+
       return result;
     },
   },

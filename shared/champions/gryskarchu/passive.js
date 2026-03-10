@@ -15,6 +15,7 @@ export default {
 
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
     if (healTarget.team !== owner.team) return;
+    if (healSrc.id === owner?.id) return; // só vale se ele foi quem realmente curou (redundante tho)
     if (healTarget.id === owner.id) return; // impede auto-trigger, evita loop infinito
 
     const selfHealAmount = Math.round(amount / 5) * 5;
