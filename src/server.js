@@ -92,6 +92,7 @@ import {
   formatPlayerName,
 } from "../shared/ui/formatters.js";
 import { emitCombatEvent } from "../shared/engine/combatEvents.js";
+import { error } from "console";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -307,10 +308,16 @@ function validateActionIntent(user, skill, socket) {
     return false;
   }
 
-  const result = emitCombatEvent("onValidateAction", { user, skill });
+  const results = emitCombatEvent("onValidateAction", { user, skill });
 
-  if (result?.messages?.length) {
-    result.messages.forEach((msg) => socket.emit("skillDenied", msg));
+  for (const res of results) {
+    if (res?.message) {
+      socket.emit("skillDenied", res.message);
+    }
+
+    if (res?.deny) {
+      return false;
+    }
   }
 
   return true;
@@ -323,7 +330,7 @@ function validateActionIntent(user, skill, socket) {
 function canExecuteAction(user, action) {
   if (!user || !user.alive) return false;
 
-  const result = emitCombatEvent(
+  const results = emitCombatEvent(
     "onValidateAction",
     {
       user,
@@ -334,17 +341,16 @@ function canExecuteAction(user, action) {
     activeChampions,
   );
 
-  if (!result) return true;
-
-  if (result?.messages?.length) {
-    result.messages.forEach((msg) => io.emit("combatLog", msg));
+  for (const res of results) {
+    if (res?.deny) {
+      return {
+        denied: true,
+        message: res.message || res.log || `${formatChampionName(user)} não pode agir.`,
+      };
+    }
   }
 
-  if (result.deny) {
-    return false;
-  }
-
-  return true;
+  return { denied: false };
 }
 
 // ============================================================
@@ -921,7 +927,18 @@ function executeSkillAction(action) {
     return false;
   }
 
-  if (!canExecuteAction(user, action)) {
+  const denial = canExecuteAction(user, action);
+
+  if (denial?.denied) {
+    io.emit("combatAction", {
+      dialogEvents: [
+        {
+          message: denial.message,
+          blocking: true,
+        },
+      ],
+    });
+
     refundActionResource(user, action);
     return false;
   }

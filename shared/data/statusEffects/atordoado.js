@@ -7,7 +7,7 @@ const atordoado = {
   onValidateAction({ user }) {
     return {
       deny: true,
-      log: `${user.name} está Atordoado e não pode agir!`,
+      message: `${user.name} está Atordoado e não pode agir!`,
     };
   },
 };

@@ -1,8 +1,8 @@
 import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
-
-  name: "impulso_crescente",
+  key: "impulso_crescente",
+  name: "Impulso Crescente",
 
   speedPerTurn: 5,
   speedCap: 25,

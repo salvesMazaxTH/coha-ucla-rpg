@@ -1,6 +1,7 @@
 import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
+  key: "mar_que_retorna",
   name: "Mar que Retorna",
   healPerStack: 5,
   hpPerStack: 25,

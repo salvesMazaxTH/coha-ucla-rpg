@@ -1,6 +1,7 @@
 import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
+  key: "energia_pulsante",
   name: "Energia Pulsante",
   speedBuff: 10,
   paralyzeChance: 33,
@@ -13,10 +14,8 @@ export default {
     onAfterDmgDealing: "source",
   },
 
-  onTurnStart({ self, context }) {
-    if (!self) return;
-
-    const result = self.modifyStat({
+  onTurnStart({ owner, context }) {
+    const result = owner.modifyStat({
       statName: "Speed",
       amount: this.speedBuff,
       context,
@@ -27,7 +26,7 @@ export default {
     if (result?.appliedAmount === 0) return;
 
     return {
-      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(self)} ganhou +${result?.appliedAmount ?? this.speedBuff} VEL.`,
+      log: `[PASSIVA — Energia Pulsante] ${formatChampionName(owner)} ganhou +${result?.appliedAmount ?? this.speedBuff} VEL.`,
     };
   },
 

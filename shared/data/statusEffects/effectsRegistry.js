@@ -6,6 +6,7 @@ import gelado from "./gelado.js";
 import congelado from "./congelado.js";
 import queimando from "./queimando.js";
 import imunidadeAbsoluta from "./imunidadeAbsoluta.js";
+import sobrecarga from "./sobrecarga.js";
 // A IMPLEMENTAR: envenenado, sangramento
 /* import envenenado from "./envenenado.js";*/
 /* import sangramento from "./sangramento.js";  */
@@ -18,7 +19,9 @@ export const StatusEffectsRegistry = {
   gelado,
   congelado,
   queimando,
-  imunidadeAbsoluta
-/*   envenenado, IMPLEMENTAÇÃO FUTURA */
-/*   sangramento, IMPLEMENTAÇÃO FUTURA*/
+  imunidadeAbsoluta,
+  sobrecarga,
+
+  /*   envenenado, IMPLEMENTAÇÃO FUTURA */
+  /*   sangramento, IMPLEMENTAÇÃO FUTURA*/
 };
