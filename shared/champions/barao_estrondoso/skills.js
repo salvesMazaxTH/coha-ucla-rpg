@@ -55,7 +55,7 @@ const baraoEstrondosoSkills = [
     },
     targetSpec: ["self"],
     resolve({ user, context }) {
-      user.applyStatusEffect("blindagem_reforcada", 2, context);
+      /*       user.applyStatusEffect("blindagem_reforcada", 2, context); */
 
       user.modifyStat({
         statName: "Defense",

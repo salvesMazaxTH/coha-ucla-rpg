@@ -255,8 +255,8 @@ const naelysSkills = [
         id: "sobrefluxo",
         expiresAtTurn: currentTurn + this.duration,
 
-        apply: ({ baseDamage, source }) => {
-          const lostHP = source.maxHP - source.HP;
+        apply: ({ baseDamage, attacker }) => {
+          const lostHP = attacker.maxHP - attacker.HP;
 
           const stacks = Math.floor(lostHP / this.stacksPerHPLost);
 

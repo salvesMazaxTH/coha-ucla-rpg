@@ -186,10 +186,6 @@ const reyskaroneSkills = [
         context,
       });
 
-      ally.applyStatusEffect("pacto_carmesim", this.pactDuration, context, {
-        source: user.id,
-      });
-
       return {
         log: `${formatChampionName(user)} selou um Pacto Carmesim com ${formatChampionName(ally)}.`,
       };

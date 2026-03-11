@@ -1568,8 +1568,8 @@ socket.on("actionsCanceled", () => {
   activeChampions.forEach((champion) => {
     champion.resetActionStatus();
     const context = {
-        freeCostSkills: editMode?.freeCostSkills === true,
-      };
+      freeCostSkills: editMode?.freeCostSkills === true,
+    };
     champion.updateUI(context);
   });
 });
@@ -1618,7 +1618,6 @@ function endTurn() {
   logCombat("Você confirmou o fim do turno. Aguardando o outro jogador...");
 
   document.getElementById("undo-actions-btn").disabled = false;
-
 }
 
 socket.on("playerConfirmedEndTurn", (playerSlot) => {

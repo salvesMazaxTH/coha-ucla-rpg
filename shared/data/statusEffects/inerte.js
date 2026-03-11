@@ -4,6 +4,10 @@ const inerte = {
   type: "debuff",
   subtypes: ["cc", "hardCC"],
 
+  hookScope: {
+    onValidateAction: "owner",
+  },
+
   onValidateAction({ user }) {
     const k = user.getStatusEffect("inerte");
 

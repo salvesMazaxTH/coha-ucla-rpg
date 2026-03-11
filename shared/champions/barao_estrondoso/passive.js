@@ -55,9 +55,9 @@ export default {
       `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
     );
 
-    const storageRate = owner.hasStatusEffect?.("blindagem_reforcada")
+    const storageRate = /* owner.hasStatusEffect?.("blindagem_reforcada")
       ? this.storageShieldPercent / 100
-      : this.storageBasePercent / 100;
+      : */ this.storageBasePercent / 100;
 
     const stored = Math.floor(damage * storageRate);
 

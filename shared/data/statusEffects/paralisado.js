@@ -2,6 +2,10 @@ const paralisado = {
   key: "paralisado",
   name: "Paralisado",
   isHardCC: true,
+  
+  hookScope: {
+  onValidateAction: "owner"
+},
 
   onValidateAction({ user }) {
     return {

@@ -142,8 +142,8 @@ const naelthosSkills = [
         id: "mar-em-ascensao",
         expiresAtTurn: currentTurn + this.effectDuration,
 
-        apply: ({ baseDamage, source }) => {
-          const stacks = Math.floor(source.HP / this.hpPerStack);
+        apply: ({ baseDamage, attacker }) => {
+          const stacks = Math.floor(attacker.HP / this.hpPerStack);
           const bonus = Math.min(stacks * this.bonusPerStack, this.maxBonus);
 
           const total = baseDamage + bonus;

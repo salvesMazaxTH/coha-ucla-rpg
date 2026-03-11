@@ -4,6 +4,10 @@ const enraizado = {
   type: "debuff",
   subtypes: ["cc", "softCC"],
 
+  hookScope: {
+    onValidateAction: "owner",
+  },
+
   onValidateAction({ user, skill }) {
     if (!skill?.contact) return;
 

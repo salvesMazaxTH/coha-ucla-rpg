@@ -4,6 +4,10 @@ const atordoado = {
   type: "debuff",
   subtypes: ["cc", "hardCC"],
 
+  hookScope: {
+    onValidateAction: "owner",
+  },
+
   onValidateAction({ user }) {
     return {
       deny: true,

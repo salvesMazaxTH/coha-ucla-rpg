@@ -31,7 +31,7 @@ export default {
         mode: "standard",
         baseDamage: skill.baseDamage,
         attacker: owner,
-        target,
+        defender: target,
         skill,
       });
     }
