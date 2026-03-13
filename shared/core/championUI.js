@@ -1,4 +1,5 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
+import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
 
 /**
  * Create the champion DOM element
@@ -313,11 +314,20 @@ export function updateChampionUI(champion, context) {
 export function syncChampionActionStateUI(champion) {
   if (!champion.el) return;
 
-  const blockingStatusEffects = ["congelado", "paralisado"];
+  let hasHardBlock = false;
 
-  const hasHardBlock = blockingStatusEffects.some((statusEffect) =>
-    champion.hasStatusEffect(statusEffect),
-  );
+  for (const statusEffectKey in StatusEffectsRegistry) {
+    const effect = StatusEffectsRegistry[statusEffectKey];
+
+    // verifica se esse status é um CC
+    if (!effect.subtypes?.includes("hardCC")) continue;
+
+    // verifica se o champion possui esse status
+    if (champion.hasStatusEffect(statusEffectKey)) {
+      hasHardBlock = true;
+      break;
+    }
+  }
 
   const inerteData = champion.getStatusEffectData("inerte");
   const isInerteBlocking = inerteData && !inerteData.canBeInterruptedByAction;

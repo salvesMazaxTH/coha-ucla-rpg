@@ -3,7 +3,7 @@ const congelado = {
   key: "congelado",
   name: "Congelado",
   type: "debuff",
-  subtypes: ["cc", "hardCC"],
+  subtypes: ["hardCC"],
 
   onStatusEffectAdded({ owner }) {
     owner.modifyStat({
@@ -25,12 +25,22 @@ const congelado = {
 
   hookScope: {
     onValidateAction: "owner",
+    onAfterDmgTaking: "target",
   },
 
   onValidateAction({ source }) {
     return {
       deny: true,
       message: `${source.name} está Congelado e não pode agir!`,
+    };
+  },
+
+  onAfterDmgTaking({ source, target, owner, damage, context }) {
+    if (damage <= 0) return;
+    owner.removeStatusEffect("congelado");
+
+    return {
+      log: `${owner.name} foi descongelado após receber dano!`,
     };
   },
 };

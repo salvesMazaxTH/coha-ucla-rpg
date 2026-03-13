@@ -1,3 +1,3 @@
-import championDB from "../champions/index.js";
+import championDB from "./champions/index.js";
 
 export { championDB };

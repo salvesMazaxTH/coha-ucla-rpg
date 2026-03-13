@@ -918,7 +918,7 @@ const queimando = {
   key: "queimando",
   name: "Queimando",
   type: "debuff", // "buff" | "debuff"
-  subtypes: ["dot"], // categorias opcionais: "cc", "hardCC", "immunity", "dot", ...
+  subtypes: ["dot"], // categorias opcionais: "hardCC", "immunity", "dot", ...
 
   // Hooks — mesma interface de qualquer hookEffect
   onTurnStart({ self, context }) {
@@ -965,7 +965,7 @@ const imunidadeAbsoluta = {
 const atordoado = {
   key: "atordoado",
   type: "debuff",
-  subtypes: ["cc", "hardCC"],
+  subtypes: ["hardCC"],
 
   onValidateAction({ user }) {
     return { deny: true, log: `${user.name} está Atordoado e não pode agir!` };

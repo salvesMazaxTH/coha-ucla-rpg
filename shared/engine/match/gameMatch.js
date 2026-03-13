@@ -179,6 +179,46 @@ class CombatState {
     return champion;
   }
 
+  /**
+   * Remove um campeão morto do jogo: registra no histórico, atualiza placar, move para deadChampions.
+   * Retorna um objeto com os dados necessários para o server emitir sockets, ou null se não encontrado.
+   */
+  removeChampionFromGame(championId, maxScore = 3) {
+    const champion = this.activeChampions.get(championId);
+    if (!champion) return null;
+
+    // Registrar morte no histórico
+    this.logTurnEvent("championDied", {
+      championId,
+      championName: champion.name,
+      team: champion.team,
+    });
+    this.ensureTurnEntry().championsDeadThisTurn.push(championId);
+
+    // Scoring
+    const scoringTeam = champion.team === 1 ? 2 : 1;
+    const scoringPlayerSlot = scoringTeam - 1;
+    let scored = false;
+
+    if (!this.gameEnded) {
+      this.addPointForSlot(scoringPlayerSlot, maxScore);
+      scored = true;
+    }
+
+    // Mover para deadChampions
+    this.removeChampion(championId);
+
+    return {
+      championId,
+      championName: champion.name,
+      team: champion.team,
+      scoringTeam,
+      scoringPlayerSlot,
+      scored,
+      gameEnded: this.gameEnded,
+    };
+  }
+
   clearActions() {
     this.pendingActions.length = 0;
   }
@@ -307,6 +347,10 @@ export class GameMatch {
 
   removeChampion(championId) {
     return this.combat.removeChampion(championId);
+  }
+
+  removeChampionFromGame(championId, maxScore = 3) {
+    return this.combat.removeChampionFromGame(championId, maxScore);
   }
 
   getChampion(championId) {

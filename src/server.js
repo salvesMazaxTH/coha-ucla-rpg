@@ -1,84 +1,4 @@
 // ============================================================
-//  HELPERS DE MANIPULAÇÃO DE ULTÔMETRO
-// ============================================================
-/**
- * Aplica regeneração global de ultMeter (+3 unidades por turno)
- */
-function applyGlobalTurnRegen(champion, context) {
-  if (!champion || !champion.alive) return 0;
-
-  const GLOBAL_ULT_REGEN = 3; // +3 unidades por turno (conforme spec)
-
-  const applied = champion.addUlt({
-    amount: GLOBAL_ULT_REGEN,
-    context,
-  });
-
-  console.log(
-    ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
-  );
-
-  return applied;
-}
-
-/**
- * Reembolso de ultMeter (ex: ação negada)
- */
-function refundActionResource(user, action) {
-  if (!user || !action) return;
-  const amount = Number(action.resourceCost) || 0;
-  if (amount > 0) {
-    user.addUlt(amount);
-  }
-}
-
-/**
- * Aplica ganho de ultMeter baseado no contexto de um evento de combate.
- */
-function applyUltMeterFromContext({ user, context }) {
-  const damageEvents = context.visual.damageEvents || [];
-  const healEvents = context.visual.healEvents || [];
-  const buffEvents = context.visual.buffEvents || [];
-
-  // =========================
-  // 🔹 GANHO DO USUÁRIO
-  // =========================
-
-  if (damageEvents.length > 0) {
-    const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
-    const applied = user.addUlt({ amount: regenAmount, context });
-
-    console.log("[ULT - DEALER]", user.name, applied);
-  } else if (healEvents.length > 0) {
-    const applied = user.addUlt({ amount: 1, context });
-    console.log("[ULT - HEAL]", user.name, applied);
-  } else if (buffEvents.length > 0) {
-    const applied = user.addUlt({ amount: 1, context });
-    console.log("[ULT - BUFF]", user.name, applied);
-  }
-
-  // =========================
-  // 🔹 GANHO DE QUEM SOFREU DANO
-  // =========================
-
-  const damagedTargets = new Set();
-
-  for (const event of damageEvents) {
-    if (!event.targetId || event.amount <= 0) continue;
-    damagedTargets.add(event.targetId);
-  }
-
-  for (const targetId of damagedTargets) {
-    const target = match.combat.activeChampions.get(targetId);
-    if (!target || !target.alive) continue;
-
-    const applied = target.addUlt({ amount: 1, context });
-
-    console.log("[ULT - TAKEN]", target.name, applied);
-  }
-}
-
-// ============================================================
 //  IMPORTS
 // ============================================================
 
@@ -99,6 +19,8 @@ import {
   formatPlayerName,
 } from "../shared/ui/formatters.js";
 import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
+import { Action } from "../shared/engine/combat/Action.js";
+import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -223,39 +145,19 @@ function checkAllTeamsSelected() {
 const CLIENT_DEATH_ANIMATION_DURATION = 2000;
 const SERVER_DELAY_AFTER_ANIMATION = 500;
 
-/** Remove um campeão do jogo, atualiza placar e traz reserva se necessário. */
-function removeChampionFromGame(championId, playerTeam) {
-  const championToRemove = match.combat.activeChampions.get(championId);
-  if (!championToRemove) {
-    console.error(`[Server] Campeão ${championId} não encontrado.`);
-    return;
-  }
+/** Emite os sockets de morte de um campeão a partir do resultado de match.removeChampionFromGame(). */
+function emitChampionDeath(deathResult) {
+  if (!deathResult) return;
 
-  // Registra morte no histórico
-  logTurnEvent("championDied", {
-    championId,
-    championName: championToRemove.name,
-    team: championToRemove.team,
-  });
-  ensureTurnEntry().championsDeadThisTurn.push(championId);
-
-  // Atualiza placar
-  const scoringTeam = championToRemove.team === 1 ? 2 : 1;
-  const scoringPlayerSlot = scoringTeam - 1;
-
-  if (!match.isGameEnded()) {
-    match.addPointForSlot(scoringPlayerSlot, MAX_SCORE);
+  if (deathResult.scored) {
     io.emit("scoreUpdate", match.getScorePayload());
-
     io.emit(
       "combatLog",
-      `${formatPlayerName(match.players[scoringPlayerSlot]?.username, scoringTeam)} marcou um ponto!`,
+      `${formatPlayerName(match.players[deathResult.scoringPlayerSlot]?.username, deathResult.scoringTeam)} marcou um ponto!`,
     );
   }
 
-  match.combat.removeChampion(championId);
-  io.emit("championRemoved", championId);
-
+  io.emit("championRemoved", deathResult.championId);
   io.emit("gameStateUpdate", getGameState());
 }
 
@@ -279,242 +181,32 @@ function validateActionIntent(user, skill, socket) {
     return false;
   }
 
-  console.log(
-    "[VALIDATE ACTION] [HOOK EFFECTS DO USER]",
-    user.runtime?.hookEffects?.map((e) => e.key),
-  );
-
-  const results = emitCombatEvent(
-    "onValidateAction",
-    { source: user, skill },
-    match.combat.activeChampions,
-  );
-
-  console.log("[VALIDATE ACTION] Results from onValidateAction:", results);
-
-  for (const res of results) {
-    console.log("[VALIDATE ACTION RESULT]", res);
-    if (res?.message) {
-      socket.emit("skillDenied", res.message);
-      console.log(`[VALIDATE ACTION] Action denied: ${res.message}`);
-    }
-
-    if (res?.deny) {
-      console.log(`[VALIDATE ACTION] Action explicitly denied by a hook.`);
-      return false;
-    }
-  }
-
   return true;
 }
 
+// ============================================================
+//  HELPERS DE MANIPULAÇÃO DE ULTÔMETRO
+// ============================================================
 /**
- * Valida se o campeão pode EXECUTAR a ação no momento da resolução do turno.
- * Diferente de validateActionIntent — aqui o estado pode ter mudado.
+ * Aplica regeneração global de ultMeter (+3 unidades por turno)
  */
-function canExecuteAction(user, action) {
-  if (!user || !user.alive) return false;
+function applyGlobalTurnRegen(champion, context) {
+  if (!champion || !champion.alive) return 0;
 
-  for (const champ of match.combat.activeChampions.values()) {
-    console.log(
-      "[actionExecution - DEBUG]",
-      champ.name,
-      champ.runtime.hookEffects,
-    );
-  }
+  const GLOBAL_ULT_REGEN = 3; // +3 unidades por turno (conforme spec)
+
+  const applied = champion.addUlt({
+    amount: GLOBAL_ULT_REGEN,
+    context,
+  });
 
   console.log(
-    "[canExecuteAction] Validating action for",
-    user.name,
-    "hooks effects:",
-    user.runtime?.hookEffects?.map((e) => e.key),
+    ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
   );
 
-  const results = emitCombatEvent(
-    "onValidateAction",
-    {
-      source: user,
-      skill: action?.skill,
-    },
-    match.combat.activeChampions,
-  );
-
-  for (const res of results) {
-    if (res?.deny) {
-      return {
-        denied: true,
-        message:
-          res.message ||
-          res.log ||
-          `${formatChampionName(user)} não pode agir.`,
-      };
-    }
-  }
-
-  return { denied: false };
+  return applied;
 }
 
-// ============================================================
-//  RESOLUÇÃO DE ALVOS
-// ============================================================
-
-/** Resolve os alvos de uma ação, respeitando Taunt e validando existência. */
-function resolveSkillTargets(user, skill, action, context) {
-  const currentTargets = {};
-  let redirected = false;
-
-  console.log("==== RESOLVE START ====");
-  console.log("Skill:", skill.key);
-  console.log("Incoming targetIds:", action.targetIds);
-  console.log("TauntEffects:", user.tauntEffects);
-
-  // Antecipar contexto
-  context ??= createBaseContext({ sourceId: user.id });
-
-  // =========================
-  // TAUNT
-  // =========================
-
-  const activeTaunt = user.tauntEffects?.find(
-    (effect) => effect.expiresAtTurn > match.combat.currentTurn,
-  );
-
-  const hasTaunt = !!activeTaunt;
-
-  const canRedirect =
-    hasTaunt && action?.targetIds && Object.keys(action.targetIds).length > 0;
-
-  // =========================
-  // REDIRECTION
-  // =========================
-
-  if (canRedirect && Array.isArray(skill.targetSpec)) {
-    const taunter = match.combat.activeChampions.get(activeTaunt.taunterId);
-
-    if (taunter && taunter.alive) {
-      let redirectionEvents = [];
-
-      skill.targetSpec.forEach((spec, index) => {
-        const type = typeof spec === "string" ? spec : spec.type;
-
-        if (type !== "enemy") return;
-
-        const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
-
-        const originalId = action.targetIds?.[roleKey];
-
-        if (!originalId) return;
-
-        const original = match.combat.activeChampions.get(originalId);
-        if (!original || !original.alive) return;
-
-        // Se unique obrigatório → NÃO redireciona automaticamente
-        if (spec.unique === true) return;
-
-        // Redireciona
-        currentTargets[roleKey] = taunter;
-        redirected = true;
-
-        redirectionEvents.push({
-          type: "tauntRedirection",
-          attackerId: user.id,
-          fromTargetId: original.id,
-          toTargetId: taunter.id,
-        });
-      });
-
-      // Preencher demais roles não redirecionados
-      for (const role in action.targetIds) {
-        if (!currentTargets[role]) {
-          const target = match.combat.activeChampions.get(
-            action.targetIds[role],
-          );
-          if (target && target.alive) {
-            currentTargets[role] = target;
-          }
-        }
-      }
-
-      if (redirected) {
-        context.visual.redirectionEvents =
-          context.visual.redirectionEvents || [];
-
-        context.visual.redirectionEvents.push(...redirectionEvents);
-
-        io.emit(
-          "combatLog",
-          `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
-        );
-      }
-    }
-  }
-
-  // =========================
-  // NORMAL RESOLUTION (if nothing redirected)
-  // =========================
-
-  if (!redirected) {
-    const normalizedSpec = Array.isArray(skill.targetSpec)
-      ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
-      : [];
-
-    const hasAllEnemies =
-      normalizedSpec.includes("all-enemies") ||
-      normalizedSpec.includes("all:enemy");
-
-    const hasAllAllies =
-      normalizedSpec.includes("all-allies") ||
-      normalizedSpec.includes("all:ally");
-
-    const hasAll = normalizedSpec.includes("all");
-
-    if (hasAllEnemies || hasAllAllies || hasAll) {
-      if (hasAllEnemies || hasAll) {
-        const enemies = Array.from(
-          match.combat.activeChampions.values(),
-        ).filter((c) => c.team !== user.team && c.alive);
-
-        enemies.forEach((enemy, i) => {
-          const key = i === 0 ? "enemy" : `enemy${i + 1}`;
-          currentTargets[key] = enemy;
-        });
-      }
-
-      if (hasAllAllies || hasAll) {
-        const allies = Array.from(match.combat.activeChampions.values()).filter(
-          (c) => c.team === user.team && c.alive,
-        );
-
-        allies.forEach((ally, i) => {
-          const key = i === 0 ? "ally" : `ally${i + 1}`;
-          currentTargets[key] = ally;
-        });
-      }
-    } else if (action?.targetIds) {
-      for (const role in action.targetIds) {
-        const target = match.combat.activeChampions.get(action.targetIds[role]);
-
-        if (target && target.alive) {
-          currentTargets[role] = target;
-        } else if (role === "self") {
-          currentTargets[role] = user;
-        }
-      }
-    }
-  }
-
-  if (Object.keys(currentTargets).length === 0) {
-    io.emit(
-      "combatLog",
-      `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
-    );
-    return null;
-  }
-
-  return currentTargets;
-}
-
-// ============================================================
 //  EMISSÃO DE AÇÕES DE COMBATE (v2)
 // ============================================================
 
@@ -777,214 +469,6 @@ function emitCombatAction(envelope) {
   io.emit("combatAction", envelope);
 }
 
-// ============================================================
-//  EXECUÇÃO DE HABILIDADES
-// ============================================================
-
-function resolveTargets(skill, user, targetIds) {
-  // ALL
-  if (skill.targetSpec?.includes("all")) {
-    return [...match.combat.activeChampions.values()].filter((c) => c.alive);
-  }
-
-  // ALL ALLY
-  if (skill.targetSpec?.includes("all:ally")) {
-    return [...match.combat.activeChampions.values()].filter(
-      (c) => c.alive && c.team === user.team,
-    );
-  }
-
-  // ALL ENEMY
-  if (skill.targetSpec?.includes("all:enemy")) {
-    return [...match.combat.activeChampions.values()].filter(
-      (c) => c.alive && c.team !== user.team,
-    );
-  }
-
-  // SINGLE TARGET (usa targetIds do cliente)
-  const targets = [];
-  for (const role in targetIds) {
-    const champ = match.combat.activeChampions.get(targetIds[role]);
-    if (champ) targets.push(champ);
-  }
-
-  return targets;
-}
-
-/** Executa a habilidade, emite payloads e registra no histórico. */
-function performSkillExecution(
-  user,
-  skill,
-  targets,
-  actionResourceCost = 0,
-  context,
-) {
-  // 🔹 1. Criar contexto
-  context ??= createBaseContext({ sourceId: user.id });
-  context.currentSkill = skill;
-
-  // 🔹 2. Injetar contexto nos campeões
-  match.combat.activeChampions.forEach((champion) => {
-    champion.runtime = champion.runtime || {};
-    champion.runtime.currentContext = context;
-  });
-
-  context.currentSkill = skill;
-
-  if (!Array.isArray(targets)) {
-    throw new Error(
-      `[SKILL ERROR] ${skill.name} recebeu targets que não são array`,
-    );
-  }
-
-  if (targets.length === 0) {
-    throw new Error(`[SKILL ERROR] ${skill.name} recebeu targets vazio`);
-  }
-
-  for (const t of targets) {
-    if (!t || typeof t !== "object" || !t.id) {
-      throw new Error(`[SKILL ERROR] ${skill.name} recebeu target inválido`);
-    }
-  }
-
-  // 🔹 3. Executar skill
-  const result = skill.resolve({
-    user,
-    targets,
-    context,
-  });
-
-  // 🔹 4. Limpar contexto
-  match.combat.activeChampions.forEach((champion) => {
-    if (champion.runtime) delete champion.runtime.currentContext;
-  });
-
-  // 🔹 5. Registrar no histórico do turno
-  registerSkillUsageInTurn(user, skill, targets);
-
-  // 🔹 6. Normalizar resultado
-  const results = Array.isArray(result) ? result : result ? [result] : [];
-
-  applyUltMeterFromContext({ user, context });
-
-  for (const r of results) {
-    if (r?.extraEffects?.some((e) => e.type === "dialog")) {
-      console.log(
-        "🔵 SERVER → dialog recebido do processDamageEvent:",
-        r.extraEffects,
-      );
-    }
-  }
-
-  // 🔹 7. Emitir envelopes
-  emitCombatEnvelopesFromContext({
-    results,
-    user,
-    skill,
-    targets,
-    context,
-    actionResourceCost,
-  });
-
-  emitCombatEvent(
-    "onActionResolved",
-    {
-      source: user,
-      skill,
-      context,
-    },
-    match.combat.activeChampions,
-  );
-}
-
-function registerSkillUsageInTurn(user, skill, targets) {
-  logTurnEvent("skillUsed", {
-    championId: user.id,
-    championName: user.name,
-    skillKey: skill.key,
-    skillName: skill.name,
-    targetIds: Object.fromEntries(
-      Object.entries(targets).map(([k, v]) => [k, v.id]),
-    ),
-    targetNames: Object.fromEntries(
-      Object.entries(targets).map(([k, v]) => [k, v.name]),
-    ),
-  });
-
-  const turnData = ensureTurnEntry();
-
-  if (!turnData.skillsUsedThisTurn[user.id]) {
-    turnData.skillsUsedThisTurn[user.id] = [];
-  }
-
-  turnData.skillsUsedThisTurn[user.id].push(skill.key);
-}
-
-/** Executa uma ação individual pendente. */
-function executeSkillAction(action) {
-  console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
-  const user = match.combat.activeChampions.get(action.championId);
-
-  if (!user || !user.alive) {
-    const userName = user ? formatChampionName(user) : "campeão desconhecido";
-    io.emit("combatLog", `Ação de ${userName} ignorada (não ativo).`);
-    refundActionResource(user, action);
-    return false;
-  }
-
-  const denial = canExecuteAction(user, action);
-
-  if (denial?.denied) {
-    io.emit("combatAction", {
-      dialogEvents: [
-        {
-          message: denial.message,
-          blocking: true,
-        },
-      ],
-    });
-
-    refundActionResource(user, action);
-    return false;
-  }
-
-  const skill = user.skills.find((s) => s.key === action.skillKey);
-  if (!skill) {
-    io.emit(
-      "combatLog",
-      `Erro: Habilidade ${action.skillKey} não encontrada para ${formatChampionName(user)}.`,
-    );
-    refundActionResource(user, action);
-    return false;
-  }
-
-  const context = createBaseContext({ sourceId: user.id });
-
-  const roleTargets = resolveSkillTargets(user, skill, action, context);
-
-  console.log("STEP 1 - TARGETS:", roleTargets);
-  if (!roleTargets) {
-    refundActionResource(user, action);
-    return false;
-  }
-
-  // injetar ação e alvos resolvidos no contexto para uso durante a execução
-  /*   context.currentAction = action;
-  context.turnActions = turnActions; */
-
-  const targetsArray = Object.values(roleTargets);
-  console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
-
-  performSkillExecution(
-    user,
-    skill,
-    targetsArray,
-    action.resourceCost,
-    context,
-  );
-  return true;
-}
-
 function createBaseContext({ sourceId = null } = {}) {
   const aliveChampionsArray = [...match.combat.activeChampions.values()].filter(
     (c) => c.alive,
@@ -1164,62 +648,53 @@ function createBaseContext({ sourceId = null } = {}) {
 //  RESOLUÇÃO DE TURNOS
 // ============================================================
 
-/** Ordena e executa todas as ações pendentes (prioridade > velocidade > desempate). */
-function resolveSkillActions() {
+function handleEndTurn() {
+  io.emit("turnLocked");
+
   console.log(
-    `[TARGETS DEBUG] [TURN ${match.combat.currentTurn}] [resolveSkillActions] Resolvendo ações...`,
+    `[handleEndTurn] [TURN ${match.combat.currentTurn}] Resolvendo ações...`,
     match.combat.pendingActions,
   );
 
-  match.combat.pendingActions.forEach((a) => {
-    a._tieBreaker = Math.random();
+  // 1. Resolver todas as ações via TurnResolver
+  const resolver = new TurnResolver(match, editMode);
+  const { actionResults, deathResults } = resolver.resolveTurn();
 
-    const champ = match.combat.activeChampions.get(a.championId);
-
-    // default
-    a.priorityBias = 0;
-
-    if (champ?.ignoreEnemyPriority) {
-      a.priorityBias = 1000;
+  // 2. Emitir envelopes para cada resultado
+  for (const result of actionResults) {
+    if (result.executed) {
+      emitCombatEnvelopesFromContext({
+        user: result.user,
+        skill: result.skill,
+        context: result.context,
+      });
+    } else if (result.reason === "denied" && result.denial) {
+      io.emit("combatAction", {
+        dialogEvents: [
+          {
+            message: result.denial.message,
+            blocking: true,
+          },
+        ],
+      });
+    } else if (result.logMessage) {
+      io.emit("combatLog", result.logMessage);
     }
-  });
-
-  match.combat.pendingActions.sort((a, b) => {
-    const aPriority = (a.priority || 0) + (a.priorityBias || 0);
-    const bPriority = (b.priority || 0) + (b.priorityBias || 0);
-
-    if (bPriority !== aPriority) return bPriority - aPriority;
-
-    if (b.speed !== a.speed) return b.speed - a.speed;
-
-    return b._tieBreaker - a._tieBreaker;
-  });
-
-  match.combat.pendingActions.forEach((action, index) => {
-    action.initiativeIndex = index;
-  });
-
-  const turnActions = [...match.combat.pendingActions];
-
-  for (const action of match.combat.pendingActions) {
-    console.log(
-      `[TARGETS] [TURN ${match.combat.currentTurn}] Executando ação de ${action.championId} (Skill: ${action.skillKey}, Targets: ${JSON.stringify(action.targetIds)})`,
-    );
-    executeSkillAction(action, turnActions);
   }
 
-  match.combat.clearActions();
-}
+  // 3. Emitir mortes
+  for (const death of deathResults) {
+    emitChampionDeath(death);
+  }
 
-function handleEndTurn() {
-  console.log("teste: TARGETS");
-  io.emit("turnLocked");
-  console.log(
-    "[handleEndTurn] [TARGETS DEBUG] Turno finalizado. Chamando resolveSkillActions...",
-  );
-  resolveSkillActions();
-  processChampionsDeaths();
+  if (match.isGameEnded()) {
+    const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
+    const winnerTeam = winnerSlot + 1;
+    const winnerName = match.players[winnerSlot]?.username;
+    io.emit("gameOver", { winnerTeam, winnerName });
+  }
 
+  // 4. Hooks onTurnEnd
   const context = {
     currentTurn: match.combat.currentTurn,
     activeChampions: Array.from(match.combat.activeChampions.values()).filter(
@@ -1229,35 +704,15 @@ function handleEndTurn() {
 
   emitCombatEvent("onTurnEnd", { context }, match.combat.activeChampions);
 
-  // NÃO chama início de turno aqui.
-  // Espera confirmação do client.
-}
-
-/** Remove campeões mortos do jogo e verifica fim de partida. */
-function processChampionsDeaths() {
-  for (const champ of match.combat.activeChampions.values()) {
-    if (!champ.alive) {
-      removeChampionFromGame(champ.id, champ.team);
-    }
-  }
-
-  if (match.isGameEnded()) {
-    const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
-    const winnerTeam = winnerSlot + 1;
-    const winnerName = match.players[winnerSlot]?.username;
-
-    io.emit("gameOver", {
-      winnerTeam,
-      winnerName,
-    });
-  }
+  // 5. Limpeza de turno e avanço
+  match.clearActions();
+  match.clearTurnReadiness();
+  match.clearFinishedAnimationSockets();
+  match.nextTurn();
 }
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
-  match.combat.nextTurn();
-  match.combat.clearTurnReadiness();
-
   const turnStartContext = createBaseContext({ sourceId: null });
 
   // 1. Injetar contexto
@@ -1657,7 +1112,15 @@ io.on("connection", (socket) => {
       return;
     }
 
-    removeChampionFromGame(championId, player.team);
+    const deathResult = match.removeChampionFromGame(championId, MAX_SCORE);
+    emitChampionDeath(deathResult);
+
+    if (match.isGameEnded()) {
+      const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
+      const winnerTeam = winnerSlot + 1;
+      const winnerName = match.players[winnerSlot]?.username;
+      io.emit("gameOver", { winnerTeam, winnerName });
+    }
   });
 
   // =============================
@@ -1710,7 +1173,7 @@ io.on("connection", (socket) => {
 
     for (let i = match.combat.pendingActions.length - 1; i >= 0; i--) {
       const action = match.combat.pendingActions[i];
-      const champ = match.combat.activeChampions.get(action.championId);
+      const champ = match.combat.activeChampions.get(action.userId);
 
       if (!champ) continue;
 
@@ -1776,15 +1239,13 @@ io.on("connection", (socket) => {
       }
     }
 
-    match.enqueueAction({
-      championId: userId,
-      skillKey,
-      targetIds,
-      priority: skill.priority || 0,
-      speed: user.Speed,
-      turn: match.getCurrentTurn(),
-      ultCost: cost,
-    });
+    const action = new Action({ userId, skillKey, targetIds });
+    action.priority = skill.priority || 0;
+    action.speed = user.Speed;
+    action.turn = match.getCurrentTurn();
+    action.ultCost = cost;
+
+    match.enqueueAction(action);
 
     console.log("[PENDING ACTION ADDED]", match.combat.pendingActions);
 

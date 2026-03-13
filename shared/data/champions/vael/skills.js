@@ -1,0 +1,116 @@
+import { formatChampionName } from "../../../ui/formatters.js";
+import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
+import basicAttack from "../basicAttack.js";
+
+const vaelSkills = [
+  // ========================
+  // Ataque Básico
+  // ========================
+  basicAttack,
+  // ========================
+  // Habilidades Especiais
+  // ========================
+  {
+    key: "corte_instantaneo",
+    name: "Corte Instantâneo",
+    bf: 65,
+    contact: true,
+    damageMode: "standard",
+    priority: 0,
+    description() {
+      return `Causa dano ao inimigo com chance de crítico.`;
+    },
+    targetSpec: ["enemy"],
+    resolve({ user, targets, context = {} }) {
+      const [enemy] = targets;
+      const baseDamage = (user.Attack * this.bf) / 100;
+
+      return new DamageEvent({
+        baseDamage,
+        attacker: user,
+        defender: enemy,
+        skill: this,
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
+    },
+  },
+  {
+    key: "investida_transpassante",
+    name: "Investida Transpassante",
+    bfPrimary: 55,
+    bfSecondary: 60,
+    contact: true,
+    damageMode: "standard",
+    priority: 0,
+    description() {
+      return `Causa dano ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
+    },
+    targetSpec: [{ type: "enemy" }, { type: "enemy", unique: true }],
+
+    resolve({ user, targets, context = {} }) {
+      const [primary, secondary] = targets;
+
+      const baseDamage = (user.Attack * this.bfPrimary) / 100;
+      const results = [];
+
+      if (primary) {
+        const primaryResult = new DamageEvent({
+          baseDamage,
+          attacker: user,
+          defender: primary,
+          skill: this,
+          context,
+          critOptions: { disable: true }, // sem crítico
+          allChampions: context?.allChampions,
+        }).execute();
+        results.push(primaryResult);
+      }
+
+      if (secondary) {
+        const secondaryResult = new DamageEvent({
+          baseDamage: (user.Attack * this.bfSecondary) / 100,
+          attacker: user,
+          defender: secondary,
+          skill: this,
+          context,
+          critOptions: { force: true }, // crítico garantido
+          allChampions: context?.allChampions,
+        }).execute();
+        results.push(secondaryResult);
+      }
+
+      return results;
+    },
+  },
+
+  {
+    key: "veredito_do_fio_silencioso",
+    name: "Veredito do Fio Silencioso",
+    bf: 145,
+    contact: true,
+    damageMode: "standard",
+    isUltimate: true,
+    ultCost: 3,
+    priority: 0,
+    description() {
+      return `Causa dano devastador ao inimigo.`;
+    },
+    targetSpec: ["enemy"],
+    resolve({ user, targets, context = {} }) {
+      const [enemy] = targets;
+      const baseDamage = (user.Attack * this.bf) / 100;
+
+      return new DamageEvent({
+        baseDamage,
+        attacker: user,
+        defender: enemy,
+        skill: this,
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
+    },
+  },
+];
+
+export default vaelSkills;

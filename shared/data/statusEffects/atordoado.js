@@ -2,7 +2,7 @@ const atordoado = {
   key: "atordoado",
   name: "Atordoado",
   type: "debuff",
-  subtypes: ["cc", "hardCC"],
+  subtypes: ["hardCC"],
 
   hookScope: {
     onValidateAction: "owner",

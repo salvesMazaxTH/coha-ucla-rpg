@@ -2,7 +2,7 @@ const inerte = {
   key: "inerte",
   name: "Inerte",
   type: "debuff",
-  subtypes: ["cc", "hardCC"],
+  subtypes: ["hardCC"],
 
   hookScope: {
     onValidateAction: "owner",

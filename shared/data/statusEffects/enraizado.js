@@ -2,7 +2,7 @@ const enraizado = {
   key: "enraizado",
   name: "Enraizado",
   type: "debuff",
-  subtypes: ["cc", "softCC"],
+  subtypes: ["softCC"],
 
   hookScope: {
     onValidateAction: "owner",
