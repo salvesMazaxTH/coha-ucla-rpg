@@ -1,6 +1,6 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
 import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
-import { emitCombatEvent } from "../engine/combatEvents.js";
+import { emitCombatEvent } from "../engine/combat/combatEvents.js";
 
 export function normalizeStatusEffectName(champion, statusEffectName) {
   if (typeof statusEffectName !== "string") return "";

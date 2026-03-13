@@ -8,10 +8,10 @@ const atordoado = {
     onValidateAction: "owner",
   },
 
-  onValidateAction({ user }) {
+  onValidateAction({ source }) {
     return {
       deny: true,
-      message: `${user.name} está Atordoado e não pode agir!`,
+      message: `${source.name} está Atordoado e não pode agir!`,
     };
   },
 };

@@ -7,10 +7,10 @@ const paralisado = {
   onValidateAction: "owner"
 },
 
-  onValidateAction({ user }) {
+  onValidateAction({ source }) {
     return {
       deny: true,
-      message: `${user.name} está Paralisado e não pode agir!`,
+      message: `${source.name} está Paralisado e não pode agir!`,
     };
   },
 };

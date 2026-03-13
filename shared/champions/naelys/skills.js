@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -186,7 +186,7 @@ const naelysSkills = [
 
         onTurnEnd({ self, context }) {
           const currentTurn = context.currentTurn;
-          
+
           console.log("[NAELYS] Hook onTurnEnd verificado.");
           console.log(
             "[NAELYS] currentTurn:",

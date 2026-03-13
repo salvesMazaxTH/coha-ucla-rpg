@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -14,7 +14,7 @@ const reyskaroneSkills = [
   // H1 — Corte Tributário
   // =========================
   {
-    key: "tributo_de_sangue",
+    key: "tributoDeSangue",
     name: "Tributo de Sangue",
     bf: 45,
     damageMode: "standard",
@@ -55,53 +55,6 @@ const reyskaroneSkills = [
       if (result?.log && tributeApplied) {
         result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
       }
-
-      user.runtime.hookEffects ??= [];
-
-      const effect = {
-        key: "tributo_de_sangue_effect",
-        expiresAt: context.currentTurn + this.tributeDuration,
-
-        onBeforeDmgDealing({ source, target, damage, owner, context }) {
-          if (target !== enemy) return;
-          if (source.team !== owner.team) return;
-          if (damage <= 0) return;
-
-          // alvo não tem tributo
-          if (!target.hasStatusEffect?.("tributo")) return;
-
-          const bonus = 10; //this.tributeBonusDamage;
-
-          return {
-            damage: damage + bonus,
-            log: `🩸 Tributo amplificou o golpe de ${source.name} (+${bonus} dano)`,
-          };
-        },
-
-        onAfterDmgDealing({ source, target, context, owner }) {
-          if (target !== enemy) return;
-          if (source.team !== owner.team) return;
-
-          const heal = 15;
-          if (heal <= 0) return;
-
-          source.heal(heal, context);
-
-          return {
-            log: `🩸 Tributo: ${source.name} recuperou ${heal} HP.`,
-          };
-        },
-
-        onTurnStart({ owner, context }) {
-          if (context.currentTurn >= this.expiresAt) {
-            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-              (e) => e !== this,
-            );
-          }
-        },
-      };
-
-      user.runtime.hookEffects.push(effect);
 
       return result;
     },

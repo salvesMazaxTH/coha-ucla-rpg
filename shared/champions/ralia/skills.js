@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -131,19 +131,19 @@ const raliaSkills = [
     description() {
       return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos.`;
     },
-    targetSpec: ["all-enemies"],
-    resolve({ user, context = {} }) {
+    targetSpec: ["all:enemy"],
+    resolve({ user, targets, context = {} }) {
       // Pegar todos os inimigos (time diferente do usuário)
-      const enemies = Array.from(
-        context?.allChampions?.values?.() || [],
-      ).filter((champion) => champion.team !== user.team && champion.alive);
+      const enemies = targets.filter(
+        (champion) => champion.team !== user.team && champion.alive,
+      );
 
       const baseDamage = (user.Attack * this.bf) / 100;
 
       const results = [];
 
       // Aplicar dano em cada inimigo
-      enemies.forEach((enemy) => {
+      for (const enemy of enemies) {
         const damageResult = new DamageEvent({
           baseDamage,
           mode: "hybrid",
@@ -162,7 +162,7 @@ const raliaSkills = [
         }); // -20 Attack por 2 turnos
 
         results.push(damageResult);
-      });
+      }
 
       return results;
     },

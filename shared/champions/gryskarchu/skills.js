@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -53,7 +53,7 @@ const gryskarchuSkills = [
   {
     key: "florescimento_vital",
     name: "Florescimento Vital",
-    healAmount: 50,
+    healAmount: 40,
     contact: false,
 
     priority: 0,
@@ -61,14 +61,15 @@ const gryskarchuSkills = [
       return `Gryskarchu cura a si e todos os aliados ativos em ${this.healAmount} HP.`;
     },
     targetSpec: ["all:ally"],
-    resolve({ user, context }) {
+    resolve({ user, targets, context }) {
       let someoneHealed = false;
 
-      for (const champ of context.allChampions.values()) {
-        if (!champ.alive) continue;
-        if (champ.team !== user.team) continue;
+      for (const target of targets) {
+        if (!target.alive) continue;
+        if (target.team !== user.team) continue;
 
-        champ.heal(this.healAmount, context, user);
+        target.heal(this.healAmount, context, user);
+        someoneHealed = true;
       }
 
       return {

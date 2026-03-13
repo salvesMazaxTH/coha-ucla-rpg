@@ -1,6 +1,7 @@
 import { formatChampionName } from "../../ui/formatters.js";
 
 export default {
+  key: "coracao_das_mares",
   name: "Coração das Marés",
 
   healPerHit: 10,
@@ -32,6 +33,8 @@ export default {
     // cura
     const healed = owner.heal(this.healPerHit, context);
 
+    console.log(`[NAELYS] ${formatChampionName(owner)} foi curado em ${healed} HP e ganhou 1 stack de Maré (${owner.runtime.mareStacks}/${this.maxStacks}).`);
+
     if (healed <= 0) return;
 
     return {
@@ -42,9 +45,11 @@ export default {
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
     // stack
     if (healSrc.id !== owner?.id) return;
+    console.log("[NAELYS] Tentando aplicar stack de Maré...");
     
     if (owner.runtime.mareStacks < this.maxStacks) {
       owner.runtime.mareStacks++;
+      console.log(`[NAELYS] ${owner} agora tem ${owner.runtime.mareStacks} stack(s) de Maré.`); 
 
       owner.addDamageModifier({
         id: `mare-stack-${owner.runtime.mareStacks}`,
@@ -55,6 +60,7 @@ export default {
           return baseDamage + this.dmgPerStack;
         },
       });
+      console.log(`[NAELYS] damageMods: ${owner.getDamageModifiers()}`);
     }
   },
 };

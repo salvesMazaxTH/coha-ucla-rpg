@@ -1,12 +1,12 @@
-import { preChecks } from "./pipeline/preChecks.js";
-import { prepareDamage } from "./pipeline/prepareDamage.js";
-import { composeDamage } from "./pipeline/composeDamage.js";
-import { runBeforeHooks } from "./pipeline/beforeHooks.js";
-import { runAfterHooks } from "./pipeline/afterHooks.js";
-import { applyDamage } from "./pipeline/applyDamage.js";
-import { processObliterate } from "./pipeline/obliterate.js";
-import { processExtraQueue } from "./pipeline/extraQueue.js";
-import { buildFinalResult } from "./pipeline/resultBuilder.js";
+import { preChecks } from "./pipeline/01_preChecks.js";
+import { prepareDamage } from "./pipeline/02_prepareDamage.js";
+import { composeDamage } from "./pipeline/03_composeDamage.js";
+import { runBeforeHooks } from "./pipeline/04_beforeHooks.js";
+import { runAfterHooks } from "./pipeline/07_afterHooks.js";
+import { applyDamage } from "./pipeline/05_applyDamage.js";
+import { processObliterate } from "./pipeline/06_obliterate.js";
+import { processExtraQueue } from "./pipeline/08_extraQueue.js";
+import { buildFinalResult } from "./pipeline/09_resultBuilder.js";
 
 export class DamageEvent {
   static Modes = {

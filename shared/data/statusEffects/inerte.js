@@ -8,22 +8,22 @@ const inerte = {
     onValidateAction: "owner",
   },
 
-  onValidateAction({ user }) {
-    const k = user.getStatusEffect("inerte");
+  onValidateAction({ source }) {
+    const k = source.getStatusEffect("inerte");
 
     let deny = true;
 
     if (k?.canBeInterruptedByAction) {
-      user.removeStatusEffect("inerte");
+      source.removeStatusEffect("inerte");
       deny = false;
       return {
-        message: `O efeito "Inerte" de ${user.name} foi interrompido!`,
+        message: `O efeito "Inerte" de ${source.name} foi interrompido!`,
       };
     }
 
     return {
       deny,
-      message: `${user.name} está Inerte e não pode agir!`,
+      message: `${source.name} está Inerte e não pode agir!`,
     };
   },
 };

@@ -1,4 +1,4 @@
-import { DamageEvent } from "../../engine/DamageEvent.js";
+import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
@@ -184,36 +184,36 @@ const kaiSkills = [
     description() {
       return `Kai desfere uma série de socos flamejantes distribuídos aleatoriamente entre todos os inimigos, cada um causando ${this.damagePerHit} de dano. Alvos já queimando recebem dano adicional de ${this.burningBonus}.`;
     },
-    targetSpec: ["all-enemies"],
+    targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
       // Busca todos os inimigos vivos do contexto (garante que não dependa de targets)
-      const enemies = Array.from(
-        (context &&
-          context.allChampions &&
-          context.allChampions.values &&
-          context.allChampions.values()) ||
-          [],
-      ).filter((champion) => champion.team !== user.team && champion.alive);
+      const enemies = targets.filter((c) => c.team !== user.team && c.alive);
       const results = [];
       if (!enemies.length) return results;
 
-      // Distribui aleatoriamente os socos entre os inimigos
       for (let i = 0; i < this.hits; i++) {
         const target = enemies[Math.floor(Math.random() * enemies.length)];
-        const isBurning = target.hasStatusEffect("queimando");
-        const directBonus = isBurning ? this.burningBonus : 0;
+
+        console.log("[KAI] HIT", i, target.name, target.alive);
+
+        const directBonus = target.hasStatusEffect("queimando")
+          ? this.burningBonus
+          : 0;
+
         const result = new DamageEvent({
           baseDamage: this.damagePerHit,
           mode: "hybrid",
-          piercingPortion: (directBonus > 0 ? directBonus : 0),
+          piercingPortion: directBonus,
           attacker: user,
           defender: target,
           skill: this,
           context,
           allChampions: context?.allChampions,
         }).execute();
+
         results.push({ ...result, targetId: target.id });
       }
+
       return results;
     },
   },

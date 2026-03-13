@@ -23,10 +23,14 @@ const congelado = {
     };
   },
 
-  onValidateAction({ user }) {
+  hookScope: {
+    onValidateAction: "owner",
+  },
+
+  onValidateAction({ source }) {
     return {
       deny: true,
-      message: `${user.name} está Congelado e não pode agir!`,
+      message: `${source.name} está Congelado e não pode agir!`,
     };
   },
 };

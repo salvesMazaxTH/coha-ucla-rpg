@@ -4,11 +4,16 @@ const imunidadeAbsoluta = {
   type: "buff",
   subtypes: ["immunity"],
 
-  onDamageIncoming({ dmgReceiver }) {
+  hookScope: {
+    onDamageIncoming: "target",
+    onStatusEffectIncoming: "target",
+  },
+
+  onDamageIncoming({ target }) {
     return {
       cancel: true,
       immune: true,
-      message: `${dmgReceiver.name} é imune a dano!`,
+      message: `${target.name} é imune a dano!`,
     };
   },
 

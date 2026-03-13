@@ -535,6 +535,9 @@ const surrenderConfirm = document.getElementById("surrender-confirm");
 
 window.StatusIndicator = StatusIndicator;
 window.gameEnded = gameEnded;
+window.resetCombat = () => {
+  socket.emit("debugResetCombat");
+};
 
 // ============================================================
 //  GERENCIADOR DE ANIMAÇÕES DE COMBATE
@@ -1334,6 +1337,9 @@ socket.on("skillDenied", (message) => {
 });
 
 socket.on("skillApproved", async ({ userId, skillKey }) => {
+  console.log(
+    `[SkillApproved] Resolvendo alvos para ${userId} usando ${skillKey}`,
+  );
   const user = activeChampions.get(userId);
   if (!user) return;
 
@@ -1342,6 +1348,7 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
 
   // Coleta alvos no client
   const targets = await collectClientTargets(user, skill);
+  console.log("[SkillApproved] Alvos coletados:", targets);
   if (!targets) return;
 
   const targetIds = {};
@@ -1369,17 +1376,20 @@ async function collectClientTargets(user, skill) {
     typeof s === "string" ? { type: s } : s,
   );
 
-  // Alvos globais não precisam de seleção manual
-  const hasGlobalTargets = skill.targetSpec.some(
-    (spec) => spec === "all-enemies" || spec === "all-allies" || spec === "all",
+  const hasGlobal = normalizedSpec.some(
+    (s) => s.type === "all" || s.type === "all:enemy" || s.type === "all:ally",
   );
-  if (hasGlobalTargets) return {};
+
+  // Se for habilidade global, não abrir UI de seleção
+  if (hasGlobal) {
+    return {};
+  }
 
   const championsInField = Array.from(activeChampions.values());
+
   const targets = {};
   const enemyCounter = { count: 0 };
   const chosenTargets = new Set();
-  let hasAtLeastOneTarget = false;
 
   for (const spec of normalizedSpec) {
     const target = await selectTargetForRole(
@@ -1391,14 +1401,25 @@ async function collectClientTargets(user, skill) {
       spec.unique === true,
     );
 
-    if (target === null) return null; // Cancelou a habilidade
-    if (target === undefined) continue; // Slot opcional ignorado
+    console.log(`[collectClientTargets] Role: ${spec.type}, Target:`, target);
+
+    // cancelamento manual
+    if (target === null) return null;
+
+    // slot ignorado
+    if (target === undefined) continue;
 
     Object.assign(targets, target);
-    hasAtLeastOneTarget = true;
   }
 
-  return hasAtLeastOneTarget ? targets : null;
+  const hasTargets = Object.keys(targets).length > 0;
+
+  if (!hasTargets) {
+    alert("Não existem alvos válidos para esta habilidade.");
+    return null;
+  }
+
+  return targets;
 }
 
 async function selectTargetForRole(
@@ -1414,6 +1435,8 @@ async function selectTargetForRole(
     enforceUnique ? list.filter((c) => !chosenTargets.has(c.id)) : list;
 
   const role = spec.type;
+
+  console.log(`[selectTargetForRole] Selecionando alvo para role: ${role}`);
 
   // SELF
   if (role === "self") {
@@ -1441,12 +1464,15 @@ async function selectTargetForRole(
     }
 
     candidates = filterUnique(candidates);
-    if (candidates.length === 0) return null;
+
     const target = await createTargetSelectionOverlay(
       candidates,
       "Escolha um Aliado",
     );
-    if (!target) return undefined;
+
+    if (target === null) return null;
+    if (target === undefined) return undefined;
+    
     chosenTargets.add(target.id);
     return { ally: target };
   }
@@ -1457,37 +1483,53 @@ async function selectTargetForRole(
   // ENEMY (seleção manual)
   if (role === "enemy") {
     enemyCounter.count++;
+
     const index = enemyCounter.count;
+
     let candidates = championsInField.filter((c) => c.team !== user.team);
     candidates = filterUnique(candidates);
-    if (candidates.length === 0) return null;
+
     const target = await createTargetSelectionOverlay(
       candidates,
       index === 1 ? "Selecione o INIMIGO" : `Selecione o INIMIGO ${index}`,
     );
-    if (!target) return null;
+
+    console.log(
+      `[selectTargetForRole] Candidates for enemy ${index}:`,
+      candidates,
+    );
+
+    if (target === null) return null;
+    if (target === undefined) return undefined;
+
     chosenTargets.add(target.id);
     const key = index === 1 ? "enemy" : `enemy${index}`;
+    console.log(
+      `[selectTargetForRole] Selected target for ${key}:`,
+      target,
+      chosenTargets,
+    );
+
     return { [key]: target };
   }
 
-  // FALLBACK genérico
-  let candidates = filterUnique(championsInField);
-  if (candidates.length === 0) return null;
-
-  const target = await createTargetSelectionOverlay(
-    candidates,
-    `Selecione o alvo (${role})`,
-  );
-  if (!target) return undefined;
-  chosenTargets.add(target.id);
-  return { [role]: target };
+  console.error(`[selectTargetForRole] Unknown target role: ${role}`);
+  return undefined;
 }
 
 // --- Overlay de seleção de alvo ---
 
 function createTargetSelectionOverlay(candidates, title) {
   return new Promise((resolve) => {
+    // se não houver candidatos, evitar abrir a UI de seleção vazia
+    if (!Array.isArray(candidates) || candidates.length === 0) {
+      console.log(
+        `[createTargetSelectionOverlay] Nenhum candidato disponível para "${title}". Pulando seleção. Resolvendo undefined.`,
+      );
+      resolve(undefined);
+      return;
+    }
+
     const overlay = document.createElement("div");
     overlay.classList.add("targetSelectionOverlay");
 

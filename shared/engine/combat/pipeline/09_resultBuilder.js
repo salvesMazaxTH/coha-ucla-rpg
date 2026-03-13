@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../ui/formatters.js";
+import { formatChampionName } from "../../../ui/formatters.js";
 
 export function buildFinalResult(event) {
   // Consolida todos os logs (os da pipeline + os que hooks podem ter jogado no context)

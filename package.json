@@ -10,6 +10,10 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "export-champions": "node exportChampionsToJson.js"
+    "export-champions": "node exportChampionsToJson.js",
+    "dev": "nodemon server.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }
