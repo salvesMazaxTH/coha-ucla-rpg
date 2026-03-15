@@ -27,17 +27,17 @@ import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 // ============================================================
 
 const editMode = {
-  enabled: true,
-  autoLogin: true,
+  enabled: false,
+  autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: true,
+  unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
