@@ -2,7 +2,7 @@
 //  OVERLAYS (DE SKILL, HOVER/TOUCH NOS BOTÕES DE SKILL, E DE CLIQUE NO PORTRAIT)
 // ============================================================
 
-import elementEmoji from "../../shared/champions/elementEmoji.js";
+import { elementEmoji } from "../../shared/ui/elementEmoji.js";
 
 let skillOverlay = null;
 

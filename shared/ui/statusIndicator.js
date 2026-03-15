@@ -1,7 +1,4 @@
-import {
-  createVFXCanvas,
-  playVFX,
-} from "../../public/js/animation/vfx/vfxManager.js";
+import { createVFXCanvas, playVFX } from "../vfx/vfxManager.js";
 
 /**
  * Sistema de indicadores visuais para status de campeões

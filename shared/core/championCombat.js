@@ -111,20 +111,30 @@ export function isTauntedBy(champion, taunterId) {
  * @param {string} config.source - Source description
  * @param {object} config.context - Combat context
  */
-export function applyDamageReduction(
-  champion,
-  { amount, duration, type = "flat", source = "unknown", context },
-) {
+export function applyDamageReduction(champion, config = {}) {
+  const {
+    amount = 0,
+    duration = 0,
+    type = "flat",
+    source = "unknown",
+    context,
+  } = config;
+
+  if (!context) {
+    throw new Error(
+      `[applyDamageReduction] chamado sem context (champion: ${champion?.name})`,
+    );
+  }
+
   champion.damageReductionModifiers.push({
     amount: amount,
     expiresAtTurn: context.currentTurn + duration,
     type: type,
     source: source,
   });
-  /* console.log(
+  console.log(
     `[Champion] ${champion.name} gained ${amount} damage reduction from ${source}. Will expire at turn ${context.currentTurn + duration}.`,
   );
-  */
 }
 
 /**
@@ -484,7 +494,11 @@ export function heal(champion, amount, context, source = champion) {
 
   const ctx = context || champion.runtime?.currentContext;
   if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
-    ctx.registerHeal({ target: champion, amount: healed, sourceId: source?.id });
+    ctx.registerHeal({
+      target: champion,
+      amount: healed,
+      sourceId: source?.id,
+    });
   }
 
   return healed;

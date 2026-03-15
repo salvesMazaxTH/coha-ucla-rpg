@@ -413,6 +413,9 @@ export class Champion {
   }
 
   applyDamageReduction(config) {
+    if (typeof config !== "object") {
+      throw new Error(`[applyDamageReduction] config inválido: ${config}`);
+    }
     return applyDamageReduction(this, config);
   }
 

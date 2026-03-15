@@ -61,11 +61,12 @@ const nytheraSkills = [
     targetSpec: ["self"],
 
     resolve({ user, context = {} }) {
-      user.applyDamageReduction(
-        user,
-        { config: { amount: 40, duration: this.effectDuration, source: this } },
+      user.applyDamageReduction({
+        amount: 40,
+        duration: this.effectDuration,
+        source: "Câmara de Estase",
         context,
-      );
+      });
 
       user.runtime.hookEffects ??= [];
 

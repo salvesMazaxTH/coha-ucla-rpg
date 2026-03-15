@@ -1,7 +1,7 @@
 import { formatChampionName } from "../../../shared/ui/formatters.js";
 
-import { syncChampionVFX } from "./vfx/vfxManager.js";
-import { playObliterateEffect } from "./vfx/obliterate.js";
+import { syncChampionVFX } from "../../../shared/vfx/vfxManager.js";
+import { playObliterateEffect } from "../../../shared/vfx/obliterate.js";
 
 // ============================================================
 //  AnimsAndLogManager.js — Combat Animation & Log System (v2)
