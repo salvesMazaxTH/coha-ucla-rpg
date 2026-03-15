@@ -23,11 +23,12 @@ export default {
     if (owner.Critical > this.critThreshold) {
       owner.critBonusOverride = this.enhancedCritBonus;
     }
-    console.log(
+    /* console.log(
       `${owner.name} ganhou +${this.critBuff}% Critical por causa de Sede de Sangue! Critical atual: ${owner.Critical}%` +
         (owner.critBonusOverride === this.enhancedCritBonus
           ? ` | Bônus de crítico: 1.${this.enhancedCritBonus}x`
           : ``),
     );
+    */
   },
 };

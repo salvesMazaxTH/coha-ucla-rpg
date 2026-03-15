@@ -2,7 +2,7 @@ const gelado = {
   key: "gelado",
   name: "Gelado",
   type: "debuff",
-  subtypes: ["statMod"],
+  subtypes: ["statMod", "ice"],
 
   onStatusEffectAdded({ owner, duration, context }) {
     owner.modifyStat({

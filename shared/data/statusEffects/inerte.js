@@ -5,7 +5,7 @@ const inerte = {
   subtypes: ["hardCC"],
 
   hookScope: {
-    onValidateAction: "owner",
+    onValidateAction: "source",
   },
 
   onValidateAction({ source }) {

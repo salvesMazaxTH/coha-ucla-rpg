@@ -30,10 +30,11 @@ const voltexzSkills = [
       const results = [];
 
       if (primary) {
-        console.log(
+        /* console.log(
           "🌊 ALL-CHAMPIONS DEBUG, allChampions in context (Voltexz 1st skill):",
           context?.allChampions,
         );
+        */
         const primaryResult = new DamageEvent({
           baseDamage,
           attacker: user,
@@ -42,7 +43,7 @@ const voltexzSkills = [
           context,
           allChampions: context?.allChampions,
         }).execute();
-        console.log("🌊 Target affinities:", primary.elementalAffinities);
+        // console.log("🌊 Target affinities:", primary.elementalAffinities);
         results.push(primaryResult);
       }
 
@@ -55,7 +56,7 @@ const voltexzSkills = [
           context,
           allChampions: context?.allChampions,
         }).execute();
-        console.log("🌊 Target affinities:", secondary.elementalAffinities);
+        // console.log("🌊 Target affinities:", secondary.elementalAffinities);
         results.push(secondaryResult);
       }
 
@@ -66,7 +67,7 @@ const voltexzSkills = [
     key: "choque_estatico",
     name: "Choque Estático",
     bf: 20,
-    paralyzeDuration: 1,
+    paralyzeDuration: 2,
     contact: false,
     damageMode: "standard",
     priority: 1,
@@ -100,9 +101,10 @@ const voltexzSkills = [
       );
 
       if (paralyzed) {
-        console.log(
+        /* console.log(
           `${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
         );
+        */
         if (damageResult?.log) {
           damageResult.log += `\n${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
         }

@@ -19,34 +19,34 @@ export default {
   },
 
   onAfterDmgDealing({ source, target, owner, damage, skill, context }) {
-    console.log("[KAI] Hook onAfterDmgDealing disparado");
-    console.log("[KAI] Owner:", owner?.name);
-    console.log("[KAI] Skill usada:", skill?.key);
-    console.log("[KAI] Dano causado:", damage);
-    console.log("[KAI] Target:", target?.name);
+    // console.log("[KAI] Hook onAfterDmgDealing disparado");
+    // console.log("[KAI] Owner:", owner?.name);
+    // console.log("[KAI] Skill usada:", skill?.key);
+    // console.log("[KAI] Dano causado:", damage);
+    // console.log("[KAI] Target:", target?.name);
 
     if (!skill) {
-      console.log("[KAI] Abortado: skill inexistente");
+      // console.log("[KAI] Abortado: skill inexistente");
       return;
     }
 
     if (owner.runtime?.fireStance !== "brasa_viva") {
       if (skill.key !== "ataque_basico") {
-        console.log("[KAI] Abortado: skill não é ataque básico");
+        // console.log("[KAI] Abortado: skill não é ataque básico");
         return;
       }
     }
 
     if (damage <= 0) {
-      console.log("[KAI] Abortado: dano <= 0");
+      // console.log("[KAI] Abortado: dano <= 0");
       return;
     }
 
     const impactDamage =
       owner.runtime?.fireStance === "brasa_viva" ? 35 : this.flamingFistsDamage;
 
-    console.log("[KAI] Impacto térmico ativado");
-    console.log("[KAI] Dano adicional:", impactDamage);
+    // console.log("[KAI] Impacto térmico ativado");
+    // console.log("[KAI] Dano adicional:", impactDamage);
 
     const result = new DamageEvent({
       mode: "hybrid",
@@ -62,20 +62,20 @@ export default {
       allChampions: context?.allChampions,
     }).execute();
 
-    console.log("[KAI] Resultado do impacto térmico:", result);
+    // console.log("[KAI] Resultado do impacto térmico:", result);
 
     if (result?.totalDamage > 0) {
-      console.log("[KAI] Impacto causou dano, verificando afinidade elemental");
+      // console.log("[KAI] Impacto causou dano, verificando afinidade elemental");
 
       const affinities = target.elementalAffinities ?? [];
 
-      console.log("[KAI] Afinidade do alvo:", affinities);
+      // console.log("[KAI] Afinidade do alvo:", affinities);
 
       if (
         owner.runtime?.fireStance !== "brasa_viva" &&
         !affinities.some((a) => ["earth", "water", "fire"].includes(a))
       ) {
-        console.log("[KAI] Alvo elegível para QUEIMANDO");
+        // console.log("[KAI] Alvo elegível para QUEIMANDO");
 
         const burnDuration =
           owner.runtime?.fireStance === "brasa_viva" ? 2 : this.burnDuration;
@@ -84,19 +84,21 @@ export default {
           source: owner.name,
         });
 
-        console.log("[KAI] StatusEffect 'queimando' aplicada por", owner.name);
+        // console.log("[KAI] StatusEffect 'queimando' aplicada por", owner.name);
       } else {
-        console.log(
+        /* console.log(
           "[KAI] Alvo possui afinidade elemental resistente → queimadura NÃO aplicada",
         );
+        */
       }
     } else {
-      console.log(
+      /* console.log(
         "[KAI] Impacto térmico não causou dano → queimadura não verificada",
       );
+      */
     }
 
-    console.log("[KAI] Hook finalizado");
+    // console.log("[KAI] Hook finalizado");
 
     return {
       log: `${formatChampionName(source)} aplica ${impactDamage} de dano térmico a ${formatChampionName(target)} com ${owner.name}.`,

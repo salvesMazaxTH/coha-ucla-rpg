@@ -125,7 +125,7 @@ const naelthosSkills = [
 
     resolve({ user, context = {} }) {
       const { currentTurn } = context;
-      console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
+      // console.log("ULT EXECUTADA:", user.name, "TURNO:", currentTurn);
 
       const factor = this.hpFactor / 100;
 

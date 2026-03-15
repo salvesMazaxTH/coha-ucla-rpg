@@ -37,9 +37,10 @@ export default {
     const success = roll < this.paralyzeChance / 100;
 
     if (!success) {
-      console.log(
+      /* console.log(
         `[PASSIVA — Energia Pulsante] Node-SPARCKINA-07 não rolou ${roll} para aplicar "Paralisado" e falhou.`,
       );
+      */
       return;
     }
 
@@ -54,16 +55,17 @@ export default {
     );
 
     if (!paralyzed) {
-      console.log(
+      /* console.log(
         `[PASSIVA — Energia Pulsante] ${formatChampionName(source)} tentou aplicar "Paralisado" em ${formatChampionName(target)}, mas falhou.`,
       );
+      */
       return;
     }
 
-    console.log(
+    /* console.log(
       `— [PASSIVA — Energia Pulsante] ${formatChampionName(source)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos. roll: ${roll}`,
     );
-
+    */
     return {
       log: `[PASSIVA — Energia Pulsante] ${formatChampionName(source)} aplicou "Paralisado" em ${formatChampionName(target)} por ${this.paralyzeDuration} turnos!`,
     };

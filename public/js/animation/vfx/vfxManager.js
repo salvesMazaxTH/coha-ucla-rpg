@@ -1,5 +1,6 @@
 import { startShield } from "./shieldCanvas.js";
 import { startFireStance } from "./fireStanceCanvas.js";
+import { startFrozenCanvas } from "./frozenCanvas.js";
 
 // no futuro:
 // import { startBurn } from "./burnCanvas.js";
@@ -59,7 +60,7 @@ export function syncChampionVFX(champion) {
   champion._vfxState.fireStance = newFire;
 }
 
-function createVFXCanvas(type, champion) {
+export function createVFXCanvas(type, champion) {
   const container = champion.el.querySelector(".portrait-wrapper");
   if (!container) return null;
 
@@ -89,6 +90,10 @@ export function playVFX(type, canvas, data = {}) {
   switch (type) {
     case "shield":
       controller = startShield(canvas, data);
+      break;
+
+    case "congelado":
+      controller = startFrozenCanvas(canvas, data);
       break;
 
     // case "burn":

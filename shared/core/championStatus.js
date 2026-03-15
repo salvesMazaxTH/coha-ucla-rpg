@@ -27,34 +27,29 @@ export function applyStatusEffect(
     throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
     );
-    return false;
   }
 
-  if (
-    !_canApplyStatusEffect(
-      champion,
-      statusEffectKey,
-      duration,
-      metadata,
-      context,
-    )
-  ) {
+  const validation = _canApplyStatusEffect(
+    champion,
+    statusEffectKey,
+    duration,
+    metadata,
+    context,
+  );
+
+  if (!validation.allowed) {
     context.visual ??= {};
     context.visual.dialogEvents ??= [];
 
-    const alreadyHasDialog = context.visual.dialogEvents.some(
-      (e) => e.type === "dialog" && e.targetId === champion.id,
-    );
-
-    if (!alreadyHasDialog) {
-      context.visual.dialogEvents.push({
-        type: "dialog",
-        message: `${champion.name} não pode receber o efeito "${statusEffectKey}"`,
-        sourceId: champion.id,
-        targetId: champion.id,
-        blocking: true,
-      });
-    }
+    context.visual.dialogEvents.push({
+      type: "dialog",
+      message:
+        validation.message ??
+        `${champion.name} não pode receber "${statusEffectKey}".`,
+      sourceId: champion.id,
+      targetId: champion.id,
+      blocking: true,
+    });
 
     return false;
   }
@@ -62,10 +57,10 @@ export function applyStatusEffect(
   const { currentTurn } = context || {};
   const isStackable = statusEffectKey === "poison";
 
-  console.log(
+  /* console.log(
     `[STATUS APPLY] ${champion.name} tentando receber "${statusEffectKey}" (duration=${duration})`,
   );
-
+  */
   duration = Number.isFinite(duration) ? duration : 1;
 
   const persistent = metadata?.persistent || false;
@@ -84,10 +79,10 @@ export function applyStatusEffect(
     ...metadata,
   });
 
-  console.log(
+  /* console.log(
     `[STATUS APPLY] ${champion.name} recebeu "${statusEffectKey}" até turno ${currentTurn + duration}`,
   );
-
+  */
   _attachStatusEffectBehavior(champion, statusEffectKey, duration, context);
 
   StatusIndicator.animateIndicatorAdd(champion, statusEffectKey);
@@ -103,9 +98,10 @@ function _canApplyStatusEffect(
   context,
 ) {
   if (context?.shieldBlockedTargets?.has(champion.id)) {
-    console.log(
+    /* console.log(
       `[STATUS BLOCKED] ${champion.name}: statusEffect "${statusEffectKey}" bloqueado por escudo.`,
     );
+    */
     return false;
   }
 
@@ -132,10 +128,11 @@ function _canApplyStatusEffect(
   const cancelled = eventResults.find((r) => r?.cancel);
 
   if (cancelled) {
-    console.log(
-      `[STATUS BLOCKED] ${champion.name} → "${statusEffectKey}" cancelado por status-effect`,
-    );
-    return false;
+    return {
+      allowed: false,
+      message:
+        cancelled.message ?? `${champion.name} é imune a ${behavior.name}.`,
+    };
   }
 
   if (behavior?.subtypes?.includes("hardCC")) {
@@ -143,19 +140,15 @@ function _canApplyStatusEffect(
       const existingBehavior = StatusEffectsRegistry[existingStatusEffect];
 
       if (existingBehavior?.subtypes?.includes("hardCC")) {
-        console.log(
-          `[STATUS BLOCKED] ${champion.name} já possui status bloqueante (${existingStatusEffect}).`,
-        );
-        return false;
+        return {
+          allowed: false,
+          message: `${champion.name} já está incapacitado.`,
+        };
       }
     }
   }
 
-  console.log(
-    `[STATUS APPLY] ${champion.name} não possui impedimento a receber "${statusEffectKey}"`,
-  );
-
-  return true;
+  return { allowed: true };
 }
 
 function _attachStatusEffectBehavior(
@@ -164,10 +157,10 @@ function _attachStatusEffectBehavior(
   duration,
   context,
 ) {
-  console.log(
+  /* console.log(
     `[STATUS HOOK] Instalando hooks de "${statusEffectKey}" em ${champion.name}`,
   );
-
+  */
   const behavior = StatusEffectsRegistry[statusEffectKey];
   if (!behavior) return;
 
@@ -192,11 +185,11 @@ function _attachStatusEffectBehavior(
 
   champion.runtime.hookEffects.push(effectInstance);
 
-  console.log(
+  /* console.log(
     `[STATUS HOOK] Hooks ativos de ${champion.name}:`,
     champion.runtime.hookEffects.map((e) => e.key),
   );
-
+  */
   if (behavior.onStatusEffectAdded) {
     behavior.onStatusEffectAdded({
       owner: champion,
@@ -252,10 +245,10 @@ export function removeStatusEffect(champion, statusEffectName) {
   const normalizedName = normalizeStatusEffectName(champion, statusEffectName);
   if (champion.statusEffects.has(normalizedName)) {
     champion.statusEffects.delete(normalizedName);
-    console.log(
+    /* console.log(
       `[STATUS REMOVE] ${champion.name}: StatusEffect "${normalizedName}" removido.`,
     );
-
+    */
     // 🎨 Anima a remoção do indicador
     StatusIndicator.animateIndicatorRemove(champion, normalizedName);
   }
@@ -276,10 +269,10 @@ export function purgeExpiredStatusEffects(champion, currentTurn) {
     if (statusEffectData.expiresAtTurn <= currentTurn) {
       champion.statusEffects.delete(statusEffectName);
       removedStatusEffects.push(statusEffectName);
-      console.log(
+      /* console.log(
         `[STATUS EXPIRE] ${champion.name}: StatusEffect "${statusEffectName}" expirou.`,
       );
-
+      */
       champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
         (e) => !(e.group === "statusEffect" && e.key === statusEffectName),
       );

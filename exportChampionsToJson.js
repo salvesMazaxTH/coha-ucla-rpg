@@ -91,7 +91,7 @@ async function main() {
 
       if (!fs.statSync(champPath).isDirectory()) continue;
 
-      console.log("Processing:", folder);
+      // console.log("Processing:", folder);
 
       const champ = await loadChampion(champPath);
 
@@ -105,7 +105,7 @@ async function main() {
 
   fs.writeFileSync(outputFile, JSON.stringify(output, null, 2));
 
-  console.log("champions_db.json generated!");
+  // console.log("champions_db.json generated!");
 }
 
 main();

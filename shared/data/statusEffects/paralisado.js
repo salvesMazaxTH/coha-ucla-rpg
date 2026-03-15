@@ -2,16 +2,19 @@ const paralisado = {
   key: "paralisado",
   name: "Paralisado",
   type: "debuff",
-  subtypes: ["softCC"],
+  subtypes: ["softCC", "lightning"],
 
   hookScope: {
-    onValidateAction: "owner",
+    onValidateAction: "source",
   },
 
   onValidateAction({ source }) {
     const chanceOfActing = 0.5; // 50% de chance de agir normalmente
     const roll = Math.random();
-    if (!(roll < chanceOfActing)) {
+    console.log(
+      `[PARALISADO] Rolando para ação de ${source.name} (Paralisado): ${roll.toFixed(2)} vs ${chanceOfActing}. Conseguiu agir? ${roll < chanceOfActing ? "Sim" : "Não"}`,
+    );
+    if (roll >= chanceOfActing) {
       return {
         deny: true,
         message: `${source.name} está Paralisado e não pode agir!`,

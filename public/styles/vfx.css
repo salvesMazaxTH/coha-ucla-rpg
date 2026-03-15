@@ -73,6 +73,14 @@
   }
 }
 
+/* Frozen status VFX (Canvas-based animations) */
+
+.vfx-congelado {
+  mix-blend-mode: screen;
+  filter: brightness(1.05) contrast(1.05);
+  z-index: 6;
+}
+
 /* ========================= */
 /* SHIELD CONTAINER STYLES   */
 /* ========================= */

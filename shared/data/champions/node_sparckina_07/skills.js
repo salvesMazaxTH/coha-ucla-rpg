@@ -101,9 +101,10 @@ const nodeSparckina07Skills = [
       );
 
       if (!paralyzed) {
-        console.log(
+        /* console.log(
           `[HABILIDADE — Radiant Burst] ${formatChampionName(user)} tentou aplicar "Paralisado" em ${formatChampionName(enemy)}, mas falhou.`,
         );
+        */
       }
 
       return new DamageEvent({

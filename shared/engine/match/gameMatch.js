@@ -157,6 +157,38 @@ class CombatState {
     );
   }
 
+  getChampionAtSlot(team, slot) {
+    return (
+      [...this.activeChampions.values()].find(
+        (c) => c.team === team && c.combatSlot === slot,
+      ) || null
+    );
+  }
+
+  getTeamLine(team) {
+    return [...this.activeChampions.values()]
+      .filter((c) => c.team === team && Number.isInteger(c.combatSlot))
+      .sort((a, b) => a.combatSlot - b.combatSlot);
+  }
+
+  getAdjacentChampions(target, { side = "both" } = {}) {
+    const champion =
+      typeof target === "string" ? this.getChampion(target) : target;
+
+    if (!champion || !Number.isInteger(champion.combatSlot)) return [];
+
+    const left = this.getChampionAtSlot(champion.team, champion.combatSlot - 1);
+    const right = this.getChampionAtSlot(
+      champion.team,
+      champion.combatSlot + 1,
+    );
+
+    if (side === "left") return left ? [left] : [];
+    if (side === "right") return right ? [right] : [];
+
+    return [left, right].filter(Boolean);
+  }
+
   registerChampion(champion, { trackSnapshot = true } = {}) {
     this.deadChampions.delete(champion.id);
     this.activeChampions.set(champion.id, champion);
@@ -166,6 +198,7 @@ class CombatState {
         championKey: champion.key,
         id: champion.id,
         team: champion.team,
+        combatSlot: champion.combatSlot,
       });
     }
   }

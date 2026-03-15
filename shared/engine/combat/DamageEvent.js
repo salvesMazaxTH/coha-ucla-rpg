@@ -38,7 +38,15 @@ export class DamageEvent {
     this.piercingPortion = params.piercingPortion || 0;
 
     this.attacker = attacker;
+    console.log(
+      "[DamageEvent_constructor] Attacker in DamageEvent:",
+      this.attacker,
+    );
     this.defender = defender;
+    console.log(
+      "[DamageEvent_constructor] Defender in DamageEvent:",
+      this.defender,
+    );
     this.skill = skill;
 
     this.context = context ?? {};
@@ -46,10 +54,10 @@ export class DamageEvent {
       params.allChampions instanceof Map
         ? [...params.allChampions.values()]
         : (params.allChampions ?? []);
-    console.log(
-      "[DamageEvent_constructor] ALL-CHAMPIONS DEBUG allChampions in DamageEvent:",
-      this.allChampions,
-    );
+    // console.log(
+    //   "[DamageEvent_constructor] ALL-CHAMPIONS DEBUG allChampions in DamageEvent:",
+    //   this.allChampions,
+    // );
     this.critOptions = params.critOptions ?? [];
 
     this.damageDepth = this.context.damageDepth ?? 0;

@@ -121,8 +121,8 @@ function _applyAfterDealingPassive(event) {
 
 function _processHook(event, eventName, payload) {
   // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
-  console.log("[ALL CHAMPIONS DEBUG]", event.allChampions);
-
+/*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions);
+ */
   // Verifique se o event.allChampions não foi redefinido por acidente
   if (!event.allChampions || event.allChampions.length === 0) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */

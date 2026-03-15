@@ -352,21 +352,24 @@ export function syncChampionActionStateUI(champion) {
  * @param {object} champion - The champion instance
  */
 export function destroyChampion(champion) {
-  console.log(
+  /* console.log(
     `[Server Champion.destroy() called for ${champion.name} (ID: ${champion.id})`,
   );
-  console.log(`[Client] this.el value:`, champion.el);
-  console.log(`[Client] typeof this.el:`, typeof champion.el);
+  */
+  // console.log(`[Client] this.el value:`, champion.el);
+  // console.log(`[Client] typeof this.el:`, typeof champion.el);
   // Remove do DOM
   if (champion.el) {
     champion.el.remove();
     champion.el = null;
-    console.log(
+    /* console.log(
       `[Client] Removed DOM element for ${champion.name} (ID: ${champion.id}).`,
     );
+    */
   } else {
-    console.log(
+    /* console.log(
       `[Client] No DOM element (this.el) found for ${champion.name} (ID: ${champion.id}) to remove.`,
     );
+    */
   }
 }

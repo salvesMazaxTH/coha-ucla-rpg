@@ -51,28 +51,30 @@ export default {
   onAfterDmgTaking({ source, target, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
-    console.log(
+    /* console.log(
       `[${owner.name} - Reator Cataclísmico] Dano recebido: ${damage}`,
     );
-
-    const storageRate = /* owner.hasStatusEffect?.("blindagem_reforcada")
+    */
+    const storageRate =
+      /* owner.hasStatusEffect?.("blindagem_reforcada")
       ? this.storageShieldPercent / 100
       : */ this.storageBasePercent / 100;
 
     const stored = Math.floor(damage * storageRate);
 
-    console.log(
+    /* console.log(
       `[${owner.name} - Reator Cataclísmico] Dano armazenado: ${stored} (Taxa: ${storageRate * 100}%)`,
     );
-
+    */
     owner.runtime = owner.runtime || {};
     owner.runtime.storedDamage = Math.min(
       this.storageCap,
       (owner.runtime.storedDamage || 0) + stored,
     );
-    console.log(
+    /* console.log(
       `[${owner.name} - Reator Cataclísmico] Dano armazenado total: ${owner.runtime.storedDamage}`,
     );
+    */
   },
 
   // 🔴 Após usar qualquer habilidade (exceto ataque básico), fica Atordoado

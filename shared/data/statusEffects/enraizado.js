@@ -5,7 +5,7 @@ const enraizado = {
   subtypes: ["softCC"],
 
   hookScope: {
-    onValidateAction: "owner",
+    onValidateAction: "source",
   },
 
   onValidateAction({ source, skill }) {

@@ -3,7 +3,7 @@ const congelado = {
   key: "congelado",
   name: "Congelado",
   type: "debuff",
-  subtypes: ["hardCC"],
+  subtypes: ["hardCC", "ice"],
 
   onStatusEffectAdded({ owner }) {
     owner.modifyStat({
@@ -24,7 +24,7 @@ const congelado = {
   },
 
   hookScope: {
-    onValidateAction: "owner",
+    onValidateAction: "source",
     onAfterDmgTaking: "target",
   },
 

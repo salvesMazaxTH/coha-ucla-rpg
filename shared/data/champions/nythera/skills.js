@@ -8,10 +8,15 @@ const nytheraSkills = [
     key: "lamina_boreal",
     name: "Lâmina Boreal",
     bf: 75,
-    contact: false,
+
     chillDuration: 2,
     freezeDuration: 1,
     bonusIfFrozen: 50,
+
+    contact: false,
+    priority: 0,
+
+    element: "ice",
     description() {
       return `Causa dano e deixa o alvo {gelado} por ${this.chillDuration} turno(s). Se o alvo já estiver {gelado}, aplica {congelado} por ${this.freezeDuration} turno(s) e causa dano adicional igual a ${this.bonusIfFrozen} de dano ({perfurante}).`;
     },
@@ -46,13 +51,12 @@ const nytheraSkills = [
     name: "Câmara de Estase",
     effectDuration: 2,
     contact: false,
-    chillDuration: 2,
     freezeDuration: 1,
 
     priority: 3,
-    element: "water",
+    element: "ice",
     description() {
-      return `Por ${this.effectDuration} turno(s), recebe -40 de redução de dano. Quem causar dano a Nythera durante esse período recebe {gelado} por ${this.chillDuration} turno(s). Se o alvo já estiver {gelado}, aplica {congelado} por ${this.freezeDuration} turno(s).`;
+      return `Por ${this.effectDuration} turno(s), recebe -40 de redução de dano. Quem causar dano a Nythera durante esse período fica {Congelado} por ${this.freezeDuration} turno(s).`;
     },
     targetSpec: ["self"],
 
@@ -71,18 +75,73 @@ const nytheraSkills = [
       const effect = {
         key: "camara_de_estase",
         expiresAt: context?.currentTurn + this.effectDuration,
+
         onAfterDmgTaking({ source, target, damage, context }) {
-          source.hasStatusEffect("congelado")
-            ? source.applyStatusEffect(
-                "congelado",
-                this.freezeDuration,
-                context,
-              )
-            : source.applyStatusEffect("gelado", this.chillDuration, context);
+          source.applyStatusEffect("congelado", this.freezeDuration, context);
         },
       };
 
       user.runtime.hookEffects.push(effect);
+    },
+  },
+
+  {
+    key: "trono_da_noite_branca",
+    name: "Trono da Noite Branca",
+    bf: 70,
+
+    chillDuration: 2,
+    freezeDuration: 1,
+    bfIfCold: 110,
+    bonusIfFrozen: 50,
+
+    contact: false,
+    priority: 0,
+
+    isUltimate: true,
+    ultCost: 3,
+
+    element: "ice",
+    description() {
+      return `Se o alvo estiver Gelado ou Congelado, o BF aumenta para ${this.bfIfCold} e aplica Congelado por ${this.freezeDuration} turno(s). Se já estiver Congelado, causa também ${this.bonusIfFrozen} de dano adicional.
+      Caso contrário, aplica Gelado por ${this.chillDuration} turno(s).`;
+    },
+    targetSpec: ["enemy"],
+    resolve({ user, targets, context = {} }) {
+      const [target] = targets;
+
+      const isFrozen = target.hasStatusEffect("congelado");
+      const isChilled = target.hasStatusEffect("gelado");
+
+      let baseDamage;
+
+      // BF base
+      if (isChilled || isFrozen) {
+        baseDamage = (user.Attack * this.bfIfCold) / 100;
+      } else {
+        baseDamage = (user.Attack * this.bf) / 100;
+      }
+
+      // bônus adicional se já estiver congelado
+      if (isFrozen) {
+        baseDamage += this.bonusIfFrozen;
+      }
+
+      // aplicar status depois
+      if (!isChilled && !isFrozen) {
+        target.applyStatusEffect("gelado", this.chillDuration, context);
+      } else if (isChilled && !isFrozen) {
+        target.applyStatusEffect("congelado", this.freezeDuration, context);
+      }
+
+      return new DamageEvent({
+        baseDamage,
+        attacker: user,
+        defender: target,
+        skill: this,
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
     },
   },
 ];

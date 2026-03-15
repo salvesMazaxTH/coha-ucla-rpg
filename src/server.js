@@ -8,7 +8,7 @@ import { Server } from "socket.io";
 import path, { format } from "path";
 import { fileURLToPath } from "url";
 
-import { GameMatch } from "../shared/engine/match/gameMatch.js";
+import { GameMatch } from "../shared/engine/match/GameMatch.js";
 import { Player } from "../shared/engine/match/Player.js";
 
 import { championDB } from "../shared/data/championDB.js";
@@ -33,7 +33,7 @@ const editMode = {
   actMultipleTimesPerTurn: false,
   unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
-  alwaysCrit: true, // Força crítico em todo ataque. (SERVER-ONLY)
+  alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
@@ -110,7 +110,7 @@ function getRandomChampionKey(excludeKeys = []) {
 
 /** Instancia e registra campeões de uma lista de keys em um time. */
 function assignChampionsToTeam(team, championKeys) {
-  championKeys.forEach((championKey) => {
+  championKeys.forEach((championKey, combatSlot) => {
     if (!championKey) return;
 
     const baseData = championDB[championKey];
@@ -118,7 +118,9 @@ function assignChampionsToTeam(team, championKeys) {
 
     const id = generateId(championKey);
 
-    const newChampion = Champion.fromBaseData(baseData, id, team);
+    const newChampion = Champion.fromBaseData(baseData, id, team, {
+      combatSlot,
+    });
 
     match.combat.registerChampion(newChampion, { trackSnapshot: false });
 
@@ -127,6 +129,7 @@ function assignChampionsToTeam(team, championKeys) {
       championKey,
       id,
       team,
+      combatSlot: newChampion.combatSlot,
     });
   });
 }
@@ -170,7 +173,7 @@ function emitChampionDeath(deathResult) {
  * Chamada em "requestSkillUse" — rejeita imediatamente via socket.
  */
 function validateActionIntent(user, skill, socket) {
-  console.log("[VALIDATE ACTION CALLED]", user?.name);
+  // console.log("[VALIDATE ACTION CALLED]", user?.name);
   if (!user.alive) {
     socket.emit("skillDenied", "Campeão morto.");
     return false;
@@ -200,9 +203,9 @@ function applyGlobalTurnRegen(champion, context) {
     context,
   });
 
-  console.log(
+/*   console.log(
     ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
-  );
+  ); */
 
   return applied;
 }
@@ -251,14 +254,14 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
   });
 
   if (mainEnvelope) {
-    console.log(
+    /* console.log(
       "SERVER SNAPSHOT ULT:",
       [...match.combat.activeChampions.values()].map((c) => ({
         name: c.name,
         ult: c.ultMeter,
       })),
     );
-
+    */
     const {
       damageEvents = [],
       healEvents = [],
@@ -469,181 +472,6 @@ function emitCombatAction(envelope) {
   io.emit("combatAction", envelope);
 }
 
-function createBaseContext({ sourceId = null } = {}) {
-  const aliveChampionsArray = [...match.combat.activeChampions.values()].filter(
-    (c) => c.alive,
-  );
-
-  return {
-    currentTurn: match.combat.currentTurn,
-    editMode,
-    allChampions: match.combat.activeChampions,
-    aliveChampions: aliveChampionsArray,
-
-    // ========================
-    // EVENT BUFFERS
-    // ========================
-    visual: {
-      damageEvents: [],
-      healEvents: [],
-      buffEvents: [],
-      resourceEvents: [],
-      shieldEvents: [],
-      dialogEvents: [],
-    },
-
-    healSourceId: sourceId,
-    buffSourceId: sourceId,
-
-    // ========================
-    // REGISTRIES
-    // ========================
-
-    registerDamage({
-      target,
-      amount,
-      sourceId,
-      isCritical = false,
-      damageDepth = 0,
-      isDot = false,
-      flags,
-    } = {}) {
-      if (!target?.id) return;
-
-      this.visual.damageEvents.push({
-        type: "damage",
-        sourceId: sourceId || null,
-        targetId: target.id,
-        amount,
-        isCritical: !!isCritical,
-        isDot: !!isDot,
-        damageDepth: damageDepth || 0,
-        evaded: flags?.evaded,
-        immune: !!flags?.immune,
-        shieldBlocked: !!flags?.shieldBlocked,
-        obliterate: !!flags?.isObliterate,
-      });
-    },
-
-    registerHeal({ target, amount, sourceId } = {}) {
-      const value = Number(amount) || 0;
-      if (!target?.id || value <= 0) return;
-
-      const sourceChamp =
-        match.combat.activeChampions.get(sourceId) ||
-        match.combat.activeChampions.get(this.healSourceId) ||
-        target;
-
-      this.visual.healEvents.push({
-        type: "heal",
-        targetId: target.id,
-        sourceId: sourceChamp?.id || target.id,
-        amount: value,
-      });
-      // 🔥 Dispara hook de cura
-      emitCombatEvent(
-        "onAfterHealing",
-        {
-          healSrc: sourceChamp || null,
-          healTarget: target,
-          amount: value,
-          context: this,
-        },
-        this.allChampions,
-      );
-    },
-
-    registerBuff({ target, amount, statName, sourceId } = {}) {
-      const value = Number(amount) || 0;
-      if (!target?.id || value === 0) return;
-
-      this.visual.buffEvents.push({
-        type: "buff",
-        targetId: target.id,
-        sourceId: sourceId || this.buffSourceId || target.id,
-        amount: value,
-        statName,
-      });
-    },
-
-    registerShield({ target, amount, sourceId } = {}) {
-      const value = Number(amount) || 0;
-      if (!target?.id || value <= 0) return;
-
-      this.visual.shieldEvents.push({
-        type: "shield",
-        targetId: target.id,
-        sourceId: sourceId || this.healSourceId || target.id,
-        amount: value,
-      });
-    },
-
-    registerResourceChange({ target, amount, sourceId } = {}) {
-      const value = Number(amount) || 0;
-      if (!target?.id || value === 0) return 0;
-
-      let applied = 0;
-
-      if (value > 0) {
-        applied = target.addUlt({
-          amount: value,
-          source: match.combat.activeChampions.get(sourceId) || target,
-          context: this,
-        });
-      } else {
-        const spend = Math.abs(value);
-        if (!target.spendUlt(spend)) return 0;
-        applied = -spend;
-      }
-
-      if (applied === 0) return 0;
-
-      const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
-
-      this.visual.resourceEvents.push({
-        type: eventType,
-        targetId: target.id,
-        sourceId: sourceId || this.healSourceId || target.id,
-        amount: Math.abs(applied),
-        resourceType: "ult",
-      });
-
-      // 🔥 Agora dispara hook corretamente
-      emitCombatEvent(
-        applied > 0 ? "onResourceGain" : "onResourceSpend",
-        {
-          target: target,
-          amount: Math.abs(applied),
-          context: this,
-          type: eventType,
-          resourceType: "ult",
-          source: match.combat.activeChampions.get(sourceId) || null,
-        },
-        this.allChampions,
-      );
-
-      return applied;
-    },
-
-    registerUltGain({ target, amount, sourceId } = {}) {
-      const value = Number(amount) || 0;
-      if (!target?.id || value <= 0) return 0;
-
-      const applied = amount ?? 0;
-      if (applied > 0) {
-        this.visual.resourceEvents.push({
-          type: "resourceGain",
-          targetId: target.id,
-          sourceId: sourceId || target.id,
-          amount: applied,
-        });
-      }
-
-      return applied;
-    },
-  };
-}
-
 // ============================================================
 //  RESOLUÇÃO DE TURNOS
 // ============================================================
@@ -651,11 +479,11 @@ function createBaseContext({ sourceId = null } = {}) {
 function handleEndTurn() {
   io.emit("turnLocked");
 
-  console.log(
+  /* console.log(
     `[handleEndTurn] [TURN ${match.combat.currentTurn}] Resolvendo ações...`,
     match.combat.pendingActions,
   );
-
+  */
   // 1. Resolver todas as ações via TurnResolver
   const resolver = new TurnResolver(match, editMode);
   const { actionResults, deathResults } = resolver.resolveTurn();
@@ -713,7 +541,8 @@ function handleEndTurn() {
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
-  const turnStartContext = createBaseContext({ sourceId: null });
+  const resolver = new TurnResolver(match, editMode);
+  const turnStartContext = resolver.createBaseContext({ sourceId: null });
 
   // 1. Injetar contexto
   match.combat.activeChampions.forEach((champ) => {
@@ -746,7 +575,7 @@ function handleStartTurn() {
   match.combat.activeChampions.forEach((champion) => {
     const applied = applyGlobalTurnRegen(champion, turnStartContext);
 
-    console.log(
+    /* console.log(
       "[ULT REGEN]",
       champion.name,
       "aplicado:",
@@ -754,6 +583,7 @@ function handleStartTurn() {
       "depois:",
       champion.ultMeter,
     );
+    */
   });
 
   // 6. Limpar runtime context
@@ -790,7 +620,9 @@ function resetCombatState() {
   for (const champ of snapshot) {
     const baseData = championDB[champ.championKey];
 
-    const newChampion = Champion.fromBaseData(baseData, champ.id, champ.team);
+    const newChampion = Champion.fromBaseData(baseData, champ.id, champ.team, {
+      combatSlot: champ.combatSlot,
+    });
 
     match.combat.registerChampion(newChampion, { trackSnapshot: false });
   }
@@ -798,7 +630,7 @@ function resetCombatState() {
   match.combat.combatSnapshot = snapshot;
   match.combat.start();
 
-  console.log("[DEBUG] Combat state reset.");
+  // console.log("[DEBUG] Combat state reset.");
 }
 
 // ============================================================
@@ -806,7 +638,7 @@ function resetCombatState() {
 // ============================================================
 
 io.on("connection", (socket) => {
-  console.log("Um usuário conectado:", socket.id);
+  // console.log("Um usuário conectado:", socket.id);
 
   // Envia editMode IMEDIATAMENTE ao client SEM propriedades server-only (damageOutput, alwaysCrit, etc.)
   const { damageOutput, alwaysCrit, ...clientEditMode } = editMode;
@@ -1039,8 +871,8 @@ io.on("connection", (socket) => {
 
     // Um jogador restante com jogo ativo — inicia contagem regressiva
     if (wasGameActive && connectedCount === 1) {
-      console.log("PLAYERS:", match.players);
-      console.log("CONNECTED COUNT:", connectedCount);
+      // console.log("PLAYERS:", match.players);
+      // console.log("CONNECTED COUNT:", connectedCount);
       const remainingSlot = match.players[0] ? 0 : 1;
       const remainingSocketId = match.players[remainingSlot].socketId;
 
@@ -1169,7 +1001,7 @@ io.on("connection", (socket) => {
 
     const playerTeam = playerSlot + 1;
 
-    console.log("[UNDO] Player team:", playerTeam);
+    // console.log("[UNDO] Player team:", playerTeam);
 
     for (let i = match.combat.pendingActions.length - 1; i >= 0; i--) {
       const action = match.combat.pendingActions[i];
@@ -1203,11 +1035,12 @@ io.on("connection", (socket) => {
   // =============================
 
   socket.on("useSkill", ({ userId, skillKey, targetIds }) => {
-    console.log("[USE SKILL] Recebido pedido de uso de skill:", {
+    /* console.log("[USE SKILL] Recebido pedido de uso de skill:", {
       userId,
       skillKey,
       targetIds,
     });
+    */
     const playerSlot = match.getSlotBySocket(socket.id);
     const player = match.players[playerSlot];
     const user = match.combat.activeChampions.get(userId);
@@ -1247,7 +1080,7 @@ io.on("connection", (socket) => {
 
     match.enqueueAction(action);
 
-    console.log("[PENDING ACTION ADDED]", match.combat.pendingActions);
+    // console.log("[PENDING ACTION ADDED]", match.combat.pendingActions);
 
     io.to(socket.id).emit(
       "combatLog",
@@ -1330,5 +1163,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  // console.log(`Servidor rodando na porta ${PORT}`);
 });

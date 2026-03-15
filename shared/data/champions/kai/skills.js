@@ -194,7 +194,7 @@ const kaiSkills = [
       for (let i = 0; i < this.hits; i++) {
         const target = enemies[Math.floor(Math.random() * enemies.length)];
 
-        console.log("[KAI] HIT", i, target.name, target.alive);
+        // console.log("[KAI] HIT", i, target.name, target.alive);
 
         const directBonus = target.hasStatusEffect("queimando")
           ? this.burningBonus

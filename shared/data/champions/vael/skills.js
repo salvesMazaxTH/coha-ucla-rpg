@@ -1,4 +1,4 @@
-import { formatChampionName } from "../../../ui/formatters.js";
+import { formatChampionName } from "../../../../public/js/ui/formatters.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import basicAttack from "../basicAttack.js";
 

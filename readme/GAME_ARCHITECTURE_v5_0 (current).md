@@ -131,15 +131,15 @@
 
 ### Notas sobre localização dos módulos
 
-| Módulo             | Caminho canônico                           |
-| ------------------ | ------------------------------------------ |
-| `DamageEvent`      | `shared/engine/DamageEvent.js`             |
-| `combatEvents`     | `shared/engine/combatEvents.js`            |
-| Pipeline steps     | `shared/engine/pipeline/0N_*.js`           |
-| `GameMatch`        | `shared/engine/match/GameMatch.js`         |
-| `Player`           | `shared/engine/match/Player.js`            |
-| `Champion`         | `shared/core/Champion.js`                  |
-| `formatChampionName` | `shared/ui/formatters.js`                |
+| Módulo               | Caminho canônico                   |
+| -------------------- | ---------------------------------- |
+| `DamageEvent`        | `shared/engine/DamageEvent.js`     |
+| `combatEvents`       | `shared/engine/combatEvents.js`    |
+| Pipeline steps       | `shared/engine/pipeline/0N_*.js`   |
+| `GameMatch`          | `shared/engine/match/GameMatch.js` |
+| `Player`             | `shared/engine/match/Player.js`    |
+| `Champion`           | `shared/core/Champion.js`          |
+| `formatChampionName` | `shared/ui/formatters.js`          |
 
 > `shared/core/combatResolver.js` não existe mais. O motor de combate é a classe `DamageEvent`. Qualquer código que antes chamava `CombatResolver.processDamageEvent(params)` agora instancia `new DamageEvent(params).execute()`.
 
@@ -307,27 +307,27 @@ Estas duas classes encapsulam todo o estado mútável de uma partida no servidor
 
 ```js
 // shared/engine/match/Player.js
-new Player({ id, username, team })
+new Player({ id, username, team });
 ```
 
 #### Propriedades
 
-| Propriedade             | Tipo       | Descrição                                             |
-| ----------------------- | ---------- | ----------------------------------------------------- |
-| `id`                    | `string`   | ID único do jogador (geralmente o socket.id inicial)  |
-| `username`              | `string`   | Nome exibido                                          |
-| `team`                  | `1 \| 2`  | Time do jogador                                       |
-| `socketId`              | `string\|null` | Socket atual (pode mudar em reconexão)           |
-| `selectedChampionKeys`  | `string[]` | Keys dos campeões selecionados (em ordem)             |
+| Propriedade            | Tipo           | Descrição                                            |
+| ---------------------- | -------------- | ---------------------------------------------------- |
+| `id`                   | `string`       | ID único do jogador (geralmente o socket.id inicial) |
+| `username`             | `string`       | Nome exibido                                         |
+| `team`                 | `1 \| 2`       | Time do jogador                                      |
+| `socketId`             | `string\|null` | Socket atual (pode mudar em reconexão)               |
+| `selectedChampionKeys` | `string[]`     | Keys dos campeões selecionados (em ordem)            |
 
 #### Métodos
 
 ```js
-player.setSocket(socketId)          // atualiza socketId ativo
-player.clearSocket()                // limpa socketId (desconexão)
-player.setSelectedChampionKeys(keys)// define seleção de equipe
-player.clearChampionSelection()     // limpa seleção
-player.isTeamSelected()             // → boolean (seleção não-vazia)
+player.setSocket(socketId); // atualiza socketId ativo
+player.clearSocket(); // limpa socketId (desconexão)
+player.setSelectedChampionKeys(keys); // define seleção de equipe
+player.clearChampionSelection(); // limpa seleção
+player.isTeamSelected(); // → boolean (seleção não-vazia)
 ```
 
 ---
@@ -357,24 +357,24 @@ Gerencia o ciclo de entrada/saída de jogadores: mapeamento socket↔slot, timer
 
 ```js
 // Mapeamento socket ↔ slot
-match.assignSocketToSlot(socketId, slot)  // registra socket no slot; atualiza player.socketId
-match.getSlotBySocket(socketId)           // → slot | undefined
-match.removeSocket(socketId)              // remove mapeamento (sem apagar o player)
+match.assignSocketToSlot(socketId, slot); // registra socket no slot; atualiza player.socketId
+match.getSlotBySocket(socketId); // → slot | undefined
+match.removeSocket(socketId); // remove mapeamento (sem apagar o player)
 
 // Timers de seleção de campeão (um por slot)
-match.setSelectionTimer(slot, timerId)    // substitui timer anterior se existir
-match.clearSelectionTimer(slot)           // cancela e remove
+match.setSelectionTimer(slot, timerId); // substitui timer anterior se existir
+match.clearSelectionTimer(slot); // cancela e remove
 
 // Timers de desconexão (um por slot)
-match.setDisconnectionTimer(slot, timerId)
-match.getDisconnectionTimer(slot)         // → timerId | undefined
-match.clearDisconnectionTimer(slot)       // cancela e remove
+match.setDisconnectionTimer(slot, timerId);
+match.getDisconnectionTimer(slot); // → timerId | undefined
+match.clearDisconnectionTimer(slot); // cancela e remove
 ```
 
 **Reset de lobby** (chamado em `clearPlayers` e ao reiniciar sala):
 
 ```js
-match.lobby.reset()
+match.lobby.reset();
 // → limpa socketToSlot, todos os selectionTimers e disconnectionTimers
 ```
 
@@ -386,17 +386,17 @@ Gerencia todo o estado de combate de uma rodada/partida.
 
 ```js
 // Estado interno
-combat.currentTurn        // number — turno atual (começa em 1)
-combat.pendingActions     // Action[] — ações enfileiradas no turno corrente
-combat.activeChampions    // Map<id, Champion> — campeões vivos
-combat.deadChampions      // Map<id, Champion> — campeões eliminados (mantidos para lookup)
-combat.playerScores       // [number, number] — pontos por slot
-combat.gameEnded          // boolean
-combat.started            // boolean
-combat.playersReadyToEndTurn    // Set<slot>
-combat.finishedAnimationSockets // Set<socketId>
-combat.combatSnapshot     // array de { championKey, id, team } — cópia imutável da composição inicial
-combat.turnHistory        // Map<turn, TurnData>
+combat.currentTurn; // number — turno atual (começa em 1)
+combat.pendingActions; // Action[] — ações enfileiradas no turno corrente
+combat.activeChampions; // Map<id, Champion> — campeões vivos
+combat.deadChampions; // Map<id, Champion> — campeões eliminados (mantidos para lookup)
+combat.playerScores; // [number, number] — pontos por slot
+combat.gameEnded; // boolean
+combat.started; // boolean
+combat.playersReadyToEndTurn; // Set<slot>
+combat.finishedAnimationSockets; // Set<socketId>
+combat.combatSnapshot; // array de { championKey, id, team } — cópia imutável da composição inicial
+combat.turnHistory; // Map<turn, TurnData>
 ```
 
 ---
@@ -408,14 +408,14 @@ Toda interação do `server.js` com o estado da partida usa os métodos abaixo. 
 **Jogadores**
 
 ```js
-match.getPlayer(slot)                    // → Player | null
-match.setPlayer(slot, player)            // define Player no slot (null para limpar)
-match.getOpponent(slot)                  // → Player do outro slot
-match.areBothPlayersConnected()          // → boolean
-match.getConnectedCount()                // → 0 | 1 | 2
-match.getPlayerNamesEntries()            // → [[slot, username], ...]
-match.isTeamSelected(slot)              // → boolean
-match.clearPlayers()                     // reseta players + lobby + combat
+match.getPlayer(slot); // → Player | null
+match.setPlayer(slot, player); // define Player no slot (null para limpar)
+match.getOpponent(slot); // → Player do outro slot
+match.areBothPlayersConnected(); // → boolean
+match.getConnectedCount(); // → 0 | 1 | 2
+match.getPlayerNamesEntries(); // → [[slot, username], ...]
+match.isTeamSelected(slot); // → boolean
+match.clearPlayers(); // reseta players + lobby + combat
 ```
 
 **Campeões**
@@ -437,54 +437,54 @@ match.getAliveChampions()
 **Turnos e Ações**
 
 ```js
-match.getCurrentTurn()                   // → number
-match.nextTurn()                         // incrementa currentTurn
-match.enqueueAction(action)              // push em pendingActions
-match.clearActions()                     // esvazia pendingActions
+match.getCurrentTurn(); // → number
+match.nextTurn(); // incrementa currentTurn
+match.enqueueAction(action); // push em pendingActions
+match.clearActions(); // esvazia pendingActions
 
 // Readiness (controle de "fim de turno")
-match.addReadyPlayer(slot)
-match.removeReadyPlayer(slot)
-match.isPlayerReady(slot)               // → boolean
-match.getReadyPlayersCount()            // → number
-match.clearTurnReadiness()              // limpa o Set
+match.addReadyPlayer(slot);
+match.removeReadyPlayer(slot);
+match.isPlayerReady(slot); // → boolean
+match.getReadyPlayersCount(); // → number
+match.clearTurnReadiness(); // limpa o Set
 
 // Animação — sincronização de sockets
-match.addFinishedAnimationSocket(socketId)
-match.clearFinishedAnimationSockets()
-match.getFinishedAnimationCount()       // → number
+match.addFinishedAnimationSocket(socketId);
+match.clearFinishedAnimationSockets();
+match.getFinishedAnimationCount(); // → number
 ```
 
 **Placar**
 
 ```js
-match.addPointForSlot(slot, maxScore=3)
+match.addPointForSlot(slot, (maxScore = 3));
 // → incrementa playerScores[slot]; se >= maxScore: gameEnded = true
 
-match.setWinnerScore(slot, maxScore=3)
+match.setWinnerScore(slot, (maxScore = 3));
 // → força playerScores[slot] = maxScore; gameEnded = true
 
-match.getScorePayload()
+match.getScorePayload();
 // → { player1: number, player2: number }
 
-match.isGameEnded()                      // → boolean
+match.isGameEnded(); // → boolean
 ```
 
 **Ciclo de Combate**
 
 ```js
-match.startCombat()                      // combat.started = true
-match.isCombatStarted()                 // → boolean
-match.resetCombat()                      // reseta todo CombatState (nova rodada)
+match.startCombat(); // combat.started = true
+match.isCombatStarted(); // → boolean
+match.resetCombat(); // reseta todo CombatState (nova rodada)
 ```
 
 **Histórico de Turno**
 
 ```js
-match.ensureTurnEntry()
+match.ensureTurnEntry();
 // → cria entrada para currentTurn se não existir; → TurnData
 
-match.logTurnEvent(eventType, eventData)
+match.logTurnEvent(eventType, eventData);
 // → push em TurnData.events com timestamp
 ```
 
@@ -518,10 +518,14 @@ match.clearTurnReadiness();
 
 // Campeão morreu
 const dead = match.removeChampion(championId);
-if (match.getAliveChampions().filter(c => c.team === loserTeam).length === 0) {
+if (
+  match.getAliveChampions().filter((c) => c.team === loserTeam).length === 0
+) {
   match.addPointForSlot(winnerSlot);
 }
-if (match.isGameEnded()) { /* emitir gameOver */ }
+if (match.isGameEnded()) {
+  /* emitir gameOver */
+}
 ```
 
 ---
@@ -628,7 +632,7 @@ Todos os campeões usam o **ultômetro** como sistema unificado de recurso para 
 - **Máximo visual**: 5 barras — **Unidades internas**: 15 (cada barra = 3 unidades)
 
 ```js
-champion.ultMeter = 0;  // 0-15
+champion.ultMeter = 0; // 0-15
 champion.ultCap = 15;
 ```
 
@@ -660,11 +664,11 @@ Skills AoE contam **uma única vez por ação**. Regen global: `+2 unidades` por
 
 ### Convenção Oficial de Papéis
 
-| Camada              | Alias canônico               |
-| ------------------- | ---------------------------- |
-| Skill layer         | `user`, `targets`            |
-| CombatEvents/hooks  | `source`, `target`, `owner`  |
-| DamageEvent/pipeline| `attacker`, `defender`       |
+| Camada               | Alias canônico              |
+| -------------------- | --------------------------- |
+| Skill layer          | `user`, `targets`           |
+| CombatEvents/hooks   | `source`, `target`, `owner` |
+| DamageEvent/pipeline | `attacker`, `defender`      |
 
 Não cruzar aliases entre camadas.
 
@@ -677,10 +681,10 @@ const result = new DamageEvent({
   defender: target,
   skill,
   context,
-  mode,              // "standard" | "hybrid" | "absolute" (padrão: "standard")
-  piercingPortion,   // porção que ignora defesa (modo hybrid)
-  critOptions,       // { force?, disable? }
-  allChampions,      // Map ou array — necessário para hooks
+  mode, // "standard" | "hybrid" | "absolute" (padrão: "standard")
+  piercingPortion, // porção que ignora defesa (modo hybrid)
+  critOptions, // { force?, disable? }
+  allChampions, // Map ou array — necessário para hooks
 }).execute();
 ```
 
@@ -689,18 +693,18 @@ const result = new DamageEvent({
 Todos os campos abaixo existem em `this` e são mutáveis ao longo da pipeline:
 
 ```js
-this.baseDamage        // valor original recebido no construtor (imutável após construção)
-this.damage            // valor em transformação ao longo da pipeline
-this.finalDamage       // foto tirada após composeDamage (antes de applyDamage)
-this.preMitigationDamage // foto antes da defesa ser aplicada
-this.actualDmg         // dano efetivamente descontado do HP (hpBefore - hpAfter)
-this.hpAfter           // HP do defender após applyDamage
-this.crit              // { didCrit, bonus, roll, forced, critExtra, critBonusFactor }
-this.lifesteal         // resultado de lifesteal ou null
-this.beforeLogs        // string[] — logs de runBeforeHooks
-this.afterLogs         // string[] — logs de runAfterHooks
-this.extraResults      // resultados de DamageEvents extras (processExtraQueue)
-this.damageDepth       // profundidade de recursão (0 = ação principal)
+this.baseDamage; // valor original recebido no construtor (imutável após construção)
+this.damage; // valor em transformação ao longo da pipeline
+this.finalDamage; // foto tirada após composeDamage (antes de applyDamage)
+this.preMitigationDamage; // foto antes da defesa ser aplicada
+this.actualDmg; // dano efetivamente descontado do HP (hpBefore - hpAfter)
+this.hpAfter; // HP do defender após applyDamage
+this.crit; // { didCrit, bonus, roll, forced, critExtra, critBonusFactor }
+this.lifesteal; // resultado de lifesteal ou null
+this.beforeLogs; // string[] — logs de runBeforeHooks
+this.afterLogs; // string[] — logs de runAfterHooks
+this.extraResults; // resultados de DamageEvents extras (processExtraQueue)
+this.damageDepth; // profundidade de recursão (0 = ação principal)
 ```
 
 ### Fluxo Completo (visão de alto nível)
@@ -879,11 +883,11 @@ Para cada extra em context.extraDamageQueue:
 
 ### Damage Modes
 
-| Mode         | Comportamento                                                                    |
-| ------------ | -------------------------------------------------------------------------------- |
-| `"standard"` | Pipeline completa com defesa, crit, hooks                                        |
-| `"absolute"` | Bypassa prepareDamage, beforeHooks, evasão, escudo — dano direto ao HP           |
-| `"hybrid"`   | `piercingPortion` do dano ignora defesa%; o restante passa pela curva normal     |
+| Mode         | Comportamento                                                                |
+| ------------ | ---------------------------------------------------------------------------- |
+| `"standard"` | Pipeline completa com defesa, crit, hooks                                    |
+| `"absolute"` | Bypassa prepareDamage, beforeHooks, evasão, escudo — dano direto ao HP       |
+| `"hybrid"`   | `piercingPortion` do dano ignora defesa%; o restante passa pela curva normal |
 
 ### `damageDepth` e Reações
 
@@ -1064,20 +1068,20 @@ element: "lightning";
 
 ### Tabela de Hooks
 
-| Hook                     | Quando dispara                        | Quem recebe tipicamente   |
-| ------------------------ | ------------------------------------- | ------------------------- |
-| `onDamageIncoming`       | Antes de qualquer cálculo de dano     | Alvo (imunidades)         |
-| `onStatusEffectIncoming` | Antes de aplicar um status-effect     | Alvo (imunidades de CC)   |
-| `onValidateAction`       | Antes de o campeão executar uma ação  | Usuário (CC que bloqueia) |
-| `onBeforeDmgDealing`     | Antes do atacante causar dano         | Atacante                  |
-| `onBeforeDmgTaking`      | Antes do alvo receber dano            | Alvo                      |
-| `onAfterDmgDealing`      | Após o atacante causar dano           | Atacante                  |
-| `onAfterDmgTaking`       | Após o alvo receber dano              | Alvo                      |
-| `onAfterLifeSteal`       | Após lifesteal ser aplicado           | Atacante                  |
-| `onCriticalHit`          | Quando um crítico ocorre              | Atacante                  |
-| `onTurnStart`            | Início de turno                       | Todos                     |
-| `onActionResolved`       | Após resolução completa de uma ação   | Todos                     |
-| `onChampionDeath`        | Quando um campeão morre               | Todos                     |
+| Hook                     | Quando dispara                       | Quem recebe tipicamente   |
+| ------------------------ | ------------------------------------ | ------------------------- |
+| `onDamageIncoming`       | Antes de qualquer cálculo de dano    | Alvo (imunidades)         |
+| `onStatusEffectIncoming` | Antes de aplicar um status-effect    | Alvo (imunidades de CC)   |
+| `onValidateAction`       | Antes de o campeão executar uma ação | Usuário (CC que bloqueia) |
+| `onBeforeDmgDealing`     | Antes do atacante causar dano        | Atacante                  |
+| `onBeforeDmgTaking`      | Antes do alvo receber dano           | Alvo                      |
+| `onAfterDmgDealing`      | Após o atacante causar dano          | Atacante                  |
+| `onAfterDmgTaking`       | Após o alvo receber dano             | Alvo                      |
+| `onAfterLifeSteal`       | Após lifesteal ser aplicado          | Atacante                  |
+| `onCriticalHit`          | Quando um crítico ocorre             | Atacante                  |
+| `onTurnStart`            | Início de turno                      | Todos                     |
+| `onActionResolved`       | Após resolução completa de uma ação  | Todos                     |
+| `onChampionDeath`        | Quando um campeão morre              | Todos                     |
 
 ### Contrato de Retorno de Hooks
 
@@ -1102,11 +1106,11 @@ element: "lightning";
 hookScope: {
   onBeforeDmgTaking: "target",
   onAfterDmgDealing: "source",
-  onTurnStart: "owner",
+  onTurnStart: "source",
 }
 ```
 
-Scopes disponíveis: `"owner"`, `"source"`, `"target"`, `"sourceOrTarget"`, `"allies"`, ou `undefined` (todos).
+Scopes disponíveis: `"source"`, `"source"`, `"target"`, `"sourceOrTarget"`, `"allies"`, ou `undefined` (todos).
 
 ### Hook Effects Temporários (`runtime.hookEffects`)
 
@@ -1134,8 +1138,14 @@ StatusEffects são objetos de comportamento registrados em `effectsRegistry.js`.
 
 ```js
 export const StatusEffectsRegistry = {
-  paralisado, atordoado, enraizado, inerte,
-  gelado, congelado, queimando, imunidadeAbsoluta,
+  paralisado,
+  atordoado,
+  enraizado,
+  inerte,
+  gelado,
+  congelado,
+  queimando,
+  imunidadeAbsoluta,
 };
 ```
 
@@ -1151,7 +1161,12 @@ const queimando = {
   onTurnStart({ self, context }) {
     const damage = 20;
     self.takeDamage(damage, context);
-    context.registerDamage({ target: self, amount: damage, sourceId: null, isDot: true });
+    context.registerDamage({
+      target: self,
+      amount: damage,
+      sourceId: null,
+      isDot: true,
+    });
     return { log: `${self.name} sofre dano de Queimadura.` };
   },
 };
@@ -1178,10 +1193,10 @@ const queimando = {
 ### Métodos
 
 ```js
-champion.applyStatusEffect("queimando", 2, context);  // duration=2 turnos
+champion.applyStatusEffect("queimando", 2, context); // duration=2 turnos
 champion.removeStatusEffect("atordoado");
-champion.hasStatusEffect("paralisado");  // → boolean
-champion.getStatusEffect("gelado");      // → dados ou null
+champion.hasStatusEffect("paralisado"); // → boolean
+champion.getStatusEffect("gelado"); // → dados ou null
 ```
 
 ### Serialização
@@ -1205,10 +1220,10 @@ statusEffects: [["queimando", { expiresAtTurn: 5 }], ...]
 }
 ```
 
-| Tipo                      | Comportamento                                                             |
-| ------------------------- | ------------------------------------------------------------------------- |
-| `"regular"`               | Absorve HP de dano antes do HP do campeão (dentro de `takeDamage`)        |
-| `"supremo"` / `"feitiço"` | Bloqueia a **ação inteiramente** (verificado em `preChecks`)              |
+| Tipo                      | Comportamento                                                      |
+| ------------------------- | ------------------------------------------------------------------ |
+| `"regular"`               | Absorve HP de dano antes do HP do campeão (dentro de `takeDamage`) |
+| `"supremo"` / `"feitiço"` | Bloqueia a **ação inteiramente** (verificado em `preChecks`)       |
 
 Escudos regulares são consumidos em ordem FIFO.
 
@@ -1333,12 +1348,12 @@ syncChampionVFX(champion)
         fireStance: runtime.fireStance === "postura" | "brasa_viva"
 ```
 
-| VFX                | Arquivo               | Ativa quando                     |
-| ------------------ | --------------------- | -------------------------------- |
-| `shield`           | `shieldCanvas.js`     | `runtime.shields.length > 0`     |
-| `fireStanceIdle`   | `fireStanceCanvas.js` | `runtime.fireStance === "postura"`|
+| VFX                | Arquivo               | Ativa quando                          |
+| ------------------ | --------------------- | ------------------------------------- |
+| `shield`           | `shieldCanvas.js`     | `runtime.shields.length > 0`          |
+| `fireStanceIdle`   | `fireStanceCanvas.js` | `runtime.fireStance === "postura"`    |
 | `fireStanceActive` | `fireStanceCanvas.js` | `runtime.fireStance === "brasa_viva"` |
-| obliterate         | `obliterate.js`       | `playObliterateEffect(el)` — direto |
+| obliterate         | `obliterate.js`       | `playObliterateEffect(el)` — direto   |
 
 ```js
 import { syncChampionVFX, playVFX, stopVFX } from "./vfx/vfxManager.js";
@@ -1397,10 +1412,10 @@ const editMode = {
   autoSelection: false,
   actMultipleTimesPerTurn: false,
   unreleasedChampions: true,
-  damageOutput: null,        // força dano fixo. null = desativado
+  damageOutput: null, // força dano fixo. null = desativado
   alwaysCrit: false,
   alwaysEvade: false,
-  executionOverride: null,   // sobrescreve threshold de obliterateRule
+  executionOverride: null, // sobrescreve threshold de obliterateRule
 };
 ```
 
@@ -1427,8 +1442,13 @@ const meu_campeao = {
   portrait: "/assets/champions/meu_campeao.png",
   unreleased: false,
 
-  HP: 500, Attack: 80, Defense: 40, Speed: 70,
-  Evasion: 0, Critical: 10, LifeSteal: 0,
+  HP: 500,
+  Attack: 80,
+  Defense: 40,
+  Speed: 70,
+  Evasion: 0,
+  Critical: 10,
+  LifeSteal: 0,
 
   elementalAffinities: ["lightning"],
 
@@ -1439,7 +1459,9 @@ const meu_campeao = {
       priority: 0,
       element: "fire",
       cannotBeEvaded: false,
-      description() { return `Descrição.`; },
+      description() {
+        return `Descrição.`;
+      },
       targetSpec: ["enemy"],
       resolve({ user, targets, context }) {
         const { enemy } = targets;
@@ -1466,9 +1488,25 @@ const meu_campeao = {
       onAfterDmgTaking: "target",
     },
 
-    onAfterDmgDealing({ source, target, owner, damage, crit, skill, context }) {},
+    onAfterDmgDealing({
+      source,
+      target,
+      owner,
+      damage,
+      crit,
+      skill,
+      context,
+    }) {},
     onAfterDmgTaking({ source, target, owner, damage, context }) {},
-    onBeforeDmgDealing({ source, target, owner, damage, crit, skill, context }) {
+    onBeforeDmgDealing({
+      source,
+      target,
+      owner,
+      damage,
+      crit,
+      skill,
+      context,
+    }) {
       return { damage: damage * 1.2 };
     },
     onBeforeDmgTaking({ source, target, owner, damage, crit, skill, context }) {
@@ -1538,6 +1576,7 @@ StatusIndicator.statusEffectIcons["meuEfeito"] = {
 ### Por que a pipeline é dividida em 9 arquivos numerados?
 
 Cada arquivo é responsável por exatamente uma etapa. Isso permite:
+
 - Localizar rapidamente onde um bug ocorre (ex: problema de crit → `02_prepareDamage.js`; problema de floor/cap → `03_composeDamage.js`).
 - Adicionar/remover/reordenar etapas sem tocar no orquestrador (`DamageEvent.js`).
 - Testar etapas individualmente se necessário.
@@ -1545,6 +1584,7 @@ Cada arquivo é responsável por exatamente uma etapa. Isso permite:
 ### Por que GameMatch + LobbyState + CombatState?
 
 O `server.js` antes gerenciava `activeChampions`, `pendingActions`, `playerScores` e timers como variáveis locais, dificultando resets limpos e múltiplas salas. Com `GameMatch`:
+
 - O reset de uma partida é um único `match.resetCombat()`.
 - LobbyState e CombatState têm responsabilidades claras e separadas.
 - A interface pública de `GameMatch` é o único ponto de acesso — o `server.js` não precisa conhecer a estrutura interna.

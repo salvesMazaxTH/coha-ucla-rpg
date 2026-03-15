@@ -419,11 +419,14 @@ export function createCombatAnimationManager(deps) {
       await showBlockingDialog(`e conseguiu!`, true);
       const randomTrollMessage = Math.random();
       if (randomTrollMessage < 0.5) {
-      await showBlockingDialog(`e conseguiu!!`, true);
-      await showBlockingDialog(`e conseguiu!!! 🤗`, true);
-      await showBlockingDialog(`e conseguiu!!! 🥳`, true);
+        await showBlockingDialog(`e conseguiu!!`, true);
+        await showBlockingDialog(`e conseguiu!!! 🤗`, true);
+        await showBlockingDialog(`e conseguiu!!! 🥳`, true);
       } else {
-        await showBlockingDialog(`...mas foi tão ruim que tropeçou e caiu no chão.`, true);
+        await showBlockingDialog(
+          `...mas foi tão ruim que tropeçou e caiu no chão.`,
+          true,
+        );
       }
     } else {
       await showBlockingDialog(`...mas falhou em esquivar.`, true);

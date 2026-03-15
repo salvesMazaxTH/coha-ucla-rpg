@@ -2,22 +2,22 @@ const queimando = {
   key: "queimando",
   name: "Queimando",
   type: "debuff",
-  subtypes: ["dot"],
+  subtypes: ["dot", "fire"],
 
-  onTurnStart({ self, context }) {
+  onTurnStart({ owner, context }) {
     const damage = 20;
 
-    self.takeDamage(damage, context);
+    owner.takeDamage(damage, context);
 
     context.registerDamage({
-      target: self,
+      target: owner,
       amount: damage,
       sourceId: null,
       isDot: true,
     });
 
     return {
-      log: `${self.name} sofre dano de Queimadura.`,
+      log: `${owner.name} sofre dano de Queimadura.`,
     };
   },
 };

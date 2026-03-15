@@ -46,7 +46,7 @@ export default {
   onTurnEnd({ owner, context }) {
     if (context.currentTurn !== owner.runtime.lastTauntTurn) {
       owner.runtime.tauntStreak = 0;
-      console.log(`[HOOK - onTurnEnd] ${owner.name} não usou Taunt no turno anterior. Taunt Streak resetada. ${owner.runtime.tauntStreak}`); // Log para debug
+      // console.log(`[HOOK - onTurnEnd] ${owner.name} não usou Taunt no turno anterior. Taunt Streak resetada. ${owner.runtime.tauntStreak}`); // Log para debug
     }
   },
 };

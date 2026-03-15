@@ -37,7 +37,7 @@ const raliaSkills = [
         context,
       });
 
-      console.log("BEFORE SELF ATK BUFF:", user.Attack);
+      // console.log("BEFORE SELF ATK BUFF:", user.Attack);
 
       user.modifyStat({
         statName: "Attack",
@@ -46,12 +46,12 @@ const raliaSkills = [
         context,
       });
 
-      console.log("AFTER SELF ATK BUFF:", user.Attack);
+      // console.log("AFTER SELF ATK BUFF:", user.Attack);
 
       // Ataque básico imediato
       const [enemy] = targets;
 
-      console.log("ATTACK BEFORE DAMAGE:", user.Attack);
+      // console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
       const userName = formatChampionName(user);
       const selfLog = `${userName} executou Juramento de Ferro, perdendo ${this.selfDamage} HP e ${this.defLoss} de Defesa, mas ganhando +${this.atkBuff} de Ataque por ${this.buffDuration} turnos.`;

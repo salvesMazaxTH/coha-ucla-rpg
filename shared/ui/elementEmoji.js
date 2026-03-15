@@ -1,10 +1,10 @@
 // Mapeamento de elementos para emojis para uso nas skills
-const elementEmoji = {
+const elementEmoji = Object.freeze({
   fire: "🔥",
   water: "🌊",
   lightning: "⚡",
   earth: "🌱",
   ice: "❄️",
-};
+});
 
-export default elementEmoji;
+export { elementEmoji };

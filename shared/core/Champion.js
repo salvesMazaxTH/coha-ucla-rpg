@@ -48,6 +48,9 @@ export class Champion {
     this.name = identity.name;
     this.portrait = identity.portrait;
     this.team = identity.team;
+    this.combatSlot = Number.isInteger(identity.combatSlot)
+      ? identity.combatSlot
+      : null;
     this.elementalAffinities = Array.from(identity.elementalAffinities) || [];
     this.entityType = identity.entityType ?? "champion";
 
@@ -92,13 +95,14 @@ export class Champion {
     this.runtime = this.buildRuntime(runtime);
   }
 
-  static fromBaseData(baseData, id, team) {
-    return new Champion({
+  static fromBaseData(baseData, id, team, { combatSlot = null } = {}) {
+    const champ = new Champion({
       identity: {
         id,
         name: baseData.name,
         portrait: baseData.portrait,
         team,
+        combatSlot,
         entityType: baseData.entityType,
         elementalAffinities: baseData.elementalAffinities || [],
       },
@@ -120,6 +124,35 @@ export class Champion {
         passive: baseData.passive,
       },
     });
+
+    champ.runtime ??= {};
+    champ.runtime.hookEffects ??= [];
+
+    // INJETAR IMUNIDADE ELEMENTAL AUTOMÁTICA
+    if (champ.elementalAffinities?.length) {
+      champ.runtime.hookEffects.push({
+        key: "elemental_affinity_immunity",
+        group: "system",
+
+        hookScope: {
+          onStatusEffectIncoming: "target",
+        },
+
+        onStatusEffectIncoming({ target, statusEffect }) {
+          const affinities = target.elementalAffinities || [];
+          const effectElements = statusEffect.subtypes || [];
+
+          if (effectElements.some((e) => affinities.includes(e))) {
+            return {
+              cancel: true,
+              message: `${formatChampionName(target)} é imune a <b>${statusEffect.name}</b>!`,
+            };
+          }
+        },
+      });
+    }
+
+    return champ;
   }
 
   // Método para serializar o estado do campeão
@@ -132,6 +165,7 @@ export class Champion {
           : this.name,
 
       team: this.team,
+      combatSlot: this.combatSlot,
 
       name: this.name,
       portrait: this.portrait,
@@ -233,7 +267,7 @@ export class Champion {
 
   // Núcleo interno
   _applyUltDelta(delta) {
-    console.log(
+    /* console.log(
       "APPLY DELTA",
       this.name,
       "instance:",
@@ -243,7 +277,7 @@ export class Champion {
       "antes:",
       this.ultMeter,
     );
-
+    */
     if (!Number.isInteger(delta) || delta === 0) return 0;
 
     const next = Math.max(0, Math.min(this.ultCap, this.ultMeter + delta));

@@ -1,3 +1,8 @@
+import {
+  createVFXCanvas,
+  playVFX,
+} from "../../public/js/animation/vfx/vfxManager.js";
+
 /**
  * Sistema de indicadores visuais para status de campeões
  * Gerencia exibição de ícones e efeitos visuais baseados em statusEffects
@@ -20,12 +25,17 @@ export const StatusIndicator = {
       value: "❄️",
       background: "rgba(173, 216, 230, 0.8)",
     },
+    congelado: {
+      type: "canvas",
+      value: null,
+      background: null,
+    },
     inerte: {
       type: "emoji",
       value: "🔒",
       background: "rgba(128, 128, 128, 0.8)",
     },
-    sobrecarga: {
+    condutor: {
       type: "emoji",
       value: "⚡",
       background: "rgba(255, 255, 0, 0.8)",
@@ -105,6 +115,9 @@ export const StatusIndicator = {
         indicator.style.top = "12%";
         indicator.style.fontSize = "1.55em";
         indicator.style.fontWeight = "bold";
+      } else if (icon.type === "canvas") {
+        const canvas = createVFXCanvas("congelado", champion);
+        playVFX("congelado", canvas);
       } else {
         const img = document.createElement("img");
         img.src = icon.value;
@@ -148,7 +161,7 @@ export const StatusIndicator = {
     if (!champion.el) return;
 
     const portraitElement = champion.el.querySelector(".portrait");
-    console.log("[removeIndicator] portraitElement:", portraitElement);
+    // console.log("[removeIndicator] portraitElement:", portraitElement);
     if (!portraitElement) return;
 
     const indicator = portraitElement.querySelector(
@@ -167,7 +180,7 @@ export const StatusIndicator = {
     if (!champion.el) return;
 
     const portraitElement = champion.el.querySelector(".portrait");
-    console.log("[clearIndicators] portraitElement:", portraitElement);
+    // console.log("[clearIndicators] portraitElement:", portraitElement);
 
     if (!portraitElement) return;
 
@@ -207,7 +220,7 @@ export const StatusIndicator = {
    */
   animateIndicatorRemove(champion, statusEffectName) {
     const portraitElement = champion.el?.querySelector(".portrait");
-    console.log("[animateIndicatorRemove] portraitElement:", portraitElement);
+    // console.log("[animateIndicatorRemove] portraitElement:", portraitElement);
 
     if (!portraitElement) return;
 

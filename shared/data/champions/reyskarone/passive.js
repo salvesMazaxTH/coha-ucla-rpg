@@ -15,7 +15,7 @@ export default {
 
   onAfterLifeSteal({ source, amount, owner, context }) {
     // ✔ Só aliados, ignorar o próprio Reyskarone
-    console.log(
+    /* console.log(
       "PASSIVA REYSKARONE DISPARADA",
       "owner:",
       owner?.name,
@@ -24,6 +24,7 @@ export default {
       "amount:",
       amount,
     );
+    */
     const heal =
       Math.round((amount * (this.lifeStealHealPercent / 100)) / 5) * 5;
     if (heal <= 0 || owner.HP >= owner.maxHP) return;

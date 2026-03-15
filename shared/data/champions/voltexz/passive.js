@@ -3,13 +3,13 @@ import { formatChampionName } from "../../../ui/formatters.js";
 const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999), entre outras coisas.
 
 export default {
-  key: "sobrecarga_instavel",
-  name: "Sobrecarga Instável",
+  key: "condutor_instavel",
+  name: "Condutor Instável",
   recoilPercent: 20,
-  sobrecargaDuration: 2,
-  sobrecargaBonusPercent: 15,
+  condutorDuration: 2,
+  condutorBonusPercent: 15,
   description() {
-    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Sobrecarga". Ao atacar um alvo com "Sobrecarga", Voltexz causa ${this.sobrecargaBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
+    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Condutor". Ao atacar um alvo com "Condutor", Voltexz causa ${this.condutorBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
   hookScope: {
     onAfterDmgDealing: "source",
@@ -19,7 +19,7 @@ export default {
   onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
 
-    // Ataque Básico não aplica recuo nem Sobrecarga
+    // Ataque Básico não aplica recuo nem Condutor
     if (skill.key === "ataque_basico") return;
 
     let log = "";
@@ -44,26 +44,26 @@ export default {
         source: owner,
         defender: owner,
         skill: {
-          key: "sobrecarga_instavel_recoil",
+          key: "condutor_instavel_recoil",
         },
       });
 
       context.visual.dialogEvents = context.visual.dialogEvents || [];
       context.visual.dialogEvents.push({
         type: "dialog",
-        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "Sobrecarga Instável"!`,
+        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "Condutor Instável"!`,
         sourceId: owner.id,
         targetId: owner.id,
         blocking: false,
       });
     }
 
-    if (target.hasStatusEffect?.("sobrecarga")) {
-      target.removeStatusEffect("sobrecarga");
+    if (target.hasStatusEffect?.("condutor")) {
+      target.removeStatusEffect("condutor");
       return;
     }
 
-    target.applyStatusEffect("sobrecarga", this.sobrecargaDuration, context, {
+    target.applyStatusEffect("condutor", this.condutorDuration, context, {
       sourceSkill: skill,
     });
 
@@ -71,28 +71,28 @@ export default {
   },
 
   onBeforeDmgDealing({ source, target, owner, crit, damage, context, skill }) {
-    console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(source));
+    // console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(source));
 
-    console.log("OWNER:", owner?.name);
-    console.log("DMG SRC:", source?.name);
-    console.log("ALVO:", target?.name);
-    console.log("HAS SOBRECARGA?", target?.hasStatusEffect?.("sobrecarga"));
+    // console.log("OWNER:", owner?.name);
+    // console.log("DMG SRC:", source?.name);
+    // console.log("ALVO:", target?.name);
+    // console.log("HAS CONDUTOR?", target?.hasStatusEffect?.("condutor"));
 
-    if (!target.hasStatusEffect?.("sobrecarga")) return;
+    if (!target.hasStatusEffect?.("condutor")) return;
 
-    const bonusDamage = Math.ceil((damage * this.sobrecargaBonusPercent) / 100);
+    const bonusDamage = Math.ceil((damage * this.condutorBonusPercent) / 100);
 
-    target.removeStatusEffect("sobrecarga");
+    target.removeStatusEffect("condutor");
 
     context.visual.dialogEvents.push({
       type: "dialog",
-      message: `${formatChampionName(target)} foi consumido por "Sobrecarga"!`,
+      message: `${formatChampionName(target)} foi consumido por "Condutor"!`,
       sourceId: source.id,
       targetId: target.id,
       blocking: false,
     });
 
-    let log = `⚡ ACERTO ! ${formatChampionName(source)} explorou "Sobrecarga" de ${formatChampionName(target)} (+${this.sobrecargaBonusPercent}% dano)!`;
+    let log = `⚡ ACERTO ! ${formatChampionName(source)} explorou "Condutor" de ${formatChampionName(target)} (+${this.condutorBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

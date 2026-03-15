@@ -1,5 +1,5 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import { formatChampionName } from "../../../ui/formatters.js";
+import { formatChampionName } from "../../../../public/js/ui/formatters.js";
 import basicAttack from "../basicAttack.js";
 
 const eliasCrossSkills = [
@@ -22,18 +22,18 @@ const eliasCrossSkills = [
     cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Se o alvo tiver "Sobrecarga", causa ${this.damageBonus} de dano absoluto a mais. Esse ataque não pode ser esquivado.`;
+      return `Se o alvo tiver "Condutor", causa ${this.damageBonus} de dano absoluto a mais. Esse ataque não pode ser esquivado.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context }) {
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const isOverloaded = enemy.hasStatusEffect("sobrecarga");
-      console.log(
+      const isOverloaded = enemy.hasStatusEffect("condutor");
+      /* console.log(
         `Impacto Relâmpago: ${formatChampionName(enemy)} ${isOverloaded ? "está" : "não está"} sobrecarregado. StatusEffects do alvo: ${[...enemy.statusEffects.keys()].join(", ")}`,
       );
-
+      */
       const results = [];
 
       const pushResult = (r) => {
@@ -67,7 +67,7 @@ const eliasCrossSkills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elias Cross ganha +35% de chance na passiva no próximo turno apenas. Se o alvo tiver "Sobrecarga", causa ${this.damageBonus} de dano absoluto a mais.`;
+      return `Elias Cross ganha +35% de chance na passiva no próximo turno apenas. Se o alvo tiver "Condutor", causa ${this.damageBonus} de dano absoluto a mais.`;
     },
     targetSpec: ["enemy", "self"],
     resolve({ user, targets, context }) {
@@ -77,7 +77,7 @@ const eliasCrossSkills = [
       user.runtime.passiveBonusNextTurn = 35;
 
       const baseDamage = (user.Attack * this.bf) / 100;
-      const isOverloaded = enemy.hasStatusEffect("sobrecarga");
+      const isOverloaded = enemy.hasStatusEffect("condutor");
 
       const results = [];
 
@@ -115,12 +115,12 @@ const eliasCrossSkills = [
     cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são {obliterados}, e caso tenham "Sobrecarga", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
+      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são {obliterados}, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
     obliterateRule(ctx) {
       const target = ctx.target;
-      const hasOverload = target.hasStatusEffect("sobrecarga");
+      const hasOverload = target.hasStatusEffect("condutor");
       return hasOverload ? 0.25 : 0.17;
     },
 

@@ -27,9 +27,10 @@ export function addShield(
     context.registerShield({ target: champion, amount });
   }
 
-  console.log(
+  /* console.log(
     `[Champion] ${champion.name} ganhou um escudo de ${amount} HP (tipo: ${type}) com decaimento de ${decayPerTurn} por turno.`,
   );
+  */
 }
 
 /**
@@ -47,9 +48,10 @@ export function _checkAndConsumeShieldBlock(champion, context) {
   );
   if (supremeIdx !== -1) {
     champion.runtime.shields.splice(supremeIdx, 1);
-    console.log(
+    /* console.log(
       `[Champion] 🛡️ ${champion.name}: Escudo Supremo bloqueou a ação completamente e se dissipou!`,
     );
+    */
     return true;
   }
 
@@ -60,9 +62,10 @@ export function _checkAndConsumeShieldBlock(champion, context) {
     );
     if (spellIdx !== -1) {
       champion.runtime.shields.splice(spellIdx, 1);
-      console.log(
+      /* console.log(
         `[Champion] 🛡️ ${champion.name}: Escudo de Feitiço bloqueou a ação sem contato e se dissipou!`,
       );
+      */
       return true;
     }
   }
@@ -82,9 +85,10 @@ export function applyTaunt(champion, taunterId, duration, context) {
     taunterId: taunterId,
     expiresAtTurn: context.currentTurn + duration,
   });
-  console.log(
+  /* console.log(
     `[Champion] ${champion.name} taunted by ${taunterId}. Will expire at turn ${context.currentTurn + duration}.`,
   );
+  */
 }
 
 /**
@@ -117,9 +121,10 @@ export function applyDamageReduction(
     type: type,
     source: source,
   });
-  console.log(
+  /* console.log(
     `[Champion] ${champion.name} gained ${amount} damage reduction from ${source}. Will expire at turn ${context.currentTurn + duration}.`,
   );
+  */
 }
 
 /**
@@ -200,13 +205,13 @@ export function applyStatModifier(
     });
   }
 
-  console.log(
+  /* console.log(
     `[Champion] ${champion.name} teve ${statName} alterado em ${appliedAmount}. ` +
       (isPermanent
         ? "A alteração é permanente e não será revertida."
         : `A alteração será revertida no turno ${currentTurn + duration}.`),
   );
-
+  */
   return {
     appliedAmount,
     isCappedMax,
@@ -508,9 +513,10 @@ export function purgeExpiredStatModifiers(champion, currentTurn) {
         revertedAmount: -modifier.amount,
         newValue: champion[modifier.statName],
       });
-      console.log(
+      /* console.log(
         `[Champion] ${champion.name} ${modifier.statName} reverted by ${-modifier.amount}. New value: ${champion[modifier.statName]}.`,
       );
+      */
       return false;
     }
     return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
@@ -518,9 +524,10 @@ export function purgeExpiredStatModifiers(champion, currentTurn) {
 
   champion.tauntEffects = champion.tauntEffects.filter((effect) => {
     if (effect.expiresAtTurn <= currentTurn) {
-      console.log(
+      /* console.log(
         `[Champion] Taunt effect from ${effect.taunterId} on ${champion.name} expired.`,
       );
+      */
       return false;
     }
     return true;
@@ -529,9 +536,10 @@ export function purgeExpiredStatModifiers(champion, currentTurn) {
   champion.damageReductionModifiers = champion.damageReductionModifiers.filter(
     (modifier) => {
       if (modifier.expiresAtTurn <= currentTurn) {
-        console.log(
+        /* console.log(
           `[Champion] Damage reduction of ${modifier.amount} from ${modifier.source} on ${champion.name} expired.`,
         );
+        */
         return false;
       }
       return true;

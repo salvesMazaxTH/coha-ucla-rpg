@@ -11,19 +11,21 @@ export function emitCombatEvent(eventName, payload, champions) {
  */
 
   if (/* !ignoredEventsForDebug.has(eventName) */ debugMode) {
-    console.log(`[EVENT EMIT] 🔥 Champions in emitCombatEvent:`, champions);
+    // console.log(`[EVENT EMIT] 🔥 Champions in emitCombatEvent:`, champions);
   }
 
   if (debugMode) {
     console.group(`📡 EVENT: ${eventName}`);
-    console.log(`[EVENT EMIT] ${eventName}`, {
+    /*  console.log(`[EVENT EMIT] ${eventName}`, {
       source: payload?.source?.name,
       target: payload?.target?.name,
-    });
+    }); */
   }
 
   if (!champions) {
-    if (debugMode) console.log(`[EVENT EMIT] ⚠️ No champions provided`);
+    if (debugMode) {
+      // console.log(`[EVENT EMIT] ⚠️ No champions provided`);
+    }
     return results;
   }
 
@@ -32,11 +34,11 @@ export function emitCombatEvent(eventName, payload, champions) {
     : Array.from(champions.values());
 
   if (debugMode /* && !ignoredEventsForDebug.has(eventName) */) {
-    console.log(
+    /* console.log(
       `[EVENT EMIT] 🎯 Champions recebidos:`,
       champArray,
       champArray.map((c) => c.name).join(", "),
-    );
+    ); */
   }
 
   for (const champ of champArray) {
@@ -57,7 +59,7 @@ export function emitCombatEvent(eventName, payload, champions) {
       if (typeof hook !== "function") continue;
 
       if (debugMode) {
-        console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
+        // console.log(`➡️ Triggering ${champ.name} (${source.key || "passive"})`);
       }
 
       const scope = source.hookScope?.[eventName];
@@ -65,8 +67,6 @@ export function emitCombatEvent(eventName, payload, champions) {
       const sourceActor = payload.source || payload.healSrc || null;
 
       const targetActor = payload.target || payload.healTarget || null;
-      
-      if (scope === "owner" && champ !== payload.user) continue;
 
       if (scope === "source" && champ !== sourceActor) continue;
 
@@ -89,7 +89,7 @@ export function emitCombatEvent(eventName, payload, champions) {
       }
 
       try {
-        console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);
+        // console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);
         const res = hook.call(source, {
           ...payload,
           owner: champ,
@@ -97,11 +97,11 @@ export function emitCombatEvent(eventName, payload, champions) {
 
         if (res) {
           if (debugMode)
-            console.log(
+            /*  console.log(
               `[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`,
               res,
-            );
-          results.push(res);
+            ); */
+            results.push(res);
         }
       } catch (err) {
         console.error(
@@ -113,7 +113,7 @@ export function emitCombatEvent(eventName, payload, champions) {
   }
 
   if (debugMode) {
-    console.log(`[EVENT EMIT] 📦 Aggregated results:`, results);
+    // console.log(`[EVENT EMIT] 📦 Aggregated results:`, results);
     console.groupEnd();
   }
 

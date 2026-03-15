@@ -60,7 +60,7 @@ export class TurnResolver {
   // ============================================================
 
   executeSkillAction(action) {
-    console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
+    // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
 
     if (!user || !user.alive) {
@@ -104,14 +104,14 @@ export class TurnResolver {
 
     const roleTargets = this.resolveSkillTargets(user, skill, action, context);
 
-    console.log("STEP 1 - TARGETS:", roleTargets);
+    // console.log("STEP 1 - TARGETS:", roleTargets);
     if (!roleTargets) {
       this.refundActionResource(user, action);
       return { executed: false, reason: "no_targets", user, action };
     }
 
     const targetsArray = Object.values(roleTargets);
-    console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
+    // console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
 
     this.performSkillExecution(user, skill, targetsArray, context);
 
@@ -229,10 +229,11 @@ export class TurnResolver {
 
     for (const r of results) {
       if (r?.extraEffects?.some((e) => e.type === "dialog")) {
-        console.log(
+        /* console.log(
           "🔵 SERVER → dialog recebido do processDamageEvent:",
           r.extraEffects,
         );
+        */
       }
     }
 
@@ -288,13 +289,13 @@ export class TurnResolver {
     if (damageEvents.length > 0) {
       const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
       const applied = user.addUlt({ amount: regenAmount, context });
-      console.log("[ULT - DEALER]", user.name, applied);
+      // console.log("[ULT - DEALER]", user.name, applied);
     } else if (healEvents.length > 0) {
       const applied = user.addUlt({ amount: 1, context });
-      console.log("[ULT - HEAL]", user.name, applied);
+      // console.log("[ULT - HEAL]", user.name, applied);
     } else if (buffEvents.length > 0) {
       const applied = user.addUlt({ amount: 1, context });
-      console.log("[ULT - BUFF]", user.name, applied);
+      // console.log("[ULT - BUFF]", user.name, applied);
     }
 
     // 🔹 GANHO DE QUEM SOFREU DANO
@@ -310,7 +311,7 @@ export class TurnResolver {
       if (!target || !target.alive) continue;
 
       const applied = target.addUlt({ amount: 1, context });
-      console.log("[ULT - TAKEN]", target.name, applied);
+      // console.log("[ULT - TAKEN]", target.name, applied);
     }
   }
 
@@ -322,10 +323,10 @@ export class TurnResolver {
     const currentTargets = {};
     let redirected = false;
 
-    console.log("==== RESOLVE START ====");
-    console.log("Skill:", skill.key);
-    console.log("Incoming targetIds:", action.targetIds);
-    console.log("TauntEffects:", user.tauntEffects);
+    // console.log("==== RESOLVE START ====");
+    // console.log("Skill:", skill.key);
+    // console.log("Incoming targetIds:", action.targetIds);
+    // console.log("TauntEffects:", user.tauntEffects);
 
     context ??= this.createBaseContext({ sourceId: action?.userId });
 
@@ -397,9 +398,10 @@ export class TurnResolver {
 
           context.visual.redirectionEvents.push(...redirectionEvents);
 
-          console.log(
+          /* console.log(
             `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
           );
+          */
         }
       }
     }
@@ -413,15 +415,13 @@ export class TurnResolver {
         ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
         : [];
 
+      const hasAll = normalizedSpec.includes("all");
       const hasAllEnemies =
         normalizedSpec.includes("all-enemies") ||
         normalizedSpec.includes("all:enemy");
-
       const hasAllAllies =
         normalizedSpec.includes("all-allies") ||
         normalizedSpec.includes("all:ally");
-
-      const hasAll = normalizedSpec.includes("all");
 
       if (hasAllEnemies || hasAllAllies || hasAll) {
         if (hasAllEnemies || hasAll) {
@@ -461,9 +461,10 @@ export class TurnResolver {
     }
 
     if (Object.keys(currentTargets).length === 0) {
-      console.log(
+      /* console.log(
         `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
       );
+      */
       return null;
     }
 
@@ -503,6 +504,14 @@ export class TurnResolver {
 
       healSourceId: sourceId,
       buffSourceId: sourceId,
+
+      getTeamLine(team, options = {}) {
+        return combat.getTeamLine(team, options);
+      },
+
+      getAdjacentChampions(target, { side } = {}) {
+        return combat.getAdjacentChampions(target, { side });
+      },
 
       // ========================
       // REGISTRIES

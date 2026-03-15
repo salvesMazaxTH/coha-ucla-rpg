@@ -33,10 +33,10 @@ export default {
     // cura
     const healed = owner.heal(this.healPerHit, context);
 
-    console.log(
+    /* console.log(
       `[NAELYS] ${formatChampionName(owner)} foi curado em ${healed} HP e ganhou 1 stack de Maré (${owner.runtime.mareStacks}/${this.maxStacks}).`,
     );
-
+    */
     if (healed <= 0) return;
 
     return {
@@ -47,14 +47,14 @@ export default {
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
     // stack
     if (healSrc.id !== owner?.id) return;
-    console.log("[NAELYS] Tentando aplicar stack de Maré...");
+    // console.log("[NAELYS] Tentando aplicar stack de Maré...");
 
     if (owner.runtime.mareStacks < this.maxStacks) {
       owner.runtime.mareStacks++;
-      console.log(
+      /* console.log(
         `[NAELYS] ${owner} agora tem ${owner.runtime.mareStacks} stack(s) de Maré.`,
       );
-
+      */
       owner.addDamageModifier({
         id: `mare-stack-${owner.runtime.mareStacks}`,
         name: "Maré",
@@ -64,7 +64,7 @@ export default {
           return baseDamage + this.dmgPerStack;
         },
       });
-      console.log(`[NAELYS] damageMods: ${owner.getDamageModifiers()}`);
+      // console.log(`[NAELYS] damageMods: ${owner.getDamageModifiers()}`);
     }
   },
 };

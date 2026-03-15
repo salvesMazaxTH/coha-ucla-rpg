@@ -9,6 +9,8 @@ export default {
     Defense: 180,
     Speed: 55,
 
+    elementalAffinities: ["ice"],
+
 
 
 }

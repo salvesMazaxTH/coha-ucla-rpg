@@ -40,7 +40,7 @@ function _applyBeforeTakingPassive(event) {
 
 function _processHook(event, eventName, payload) {
   // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
-  console.log("[ALL CHAMPIONS DEBUG]", event.allChampions);
+/*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions); */
 
   // Verifique se o event.allChampions não foi redefinido por acidente
   if (!event.allChampions || event.allChampions.length === 0) {
@@ -59,7 +59,10 @@ function _processHook(event, eventName, payload) {
     }
 
     // Mutação de estado do evento
-    if (r.damage !== undefined) event.damage = r.damage;
+    if (r.damage !== undefined) {
+      event.damage = r.damage;
+      event.finalDamage = event.damage;
+    }
     if (r.crit !== undefined) event.crit = r.crit;
 
     // Consolidação de Logs e Effects (Uso de set de chaves para enxugar)

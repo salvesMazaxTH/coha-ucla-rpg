@@ -19,14 +19,14 @@ export default {
   onAfterDmgTaking({ source, target, owner, damage, context }) {
     if (damage <= 0) return;
 
-    console.log(
+    /* console.log(
       "PASSIVA NAELTHOS DISPARADA",
       "owner:",
       owner?.name,
       "receiver:",
       target?.name,
     );
-
+    */
     let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;
 
     heal = Math.min(heal, this.maxHeal);
@@ -36,10 +36,10 @@ export default {
     const before = owner.HP;
     owner.heal(heal, context);
 
-    console.log(
+    /* console.log(
       `[PASSIVA NAELTHOS] Mar que Retorna → damage=${damage}, heal=${heal}, HP ${before} → ${owner.HP}`,
     );
-
+    */
     const ownerName = formatChampionName(owner);
     return {
       log: `[PASSIVA — Mar que Retorna] ${ownerName} recuperou ${heal} HP.`,
