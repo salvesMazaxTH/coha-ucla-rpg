@@ -6,58 +6,43 @@ import { startFrozenCanvas } from "./frozenCanvas.js";
 // import { startBurn } from "./burnCanvas.js";
 // import { startFreeze } from "./freezeCanvas.js";
 
+const VFXTriggers = {
+  shield: (champion) =>
+    Array.isArray(champion.runtime?.shields) &&
+    champion.runtime.shields.length > 0,
+
+  fireStanceIdle: (champion) => champion.runtime?.fireStance === "postura",
+
+  fireStanceActive: (champion) => champion.runtime?.fireStance === "brasa_viva",
+
+  congelado: (champion) => champion.statusEffects?.has("congelado"),
+};
+
 const activeEffects = new WeakMap();
 
 export function syncChampionVFX(champion) {
   if (!champion?.el) return;
   if (!champion.el.isConnected) return;
 
-  const runtime = champion.runtime || {};
-
   champion._vfxState ??= {};
   champion._vfxCanvases ??= {};
 
-  // =========================
-  // 🛡 SHIELD
-  // =========================
-  const hasShield =
-    Array.isArray(runtime.shields) && runtime.shields.length > 0;
+  for (const [type, trigger] of Object.entries(VFXTriggers)) {
+    const shouldExist = trigger(champion);
+    const exists = champion._vfxState[type];
 
-  if (hasShield && !champion._vfxState.shield) {
-    const canvas = createVFXCanvas("shield", champion);
-    champion._vfxCanvases.shield = canvas;
-    playVFX("shield", canvas);
-  }
-
-  if (!hasShield && champion._vfxState.shield) {
-    removeVFXCanvas(champion, "shield");
-  }
-
-  champion._vfxState.shield = hasShield;
-
-  // =========================
-  // 🔥 FIRE STANCE
-  // =========================
-  const previousFire = champion._vfxState.fireStance || null;
-  const newFire = runtime.fireStance || null;
-
-  if (previousFire !== newFire) {
-    removeVFXCanvas(champion, "fireStance");
-
-    if (newFire === "postura") {
-      const canvas = createVFXCanvas("fireStanceIdle", champion);
-      champion._vfxCanvases.fireStance = canvas;
-      playVFX("fireStanceIdle", canvas);
+    if (shouldExist && !exists) {
+      const canvas = createVFXCanvas(type, champion);
+      champion._vfxCanvases[type] = canvas;
+      playVFX(type, canvas);
     }
 
-    if (newFire === "brasa_viva") {
-      const canvas = createVFXCanvas("fireStanceActive", champion);
-      champion._vfxCanvases.fireStance = canvas;
-      playVFX("fireStanceActive", canvas);
+    if (!shouldExist && exists) {
+      removeVFXCanvas(champion, type);
     }
-  }
 
-  champion._vfxState.fireStance = newFire;
+    champion._vfxState[type] = shouldExist;
+  }
 }
 
 export function createVFXCanvas(type, champion) {

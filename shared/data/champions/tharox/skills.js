@@ -45,9 +45,7 @@ const tharoxSkills = [
       if (!sucess) {
         user.runtime.tauntStreak = 0; // Reset streak se a provocação for mal-sucedida
 
-        context.visual.dialogEvents ??= [];
-        context.visual.dialogEvents.push({
-          type: "dialog",
+        context.registerDialog({
           message: `Mas falhou.`,
           sourceId: user.id,
           targetId: user.id,

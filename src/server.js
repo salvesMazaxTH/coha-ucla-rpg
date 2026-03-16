@@ -27,17 +27,17 @@ import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
+  enabled: true,
+  autoLogin: true,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -203,7 +203,7 @@ function applyGlobalTurnRegen(champion, context) {
     context,
   });
 
-/*   console.log(
+  /*   console.log(
     ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
   ); */
 
@@ -222,11 +222,17 @@ function buildEmitTargetInfo(realTargetIds) {
   let targetName = null;
 
   if (realTargetIds.length === 1) {
-    const champ = match.combat.activeChampions.get(realTargetIds[0]);
+    const champ =
+      match.combat.activeChampions.get(realTargetIds[0]) ??
+      match.combat.deadChampions.get(realTargetIds[0]);
+
     targetName = champ ? formatChampionName(champ) : null;
   } else if (realTargetIds.length > 1) {
     const names = realTargetIds.map((id) => {
-      const champ = match.combat.activeChampions.get(id);
+      const champ =
+        match.combat.activeChampions.get(id) ??
+        match.combat.deadChampions.get(id);
+
       return champ ? formatChampionName(champ) : "Desconecido";
     });
 
@@ -247,11 +253,11 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     context,
   });
 
-  const reactionEnvelopes = buildReactionEnvelopesFromContext({
+/*   const reactionEnvelopes = buildReactionEnvelopesFromContext({
     user,
     skill,
     context,
-  });
+  }); */
 
   if (mainEnvelope) {
     /* console.log(
@@ -286,9 +292,9 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     }
   }
 
-  for (const envelope of reactionEnvelopes) {
+  /* for (const envelope of reactionEnvelopes) {
     emitCombatAction(envelope);
-  }
+  } */
 }
 
 function buildMainEnvelopeFromContext({ user, skill, context }) {
@@ -346,7 +352,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
   };
 }
 
-function buildReactionEnvelopesFromContext({ user, skill, context }) {
+/* function buildReactionEnvelopesFromContext({ user, skill, context }) {
   const {
     damageEvents = [],
     healEvents = [],
@@ -438,7 +444,7 @@ function buildReactionEnvelopesFromContext({ user, skill, context }) {
   }
 
   return envelopes;
-}
+} */
 
 /**
  * Gera snapshots serializados dos campeões a partir de uma lista de IDs.

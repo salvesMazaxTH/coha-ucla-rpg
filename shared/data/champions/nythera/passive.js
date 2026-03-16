@@ -3,9 +3,9 @@ export default {
   chillDuration: 2,
   freezeDuration: 1,
   description() {
-    return `Sempre que Nythera sofrer dano (exceto dano absoluto): o agressor recebe ❄️ {Gelado}.
+    return `Sempre que Nythera sofrer dano (exceto dano absoluto): o agressor recebe ❄️ Gelado.
 
-    Se já estiver {Gelado}: → torna-se {Congelado}.`;
+    Se já estiver Gelado: → torna-se Congelado.`;
   },
   hookScope: {
     onAfterDmgTaking: "target",

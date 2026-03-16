@@ -1,6 +1,7 @@
 import { StatusIndicator } from "../ui/statusIndicator.js";
 import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
 import { emitCombatEvent } from "../engine/combat/combatEvents.js";
+import { formatChampionName } from "../ui/formatters.js";
 
 export function normalizeStatusEffectName(champion, statusEffectName) {
   if (typeof statusEffectName !== "string") return "";
@@ -38,14 +39,10 @@ export function applyStatusEffect(
   );
 
   if (!validation.allowed) {
-    context.visual ??= {};
-    context.visual.dialogEvents ??= [];
-
-    context.visual.dialogEvents.push({
-      type: "dialog",
+    context.registerDialog({
       message:
         validation.message ??
-        `${champion.name} não pode receber "${statusEffectKey}".`,
+        `${formatChampionName(champion)} não pode receber "${statusEffectKey}".`,
       sourceId: champion.id,
       targetId: champion.id,
       blocking: true,
@@ -85,7 +82,12 @@ export function applyStatusEffect(
   */
   _attachStatusEffectBehavior(champion, statusEffectKey, duration, context);
 
-  StatusIndicator.animateIndicatorAdd(champion, statusEffectKey);
+  context.registerDialog({
+    message: `${formatChampionName(champion)} recebeu "<b>${statusEffectKey.charAt(0).toUpperCase() + statusEffectKey.slice(1)}</b>".`,
+    sourceId: champion.id,
+    targetId: champion.id,
+    blocking: true,
+  });
 
   return true;
 }
@@ -121,6 +123,7 @@ function _canApplyStatusEffect(
       statusEffect: behavior,
       duration,
       metadata,
+      context,
     },
     context?.allChampions,
   );
@@ -131,7 +134,8 @@ function _canApplyStatusEffect(
     return {
       allowed: false,
       message:
-        cancelled.message ?? `${champion.name} é imune a ${behavior.name}.`,
+        cancelled.message ??
+        `${formatChampionName(champion)} é imune a ${behavior.name}.`,
     };
   }
 
@@ -250,7 +254,7 @@ export function removeStatusEffect(champion, statusEffectName) {
     );
     */
     // 🎨 Anima a remoção do indicador
-    StatusIndicator.animateIndicatorRemove(champion, normalizedName);
+    /*     StatusIndicator.animateIndicatorRemove(champion, normalizedName); */
   }
 }
 
@@ -278,7 +282,7 @@ export function purgeExpiredStatusEffects(champion, currentTurn) {
       );
 
       // 🎨 Anima a remoção do indicador com delay visual
-      StatusIndicator.animateIndicatorRemove(champion, statusEffectName);
+      /*       StatusIndicator.animateIndicatorRemove(champion, statusEffectName); */
     }
   }
   return removedStatusEffects;

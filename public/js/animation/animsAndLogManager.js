@@ -2,6 +2,7 @@ import { formatChampionName } from "../../../shared/ui/formatters.js";
 
 import { syncChampionVFX } from "../../../shared/vfx/vfxManager.js";
 import { playObliterateEffect } from "../../../shared/vfx/obliterate.js";
+import { StatusIndicator } from "../../../shared/ui/statusIndicator.js";
 
 // ============================================================
 //  AnimsAndLogManager.js — Combat Animation & Log System (v2)
@@ -203,54 +204,55 @@ export function createCombatAnimationManager(deps) {
       }
     }
 
-    for (const [key, events] of Object.entries(eventGroups)) {
-      if (!Array.isArray(events) || events.length === 0) continue;
+    // reconstruir ordem real
+    const orderedEvents = [
+      ...(eventGroups.damageEvents ?? []),
+      ...(eventGroups.healEvents ?? []),
+      ...(eventGroups.shieldEvents ?? []),
+      ...(eventGroups.buffEvents ?? []),
+      ...(eventGroups.resourceEvents ?? []),
+      ...(eventGroups.dialogEvents ?? []),
+      ...(eventGroups.redirectionEvents ?? []),
+    ].sort((a, b) => a.eventIndex - b.eventIndex);
 
-      for (let i = 0; i < events.length; i++) {
-        const event = events[i];
-        switch (key) {
-          case "damageEvents":
-            await animateDamage(event);
-            break;
+    for (const event of orderedEvents) {
+      switch (event.type) {
+        case "damage":
+          await animateDamage(event);
+          break;
 
-          case "healEvents":
-            await animateHeal(event);
-            break;
+        case "heal":
+          await animateHeal(event);
+          break;
 
-          case "shieldEvents":
-            await animateShield(event);
-            break;
+        case "shield":
+          await animateShield(event);
+          break;
 
-          case "buffEvents":
-            await animateBuff(event);
-            break;
+        case "buff":
+          await animateBuff(event);
+          break;
 
-          case "resourceEvents":
-            animateResourceChange(event);
-            break;
+        case "resourceGain":
+        case "resourceSpend":
+          animateResourceChange(event);
+          break;
 
-          case "redirectionEvents":
-            animateTauntRedirection(event);
-            break;
+        case "redirection":
+          animateTauntRedirection(event);
+          break;
 
-          case "dialogEvents": {
-            const { message, blocking = true } = event;
-
-            if (!message) break;
-
-            if (blocking) {
-              await showBlockingDialog(message);
-            } else {
-              showNonBlockingDialog(message);
-              await wait(770);
-            }
-
-            break;
+        case "dialog":
+          if (event.blocking ?? true) {
+            await showBlockingDialog(event.message);
+          } else {
+            showNonBlockingDialog(event.message);
+            await wait(770);
           }
+          break;
 
-          default:
-            console.warn("Grupo de evento desconhecido:", key);
-        }
+        default:
+          console.warn("Evento desconhecido:", event);
       }
     }
 
@@ -446,6 +448,8 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
+    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
+
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
     const champion = deps.activeChampions.get(targetId);
@@ -458,9 +462,6 @@ export function createCombatAnimationManager(deps) {
     if (portraitWrapper) {
       createFloatElement(portraitWrapper, `🛡️ ${amount}`, "shield-float");
     }
-
-    syncChampionVFX(champion);
-
     // Shield bubble visual (.has-shield) is applied when state syncs via updateUI
     await wait(600);
   }
@@ -917,9 +918,8 @@ export function createCombatAnimationManager(deps) {
         freeCostSkills: editMode?.freeCostSkills === true,
       });
 
-      if (champion.name === "Kai" || champion.name === "kai") {
-        console.log("Kai fireStance:", champion.runtime.fireStance);
-      }
+      StatusIndicator.updateChampionIndicators(champion);
+
       syncChampionVFX(champion);
     }
   }

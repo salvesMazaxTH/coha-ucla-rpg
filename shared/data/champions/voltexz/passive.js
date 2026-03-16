@@ -3,8 +3,8 @@ import { formatChampionName } from "../../../ui/formatters.js";
 const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999), entre outras coisas.
 
 export default {
-  key: "condutor_instavel",
-  name: "Condutor Instável",
+  key: "sobrecarga_instavel",
+  name: "Sobrecarga Instável",
   recoilPercent: 20,
   condutorDuration: 2,
   condutorBonusPercent: 15,
@@ -44,14 +44,12 @@ export default {
         source: owner,
         defender: owner,
         skill: {
-          key: "condutor_instavel_recoil",
+          key: "sobrecarga_instavel_recoil",
         },
       });
 
-      context.visual.dialogEvents = context.visual.dialogEvents || [];
-      context.visual.dialogEvents.push({
-        type: "dialog",
-        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "Condutor Instável"!`,
+      context.registerDialog({
+        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "<b>Sobrecarga Instável</b>"!`,
         sourceId: owner.id,
         targetId: owner.id,
         blocking: false,
@@ -84,9 +82,8 @@ export default {
 
     target.removeStatusEffect("condutor");
 
-    context.visual.dialogEvents.push({
-      type: "dialog",
-      message: `${formatChampionName(target)} foi consumido por "Condutor"!`,
+    context.registerDialog({
+      message: `${formatChampionName(target)} foi consumido por <b>"Condutor"</b>!`,
       sourceId: source.id,
       targetId: target.id,
       blocking: false,

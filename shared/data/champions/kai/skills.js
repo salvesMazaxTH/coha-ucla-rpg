@@ -83,8 +83,7 @@ const kaiSkills = [
             },
           });
 
-          context.visual.dialogEvents.push({
-            type: "dialog",
+          context.registerDialog({
             message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(source)}!`,
             sourceId: owner.id,
             targetId: owner.id,

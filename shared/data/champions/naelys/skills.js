@@ -172,8 +172,7 @@ const naelysSkills = [
             source?.name,
           );
           */
-          context.visual.dialogEvents.push({
-            type: "dialog",
+          context.registerDialog({
             message: `${formatChampionName(owner)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(source)}!`,
             sourceId: owner.id,
             targetId: source.id,

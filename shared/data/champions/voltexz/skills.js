@@ -35,6 +35,7 @@ const voltexzSkills = [
           context?.allChampions,
         );
         */
+
         const primaryResult = new DamageEvent({
           baseDamage,
           attacker: user,
@@ -90,15 +91,30 @@ const voltexzSkills = [
       }).execute();
 
       results.push(damageResult);
-      // Aplica o efeito de paralisia
-      const paralyzed = enemy.applyStatusEffect(
-        "paralisado",
-        this.paralyzeDuration,
-        context,
-        {
-          // nao reduz nada, apenas perde a ação
-        },
+
+      const damageArray = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
+
+      const mainDamage = damageArray[0];
+
+      let paralyzed;
+
+      console.log(
+        "[Votexz - Choque Estático] DamageResult (mainDamage):",
+        mainDamage,
+        "mainDamage.totalDamage:",
+        mainDamage?.totalDamage,
       );
+
+      // Aplica o efeito de paralisia
+      if (mainDamage.totalDamage > 0) {
+        paralyzed = enemy.applyStatusEffect(
+          "paralisado",
+          this.paralyzeDuration,
+          context,
+        );
+      }
 
       if (paralyzed) {
         /* console.log(

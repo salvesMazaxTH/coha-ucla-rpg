@@ -13,25 +13,36 @@ export class TurnResolver {
   // ============================================================
 
   resolveTurn() {
-    const actions = [...this.combat.pendingActions];
-
-    // Ordenação: priority DESC → speed DESC → random tie break
-    actions.sort((a, b) => {
-      const pA = a.getPriority(this.match);
-      const pB = b.getPriority(this.match);
-      if (pA !== pB) return pB - pA;
-
-      const sA = a.getSpeed(this.match);
-      const sB = b.getSpeed(this.match);
-      if (sA !== sB) return sB - sA;
-
-      return Math.random() < 0.5 ? -1 : 1;
-    });
-
     const actionResults = [];
+    let actionOrder = 0;
 
-    for (const action of actions) {
-      const result = this.executeSkillAction(action);
+    const turnExecutionMap = new Map(); // championId -> executionIndex
+
+    while (this.combat.pendingActions.length > 0) {
+      const actions = this.combat.pendingActions;
+
+      actions.sort((a, b) => {
+        const pA = a.getPriority(this.match);
+        const pB = b.getPriority(this.match);
+        if (pA !== pB) return pB - pA;
+
+        const sA = a.getSpeed(this.match);
+        const sB = b.getSpeed(this.match);
+        if (sA !== sB) return sB - sA;
+
+        return Math.random() - 0.5; // desempate aleatório para ações com mesma prioridade e velocidade
+      });
+
+      const action = actions.shift(); // remove a próxima ação
+
+      // 🔹 registra a posição da execução
+      action.executionIndex = actionOrder++;
+
+      const user = this.combat.activeChampions.get(action.userId);
+
+      turnExecutionMap.set(user.id, action.executionIndex);
+
+      const result = this.executeSkillAction(action, turnExecutionMap);
       actionResults.push(result);
     }
 
@@ -59,7 +70,7 @@ export class TurnResolver {
   //  EXECUÇÃO DE AÇÃO INDIVIDUAL
   // ============================================================
 
-  executeSkillAction(action) {
+  executeSkillAction(action, turnExecutionMap) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
 
@@ -112,6 +123,13 @@ export class TurnResolver {
 
     const targetsArray = Object.values(roleTargets);
     // console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
+
+    context.executionIndex = action.executionIndex;
+    console.log(
+      `[executeSkillAction] executionIndex set to ${context.executionIndex} for skill ${skill.name}`,
+    );
+
+    context.turnExecutionMap = turnExecutionMap;
 
     this.performSkillExecution(user, skill, targetsArray, context);
 
@@ -181,9 +199,11 @@ export class TurnResolver {
   // ============================================================
 
   performSkillExecution(user, skill, targets, context) {
-    // 🔹 1. Criar/configurar contexto
-    context ??= this.createBaseContext({ sourceId: user.id });
     context.currentSkill = skill;
+    // Verificar executionIndex:
+    console.log(
+      `[performSkillExecution] executionIndex: ${context.executionIndex}`,
+    );
 
     // 🔹 2. Injetar contexto nos campeões
     this.combat.activeChampions.forEach((champion) => {
@@ -242,6 +262,7 @@ export class TurnResolver {
       "onActionResolved",
       {
         source: user,
+        targets,
         skill,
         context,
       },
@@ -488,6 +509,7 @@ export class TurnResolver {
       editMode,
       allChampions: combat.activeChampions,
       aliveChampions: aliveChampionsArray,
+      eventIndex: 0, // para controle interno de ordem de eventos dentro da resolução de uma ação
 
       // ========================
       // EVENT BUFFERS
@@ -513,10 +535,14 @@ export class TurnResolver {
         return combat.getAdjacentChampions(target, { side });
       },
 
+      nextEventIndex() {
+        return this.eventIndex++;
+      },
+
       // ========================
       // REGISTRIES
       // ========================
-
+      // -- DAMAGE REGISTRY -- //
       registerDamage({
         target,
         amount,
@@ -529,6 +555,7 @@ export class TurnResolver {
         if (!target?.id) return;
 
         this.visual.damageEvents.push({
+          eventIndex: this.nextEventIndex(),
           type: "damage",
           sourceId: sourceId || null,
           targetId: target.id,
@@ -542,7 +569,7 @@ export class TurnResolver {
           obliterate: !!flags?.isObliterate,
         });
       },
-
+      // -- HEAL REGISTRY -- //
       registerHeal({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value <= 0) return;
@@ -553,6 +580,7 @@ export class TurnResolver {
           target;
 
         this.visual.healEvents.push({
+          eventIndex: this.nextEventIndex(),
           type: "heal",
           targetId: target.id,
           sourceId: sourceChamp?.id || target.id,
@@ -570,12 +598,13 @@ export class TurnResolver {
           this.allChampions,
         );
       },
-
+      // -- BUFF REGISTRY -- //
       registerBuff({ target, amount, statName, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return;
 
         this.visual.buffEvents.push({
+          eventIndex: this.nextEventIndex(),
           type: "buff",
           targetId: target.id,
           sourceId: sourceId || this.buffSourceId || target.id,
@@ -583,19 +612,20 @@ export class TurnResolver {
           statName,
         });
       },
-
+      // -- SHIELD REGISTRY -- //
       registerShield({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value <= 0) return;
 
         this.visual.shieldEvents.push({
+          eventIndex: this.nextEventIndex(),
           type: "shield",
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
           amount: value,
         });
       },
-
+      // -- RESOURCE REGISTRY -- //
       registerResourceChange({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return 0;
@@ -619,6 +649,7 @@ export class TurnResolver {
         const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
 
         this.visual.resourceEvents.push({
+          eventIndex: this.nextEventIndex(),
           type: eventType,
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
@@ -642,7 +673,7 @@ export class TurnResolver {
 
         return applied;
       },
-
+      // -- ULT GAIN REGISTRY -- //
       registerUltGain({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value <= 0) return 0;
@@ -650,6 +681,7 @@ export class TurnResolver {
         const applied = amount ?? 0;
         if (applied > 0) {
           this.visual.resourceEvents.push({
+            eventIndex: this.nextEventIndex(),
             type: "resourceGain",
             targetId: target.id,
             sourceId: sourceId || target.id,
@@ -658,6 +690,26 @@ export class TurnResolver {
         }
 
         return applied;
+      },
+      // -- DIALOG REGISTRY -- //
+      registerDialog({
+        message,
+        blocking = true,
+        sourceId = null,
+        targetId = null,
+        damageDepth,
+      } = {}) {
+        if (!message) return;
+
+        this.visual.dialogEvents.push({
+          eventIndex: this.nextEventIndex(),
+          type: "dialog",
+          message,
+          blocking,
+          sourceId: sourceId || null,
+          targetId: targetId || null,
+          damageDepth: damageDepth ?? this.damageDepth ?? 0,
+        });
       },
     };
   }

@@ -7,8 +7,22 @@ import { elementEmoji } from "../../shared/ui/elementEmoji.js";
 let skillOverlay = null;
 
 function extractGlossaryKeys(text) {
-  const matches = [...text.matchAll(/\{(.*?)\}/g)];
-  return [...new Set(matches.map((m) => m[1]))];
+  const keys = new Set();
+
+  for (const [key, data] of Object.entries(GAME_GLOSSARY)) {
+    const terms = [key, ...(data.aliases || [])];
+
+    for (const term of terms) {
+      const regex = new RegExp(`\\b${term}\\w*`, "i");
+
+      if (regex.test(text)) {
+        keys.add(key);
+        break;
+      }
+    }
+  }
+
+  return [...keys];
 }
 
 function renderGlossaryStatusEffects(text) {
@@ -20,7 +34,7 @@ function renderGlossaryStatusEffects(text) {
     const terms = [key, ...(data.aliases || [])];
 
     for (const term of terms) {
-      const regex = new RegExp(`\\b${term}\\b`, "gi");
+      const regex = new RegExp(`\\b${term}\\w*`, "gi");
 
       result = result.replace(
         regex,
@@ -552,8 +566,7 @@ const combatAnimations = createCombatAnimationManager({
   },
   updateTurnDisplay,
   applyTurnUpdate,
-  startStatusIndicatorRotation: (champions) =>
-    StatusIndicator.startRotationLoop(champions),
+  startStatusIndicatorRotation: () => StatusIndicator.startRotationLoop(),
   combatDialog,
   combatDialogText,
   editMode,
@@ -1472,7 +1485,7 @@ async function selectTargetForRole(
 
     if (target === null) return null;
     if (target === undefined) return undefined;
-    
+
     chosenTargets.add(target.id);
     return { ally: target };
   }

@@ -186,9 +186,7 @@ const blyskartriSkills = [
             },
           });
 
-          context.visual.dialogEvents ??= [];
-          context.visual.dialogEvents.push({
-            type: "dialog",
+          context.registerDialog({
             message: `${formatChampionName(user)} Blyskartri revidou o ataque de ${formatChampionName(source)} em seu aliado!`,
             sourceId: owner.id,
             targetId: source.id,

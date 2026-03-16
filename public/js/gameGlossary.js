@@ -7,7 +7,7 @@ export const GAME_GLOSSARY = {
   paralisado: {
     title: "Paralisado",
     description:
-      "O campeão tem 50% de chance de não agir. Caso haja, age por último (exceto prioridade negativa) (somente usuários de raio).",
+      "O campeão tem 50% de chance de não agir. Caso aja, age por último (exceto prioridade negativa) (somente usuários de raio).",
   },
 
   inerte: {

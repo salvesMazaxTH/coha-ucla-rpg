@@ -39,6 +39,8 @@ import {
   destroyChampion,
 } from "./championUI.js";
 
+import { formatChampionName } from "../ui/formatters.js";
+
 export class Champion {
   constructor(data = {}) {
     const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
@@ -139,6 +141,12 @@ export class Champion {
         },
 
         onStatusEffectIncoming({ target, statusEffect }) {
+          console.log(
+            "IMMUNITY TEST",
+            target.name,
+            target.elementalAffinities,
+            statusEffect.subtypes,
+          );
           const affinities = target.elementalAffinities || [];
           const effectElements = statusEffect.subtypes || [];
 

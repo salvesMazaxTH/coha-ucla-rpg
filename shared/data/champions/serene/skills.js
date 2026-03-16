@@ -195,11 +195,7 @@ const sereneSkills = [
               owner.name,
             );
             */
-            context.visual ??= {};
-            context.visual.dialogEvents ??= [];
-
-            context.visual.dialogEvents.push({
-              type: "dialog",
+            context.registerDialog({
               message: `${formatChampionName(owner)} escapou da morte graças à Epifania do Limiar!`,
               sourceId: owner.id,
               targetId: owner.id,

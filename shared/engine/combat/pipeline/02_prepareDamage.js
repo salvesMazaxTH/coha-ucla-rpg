@@ -45,9 +45,7 @@ function applyAffinity(event, debugMode) {
         ? "✨ É SUPER-EFETIVO!"
         : "🛡️ Não é muito efetivo...";
 
-    event.context.visual.dialogEvents ??= [];
-    event.context.visual.dialogEvents.push({
-      type: "dialog",
+    event.context.registerDialog({
       message,
       blocking: false,
     });

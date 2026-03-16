@@ -18,7 +18,7 @@ const nytheraSkills = [
 
     element: "ice",
     description() {
-      return `Causa dano e deixa o alvo {gelado} por ${this.chillDuration} turno(s). Se o alvo já estiver {gelado}, aplica {congelado} por ${this.freezeDuration} turno(s) e causa dano adicional igual a ${this.bonusIfFrozen} de dano ({perfurante}).`;
+      return `Causa dano e deixa o alvo Gelado por ${this.chillDuration} turno(s). Se o alvo já estiver Gelado, aplica Congelado por ${this.freezeDuration} turno(s) e causa dano adicional igual a ${this.bonusIfFrozen} de dano (Perfurante).`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
