@@ -37,12 +37,44 @@ const reyskaroneSkills = [
 
       user.takeDamage(hpSacrifice);
 
-      const tributeApplied = enemy.applyStatusEffect(
-        "tributo",
-        this.tributeDuration,
-        context,
-      );
+      // =========================
+      // HOOK TEMPORÁRIO: TRIBUTO
+      // =========================
+      enemy.runtime.hookEffects.push({
+        key: "tributo",
+        group: "skill",
 
+        expiresAtTurn: context.currentTurn + this.tributeDuration,
+
+        hookScope: {
+          onBeforeDmgDealing: "target",
+        },
+
+        onBeforeDmgDealing: ({ source, target, context }) => {
+          if (target !== enemy) return;
+
+          // bônus de dano
+          target.runtime.pendingFlatDamageBonus =
+            (target.runtime.pendingFlatDamageBonus || 0) +
+            this.tributeBonusDamage;
+
+          // cura o atacante
+          context.registerHeal({
+            target: source,
+            amount: this.tributeHeal,
+            sourceId: enemy.id,
+          });
+        },
+      });
+
+      context.registerDialog({
+        message: `${formatChampionName(enemy)} foi marcado com <b>Tributo</b>!`,
+        sourceId: user.id,
+        targetId: user.id,
+        blocking: false,
+      });
+
+      // ataque imediato
       const result = new DamageEvent({
         baseDamage: (user.Attack * this.bf) / 100,
         attacker: user,
@@ -52,7 +84,7 @@ const reyskaroneSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      if (result?.log && tributeApplied) {
+      if (result?.log) {
         result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
       }
 

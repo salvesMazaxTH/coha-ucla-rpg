@@ -28,14 +28,14 @@ const raliaSkills = [
     },
     targetSpec: ["self", "enemy"],
     resolve({ user, targets, context = {} }) {
-      user.takeDamage(this.selfDamage);
-
       user.modifyStat({
         statName: "Defense",
         amount: -this.defLoss,
         duration: this.buffDuration,
         context,
       });
+
+      user.modifyHP(-this.selfDamage, { context });
 
       // console.log("BEFORE SELF ATK BUFF:", user.Attack);
 
@@ -49,7 +49,7 @@ const raliaSkills = [
       // console.log("AFTER SELF ATK BUFF:", user.Attack);
 
       // Ataque básico imediato
-      const [enemy] = targets;
+      const enemy = targets.find((t) => t.id !== user.id);
 
       // console.log("ATTACK BEFORE DAMAGE:", user.Attack);
 
@@ -68,9 +68,12 @@ const raliaSkills = [
         context,
         allChampions: context?.allChampions,
       }).execute();
-      // colocar dentro de result.log
-      result.log = selfLog + " " + result.log;
-      return result;
+
+      const results = Array.isArray(result) ? result : [result];
+
+      results[0].log = selfLog + " " + results[0].log;
+
+      return results;
     },
   },
 
