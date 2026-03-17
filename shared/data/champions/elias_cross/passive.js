@@ -2,8 +2,7 @@ import { formatChampionName } from "../../../ui/formatters.js";
 
 export default {
   name: "O Raio Pode Cair Duas Vezes",
-  //1
-  initialChance: 95, // PARA TESTAR
+  initialChance: 1,
   chanceIncreasePerTurn: 5,
   description(champion) {
     return `As habilidades de dano Elias Cross têm <b>${champion.runtime.passiveChance ?? this.initialChance}%</b> de chance de se repetirem. A cada turno, ele ganha <b>+${this.chanceIncreasePerTurn}%</b> de chance. `;
