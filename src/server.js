@@ -554,6 +554,12 @@ function handleStartTurn() {
     match.combat.activeChampions,
   );
 
+  const deathResults = resolver.processChampionDeaths();
+
+  for (const death of deathResults) {
+    emitChampionDeath(death);
+    }
+
   // 3. Limpar expirados
   match.combat.activeChampions.forEach((champion) => {
     champion.purgeExpiredStatModifiers(match.combat.currentTurn);
