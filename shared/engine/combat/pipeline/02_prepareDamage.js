@@ -50,8 +50,6 @@ function applyAffinity(event, debugMode) {
       blocking: false,
     });
   }
-
-  event.context.ignoreMinimumFloor = true;
 }
 
 function _getElementalRelation(attackingElement, defendingElement) {

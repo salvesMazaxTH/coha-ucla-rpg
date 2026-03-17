@@ -57,7 +57,7 @@ function _applyLifeSteal(event) {
   }
 
   // 3. Aplica a cura
-  event.attacker.heal(effectiveHeal, { suppressHealEvents: true });
+  event.attacker.heal(effectiveHeal, event.context);
 
   // 4. Dispara evento para passivas reativas a lifesteal (ex: "ao curar, ganhe buff")
   const results =

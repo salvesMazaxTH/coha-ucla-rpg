@@ -92,7 +92,15 @@ export function createCombatAnimationManager(deps) {
   let processing = false;
   let lastLoggedTurn = null;
   let currentPhase = "null";
+  let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
+
+  // Double-click em qualquer área da tela acelera apenas o dialog atual.
+  document.addEventListener("click", () => {
+    if (activeDialogController) {
+      activeDialogController.requestSkip();
+    }
+  });
 
   // ============================================================
   //  QUEUE MANAGEMENT
@@ -270,6 +278,12 @@ export function createCombatAnimationManager(deps) {
 
       console.log(`📚 GROUP: ${key} (${events.length})`);
 
+      // 👇 tratamento especial
+      if (key === "buffEvents") {
+        await animateBuff(events[0]);
+        continue; // pula o loop interno
+      }
+
       for (let i = 0; i < events.length; i++) {
         const event = events[i];
 
@@ -290,9 +304,9 @@ export function createCombatAnimationManager(deps) {
             await animateShield(event);
             break;
 
-          case "buffEvents":
+          /*           case "buffEvents":
             await animateBuff(event);
-            break;
+            break; */
 
           case "resourceEvents":
             animateResourceChange(event);
@@ -923,23 +937,72 @@ export function createCombatAnimationManager(deps) {
     await showBlockingDialog(dialogText, true);
   }
 
+  function createDialogController() {
+    let skipRequested = false;
+    let releaseCurrentWait = null;
+
+    function resolveCurrentWaitNow() {
+      if (typeof releaseCurrentWait === "function") {
+        releaseCurrentWait();
+      }
+    }
+
+    return {
+      async waitWithOptionalSkip(ms) {
+        if (skipRequested) {
+          await wait(20);
+          return;
+        }
+
+        await new Promise((resolve) => {
+          const timer = setTimeout(() => {
+            releaseCurrentWait = null;
+            resolve();
+          }, ms);
+
+          releaseCurrentWait = () => {
+            clearTimeout(timer);
+            releaseCurrentWait = null;
+            resolve();
+          };
+        });
+      },
+      requestSkip() {
+        skipRequested = true;
+        resolveCurrentWaitNow();
+      },
+      dispose() {
+        releaseCurrentWait = null;
+      },
+    };
+  }
+
   async function showBlockingDialog(text) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
+
+    const dialogController = createDialogController();
+    activeDialogController = dialogController;
 
     dialogText.innerHTML = text;
 
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");
 
-    await wait(TIMING.DIALOG_DISPLAY);
+    await dialogController.waitWithOptionalSkip(TIMING.DIALOG_DISPLAY);
 
     dialog.classList.add("leaving");
-    await wait(TIMING.DIALOG_LEAVE);
+    await dialogController.waitWithOptionalSkip(TIMING.DIALOG_LEAVE);
 
     dialog.classList.remove("active", "leaving");
     dialog.classList.add("hidden");
+
+    if (activeDialogController === dialogController) {
+      activeDialogController = null;
+    }
+
+    dialogController.dispose();
   }
 
   async function showNonBlockingDialog(text) {

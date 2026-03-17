@@ -56,7 +56,7 @@ const nytheraSkills = [
     priority: 3,
     element: "ice",
     description() {
-      return `Por ${this.effectDuration} turno(s), recebe -40 de redução de dano. Quem causar dano a Nythera durante esse período fica {Congelado} por ${this.freezeDuration} turno(s).`;
+      return `Por ${this.effectDuration} turno(s), recebe -40 de redução de dano. Quem causar dano a Nythera durante esse período fica Congelado por ${this.freezeDuration} turno(s).`;
     },
     targetSpec: ["self"],
 

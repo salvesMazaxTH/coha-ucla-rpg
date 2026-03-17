@@ -102,9 +102,18 @@
 
 .portrait img {
   width: 100%;
-  position: relative;
-  z-index: 1;
   height: 100%;
+
+  position: relative;
+
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge antigo */
+
+  z-index: 1;
+
   object-fit: cover;
   object-position: 60% center;
   display: block;
@@ -928,6 +937,11 @@
 .champion {
   width: 25%;
   height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge antigo */
   position: relative;
   overflow: visible;
   transition:
@@ -1272,6 +1286,11 @@
 
 .combat-dialog {
   position: fixed;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge antigo */
   inset: 0;
   display: flex;
   align-items: center;

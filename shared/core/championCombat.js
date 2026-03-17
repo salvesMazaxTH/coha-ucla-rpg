@@ -165,11 +165,19 @@ export function getTotalDamageReduction(champion) {
  * @param {number} duration - Duration in turns
  * @param {object} context - Combat context
  * @param {boolean} isPermanent - Whether modification is permanent
+ * @param {boolean} ignoreMinimum - Whether to ignore the stat minimum clamp
  * @returns {object} Result object
  */
 export function applyStatModifier(
   champion,
-  { statName, amount, duration = 1, context, isPermanent = false } = {},
+  {
+    statName,
+    amount,
+    duration = 1,
+    context,
+    isPermanent = false,
+    ignoreMinimum = false,
+  } = {},
 ) {
   if (!(statName in champion)) {
     console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
@@ -187,7 +195,8 @@ export function applyStatModifier(
   const { min, max } = limits[statName] || limits.default;
 
   const previous = champion[statName];
-  const clamped = Math.max(min, Math.min(previous + amount, max));
+  const effectiveMin = ignoreMinimum ? 0 : min;
+  const clamped = Math.max(effectiveMin, Math.min(previous + amount, max));
   const appliedAmount = clamped - previous;
 
   champion[statName] = clamped;
@@ -197,10 +206,11 @@ export function applyStatModifier(
 
   const currentTurn = context?.currentTurn ?? 0;
 
-  if (appliedAmount !== 0) {
+  if (amount !== 0) {
     champion.statModifiers.push({
       statName: statName,
-      amount: appliedAmount,
+      amount: amount,
+      ignoreMinimum: ignoreMinimum,
       expiresAtTurn: currentTurn + duration,
       isPermanent: isPermanent,
     });
@@ -244,6 +254,7 @@ export function buffStat(
     context,
     isPermanent = false,
     isPercent = false,
+    ignoreMinimum = false,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -274,6 +285,7 @@ export function buffStat(
     duration,
     context,
     isPermanent,
+    ignoreMinimum,
   });
 }
 
@@ -292,6 +304,7 @@ export function debuffStat(
     context,
     isPermanent = false,
     isPercent = false,
+    ignoreMinimum = false,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -320,6 +333,7 @@ export function debuffStat(
     duration,
     context,
     isPermanent,
+    ignoreMinimum,
   });
 }
 
@@ -338,6 +352,7 @@ export function modifyStat(
     context,
     isPermanent = false,
     isPercent = false,
+    ignoreMinimum = false,
   } = {},
 ) {
   if (amount === 0) {
@@ -352,6 +367,7 @@ export function modifyStat(
       context,
       isPermanent,
       isPercent,
+      ignoreMinimum,
     });
   }
 
@@ -361,6 +377,8 @@ export function modifyStat(
     duration,
     context,
     isPermanent,
+    isPercent,
+    ignoreMinimum,
   });
 }
 
@@ -512,29 +530,59 @@ export function heal(champion, amount, context, source = champion) {
  */
 export function purgeExpiredStatModifiers(champion, currentTurn) {
   const revertedStats = [];
-  champion.statModifiers = champion.statModifiers.filter((modifier) => {
+  const affectedStats = new Set();
+  const remaining = [];
+
+  for (const modifier of champion.statModifiers) {
     if (modifier.expiresAtTurn <= currentTurn && !modifier.isPermanent) {
-      // Revert the stat change only if not permanent
-      champion[modifier.statName] -= modifier.amount;
-      if (modifier.statName === "maxHP") {
-        // Keep current HP in sync with maxHP reverting
-        const nextHP = roundToFive(champion.HP - modifier.amount);
-        champion.HP = Math.max(0, Math.min(nextHP, champion.maxHP));
+      affectedStats.add(modifier.statName);
+    } else {
+      remaining.push(modifier);
+    }
+  }
+
+  champion.statModifiers = remaining;
+
+  // Recalculate each affected stat from base, reapplying remaining modifiers
+  for (const statName of affectedStats) {
+    const baseKey = statName === "maxHP" ? "baseHP" : `base${statName}`;
+    const baseValue = champion[baseKey];
+    if (baseValue === undefined) continue;
+
+    const limits = {
+      Critical: { min: 0, max: 95 },
+      Evasion: { min: 0, max: 95 },
+      default: { min: 10, max: 999 },
+    };
+    const { max } = limits[statName] || limits.default;
+
+    const previousValue = champion[statName];
+    let newValue = baseValue;
+
+    for (const mod of remaining) {
+      if (mod.statName === statName) {
+        const effectiveMin = mod.ignoreMinimum
+          ? 0
+          : (limits[statName] || limits.default).min;
+        newValue = Math.max(effectiveMin, Math.min(newValue + mod.amount, max));
       }
+    }
+
+    champion[statName] = newValue;
+
+    if (statName === "maxHP") {
+      champion.HP = Math.max(0, Math.min(champion.HP, champion.maxHP));
+    }
+
+    if (previousValue !== newValue) {
       revertedStats.push({
         championId: champion.id,
-        statName: modifier.statName,
-        revertedAmount: -modifier.amount,
-        newValue: champion[modifier.statName],
+        statName: statName,
+        revertedAmount: newValue - previousValue,
+        newValue: newValue,
       });
-      /* console.log(
-        `[Champion] ${champion.name} ${modifier.statName} reverted by ${-modifier.amount}. New value: ${champion[modifier.statName]}.`,
-      );
-      */
-      return false;
     }
-    return modifier.isPermanent || modifier.expiresAtTurn > currentTurn;
-  });
+  }
 
   champion.tauntEffects = champion.tauntEffects.filter((effect) => {
     if (effect.expiresAtTurn <= currentTurn) {

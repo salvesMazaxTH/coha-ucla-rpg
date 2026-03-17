@@ -11,6 +11,7 @@ const gelado = {
       duration,
       context,
       isPercent: true,
+      ignoreMinimum: true,
     });
 
     owner.modifyStat({
@@ -19,6 +20,7 @@ const gelado = {
       duration,
       context,
       isPercent: true,
+      ignoreMinimum: true,
     });
   },
 };

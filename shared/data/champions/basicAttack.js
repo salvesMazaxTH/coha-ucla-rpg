@@ -4,7 +4,7 @@ import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 const basicAttack = {
   key: "ataque_basico",
   name: "Ataque Básico",
-  bf: 15,
+  bf: 20,
   bonusFlat: 20,
   contact: true,
   damageMode: "standard",

@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../ui/formatters.js";
+
 const atordoado = {
   key: "atordoado",
   name: "Atordoado",
@@ -11,7 +13,7 @@ const atordoado = {
   onValidateAction({ source }) {
     return {
       deny: true,
-      message: `${source.name} está Atordoado e não pode agir!`,
+      message: `${formatChampionName(source)} está Atordoado e não pode agir!`,
     };
   },
 };

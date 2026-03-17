@@ -54,10 +54,10 @@ export function applyStatusEffect(
   const { currentTurn } = context || {};
   const isStackable = statusEffectKey === "poison";
 
-  /* console.log(
+  console.log(
     `[STATUS APPLY] ${champion.name} tentando receber "${statusEffectKey}" (duration=${duration})`,
   );
-  */
+  
   duration = Number.isFinite(duration) ? duration : 1;
 
   const persistent = metadata?.persistent || false;
@@ -81,6 +81,12 @@ export function applyStatusEffect(
   );
   */
   _attachStatusEffectBehavior(champion, statusEffectKey, duration, context);
+
+  console.log("STATUS MAP:", [...champion.statusEffects.keys()]);
+  console.log(
+    "HOOK EFFECTS:",
+    champion.runtime.hookEffects.map((e) => e.key),
+  );
 
   context.registerDialog({
     message: `${formatChampionName(champion)} recebeu "<b>${statusEffectKey.charAt(0).toUpperCase() + statusEffectKey.slice(1)}</b>".`,
@@ -249,6 +255,11 @@ export function removeStatusEffect(champion, statusEffectName) {
   const normalizedName = normalizeStatusEffectName(champion, statusEffectName);
   if (champion.statusEffects.has(normalizedName)) {
     champion.statusEffects.delete(normalizedName);
+
+    champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
+      (e) => !(e.group === "statusEffect" && e.key === statusEffectName),
+    );
+
     /* console.log(
       `[STATUS REMOVE] ${champion.name}: StatusEffect "${normalizedName}" removido.`,
     );

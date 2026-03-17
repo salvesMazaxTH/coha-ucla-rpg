@@ -40,9 +40,9 @@ const kaiSkills = [
     element: "fire",
 
     description() {
-      return `Kai assume uma postura incandescente até o início do próximo turno, recebendo ${this.damageReduction}% de redução de dano. 
-      Se sofrer ataque de contato, contra-ataca causando ${this.counterAtkDmg} de dano perfurante e aplica queimadura. 
-      Se causar dano, ativa Brasa Viva por 2 turnos: todos seus ataques causam ${this.flamingFistsBonus} de dano adicional e aplicam queimadura prolongada independente da afinidade elemental do alvo.`;
+      return `Durante este turno e o próximo, Kai assume uma postura incandescente, recebendo ${this.damageReduction}% de redução de dano. 
+      Se sofrer ataque de contato, contra-ataca com ${this.counterAtkDmg} de dano perfurante e aplica Queimadura. 
+      Ao causar dano, ativa Brasa Viva por 2 turnos: seus ataques causam +${this.flamingFistsBonus} de dano e sempre aplicam Queimadura.`;
     },
 
     targetSpec: ["self"],
@@ -51,7 +51,6 @@ const kaiSkills = [
       user.runtime.hookEffects ??= [];
 
       const counterAtkDmg = this.counterAtkDmg;
-      const flamingFistsBonus = this.flamingFistsBonus;
 
       user.runtime.fireStance = "postura"; // Sinaliza para o sistema de VFX que a postura está ativa
 
@@ -98,17 +97,6 @@ const kaiSkills = [
           };
         },
 
-        // 🔥 BÔNUS ENQUANTO BRASA VIVA
-        onBeforeDmgDealing({ source, owner, damage, context }) {
-          if (this.state !== "brasa_viva") return;
-          if (source !== owner) return;
-
-          return {
-            damage: damage + flamingFistsBonus,
-            log: `🔥 Brasa Viva: +${flamingFistsBonus} Dano Direto!`,
-          };
-        },
-
         onAfterDmgDealing({ source, target, owner, damage, context }) {
           if (source !== owner) return;
           if (damage <= 0) return;
@@ -142,12 +130,12 @@ const kaiSkills = [
         },
 
         // 🔥 REMOÇÃO AUTOMÁTICA
-        onTurnStart({ self, context }) {
+        onTurnStart({ owner, context }) {
           if (context.currentTurn >= this.expiresAt) {
-            self.runtime.hookEffects = self.runtime.hookEffects.filter(
+            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
               (e) => e !== this,
             );
-            self.runtime.fireStance = null; // Sinaliza para o sistema de VFX que a postura foi removida
+            owner.runtime.fireStance = null; // Sinaliza para o sistema de VFX que a postura foi removida
           }
         },
       };

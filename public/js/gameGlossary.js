@@ -7,7 +7,7 @@ export const GAME_GLOSSARY = {
   paralisado: {
     title: "Paralisado",
     description:
-      "O campeão tem 50% de chance de não agir. Caso aja, age por último (exceto prioridade negativa) (somente usuários de raio).",
+      "O campeão tem sua VEL zerada e fica com 50% de chance de não agir.",
   },
 
   inerte: {
@@ -41,6 +41,12 @@ export const GAME_GLOSSARY = {
     title: "Congelado",
     description:
       "O campeão fica temporariamente incapacitado de agir. Velocidade e Ataque são zerados.",
+  },
+
+  queimando: {
+    title: "Queimando",
+    description:
+      "O campeão sofre dano contínuo (geralmente 20) por um certo número de turnos (geralmente 1).",
   },
 
   obliterar: {

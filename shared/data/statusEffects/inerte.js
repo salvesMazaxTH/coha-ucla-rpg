@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../ui/formatters.js";
+
 const inerte = {
   key: "inerte",
   name: "Inerte",
@@ -17,13 +19,13 @@ const inerte = {
       source.removeStatusEffect("inerte");
       deny = false;
       return {
-        message: `O efeito "Inerte" de ${source.name} foi interrompido!`,
+        message: `O efeito "Inerte" de ${formatChampionName(source)} foi interrompido!`,
       };
     }
 
     return {
       deny,
-      message: `${source.name} está Inerte e não pode agir!`,
+      message: `${formatChampionName(source)} está Inerte e não pode agir!`,
     };
   },
 };

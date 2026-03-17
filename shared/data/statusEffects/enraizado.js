@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../ui/formatters.js";
+
 const enraizado = {
   key: "enraizado",
   name: "Enraizado",
@@ -15,7 +17,7 @@ const enraizado = {
 
     return {
       deny: true,
-      message: `${source.name} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
+      message: `${formatChampionName(source)} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
     };
   },
 };

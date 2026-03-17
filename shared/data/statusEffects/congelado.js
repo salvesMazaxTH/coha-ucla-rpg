@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../ui/formatters.js";
+
 // Reduz velocidade e ataque a 0 e impede de agir por X turno(s) (X geralmente 1)
 const congelado = {
   key: "congelado",
@@ -11,12 +13,14 @@ const congelado = {
       amount: -100,
       duration: 1,
       isPercent: true,
+      ignoreMinimum: true,
     });
     owner.modifyStat({
       statName: "Attack",
       amount: -100,
       duration: 1,
       isPercent: true,
+      ignoreMinimum: true,
     });
     return {
       message: `${owner.name} foi Congelado!`,
@@ -31,7 +35,7 @@ const congelado = {
   onValidateAction({ source }) {
     return {
       deny: true,
-      message: `${source.name} está Congelado e não pode agir!`,
+      message: `${formatChampionName(source)} está Congelado e não pode agir!`,
     };
   },
 
@@ -40,7 +44,7 @@ const congelado = {
     owner.removeStatusEffect("congelado");
 
     return {
-      log: `${owner.name} foi descongelado após receber dano!`,
+      log: `${formatChampionName(owner)} foi descongelado após receber dano!`,
     };
   },
 };

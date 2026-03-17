@@ -442,6 +442,7 @@ import { Champion } from "/shared/core/Champion.js";
 import { StatusIndicator } from "../../shared/ui/statusIndicator.js";
 import { createCombatAnimationManager } from "./animation/animsAndLogManager.js";
 import { GAME_GLOSSARY } from "./gameGlossary.js";
+import { syncChampionVFX } from "../../shared/vfx/vfxManager.js";
 
 // ============================================================
 //  SOCKET
@@ -550,6 +551,7 @@ const surrenderConfirm = document.getElementById("surrender-confirm");
 window.StatusIndicator = StatusIndicator;
 window.gameEnded = gameEnded;
 window.resetCombat = () => {
+  if (!editMode.enabled) return;
   socket.emit("debugResetCombat");
 };
 
@@ -1643,8 +1645,9 @@ function applyTurnUpdate(turn) {
       freeCostSkills: editMode?.freeCostSkills === true,
     };
     champion.updateUI(context);
-    requestAnimationFrame(() =>
-      StatusIndicator.updateChampionIndicators(champion),
+    requestAnimationFrame(
+      () => StatusIndicator.updateChampionIndicators(champion),
+      syncChampionVFX(champion),
     );
   });
 
