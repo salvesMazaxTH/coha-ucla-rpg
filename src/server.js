@@ -21,6 +21,7 @@ import {
 import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 import { Action } from "../shared/engine/combat/Action.js";
 import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
+import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -253,7 +254,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     context,
   });
 
-/*   const reactionEnvelopes = buildReactionEnvelopesFromContext({
+  /*   const reactionEnvelopes = buildReactionEnvelopesFromContext({
     user,
     skill,
     context,
@@ -348,7 +349,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
     buffEvents: mainBuff,
     resourceEvents: mainResource,
     dialogEvents: mainDialog,
-    state: snapshotChampions([...affectedIds]),
+    state: context._intermediateSnapshot,
   };
 }
 
@@ -445,24 +446,6 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
 
   return envelopes;
 } */
-
-/**
- * Gera snapshots serializados dos campeões a partir de uma lista de IDs.
- * Usado para enviar o estado final pós-ação ao cliente.
- */
-function snapshotChampions(ids) {
-  if (!ids || ids.length === 0) return null;
-
-  const uniqueIds = [...new Set(ids)];
-  const snapshots = [];
-
-  for (const id of uniqueIds) {
-    const champion = match.combat.activeChampions.get(id);
-    if (champion?.serialize) snapshots.push(champion.serialize());
-  }
-
-  return snapshots.length > 0 ? snapshots : null;
-}
 
 /**
  * Emite um envelope de ação de combate para todos os clientes.

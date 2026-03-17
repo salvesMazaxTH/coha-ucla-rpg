@@ -1,5 +1,6 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
+import { snapshotChampions } from "./snapshotChampions.js";
 
 export class TurnResolver {
   constructor(match, editMode) {
@@ -132,6 +133,10 @@ export class TurnResolver {
     context.turnExecutionMap = turnExecutionMap;
 
     this.performSkillExecution(user, skill, targetsArray, context);
+
+    // Captura snapshot intermediário AGORA, antes da próxima ação mutar os champions
+
+    context._intermediateSnapshot = snapshotChampions(this.combat.activeChampions);
 
     return { executed: true, user, skill, context, action };
   }
@@ -509,7 +514,7 @@ export class TurnResolver {
       editMode,
       allChampions: combat.activeChampions,
       aliveChampions: aliveChampionsArray,
-      eventIndex: 0, // para controle interno de ordem de eventos dentro da resolução de uma ação
+      // eventIndex: 0, // para controle interno de ordem de eventos dentro da resolução de uma ação
 
       // ========================
       // EVENT BUFFERS
@@ -535,9 +540,9 @@ export class TurnResolver {
         return combat.getAdjacentChampions(target, { side });
       },
 
-      nextEventIndex() {
-        return this.eventIndex++;
-      },
+      // nextEventIndex() {
+      //   return this.eventIndex++;
+      // },
 
       // ========================
       // REGISTRIES
@@ -555,7 +560,7 @@ export class TurnResolver {
         if (!target?.id) return;
 
         this.visual.damageEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: "damage",
           sourceId: sourceId || null,
           targetId: target.id,
@@ -580,7 +585,7 @@ export class TurnResolver {
           target;
 
         this.visual.healEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: "heal",
           targetId: target.id,
           sourceId: sourceChamp?.id || target.id,
@@ -604,7 +609,7 @@ export class TurnResolver {
         if (!target?.id || value === 0) return;
 
         this.visual.buffEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: "buff",
           targetId: target.id,
           sourceId: sourceId || this.buffSourceId || target.id,
@@ -618,7 +623,7 @@ export class TurnResolver {
         if (!target?.id || value <= 0) return;
 
         this.visual.shieldEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: "shield",
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
@@ -649,7 +654,7 @@ export class TurnResolver {
         const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
 
         this.visual.resourceEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: eventType,
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
@@ -681,7 +686,7 @@ export class TurnResolver {
         const applied = amount ?? 0;
         if (applied > 0) {
           this.visual.resourceEvents.push({
-            eventIndex: this.nextEventIndex(),
+            // eventIndex: this.nextEventIndex(),
             type: "resourceGain",
             targetId: target.id,
             sourceId: sourceId || target.id,
@@ -702,7 +707,7 @@ export class TurnResolver {
         if (!message) return;
 
         this.visual.dialogEvents.push({
-          eventIndex: this.nextEventIndex(),
+          // eventIndex: this.nextEventIndex(),
           type: "dialog",
           message,
           blocking,

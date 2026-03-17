@@ -125,13 +125,18 @@ export function createCombatAnimationManager(deps) {
   }
 
   async function dispatchQueueItem(item) {
+    console.log("📦 DISPATCH:", item.type);
+
     switch (item.type) {
       case "combatAction":
+        console.log("⚔️ START combatAction");
         await processCombatAction(item.data);
+        console.log("✅ END combatAction");
         await wait(TIMING.BETWEEN_ACTIONS);
         break;
 
       case "gameStateUpdate":
+        console.log("🧠 APPLY gameStateUpdate");
         processGameStateUpdate(item.data);
         break;
 
@@ -152,6 +157,7 @@ export function createCombatAnimationManager(deps) {
         break;
 
       default:
+        console.log("❓ OTHER:", item.type);
         console.warn("[AnimManager] Unknown queue type:", item.type);
     }
   }
@@ -193,6 +199,8 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function processCombatAction(envelope) {
+    console.log("➡️ processCombatAction START");
+
     const { action, log, state, ...eventGroups } = envelope;
 
     // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
@@ -200,64 +208,124 @@ export function createCombatAnimationManager(deps) {
       currentPhase = "combat";
 
       if (typeof handleActionDialog === "function") {
+        console.log("💬 ACTION dialog");
         await handleActionDialog(action);
       }
     }
 
-    // reconstruir ordem real
-    const orderedEvents = [
-      ...(eventGroups.damageEvents ?? []),
-      ...(eventGroups.healEvents ?? []),
-      ...(eventGroups.shieldEvents ?? []),
-      ...(eventGroups.buffEvents ?? []),
-      ...(eventGroups.resourceEvents ?? []),
-      ...(eventGroups.dialogEvents ?? []),
-      ...(eventGroups.redirectionEvents ?? []),
-    ].sort((a, b) => a.eventIndex - b.eventIndex);
+    // // reconstruir ordem real (versão com eventIndex)
+    // const orderedEvents = [
+    //   ...(eventGroups.damageEvents ?? []),
+    //   ...(eventGroups.healEvents ?? []),
+    //   ...(eventGroups.shieldEvents ?? []),
+    //   ...(eventGroups.buffEvents ?? []),
+    //   ...(eventGroups.resourceEvents ?? []),
+    //   ...(eventGroups.dialogEvents ?? []),
+    //   ...(eventGroups.redirectionEvents ?? []),
+    // ].sort((a, b) => a.eventIndex - b.eventIndex);
+    //
+    // for (const event of orderedEvents) {
+    //   switch (event.type) {
+    //     case "damage":
+    //       await animateDamage(event);
+    //       break;
+    //
+    //     case "heal":
+    //       await animateHeal(event);
+    //       break;
+    //
+    //     case "shield":
+    //       await animateShield(event);
+    //       break;
+    //
+    //     case "buff":
+    //       await animateBuff(event);
+    //       break;
+    //
+    //     case "resourceGain":
+    //     case "resourceSpend":
+    //       animateResourceChange(event);
+    //       break;
+    //
+    //     case "redirection":
+    //       animateTauntRedirection(event);
+    //       break;
+    //
+    //     case "dialog":
+    //       if (event.blocking ?? true) {
+    //         await showBlockingDialog(event.message);
+    //       } else {
+    //         showNonBlockingDialog(event.message);
+    //         await wait(770);
+    //       }
+    //       break;
+    //
+    //     default:
+    //       console.warn("Evento desconhecido:", event);
+    //   }
+    // }
 
-    for (const event of orderedEvents) {
-      switch (event.type) {
-        case "damage":
-          await animateDamage(event);
-          break;
+    for (const [key, events] of Object.entries(eventGroups)) {
+      if (!Array.isArray(events) || events.length === 0) continue;
 
-        case "heal":
-          await animateHeal(event);
-          break;
+      console.log(`📚 GROUP: ${key} (${events.length})`);
 
-        case "shield":
-          await animateShield(event);
-          break;
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i];
 
-        case "buff":
-          await animateBuff(event);
-          break;
+        console.log("👉 EVENT:", key, event);
 
-        case "resourceGain":
-        case "resourceSpend":
-          animateResourceChange(event);
-          break;
+        switch (key) {
+          case "damageEvents":
+            console.log("💥 animateDamage START");
+            await animateDamage(event);
+            console.log("💥 animateDamage END");
+            break;
 
-        case "redirection":
-          animateTauntRedirection(event);
-          break;
+          case "healEvents":
+            await animateHeal(event);
+            break;
 
-        case "dialog":
-          if (event.blocking ?? true) {
-            await showBlockingDialog(event.message);
-          } else {
-            showNonBlockingDialog(event.message);
-            await wait(770);
-          }
-          break;
+          case "shieldEvents":
+            await animateShield(event);
+            break;
 
-        default:
-          console.warn("Evento desconhecido:", event);
+          case "buffEvents":
+            await animateBuff(event);
+            break;
+
+          case "resourceEvents":
+            animateResourceChange(event);
+            break;
+
+          case "redirectionEvents":
+            animateTauntRedirection(event);
+            break;
+
+          case "dialogEvents":
+            console.log("💬 dialog START");
+            if (event.blocking ?? true) {
+              await showBlockingDialog(event.message);
+            } else {
+              showNonBlockingDialog(event.message);
+              await wait(770);
+            }
+            console.log("💬 dialog END");
+            break;
+
+          default:
+            console.warn("Evento desconhecido:", key, event);
+        }
       }
     }
 
+    console.log("📸 APPLY SNAPSHOT");
     if (state) applyStateSnapshots(state);
+
+    console.log("🧾 APPEND LOG");
     if (log) appendToLog(log);
+
+    console.log("⬅️ processCombatAction END");
   }
 
   // ============================================================
@@ -314,7 +382,7 @@ export function createCombatAnimationManager(deps) {
       await playObliterateEffect(championEl);
       championEl.dataset.obliterated = "true";
     } else {
-      updateVisualHP(targetId, -amount, champion.currentHp);
+      updateVisualHP(targetId, -amount);
       if (isCritical) {
         await showBlockingDialog(
           `UM ACERTO CRÍTICO! ${targetName} sofreu um dano devastador!`,
@@ -928,6 +996,7 @@ export function createCombatAnimationManager(deps) {
     // 🔥 HP só é aplicado se NÃO houve animação de dano
     if (snap.HP !== undefined) {
       champion.HP = snap.HP;
+      champion.currentHp = snap.HP; // Para manter o currentHp em sincronia com o HP real do snapshot
     }
 
     if (snap.maxHP !== undefined) champion.maxHP = snap.maxHP;
@@ -968,6 +1037,8 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   function processGameStateUpdate(gameState) {
+    console.log("🚨 GAME STATE UPDATE RECEIVED", gameState);
+
     if (!gameState) return;
 
     const { champions, currentTurn } = gameState;

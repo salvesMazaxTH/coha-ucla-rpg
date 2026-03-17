@@ -147,7 +147,8 @@ export const StatusIndicator = {
   },
 
   startRotationLoop() {
-    if (this._rotationTimer !== null) {
+    console.log("[StatusIndicator] Starting rotation loop");
+    /*     if (this._rotationTimer !== null) {
       console.log("[RotationLoop] already running");
       return;
     }
@@ -194,6 +195,6 @@ export const StatusIndicator = {
             i === this._rotationIndex % indicators.length ? "1" : "0";
         });
       });
-    }, this.ROTATION_INTERVAL);
+    }, this.ROTATION_INTERVAL); */
   },
 };
