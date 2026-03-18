@@ -33,7 +33,7 @@ function _applyLifeSteal(event) {
   if (event.constructor.debugMode) console.group(`💉 [LIFESTEAL]`);
 
   // 1. Validações iniciais usando os dados da instância
-  const lsRate = event.attacker.LifeSteal || 0;
+  const lsRate = event.attacker?.LifeSteal || 0;
   if (lsRate <= 0 || event.actualDmg <= 0 || event.context.isDot) {
     if (event.constructor.debugMode) {
       console.log(
@@ -121,8 +121,8 @@ function _applyAfterDealingPassive(event) {
 
 function _processHook(event, eventName, payload) {
   // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
-/*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions);
- */
+  /*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions);
+   */
   // Verifique se o event.allChampions não foi redefinido por acidente
   if (!event.allChampions || event.allChampions.length === 0) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */

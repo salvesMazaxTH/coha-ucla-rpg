@@ -22,7 +22,7 @@ export class DamageEvent {
   constructor(params) {
     const { attacker, defender, skill, context, baseDamage } = params;
 
-    if (!attacker) {
+    if (!attacker && !context?.isDot) {
       throw new Error("DamageEvent precisa de attacker");
     }
 

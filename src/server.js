@@ -21,6 +21,7 @@ import {
 import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 import { Action } from "../shared/engine/combat/Action.js";
 import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
+import { DamageEvent } from "../shared/engine/combat/DamageEvent.js";
 import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js";
 
 // ============================================================
@@ -28,9 +29,9 @@ import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js"
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
-  autoSelection: false,
+  enabled: true,
+  autoLogin: true,
+  autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
@@ -38,7 +39,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -110,28 +111,73 @@ function getRandomChampionKey(excludeKeys = []) {
   return availableKeys[Math.floor(Math.random() * availableKeys.length)];
 }
 
-/** Instancia e registra campeões de uma lista de keys em um time. */
-function assignChampionsToTeam(team, championKeys) {
-  championKeys.forEach((championKey, combatSlot) => {
-    if (!championKey) return;
+/**
+ * Cria, registra e (opcionalmente) notifica os clientes de um novo campeão.
+ *
+ * @param {Object}  opts
+ * @param {string}  opts.championKey   – chave no championDB
+ * @param {number}  opts.team          – 1 ou 2
+ * @param {number|null}  [opts.combatSlot]  – slot explícito; se omitido, encontra o próximo livre
+ * @param {boolean} [opts.trackSnapshot=true]  – se registra no combatSnapshot (false na montagem inicial)
+ * @param {boolean} [opts.emit=false]          – se emite "championAdded" para os clientes
+ * @returns {Champion|null} a instância criada, ou null se impossível (time cheio ou dados inválidos)
+ */
+function spawnChampion({
+  championKey,
+  team,
+  combatSlot = null,
+  trackSnapshot = true,
+} = {}) {
+  const baseData = championDB[championKey];
+  if (!baseData) return null;
 
-    const baseData = championDB[championKey];
-    if (!baseData) return;
+  // --- Checar se o time pode receber mais um campeão vivo ---
+  if (!match.combat.canSpawnOnTeam(team, TEAM_SIZE)) return null;
 
-    const id = generateId(championKey);
+  // --- Resolver combatSlot ---
+  if (!Number.isInteger(combatSlot)) {
+    combatSlot = match.combat.getNextAvailableSlot(team, TEAM_SIZE);
+    if (combatSlot === null) return null; // sem slot livre
+  }
 
-    const newChampion = Champion.fromBaseData(baseData, id, team, {
-      combatSlot,
-    });
+  const id = generateId(championKey);
 
-    match.combat.registerChampion(newChampion, { trackSnapshot: false });
+  const newChampion = Champion.fromBaseData(baseData, id, team, {
+    combatSlot,
+  });
 
-    // 👇 registrar snapshot correto
+  newChampion.championKey = championKey;
+  console.log(
+    `[SPAWN] ${newChampion.name} (ID: ${id}) no time ${team}, no slot ${combatSlot}, com championKey ${championKey}`,
+  );
+
+  match.combat.registerChampion(newChampion, { trackSnapshot });
+
+  if (!trackSnapshot) {
+    // Montagem inicial — snapshot manual
     match.combat.combatSnapshot.push({
       championKey,
       id,
       team,
       combatSlot: newChampion.combatSlot,
+    });
+  }
+
+  io.emit("gameStateUpdate", getGameState());
+
+  return newChampion;
+}
+
+/** Instancia e registra campeões de uma lista de keys em um time (fase de seleção inicial). */
+function assignChampionsToTeam(team, championKeys) {
+  championKeys.forEach((championKey, index) => {
+    if (!championKey) return;
+    spawnChampion({
+      championKey,
+      team,
+      combatSlot: index,
+      trackSnapshot: false,
+      emit: false,
     });
   });
 }
@@ -533,6 +579,51 @@ function handleEndTurn() {
   io.emit("combatPhaseComplete");
 }
 
+function handleEffect(effect) {
+  switch (effect.type) {
+    case "spawnChampion":
+      spawnChampion(effect.payload);
+      break;
+
+    case "damage": {
+      const resolver = new TurnResolver(match, editMode);
+      const ctx = resolver.createBaseContext({
+        sourceId: effect.payload.attackerId,
+      });
+      const targets = Array.isArray(effect.payload.defenderIds)
+        ? effect.payload.defenderIds
+        : [effect.payload.defenderId];
+
+      for (const defId of targets) {
+        const attacker = match.combat.activeChampions.get(
+          effect.payload.attackerId,
+        );
+        const defender = match.combat.activeChampions.get(defId);
+        if (!attacker || !defender || !defender.alive) continue;
+
+        const dmg = new DamageEvent({
+          attacker,
+          defender,
+          skill: effect.payload.skill ?? null,
+          context: ctx,
+          baseDamage: effect.payload.baseDamage ?? 0,
+          mode: effect.payload.mode,
+          piercingPortion: effect.payload.piercingPortion,
+          allChampions: match.combat.activeChampions,
+        });
+        dmg.execute();
+      }
+      break;
+    }
+
+    default:
+      if (typeof effect.execute === "function") {
+        effect.execute();
+      }
+      break;
+  }
+}
+
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
   const resolver = new TurnResolver(match, editMode);
@@ -552,18 +643,31 @@ function handleStartTurn() {
     context: turnStartContext,
   }); */
 
-  // 4. Hooks onTurnStart
+  // 3. Hooks onTurnStart (DoTs, passivas reativas, etc.)
   emitCombatEvent(
     "onTurnStart",
     { context: turnStartContext },
     match.combat.activeChampions,
   );
 
+  // 4. Executar scheduled effects deste turno (inclusive os agendados durante onTurnStart)
+  const currentTurn = match.combat.currentTurn;
+  const remaining = [];
+
+  for (const effect of match.combat.scheduledEffects) {
+    if (effect.turnToHappen === currentTurn) {
+      handleEffect(effect);
+    } else {
+      remaining.push(effect);
+    }
+  }
+  match.combat.scheduledEffects = remaining;
+
   const deathResults = resolver.processChampionDeaths();
 
   for (const death of deathResults) {
     emitChampionDeath(death);
-    }
+  }
 
   // 3. Limpar expirados
   match.combat.activeChampions.forEach((champion) => {

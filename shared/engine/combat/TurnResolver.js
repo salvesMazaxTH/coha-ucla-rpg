@@ -136,7 +136,9 @@ export class TurnResolver {
 
     // Captura snapshot intermediário AGORA, antes da próxima ação mutar os champions
 
-    context._intermediateSnapshot = snapshotChampions(this.combat.activeChampions);
+    context._intermediateSnapshot = snapshotChampions(
+      this.combat.activeChampions,
+    );
 
     return { executed: true, user, skill, context, action };
   }
@@ -531,6 +533,10 @@ export class TurnResolver {
 
       healSourceId: sourceId,
       buffSourceId: sourceId,
+
+      schedule(scheduledEffect) {
+        combat.scheduledEffects.push(scheduledEffect);
+      },
 
       getTeamLine(team, options = {}) {
         return combat.getTeamLine(team, options);

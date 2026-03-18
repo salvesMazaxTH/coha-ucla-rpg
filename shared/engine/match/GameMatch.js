@@ -88,6 +88,7 @@ class CombatState {
     this.finishedAnimationSockets = new Set();
     this.combatSnapshot = [];
     this.turnHistory = new Map();
+    this.scheduledEffects = [];
   }
 
   resetProgress() {
@@ -96,6 +97,7 @@ class CombatState {
     this.playersReadyToEndTurn.clear();
     this.finishedAnimationSockets.clear();
     this.turnHistory.clear();
+    this.scheduledEffects = [];
     this.playerScores = [0, 0];
     this.gameEnded = false;
   }
@@ -187,6 +189,39 @@ class CombatState {
     if (side === "right") return right ? [right] : [];
 
     return [left, right].filter(Boolean);
+  }
+
+  /**
+   * Retorna o número de campeões vivos num time.
+   */
+  getAliveCountForTeam(team) {
+    return this.getAliveChampionsForTeam(team).length;
+  }
+
+  /**
+   * Verifica se o time tem espaço para mais um campeão vivo.
+   */
+  canSpawnOnTeam(team, maxPerTeam = 3) {
+    return this.getAliveCountForTeam(team) < maxPerTeam;
+  }
+
+  /**
+   * Retorna o próximo combatSlot livre (0-based) para um time,
+   * ou null se todos os slots 0..maxPerTeam-1 estiverem ocupados.
+   */
+  getNextAvailableSlot(team, maxPerTeam = 3) {
+    const occupied = new Set(
+      [...this.activeChampions.values()]
+        .filter(
+          (c) => c.team === team && c.alive && Number.isInteger(c.combatSlot),
+        )
+        .map((c) => c.combatSlot),
+    );
+
+    for (let i = 0; i < maxPerTeam; i++) {
+      if (!occupied.has(i)) return i;
+    }
+    return null;
   }
 
   registerChampion(champion, { trackSnapshot = true } = {}) {

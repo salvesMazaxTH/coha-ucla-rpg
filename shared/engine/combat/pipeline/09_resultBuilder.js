@@ -27,7 +27,7 @@ export function buildFinalResult(event) {
     totalDamage: event.actualDmg,
     finalHP: event.defender.HP,
     targetId: event.defender.id,
-    userId: event.attacker.id,
+    userId: event.attacker?.id ?? null,
     log: finalLog,
     crit: event.crit,
     damageDepth: event.context.damageDepth,
@@ -47,7 +47,7 @@ export function buildFinalResult(event) {
 }
 
 function _buildLog(user, target, skill, dmg, crit, hpAfter) {
-  const userName = formatChampionName(user);
+  const userName = user ? formatChampionName(user) : "Efeito";
   const targetName = formatChampionName(target);
 
   // skill pode ser objeto ou string

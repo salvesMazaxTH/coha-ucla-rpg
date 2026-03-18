@@ -136,25 +136,29 @@ function _rollEvasion({ attacker, defender, context, debugMode }) {
 function _buildImmuneResult(event) {
   // Usamos as propriedades que já existem na instância
   const targetName = formatChampionName(event.defender);
-  const username = formatChampionName(event.attacker);
+  const username = event.attacker ? formatChampionName(event.attacker) : null;
   const skillName = event.skill?.name || "habilidade";
 
   event.context.registerDamage({
     target: event.defender,
     amount: 0,
-    sourceId: event.attacker?.id,
+    sourceId: event.attacker?.id ?? null,
     flags: { immune: true },
   });
+
+  const log = username
+    ? `${username} tentou usar ${skillName} em ${targetName}, mas o alvo possui Imunidade Absoluta!`
+    : `${targetName} é imune ao dano!`;
 
   return {
     baseDamage: event.baseDamage,
     totalDamage: 0,
     finalHP: event.defender.HP,
     targetId: event.defender.id,
-    userId: event.attacker.id,
+    userId: event.attacker?.id ?? null,
     evaded: false,
-    immune: true, // Adicionado para facilitar a identificação no front
-    log: `${username} tentou usar ${skillName} em ${targetName}, mas o alvo possui Imunidade Absoluta!`,
+    immune: true,
+    log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };
 }

@@ -3,6 +3,6 @@ export default {
   portrait: "/assets/portraits/serene.webp",
   HP: 365,
   Attack: 130,
-  Defense: 75,
+  Defense: 85,
   Speed: 40,
 };

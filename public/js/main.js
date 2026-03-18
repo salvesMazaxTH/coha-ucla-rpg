@@ -1052,26 +1052,6 @@ function updateChampionSelectionTimerUI() {
 //  GERENCIAMENTO DE CAMPEÕES
 // ============================================================
 
-socket.on("championAdded", (championData) => {
-  // Pré-registra o campeão para que gameStateUpdate possa utilizá-lo
-  if (activeChampions.has(championData.id)) return;
-
-  const baseData = championDB[championData.championKey];
-  if (!baseData) return;
-
-  const champion = Champion.fromBaseData(
-    baseData,
-    championData.id,
-    championData.team,
-  );
-  champion.baseAttack = baseData.Attack;
-  champion.baseDefense = baseData.Defense;
-  champion.baseSpeed = baseData.Speed;
-  champion.baseCritical = baseData.Critical;
-  champion.baseLifeSteal = baseData.LifeSteal;
-  activeChampions.set(champion.id, champion);
-});
-
 socket.on("championRemoved", (championId) => {
   combatAnimations.handleChampionRemoved(championId);
 });

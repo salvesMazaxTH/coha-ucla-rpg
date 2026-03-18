@@ -27,6 +27,7 @@ export function applyDamage(event) {
     amount: damageToApply,
     sourceId: event.attacker?.id,
     isCritical: event.crit?.didCrit,
+    isDot: !!event.context.isDot,
     flags: {
       evaded: event.context.evasionAttempt ? false : undefined,
     },
