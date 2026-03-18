@@ -7,18 +7,20 @@ const congelado = {
   type: "debuff",
   subtypes: ["hardCC", "ice"],
 
-  onStatusEffectAdded({ owner }) {
+  onStatusEffectAdded({ owner, duration, context }) {
     owner.modifyStat({
       statName: "Speed",
       amount: -100,
-      duration: 1,
+      duration,
+      context,
       isPercent: true,
       ignoreMinimum: true,
     });
     owner.modifyStat({
       statName: "Attack",
       amount: -100,
-      duration: 1,
+      duration,
+      context,
       isPercent: true,
       ignoreMinimum: true,
     });

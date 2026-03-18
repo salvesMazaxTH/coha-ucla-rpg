@@ -15,6 +15,7 @@ const paralisado = {
       statName: "Speed",
       amount: -100,
       duration,
+      context,
       isPercent: true,
       ignoreMinimum: true,
     });
