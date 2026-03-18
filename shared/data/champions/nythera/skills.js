@@ -77,6 +77,10 @@ const nytheraSkills = [
         key: "camara_de_estase",
         expiresAt: context?.currentTurn + this.effectDuration,
 
+        hookScope: {
+          onAfterDmgTaking: "target",
+        },
+
         onAfterDmgTaking({ source, target, damage, context }) {
           source.applyStatusEffect("congelado", this.freezeDuration, context);
         },

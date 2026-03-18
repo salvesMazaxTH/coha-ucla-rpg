@@ -44,41 +44,52 @@ const vaelSkills = [
     damageMode: "standard",
     priority: 0,
     description() {
-      return `Causa dano ao inimigo primário (BF ${this.bfPrimary}, sem crítico) e ao secundário (BF ${this.bfSecondary}, crítico garantido).`;
+      return `Causa dano ao inimigo (BF ${this.bfPrimary}, sem crítico) e ao inimigo à esquerda do alvo, caso exista (BF ${this.bfSecondary}, crítico garantido).`;
     },
-    targetSpec: [{ type: "enemy" }, { type: "enemy", unique: true }],
+    targetSpec: ["enemy"],
 
     resolve({ user, targets, context = {} }) {
-      const [primary, secondary] = targets;
+      const [primary] = targets;
 
       const baseDamage = (user.Attack * this.bfPrimary) / 100;
       const results = [];
 
-      if (primary) {
-        const primaryResult = new DamageEvent({
-          baseDamage,
-          attacker: user,
-          defender: primary,
-          skill: this,
-          context,
-          critOptions: { disable: true }, // sem crítico
-          allChampions: context?.allChampions,
-        }).execute();
-        results.push(primaryResult);
-      }
+      const primaryResult = new DamageEvent({
+        baseDamage,
+        attacker: user,
+        defender: primary,
+        skill: this,
+        context,
+        critOptions: { disable: true }, // sem crítico
+        allChampions: context?.allChampions,
+      }).execute();
+      results.push(primaryResult);
 
-      if (secondary) {
-        const secondaryResult = new DamageEvent({
-          baseDamage: (user.Attack * this.bfSecondary) / 100,
-          attacker: user,
-          defender: secondary,
-          skill: this,
-          context,
-          critOptions: { force: true }, // crítico garantido
-          allChampions: context?.allChampions,
-        }).execute();
-        results.push(secondaryResult);
-      }
+      console.log(
+        `[INVESTIDA TRANSPASSANTE] primary.combatSlot: ${primary.combatSlot}, primary.team: ${primary.team}`,
+      );
+
+      const [secondaryTarget] = context.getAdjacentChampions(primary, {
+        side: "left",
+      });
+
+      console.log(
+        "[INVESTIDA TRANSPASSANTE] Alvo adjacente (left):",
+        secondaryTarget?.name ?? "NENHUM",
+      );
+
+      if (!secondaryTarget) return results;
+
+      const secondaryResult = new DamageEvent({
+        baseDamage: (user.Attack * this.bfSecondary) / 100,
+        attacker: user,
+        defender: secondaryTarget,
+        skill: this,
+        context,
+        critOptions: { force: true }, // crítico garantido
+        allChampions: context?.allChampions,
+      }).execute();
+      results.push(secondaryResult);
 
       return results;
     },

@@ -152,7 +152,7 @@ function _canApplyStatusEffect(
       if (existingBehavior?.subtypes?.includes("hardCC")) {
         return {
           allowed: false,
-          message: `${champion.name} já está incapacitado.`,
+ /*          message: `${champion.name} já está incapacitado.`, */
         };
       }
     }

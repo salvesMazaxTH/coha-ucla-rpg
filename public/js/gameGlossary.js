@@ -7,7 +7,7 @@ export const GAME_GLOSSARY = {
   paralisado: {
     title: "Paralisado",
     description:
-      "O campeão tem sua VEL zerada e fica com 50% de chance de não agir.",
+      "O campeão tem sua VEL zerada e fica com 40% de chance de não agir.",
   },
 
   inerte: {

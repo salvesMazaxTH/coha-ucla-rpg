@@ -28,8 +28,8 @@ import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js"
 // ============================================================
 
 const editMode = {
-  enabled: true,
-  autoLogin: true,
+  enabled: false,
+  autoLogin: false,
   autoSelection: false,
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
@@ -38,7 +38,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -69,6 +69,7 @@ app.get("/", (_req, res) => {
 // ============================================================
 
 const match = new GameMatch();
+let waitingForAnimations = false;
 
 /** Garante que a entrada do turno atual existe no histórico. */
 function ensureTurnEntry() {
@@ -526,6 +527,10 @@ function handleEndTurn() {
   match.clearTurnReadiness();
   match.clearFinishedAnimationSockets();
   match.nextTurn();
+
+  // 6. Sinaliza clientes que todos os eventos de combate foram emitidos
+  waitingForAnimations = true;
+  io.emit("combatPhaseComplete");
 }
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
@@ -647,11 +652,13 @@ io.on("connection", (socket) => {
 
   // --- Socket handler para início de turno após animações ---
   socket.on("combatAnimationsFinished", () => {
+    if (!waitingForAnimations) return;
+    if (match.getSlotBySocket(socket.id) === undefined) return;
+
     match.addFinishedAnimationSocket(socket.id);
 
-    const totalPlayers = io.engine.clientsCount;
-
-    if (match.getFinishedAnimationCount() === totalPlayers) {
+    if (match.getFinishedAnimationCount() >= 2) {
+      waitingForAnimations = false;
       match.clearFinishedAnimationSockets();
       handleStartTurn();
     }
@@ -1158,5 +1165,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
-  // console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });

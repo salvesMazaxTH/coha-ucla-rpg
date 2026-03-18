@@ -25,7 +25,7 @@ const paralisado = {
   },
 
   onValidateAction({ source }) {
-    const chanceOfActing = 0.9; // 0.5 // TESTE // TESTE // 50% de chance de agir normalmente
+    const chanceOfActing = 0.6; // 60% de chance de agir normalmente
     const roll = Math.random();
     console.log(
       `[PARALISADO] Rolando para ação de ${formatChampionName(source)} (Paralisado): ${roll.toFixed(2)} vs ${chanceOfActing}. Conseguiu agir? ${roll < chanceOfActing ? "Sim" : "Não"}`,

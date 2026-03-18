@@ -160,9 +160,9 @@ const tharoxSkills = [
         name: "Bônus de Apoteose do Monólito",
         expiresAtTurn: context.currentTurn + this.modifierDuration,
 
-        apply: ({ baseDamage, source }) => {
+        apply: ({ baseDamage, attacker }) => {
           const bonus = Math.min(
-            Math.floor(source.Defense * (this.defDamagePercent / 100)),
+            Math.floor(attacker.Defense * (this.defDamagePercent / 100)),
             this.maxDamageBonus,
           );
           return baseDamage + bonus;

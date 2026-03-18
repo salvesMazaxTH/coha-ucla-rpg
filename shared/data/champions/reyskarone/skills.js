@@ -146,7 +146,7 @@ const reyskaroneSkills = [
     pactDuration: 3,
     contact: false,
     isUltimate: true,
-    ultCost: 2,
+    ultCost: 3,
 
     priority: 5,
     description() {

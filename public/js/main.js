@@ -1700,6 +1700,10 @@ socket.on("combatAction", (envelope) => {
   combatAnimations.handleCombatAction(envelope);
 });
 
+socket.on("combatPhaseComplete", () => {
+  combatAnimations.handleCombatPhaseComplete();
+});
+
 socket.on("combatLog", (message) => {
   if (typeof message === "string") {
     combatAnimations.handleCombatLog(message);

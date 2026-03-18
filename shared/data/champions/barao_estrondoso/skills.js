@@ -71,15 +71,15 @@ const baraoEstrondosoSkills = [
   },
 
   {
-    key: "super_hiper_ultra_mega_blaster_atomico",
-    name: "Super Hiper Ultra Mega Blaster Atômico",
+    key: "super_hiper_ultra_mega_barrigada_atomico",
+    name: "Super Hiper Ultra Mega Barrigada Atômico",
     bf: 600,
     contact: false,
     damageMode: "standard",
     priority: -999,
 
     isUltimate: true,
-    ultCost: 5,
+    ultCost: 6,
 
     description() {
       return `Causa dano ABSURDO ao inimigo somado ao dano armazenado. Este ataque é sempre um acerto Crítico. Após o ataque, o dano armazenado é zerado.`;

@@ -64,6 +64,36 @@ function getChampionElement(championId) {
   return document.querySelector(`.champion[data-champion-id="${championId}"]`);
 }
 
+function scrollIfNeeded(
+  el,
+  {
+    threshold = 0.6, // quanto do elemento precisa estar visível (0 a 1)
+    behavior = "smooth",
+  } = {},
+) {
+  const rect = el.getBoundingClientRect();
+
+  const viewportHeight =
+    window.innerHeight || document.documentElement.clientHeight;
+
+  const visibleTop = Math.max(rect.top, 0);
+  const visibleBottom = Math.min(rect.bottom, viewportHeight);
+
+  const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+  const elementHeight = rect.height || 1;
+
+  const visibilityRatio =
+    visibleHeight / Math.min(elementHeight, viewportHeight);
+
+  if (visibilityRatio < threshold) {
+    if (rect.top < 0) {
+      el.scrollIntoView({ behavior, block: "start" });
+    } else if (rect.bottom > viewportHeight) {
+      el.scrollIntoView({ behavior, block: "end" });
+    }
+  }
+}
+
 // ============================================================
 //  FACTORY
 // ============================================================
@@ -91,7 +121,7 @@ export function createCombatAnimationManager(deps) {
   const { onQueueEmpty } = deps;
   let processing = false;
   let lastLoggedTurn = null;
-  let currentPhase = "null";
+  let currentPhase = null;
   let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
 
@@ -127,7 +157,7 @@ export function createCombatAnimationManager(deps) {
     processing = false;
 
     if (typeof onQueueEmpty === "function" && currentPhase === "combat") {
-      currentPhase = "null";
+      currentPhase = null;
       onQueueEmpty();
     }
   }
@@ -158,6 +188,10 @@ export function createCombatAnimationManager(deps) {
 
       case "combatLog":
         await processCombatLog(item.data);
+        break;
+
+      case "combatPhaseComplete":
+        currentPhase = "combat";
         break;
 
       case "gameOver":
@@ -207,7 +241,7 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function processCombatAction(envelope) {
-    console.log("➡️ processCombatAction START");
+    console.log("[processCombatAction] ➡️ processCombatAction START");
 
     const { action, log, state, ...eventGroups } = envelope;
 
@@ -216,7 +250,7 @@ export function createCombatAnimationManager(deps) {
       currentPhase = "combat";
 
       if (typeof handleActionDialog === "function") {
-        console.log("💬 ACTION dialog");
+        console.log("[processCombatAction] 💬 ACTION dialog");
         await handleActionDialog(action);
       }
     }
@@ -276,7 +310,7 @@ export function createCombatAnimationManager(deps) {
     for (const [key, events] of Object.entries(eventGroups)) {
       if (!Array.isArray(events) || events.length === 0) continue;
 
-      console.log(`📚 GROUP: ${key} (${events.length})`);
+      console.log(`[processCombatAction] 📚 GROUP: ${key} (${events.length})`);
 
       // 👇 tratamento especial
       if (key === "buffEvents") {
@@ -333,13 +367,13 @@ export function createCombatAnimationManager(deps) {
       }
     }
 
-    console.log("📸 APPLY SNAPSHOT");
+    console.log("[processCombatAction] 📸 APPLY SNAPSHOT");
     if (state) applyStateSnapshots(state);
 
-    console.log("🧾 APPEND LOG");
+    console.log("[processCombatAction] 🧾 APPEND LOG");
     if (log) appendToLog(log);
 
-    console.log("⬅️ processCombatAction END");
+    console.log("[processCombatAction] ⬅️ processCombatAction END");
   }
 
   // ============================================================
@@ -357,7 +391,10 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
 
     if (!championEl) return;
-    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Garante que o alvo esteja visível antes de iniciar a animação
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     // 1. Guardas de Interrupção (Evasão, Imunidade, Escudo)
     if (effect.evaded !== undefined) {
@@ -369,7 +406,6 @@ export function createCombatAnimationManager(deps) {
     if (!obliterate && (!amount || amount <= 0)) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
-    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
 
     // 2. Diálogos de pré-dano (DoT)
     if (isDot) await showBlockingDialog(`${targetName} sofreu dano.`, true);
@@ -442,9 +478,9 @@ export function createCombatAnimationManager(deps) {
 
     if (!championEl) return;
 
-    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
-
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     const champion = deps.activeChampions.get(targetId);
 
@@ -483,7 +519,9 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
-    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
@@ -530,9 +568,9 @@ export function createCombatAnimationManager(deps) {
     const championEl = getChampionElement(targetId);
     if (!championEl) return;
 
-    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
-
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     const champion = deps.activeChampions.get(targetId);
 
@@ -562,6 +600,8 @@ export function createCombatAnimationManager(deps) {
     if (!championEl) return;
 
     const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     const sign = direction >= 0 ? "+" : "-";
     const bars = getUltBarDelta(
@@ -642,7 +682,10 @@ export function createCombatAnimationManager(deps) {
 
     if (!championEl) return;
 
-    championEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Garante que o alvo esteja visível antes de iniciar a animação
+    const portraiWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraiWrapper.querySelector(".portrait");
+    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
@@ -1245,6 +1288,9 @@ export function createCombatAnimationManager(deps) {
     },
     handleGameOver(data) {
       enqueue("gameOver", data);
+    },
+    handleCombatPhaseComplete() {
+      enqueue("combatPhaseComplete", null);
     },
     appendToLog,
     reset,
