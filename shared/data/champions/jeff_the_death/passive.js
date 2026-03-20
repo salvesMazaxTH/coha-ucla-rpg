@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../../ui/formatters.js";
+
 export default {
   key: "a_morte_não_cessa",
   name: "A Morte Não Cessa",
@@ -26,6 +28,32 @@ export default {
         championKey: target.championKey,
         team: target.team,
       },
+      dialog: {
+        message: `[Passiva - <b>A Morte Não Cessa</b>] ${formatChampionName(target)} retorna ao campo de batalha!`,
+        sourceId: null,
+        targetId: null,
+        blocking: true,
+      },
+    });
+  },
+
+  onAfterDeath({ owner }) {
+    // não incluí hookScope, porque quando qualquer um morre, ele se buffa
+    console.log("[Passiva - Jeff] Buffando Jeff por morte de um aliado, inimigo ou de si mesmo.");
+    const buffsPerDeath = [
+      { stat: "Attack", amount: 30, isPercent: true },
+      { stat: "Defense", amount: 30, isPercent: true },
+    ];
+    console.log(`[Passiva - Jeff] Buffs a serem aplicados:`, buffsPerDeath);
+    buffsPerDeath.forEach((buff) => {
+      console.log(`[Passiva - Jeff] Aplicando buff: +${buff.amount}${buff.isPercent ? "%" : ""} ${buff.stat} a Jeff (ID: ${owner.id})`);
+      owner.modifyStat({
+        statName: buff.stat,
+        amount: buff.amount,
+        context,
+        isPermanent: true,
+        isPercent: buff.isPercent,
+      });
     });
   },
 };

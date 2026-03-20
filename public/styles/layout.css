@@ -153,6 +153,54 @@ body.team-selection-active .team-container:hover {
   color: rgba(255, 0, 0, 0.1);
 }
 
+/* ============================================
+   PERSPECTIVE MIRRORING
+   When the local player is team 2, visually
+   flip the arena so they always appear on top
+   in blue, and the opponent appears on bottom
+   in red — matching the standard game feel.
+   ============================================ */
+
+/* Reorder flex items: team-2 on top, team-1 on bottom */
+.arena--mirrored .player-name-display[data-team="2"] {
+  order: 1;
+}
+.arena--mirrored .team-container.team-2 {
+  order: 2;
+}
+.arena--mirrored .player-name-display[data-team="1"] {
+  order: 3;
+}
+.arena--mirrored .team-container.team-1 {
+  order: 4;
+}
+
+/* Swap arena container colors: local team (2) → blue, opponent (1) → red */
+.arena--mirrored .team-1 {
+  border-color: rgba(255, 0, 0, 0.4);
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.1);
+  background: linear-gradient(transparent, rgba(255, 0, 0, 0.05));
+}
+.arena--mirrored .team-1::before {
+  color: rgba(255, 0, 0, 0.1);
+}
+.arena--mirrored .team-2 {
+  border-color: rgba(0, 150, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 150, 255, 0.1);
+  background: rgba(0, 150, 255, 0.05);
+}
+.arena--mirrored .team-2::before {
+  color: rgba(0, 150, 255, 0.1);
+}
+
+/* Swap player-name-display colors: local (2) → blue, opponent (1) → red */
+.arena--mirrored .player-name-display[data-team="1"] {
+  color: #ff0000;
+}
+.arena--mirrored .player-name-display[data-team="2"] {
+  color: #0096ff;
+}
+
 /* -------------------------------- */
 
 .main-content.hidden {

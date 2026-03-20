@@ -18,6 +18,7 @@ import elias_cross from "./elias_cross/index.js";
 import nythera from "./nythera/index.js";
 import vulnara from "./vulnara/index.js";
 import kael_drath_vulcano from "./kael_drath_vulcano/index.js";
+import jeff_the_death from "./jeff_the_death/index.js";
 
 const championDB = {
   ralia,
@@ -40,6 +41,7 @@ const championDB = {
   nythera,
   vulnara,
   kael_drath_vulcano,
+  jeff_the_death,
 };
 
 export default championDB;

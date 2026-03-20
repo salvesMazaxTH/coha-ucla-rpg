@@ -609,6 +609,16 @@ socket.on("playerAssigned", (data) => {
   playerTeam = data.team;
   username = data.username;
   window.playerTeam = playerTeam;
+
+  // Mirror the arena so the local player always appears on top in blue
+  const arena = document.querySelector(".arena");
+  if (playerTeam === 2) {
+    arena?.classList.add("arena--mirrored");
+    document.body.classList.add("perspective-team2");
+  } else {
+    arena?.classList.remove("arena--mirrored");
+    document.body.classList.remove("perspective-team2");
+  }
 });
 
 socket.on("waitingForOpponent", (message) => {
@@ -688,6 +698,10 @@ socket.on("forceLogout", (message) => {
   playerTeam = null;
   username = null;
   playerNames.clear();
+
+  // Remove perspective classes
+  document.querySelector(".arena")?.classList.remove("arena--mirrored");
+  document.body.classList.remove("perspective-team2");
 
   // Reseta elementos de login
   usernameInput.value = "";

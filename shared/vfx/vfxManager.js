@@ -1,6 +1,7 @@
 import { startShield } from "./shieldCanvas.js";
 import { startFireStance } from "./fireStanceCanvas.js";
 import { startFrozenCanvas } from "./frozenCanvas.js";
+import { startWaterBubble } from "./waterBubbleCanvas.js";
 
 // no futuro:
 // import { startBurn } from "./burnCanvas.js";
@@ -16,6 +17,8 @@ const VFXTriggers = {
   fireStanceActive: (champion) => champion.runtime?.fireStance === "brasa_viva",
 
   congelado: (champion) => champion.statusEffects?.has("congelado"),
+
+  waterBubble: (champion) => champion.runtime?.form === "bola_agua",
 };
 
 const activeEffects = new WeakMap();
@@ -62,6 +65,11 @@ export function createVFXCanvas(type, champion) {
 
   container.appendChild(canvas);
 
+  if (type === "waterBubble") {
+    const imgEl = container.querySelector(".portrait img");
+    if (imgEl) imgEl.style.visibility = "hidden";
+  }
+
   return canvas;
 }
 
@@ -91,6 +99,10 @@ export function playVFX(type, canvas, data = {}) {
       controller = startFireStance(canvas, { mode: type });
       break;
 
+    case "waterBubble":
+      controller = startWaterBubble(canvas, data);
+      break;
+
     default:
       return;
   }
@@ -101,6 +113,11 @@ export function playVFX(type, canvas, data = {}) {
 function removeVFXCanvas(champion, key) {
   const canvas = champion._vfxCanvases?.[key];
   if (!canvas) return;
+
+  if (key === "waterBubble") {
+    const imgEl = champion.el?.querySelector(".portrait img");
+    if (imgEl) imgEl.style.visibility = "";
+  }
 
   stopVFX(canvas);
   canvas.remove();

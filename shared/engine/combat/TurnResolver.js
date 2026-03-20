@@ -576,6 +576,7 @@ export class TurnResolver {
           damageDepth: damageDepth || 0,
           evaded: flags?.evaded,
           immune: !!flags?.immune,
+          immuneMessage: flags?.immuneMessage ?? null,
           shieldBlocked: !!flags?.shieldBlocked,
           obliterate: !!flags?.isObliterate,
         });

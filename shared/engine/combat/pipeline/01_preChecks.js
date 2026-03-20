@@ -25,7 +25,7 @@ export function preChecks(event) {
       console.log(
         `[DAMAGE CANCEL] ${event.defender.name} teve o dano cancelado por status-effect`,
       );
-      return _buildImmuneResult(event);
+      return _buildImmuneResult(event, r.message ?? null);
     }
   }
 
@@ -133,7 +133,7 @@ function _rollEvasion({ attacker, defender, context, debugMode }) {
   };
 }
 
-function _buildImmuneResult(event) {
+function _buildImmuneResult(event, customMessage = null) {
   // Usamos as propriedades que já existem na instância
   const targetName = formatChampionName(event.defender);
   const username = event.attacker ? formatChampionName(event.attacker) : null;
@@ -143,12 +143,14 @@ function _buildImmuneResult(event) {
     target: event.defender,
     amount: 0,
     sourceId: event.attacker?.id ?? null,
-    flags: { immune: true },
+    flags: { immune: true, immuneMessage: customMessage },
   });
 
-  const log = username
-    ? `${username} tentou usar ${skillName} em ${targetName}, mas o alvo possui Imunidade Absoluta!`
-    : `${targetName} é imune ao dano!`;
+  const log = customMessage
+    ? customMessage
+    : username
+      ? `${username} tentou usar ${skillName} em ${targetName}, mas o alvo possui Imunidade Absoluta!`
+      : `${targetName} é imune ao dano!`;
 
   return {
     baseDamage: event.baseDamage,

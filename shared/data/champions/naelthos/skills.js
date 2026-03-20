@@ -81,22 +81,77 @@ const naelthosSkills = [
     priority: 2,
     element: "water",
     description() {
-      return `Transforma-se em água pura, ficando "Inerte" e com "Imunidade Absoluta" por ${this.effectDuration} turnos. Pode ser interrompido se executar uma ação.`;
+      return `Transforma-se em água pura, ficando inalvejável por ${this.effectDuration} turnos. Pode ser interrompido se executar uma ação.`;
     },
     targetSpec: ["self"],
 
     resolve({ user, context = {} }) {
       const { currentTurn } = context;
 
-      // Apply statusEffects
-      user.applyStatusEffect("inerte", this.effectDuration, context, {
+      user.runtime.hookEffects ??= [];
+
+      const hookEffect = {
+        key: "forma_aquatica_hook",
+        group: "skill",
+        form: "bola_agua",
+
+        expiresAtTurn: currentTurn + this.effectDuration,
+
+        hookScope: {
+          onDamageIncoming: "target",
+          onStatusEffectIncoming: "target",
+          onActionResolved: "source",
+        },
+
+        onTurnStart({ owner, context }) {
+          if (context.currentTurn < this.expiresAtTurn) return;
+
+          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+            (e) => e.key !== "forma_aquatica_hook",
+          );
+          owner.runtime.form = null;
+        },
+
+        onActionResolved({ source, owner, skill }) {
+          if (source !== owner) return;
+          if (skill?.key === "forma_aquatica") return;
+
+          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+            (e) => e.key !== "forma_aquatica_hook",
+          );
+          owner.runtime.form = null;
+        },
+
+        onDamageIncoming({ target }) {
+          return {
+            cancel: true,
+            immune: true,
+            message: `${formatChampionName(target)} está em Forma Aquática! É inalvejável e imune a dano!`,
+          };
+        },
+
+        onStatusEffectIncoming({ target, statusEffect }) {
+          if (statusEffect.type !== "debuff") return;
+
+          return {
+            cancel: true,
+            immune: true,
+            message: `${formatChampionName(target)} está em Forma Aquática! É inalvejável e imune a efeitos negativos!`,
+          };
+        },
+      };
+
+      user.runtime.hookEffects.push(hookEffect);
+      user.runtime.form = "bola_agua"; // Para animação visual
+
+      // Apply inerte como status effect (interrompível por ação)
+/*       user.applyStatusEffect("inerte", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
-      user.applyStatusEffect("imunidadeAbsoluta", this.effectDuration, context);
-
+ */
       const userName = formatChampionName(user);
       return {
-        log: `${userName} usa Forma Aquática! Está Inerte e com Imunidade Absoluta até o turno ${currentTurn + this.effectDuration}. (Pode ser interrompido por ação do usuário).`,
+        log: `${userName} usa Forma Aquática! Está inalvejável até o turno ${currentTurn + this.effectDuration}. (Pode ser interrompido por ação do usuário).`,
       };
     },
   },

@@ -1344,6 +1344,27 @@
   font-weight: bold;
 }
 
+/* ============================================
+   PERSPECTIVE COLOR SWAP (team-2 local player)
+   When the viewer is team 2, team-1 = opponent
+   (red) and team-2 = self (blue) in dialogs and
+   the combat log.
+   ============================================ */
+
+body.perspective-team2 #combat-log .team-1 {
+  color: #ff4444;
+}
+body.perspective-team2 #combat-log .team-2 {
+  color: #00bfff;
+}
+
+body.perspective-team2 .combat-dialog-bubble .team-1 {
+  color: #ff4444 !important;
+}
+body.perspective-team2 .combat-dialog-bubble .team-2 {
+  color: #00bfff !important;
+}
+
 .combat-dialog.leaving .combat-dialog-bubble {
   animation: dialogOut 0.18s ease;
 }

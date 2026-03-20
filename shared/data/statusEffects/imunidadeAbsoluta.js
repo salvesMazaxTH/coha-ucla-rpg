@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../ui/formatters.js";
+
 const imunidadeAbsoluta = {
   key: "imunidadeAbsoluta",
   name: "Imunidade Absoluta",
@@ -13,7 +15,7 @@ const imunidadeAbsoluta = {
     return {
       cancel: true,
       immune: true,
-      message: `${target.name} é imune a dano!`,
+      message: `${formatChampionName(target)} está com <b>${this.name}</b> e é imune a dano!`,
     };
   },
 
@@ -22,7 +24,7 @@ const imunidadeAbsoluta = {
 
     return {
       cancel: true,
-      message: `${target.name} é imune a efeitos negativos!`,
+      message: `${formatChampionName(target)} está com <b>${this.name}</b> e é imune a efeitos negativos!`,
     };
   },
 };

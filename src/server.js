@@ -579,7 +579,7 @@ function handleEndTurn() {
   io.emit("combatPhaseComplete");
 }
 
-function handleEffect(effect) {
+function handleScheduledEffect(effect) {
   switch (effect.type) {
     case "spawnChampion":
       spawnChampion(effect.payload);
@@ -656,7 +656,10 @@ function handleStartTurn() {
 
   for (const effect of match.combat.scheduledEffects) {
     if (effect.turnToHappen === currentTurn) {
-      handleEffect(effect);
+      handleScheduledEffect(effect);
+      if (effect.dialog) {
+        turnStartContext.registerDialog(effect.dialog);
+      }
     } else {
       remaining.push(effect);
     }

@@ -637,14 +637,12 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateImmune(effect) {
-    const { targetId } = effect;
+    const { targetId, immuneMessage } = effect;
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    // showNonBlockingDialog(`${name} está com <b>Imunidade Absoluta!</b>`, true);
-    await showBlockingDialog(
-      `${name} está com <b>Imunidade Absoluta!</b>`,
-      true,
-    );
+    const message =
+      immuneMessage || `${name} está <b>Imune!</b>`;
+    await showBlockingDialog(message, true);
   }
 
   // ============================================================
@@ -1170,6 +1168,8 @@ export function createCombatAnimationManager(deps) {
       champion.updateUI({
         freeCostSkills: editMode?.freeCostSkills === true,
       });
+
+      syncChampionVFX(champion);
     }
 
     // Refresh status indicators for all champions
