@@ -27,9 +27,7 @@ export default {
     let recoilDamage = 0;
 
     if (damage > 0) {
-      recoilDamage = editMode
-        ? 999
-        : Math.round((damage * (this.recoilPercent / 100)) / 5) * 5;
+      recoilDamage = editMode ? 999 : damage * (this.recoilPercent / 100);
     }
 
     context.extraDamageQueue ??= [];
@@ -49,7 +47,7 @@ export default {
       });
 
       context.registerDialog({
-        message: `${formatChampionName(owner)} sofreu ${recoilDamage} de recuo por "<b>Sobrecarga Instável</b>"!`,
+        message: `${formatChampionName(owner)} sofreu ${Math.floor(recoilDamage)} de recuo por "<b>Sobrecarga Instável</b>"!`,
         sourceId: owner.id,
         targetId: owner.id,
         blocking: false,
@@ -78,7 +76,7 @@ export default {
 
     if (!target.hasStatusEffect?.("condutor")) return;
 
-    const bonusDamage = Math.ceil((damage * this.condutorBonusPercent) / 100);
+    const bonusDamage = (damage * this.condutorBonusPercent) / 100;
 
     target.removeStatusEffect("condutor");
 

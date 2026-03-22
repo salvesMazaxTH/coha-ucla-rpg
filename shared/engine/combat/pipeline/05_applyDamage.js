@@ -8,7 +8,7 @@ export function applyDamage(event) {
 
   const hpBefore = event.defender.HP;
 
-  const damageToApply = event.damage;
+  const damageToApply = Math.floor(event.damage);
 
   console.log(`[DAMAGE COMPOSITION] damageToApply: ${damageToApply}`);
   console.log(`[DAMAGE COMPOSITION] hpBefore: ${hpBefore}`);

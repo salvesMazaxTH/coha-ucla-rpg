@@ -44,20 +44,16 @@ function _applyLifeSteal(event) {
     return null;
   }
 
-  // 2. Cálculo do heal (usando o arredondamento padrão da sua classe)
+  // 2. Cálculo do heal
   const rawHeal = (event.actualDmg * lsRate) / 100;
-  const heal = Math.max(5, _roundToFive(rawHeal));
 
-  const hpBefore = event.attacker.HP;
-  const effectiveHeal = Math.min(heal, event.attacker.maxHP - hpBefore);
+  // 3. Aplica a cura (heal() garante floor e mínimo de 1)
+  const effectiveHeal = event.attacker.heal(rawHeal, event.context);
 
   if (effectiveHeal <= 0) {
     if (event.constructor.debugMode) console.groupEnd();
     return null;
   }
-
-  // 3. Aplica a cura
-  event.attacker.heal(effectiveHeal, event.context);
 
   // 4. Dispara evento para passivas reativas a lifesteal (ex: "ao curar, ganhe buff")
   const results =
@@ -154,8 +150,4 @@ function _processHook(event, eventName, payload) {
     if (r.effects?.length) summary.effects.push(...r.effects);
   }
   return summary;
-}
-
-function _roundToFive(x) {
-  return Math.round(x / 5) * 5;
 }

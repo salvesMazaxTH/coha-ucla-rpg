@@ -15,6 +15,7 @@ export class TurnResolver {
 
   resolveTurn() {
     const actionResults = [];
+    const switchResults = [];
     let actionOrder = 0;
 
     const turnExecutionMap = new Map(); // championId -> executionIndex
@@ -36,6 +37,12 @@ export class TurnResolver {
 
       const action = actions.shift(); // remove a próxima ação
 
+      // Switches são retornados para processamento pelo servidor
+      if (action.type === "switch") {
+        switchResults.push(action);
+        continue;
+      }
+
       // 🔹 registra a posição da execução
       action.executionIndex = actionOrder++;
 
@@ -43,25 +50,38 @@ export class TurnResolver {
 
       turnExecutionMap.set(user.id, action.executionIndex);
 
-      const result = this.executeSkillAction(action, turnExecutionMap);
+      const context = this.createBaseContext({ sourceId: user.id });
+      context.executionIndex = action.executionIndex;
+      context.turnExecutionMap = turnExecutionMap;
+
+      const result = this.executeSkillAction(action, turnExecutionMap, context);
       actionResults.push(result);
     }
 
-    const deathResults = this.processChampionDeaths();
+    const deathContext = this.createBaseContext({ sourceId: null });
+    const deathResults = this.processChampionDeaths(3, deathContext);
 
-    return { actionResults, deathResults };
+    return { actionResults, deathResults, switchResults };
   }
 
   // ============================================================
   //  PROCESSAMENTO DE MORTES
   // ============================================================
 
-  processChampionDeaths(maxScore = 3) {
+  processChampionDeaths(maxScore = 3, context = null) {
     const results = [];
     for (const champ of this.combat.activeChampions.values()) {
       if (!champ.alive) {
         const result = this.match.removeChampionFromGame(champ.id, maxScore);
         if (result) results.push(result);
+
+        if (context) {
+          emitCombatEvent(
+            "onChampionDeath",
+            { deadChampion: champ, context },
+            this.combat.activeChampions,
+          );
+        }
       }
     }
     return results;
@@ -71,7 +91,7 @@ export class TurnResolver {
   //  EXECUÇÃO DE AÇÃO INDIVIDUAL
   // ============================================================
 
-  executeSkillAction(action, turnExecutionMap) {
+  executeSkillAction(action, turnExecutionMap, context) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
 
@@ -112,8 +132,6 @@ export class TurnResolver {
       };
     }
 
-    const context = this.createBaseContext({ sourceId: user.id });
-
     const roleTargets = this.resolveSkillTargets(user, skill, action, context);
 
     // console.log("STEP 1 - TARGETS:", roleTargets);
@@ -125,12 +143,9 @@ export class TurnResolver {
     const targetsArray = Object.values(roleTargets);
     // console.log("STEP 2 - TARGETS ARRAY:", targetsArray);
 
-    context.executionIndex = action.executionIndex;
     console.log(
       `[executeSkillAction] executionIndex set to ${context.executionIndex} for skill ${skill.name}`,
     );
-
-    context.turnExecutionMap = turnExecutionMap;
 
     this.performSkillExecution(user, skill, targetsArray, context);
 

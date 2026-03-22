@@ -151,8 +151,7 @@ const tharoxSkills = [
         context,
         isPermanent: true,
       }); // Aumenta DEF permanentemente
-      const proportionalHeal =
-        Math.floor((user.Defense - this.baseDef) / 5) * 5;
+      const proportionalHeal = user.Defense - this.baseDef;
       user.heal(proportionalHeal, context);
 
       user.addDamageModifier({
@@ -162,7 +161,7 @@ const tharoxSkills = [
 
         apply: ({ baseDamage, attacker }) => {
           const bonus = Math.min(
-            Math.floor(attacker.Defense * (this.defDamagePercent / 100)),
+            attacker.Defense * (this.defDamagePercent / 100),
             this.maxDamageBonus,
           );
           return baseDamage + bonus;

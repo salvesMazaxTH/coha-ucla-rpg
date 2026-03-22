@@ -7,7 +7,7 @@ const queimando = {
   subtypes: ["dot", "fire"],
 
   onTurnStart({ owner, context }) {
-    const damage = 25;
+    const damage = 15 + Math.floor(owner.maxHP * 0.04); // dano base + 4% do HP máximo
 
     context.isDot = true;
 

@@ -105,7 +105,7 @@ const raliaSkills = [
       const effectiveDamage = result.totalDamage || 0;
       const healingAmount = Math.max(
         this.minHeal,
-        Math.round((effectiveDamage * (this.healPercent / 100)) / 5) * 5,
+        effectiveDamage * (this.healPercent / 100),
       );
 
       user.heal(healingAmount, context); // Cura o usuário

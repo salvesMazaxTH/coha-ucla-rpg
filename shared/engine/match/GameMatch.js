@@ -89,6 +89,8 @@ class CombatState {
     this.combatSnapshot = [];
     this.turnHistory = new Map();
     this.scheduledEffects = [];
+    this.reserveQueues = new Map();
+    this.benchedChampions = new Map();
   }
 
   resetProgress() {
@@ -100,6 +102,8 @@ class CombatState {
     this.scheduledEffects = [];
     this.playerScores = [0, 0];
     this.gameEnded = false;
+    this.reserveQueues = new Map();
+    this.benchedChampions = new Map();
   }
 
   start() {

@@ -134,6 +134,10 @@ const blyskartriSkills = [
         key: "condutancia_vital_counter",
         expiresAtTurn: context.currentTurn + this.buffsDuration,
 
+        hookScope: {
+          onEvade: "target",
+        },
+
         onEvade({ source, target, owner, damage, context }) {
           // owner = aliado buffado
           /* console.log("[BLYSKARTRI][condutancia_vital] hook triggered", {
@@ -286,7 +290,7 @@ const blyskartriSkills = [
 
           const bonusPercent = stacks * 3;
 
-          const bonusDamage = Math.floor(baseDamage * (bonusPercent / 100));
+          const bonusDamage = baseDamage * (bonusPercent / 100);
           /* console.log("[BLYSKARTRI][horizonte_infinito] bonus applied", {
             bonusPercent,
             bonusDamage,

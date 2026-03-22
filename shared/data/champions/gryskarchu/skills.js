@@ -99,8 +99,7 @@ const gryskarchuSkills = [
     targetSpec: ["select:ally"],
     resolve({ user, targets, context }) {
       const [ally] = targets;
-      let healAmount = Math.floor(ally.maxHP * (this.healPercent / 100));
-      healAmount = Math.round(healAmount / 5) * 5;
+      let healAmount = ally.maxHP * (this.healPercent / 100);
 
       ally.heal(healAmount, context, user);
       ally.modifyStat({
@@ -111,9 +110,7 @@ const gryskarchuSkills = [
         isPercent: true,
       });
 
-      const bonus =
-        Math.round(Math.floor(ally.Defense * (this.defDamageBonus / 100)) / 5) *
-        5;
+      const bonus = ally.Defense * (this.defDamageBonus / 100);
 
       ally.addDamageModifier({
         id: "proteção_da_mãe_terra",

@@ -25,8 +25,7 @@ export default {
       amount,
     );
     */
-    const heal =
-      Math.round((amount * (this.lifeStealHealPercent / 100)) / 5) * 5;
+    const heal = amount * (this.lifeStealHealPercent / 100);
     if (heal <= 0 || owner.HP >= owner.maxHP) return;
 
     owner.heal(heal, context);

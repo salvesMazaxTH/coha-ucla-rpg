@@ -186,6 +186,10 @@ export function createCombatAnimationManager(deps) {
         await processChampionRemoved(item.data);
         break;
 
+      case "championSwitchedOut":
+        await processChampionSwitchedOut(item.data);
+        break;
+
       case "combatLog":
         await processCombatLog(item.data);
         break;
@@ -640,8 +644,7 @@ export function createCombatAnimationManager(deps) {
     const { targetId, immuneMessage } = effect;
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    const message =
-      immuneMessage || `${name} está <b>Imune!</b>`;
+    const message = immuneMessage || `${name} está <b>Imune!</b>`;
     await showBlockingDialog(message, true);
   }
 
@@ -1174,6 +1177,8 @@ export function createCombatAnimationManager(deps) {
 
     // Refresh status indicators for all champions
     deps.startStatusIndicatorRotation([...deps.activeChampions.values()]);
+
+    deps.onGameStateProcessed?.();
   }
 
   // ============================================================
@@ -1182,6 +1187,19 @@ export function createCombatAnimationManager(deps) {
 
   function processTurnUpdate(turn) {
     deps.applyTurnUpdate(turn);
+  }
+
+  // ============================================================
+  //  CHAMPION SWITCHED OUT (no death animation — instant remove)
+  // ============================================================
+
+  async function processChampionSwitchedOut(championId) {
+    const champion = deps.activeChampions.get(championId);
+    if (!champion) return;
+
+    champion.el?.remove();
+    champion.el = null;
+    deps.activeChampions.delete(championId);
   }
 
   // ============================================================
@@ -1285,6 +1303,9 @@ export function createCombatAnimationManager(deps) {
     },
     handleChampionRemoved(championId) {
       enqueue("championRemoved", championId);
+    },
+    handleChampionSwitchedOut(championId) {
+      enqueue("championSwitchedOut", championId);
     },
     handleGameOver(data) {
       enqueue("gameOver", data);

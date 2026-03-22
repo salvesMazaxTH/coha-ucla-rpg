@@ -24,7 +24,7 @@ export default {
     // Se NÃO tomou dano no turno anterior
     if (lastDamaged === context.currentTurn - 1) return;
 
-    const heal = Math.round((owner.maxHP * 0.15) / 5) * 5;
+    const heal = owner.maxHP * 0.15;
     if (heal <= 0 || owner.HP >= owner.maxHP) return;
 
     const before = owner.HP;

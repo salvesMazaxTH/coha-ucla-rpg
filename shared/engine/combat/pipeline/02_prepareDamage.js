@@ -27,13 +27,13 @@ function applyAffinity(event, debugMode) {
     const relation = _getElementalRelation(skillElement, affinity);
 
     if (relation === "weak") {
-      event.damage = Math.floor(event.damage * 1.2 + 25);
+      event.damage = (event.damage * 1.675) + 5;
       strongestRelation = "weak";
       break;
     }
 
     if (relation === "resist" && strongestRelation !== "weak") {
-      event.damage = Math.max(event.damage - 40, 0);
+      event.damage = event.damage * 0.6;
       strongestRelation = "resist";
       break;
     }
@@ -238,7 +238,7 @@ function applyDamageModifiers(event, debugMode) {
   }
 
   if (debugMode) {
-    console.log(`📊 Damage Final: ${event.damage}`);
+    console.log(`📊 Damage Final: ${event.damage.toFixed(2)}`);
     console.groupEnd();
   }
 }

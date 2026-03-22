@@ -21,12 +21,32 @@ export default {
       `[Passiva - Jeff] Agendando revival para o próximo turno (Turno ${context.currentTurn + 1})`,
     );
 
+    target.runtime.deathCounter ??= 0;
+    target.runtime.deathCounter++;
+
     context.schedule({
       type: "spawnChampion",
       turnToHappen: context.currentTurn + 1,
       payload: {
         championKey: target.championKey,
         team: target.team,
+        onSpawn: (champion, context) => {
+          champion.HP = Math.floor(champion.maxHP * 0.75);
+          // buff pela própria morte, já que onChampionDeath é pulado quando Jeff morre
+          const buffsPerDeath = [
+            { stat: "Attack", amount: 30, isPercent: true },
+            { stat: "Defense", amount: 30, isPercent: true },
+          ];
+          buffsPerDeath.forEach((buff) => {
+            champion.modifyStat({
+              statName: buff.stat,
+              amount: buff.amount,
+              context,
+              isPermanent: true,
+              isPercent: buff.isPercent,
+            });
+          });
+        },
       },
       dialog: {
         message: `[Passiva - <b>A Morte Não Cessa</b>] ${formatChampionName(target)} retorna ao campo de batalha!`,
@@ -37,16 +57,18 @@ export default {
     });
   },
 
-  onAfterDeath({ owner }) {
+  onChampionDeath({ owner, deadChampion, context }) {
+    if (owner === deadChampion) return; // buff da própria morte é tratado em onSpawn
+    if (!owner.alive) return;
     // não incluí hookScope, porque quando qualquer um morre, ele se buffa
-    console.log("[Passiva - Jeff] Buffando Jeff por morte de um aliado, inimigo ou de si mesmo.");
+    console.log(
+      `[Passiva - Jeff] Buffando Jeff pela morte de ${deadChampion?.name ?? "alguém"}.`,
+    );
     const buffsPerDeath = [
       { stat: "Attack", amount: 30, isPercent: true },
       { stat: "Defense", amount: 30, isPercent: true },
     ];
-    console.log(`[Passiva - Jeff] Buffs a serem aplicados:`, buffsPerDeath);
     buffsPerDeath.forEach((buff) => {
-      console.log(`[Passiva - Jeff] Aplicando buff: +${buff.amount}${buff.isPercent ? "%" : ""} ${buff.stat} a Jeff (ID: ${owner.id})`);
       owner.modifyStat({
         statName: buff.stat,
         amount: buff.amount,

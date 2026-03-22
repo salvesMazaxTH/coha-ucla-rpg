@@ -400,11 +400,11 @@ export function modifyHP(
     affectMax = false,
   } = {},
 ) {
-  amount = roundToFive(amount);
-
   if (amount === 0) {
     return { appliedAmount: 0, isCappedMax: false, log: null };
   }
+
+  amount = Math.floor(amount);
 
   // 🔹 Alteração estrutural proporcional (buff real de vida)
   if (affectMax) {
@@ -428,7 +428,7 @@ export function modifyHP(
           });
 
     // Aplica o mesmo delta ao HP atual
-    const nextHP = roundToFive(previousHP + result.appliedAmount);
+    const nextHP = previousHP + result.appliedAmount;
     champion.HP = Math.max(0, Math.min(nextHP, champion.maxHP));
 
     return result;
@@ -458,7 +458,7 @@ export function modifyHP(
   } else {
     const previous = champion.HP;
     const newHP = Math.max(0, previous + amount);
-    champion.HP = newHP;
+    champion.HP = Math.floor(newHP);
   }
 
   return {
@@ -477,6 +477,8 @@ export function modifyHP(
 export function takeDamage(champion, amount, context) {
   if (!champion.alive) return;
 
+  amount = Math.floor(amount);
+
   for (const shield of champion.runtime.shields) {
     // Escudos de Feitiço e Supremo não absorvem HP — só bloqueiam ações
     if (shield.type && shield.type !== "regular") continue;
@@ -488,7 +490,6 @@ export function takeDamage(champion, amount, context) {
   }
 
   champion.HP -= amount;
-  champion.HP = roundToFive(champion.HP);
 
   if (champion.HP <= 0) {
     champion.HP = 0;
@@ -506,9 +507,13 @@ export function takeDamage(champion, amount, context) {
 export function heal(champion, amount, context, source = champion) {
   if (!champion.alive) return 0;
 
+  if (amount > 0) amount = Math.max(Math.floor(amount), 1);
+
   const before = champion.HP;
   champion.HP = Math.min(champion.HP + amount, champion.maxHP);
   const healed = Math.max(0, champion.HP - before);
+
+  if (healed <= 0) return 0;
 
   const ctx = context || champion.runtime?.currentContext;
   if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {

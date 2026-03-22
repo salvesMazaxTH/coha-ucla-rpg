@@ -32,8 +32,7 @@ const reyskaroneSkills = [
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
 
-      const hpSacrifice =
-        Math.round((user.maxHP * (this.hpSacrificePercent / 100)) / 5) * 5;
+      const hpSacrifice = user.maxHP * (this.hpSacrificePercent / 100);
 
       user.takeDamage(hpSacrifice);
 

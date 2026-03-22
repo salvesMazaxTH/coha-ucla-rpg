@@ -76,6 +76,7 @@ header h1 {
   align-items: center;
   border: 1px solid transparent;
   padding: 10px;
+  padding-bottom: 90px;
   position: relative;
   transition:
     border-color 0.3s ease,
@@ -247,23 +248,33 @@ body.team-selection-active .team-container:hover {
 
 .back-champion-display {
   position: absolute;
-  bottom: 20px;
-  padding: 10px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.6);
+  bottom: 100px;
+  width: 252px;
+  min-height: 114px;
+  padding: 8px;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 16, 26, 0.92),
+    rgba(3, 9, 16, 0.9)
+  );
   display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 0 15px rgba(0, 255, 150, 0.3);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  box-sizing: border-box;
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(120, 185, 255, 0.12);
   z-index: 500;
 }
 
-.back-champion-display[data-team="1"] {
+.back-champion-display[data-side="ally"] {
   left: 20px;
   border: 2px solid rgba(0, 150, 255, 0.4);
 }
 
-.back-champion-display[data-team="2"] {
+.back-champion-display[data-side="enemy"] {
   right: 20px;
   border: 2px solid rgba(255, 0, 0, 0.4);
 }
@@ -272,16 +283,144 @@ body.team-selection-active .team-container:hover {
   display: none;
 }
 
-.back-champion-display img {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-  border-radius: 50%;
-  border: 2px solid #00ff99;
+.reserve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 0 2px;
 }
 
-.back-champion-display p {
+.reserve-label {
+  font-size: 0.67rem;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9ec3ff;
+  opacity: 0.88;
+  font-weight: 700;
+}
+
+.back-champion-display[data-side="enemy"] .reserve-label {
+  color: #ffb3b3;
+}
+
+/* contador de trocas restantes */
+.switch-counter {
+  min-width: 24px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(84, 176, 255, 0.2);
+  border: 1px solid rgba(120, 200, 255, 0.35);
+  color: #d8efff;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 700;
+  padding: 0 7px;
+}
+
+.back-champion-display[data-side="enemy"] .switch-counter {
+  background: rgba(255, 92, 92, 0.18);
+  border-color: rgba(255, 134, 134, 0.36);
+  color: #ffdede;
+}
+
+.reserve-cards {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* card individual de reserva */
+.reserve-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 72px;
+  min-height: 74px;
+  cursor: default;
+  border-radius: 8px;
+  border: 1px solid rgba(140, 202, 255, 0.16);
+  background: rgba(12, 28, 42, 0.55);
+  padding: 5px 4px;
+  box-sizing: border-box;
+  transition:
+    background 0.15s,
+    transform 0.1s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.reserve-card.clickable {
+  cursor: pointer;
+}
+
+.back-champion-display[data-side="enemy"] .reserve-card {
+  border-color: rgba(255, 138, 138, 0.28);
+  background: rgba(42, 14, 18, 0.52);
+}
+
+.reserve-card.clickable:hover {
+  background: rgba(54, 170, 255, 0.16);
+  border-color: rgba(130, 220, 255, 0.55);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+
+.reserve-card img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(83, 197, 255, 0.75);
+}
+
+.back-champion-display[data-side="enemy"] .reserve-card img {
+  border-color: rgba(255, 120, 120, 0.8);
+}
+
+.reserve-card.clickable img {
+  border-color: rgba(130, 236, 255, 0.95);
+  box-shadow: 0 0 8px rgba(90, 210, 255, 0.48);
+}
+
+.reserve-name {
+  width: 100%;
+  display: block;
   margin: 0;
-  font-size: 0.9em;
-  color: #e6fff2;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  font-weight: 600;
+  color: #def2ff;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.back-champion-display[data-side="enemy"] .reserve-name {
+  color: #ffdede;
+}
+
+@media (max-width: 980px) {
+  .back-champion-display {
+    width: 220px;
+    min-height: 108px;
+    padding: 7px;
+  }
+
+  .reserve-card {
+    width: 64px;
+    min-height: 70px;
+  }
+
+  .reserve-card img {
+    width: 38px;
+    height: 38px;
+  }
 }

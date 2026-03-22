@@ -27,31 +27,6 @@ function createChampionElement(champion, handlers = {}) {
 function buildChampionHTML(champion, { editMode } = {}) {
   const isEditModeEnabled = editMode?.enabled === true;
 
-  const buildSkillsHTML = () => {
-    return champion.skills
-      .map((skill, index) => {
-        const isUlt = skill.isUltimate === true;
-        const isBasicAttack = index === 0;
-        const label = isUlt ? "ULT" : isBasicAttack ? "AB" : `Hab.${index}`;
-
-        return `
-          <button 
-            class="skill-btn ${isUlt ? "ultimate" : ""}"
-            data-champion-id="${champion.id}"
-            data-skill-key="${skill.key}"
-            data-skill-index="${index}"
-            data-default-label="${label}"
-            title="${skill.name}\n${skill.description || ""}"
-          >
-            <span class="skill-label">${label}</span>
-          </button>
-        `;
-      })
-      .join("");
-  };
-
-  const skillsHTML = buildSkillsHTML();
-
   return `
   <div class="portrait-wrapper">
     <div class="portrait" data-id="${champion.id}">
@@ -77,10 +52,6 @@ function buildChampionHTML(champion, { editMode } = {}) {
         <div class="ult-segments"></div>
     </div>
 
-    <div class="skills-bar">
-      ${skillsHTML}
-    </div>
-
     ${
       isEditModeEnabled
         ? `
@@ -102,14 +73,8 @@ function buildChampionHTML(champion, { editMode } = {}) {
  * @param {object} handlers - Event handlers
  */
 function bindChampionHandlers(champion, div, handlers = {}) {
-  const { onSkillClick, onDelete } = handlers;
+  const { onDelete } = handlers;
 
-  // botões das skills
-  div.querySelectorAll(".skill-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      onSkillClick?.(btn);
-    });
-  });
   // botão de deletar
   div.querySelector(".delete-btn")?.addEventListener("click", () => {
     onDelete?.(champion.id);
@@ -119,25 +84,6 @@ function bindChampionHandlers(champion, div, handlers = {}) {
     handlers.onPortraitClick?.(champion);
   });
 
-  div.querySelectorAll(".skill-btn").forEach((button) => {
-    const skillKey = button.dataset.skillKey;
-
-    const skill = champion.skills.find((s) => s.key === skillKey);
-    if (!skill) return;
-
-    // =========================
-    // DESKTOP (hover)
-    // =========================
-    button.addEventListener("mouseenter", (e) => {
-      e.preventDefault();
-      handlers.showSkillOverlay?.(button, skill, champion);
-    });
-
-    button.addEventListener("mouseout", (e) => {
-      e.preventDefault();
-      handlers.removeSkillOverlay?.();
-    });
-  });
   // 🔥 bloquear menu padrão da imagem
   const img = div.querySelector(".portrait img");
   if (img) {
@@ -271,31 +217,6 @@ export function updateChampionUI(champion, context) {
   }
 
   // =========================
-  // SKILLS (custo de ultômetro pra ult)
-  // =========================
-
-  champion.el.querySelectorAll(".skill-btn").forEach((button) => {
-    const skillKey = button.dataset.skillKey;
-    const skill = champion.skills.find((s) => s.key === skillKey);
-    if (!skill) return;
-
-    // 🔹 Se não for ultimate, nunca é bloqueado por recurso
-    if (!skill.isUltimate) {
-      button.dataset.disabledByResource = "false";
-      return;
-    }
-
-    const cost = champion.getSkillCost(skill);
-    const resourceState = champion.getResourceState();
-
-    const hasResource = context?.freeCostSkills
-      ? true
-      : resourceState.current >= cost;
-
-    button.dataset.disabledByResource = hasResource ? "false" : "true";
-  });
-
-  // =========================
   // Status indicators
   // =========================
 
@@ -311,40 +232,8 @@ export function updateChampionUI(champion, context) {
  * Sync action state UI
  * @param {object} champion - The champion instance
  */
-export function syncChampionActionStateUI(champion) {
-  if (!champion.el) return;
-
-  let hasHardBlock = false;
-
-  for (const statusEffectKey in StatusEffectsRegistry) {
-    const effect = StatusEffectsRegistry[statusEffectKey];
-
-    // verifica se esse status é um CC
-    if (!effect.subtypes?.includes("hardCC")) continue;
-
-    // verifica se o champion possui esse status
-    if (champion.hasStatusEffect(statusEffectKey)) {
-      hasHardBlock = true;
-      break;
-    }
-  }
-
-  const inerteData = champion.getStatusEffectData("inerte");
-  const isInerteBlocking = inerteData && !inerteData.canBeInterruptedByAction;
-
-  const hasBlockingStatusEffects = hasHardBlock || isInerteBlocking;
-
-  champion.el.querySelectorAll(".skill-btn").forEach((btn) => {
-    const disabledByResource = btn.dataset.disabledByResource === "true";
-    const disabledByAction = champion.hasActedThisTurn;
-
-    btn.dataset.disabledByAction = disabledByAction ? "true" : "false";
-
-    const shouldDisable =
-      disabledByResource || disabledByAction || hasBlockingStatusEffects;
-
-    btn.disabled = shouldDisable;
-  });
+export function syncChampionActionStateUI(_champion) {
+  // skill buttons have been removed from champion cards; action is handled via the action bar
 }
 
 /**

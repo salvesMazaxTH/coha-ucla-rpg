@@ -57,7 +57,7 @@ const nodeSparckina07Skills = [
       });
 
       // buffar a ESQ depois de buffar a VEL para garantir que o aumento de ESQ seja baseado na VEL atualizada
-      const evasionBuff = Math.round(user.Speed * (this.evasionPercent / 100));
+      const evasionBuff = user.Speed * (this.evasionPercent / 100);
 
       user.modifyStat({
         statName: "Evasion",

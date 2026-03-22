@@ -62,7 +62,7 @@ const sereneSkills = [
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
 
-      const baseDamage = Math.floor(enemy.maxHP * (this.hpDamagePercent / 100));
+      const baseDamage = enemy.maxHP * (this.hpDamagePercent / 100);
 
       // aplica status
       const stunned = enemy.applyStatusEffect(
@@ -75,7 +75,7 @@ const sereneSkills = [
       const result = new DamageEvent({
         baseDamage,
         piercingPortion: baseDamage,
-        mode: "hybrid",
+        mode: "piercing",
         attacker: user,
         defender: enemy,
         skill: this,

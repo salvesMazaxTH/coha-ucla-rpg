@@ -45,6 +45,101 @@
 }
 
 /* ============================================
+   OCULTAR SKILLS-BAR DO CARD (substituída pelo action bar)
+   ============================================ */
+
+.skills-bar {
+  display: none;
+}
+
+/* ============================================
+   ACTION BAR (slot-by-slot action selection)
+   ============================================ */
+
+.action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 600;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+
+  background: rgba(5, 10, 20, 0.88);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(0, 200, 255, 0.2);
+  border-radius: 0 0 8px 8px;
+}
+
+.action-bar-header {
+  font-size: 0.78em;
+  font-weight: bold;
+  color: #90d0f0;
+  letter-spacing: 0.4px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.action-bar-skills {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.action-bar-skill-btn {
+  flex: 1;
+  max-width: 22%;
+  padding: 8px 6px;
+
+  background: linear-gradient(180deg, #1a3a5c, #0f2540);
+  border: 1px solid rgba(80, 160, 255, 0.35);
+  border-radius: 8px;
+
+  color: #b8dcf8;
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+
+.action-bar-skill-btn.ultimate {
+  background: linear-gradient(180deg, #4a1270, #2d0850);
+  border-color: rgba(180, 80, 255, 0.45);
+  color: #e0b8ff;
+}
+
+.action-bar-skill-btn:hover:not(:disabled) {
+  transform: scale(1.04);
+  box-shadow: 0 0 8px rgba(80, 160, 255, 0.4);
+}
+
+.action-bar-skill-btn.ultimate:hover:not(:disabled) {
+  box-shadow: 0 0 8px rgba(180, 80, 255, 0.5);
+}
+
+.action-bar-skill-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.action-bar-skill-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================
    CHAMPION PORTRAIT & SELECTION
    ============================================ */
 

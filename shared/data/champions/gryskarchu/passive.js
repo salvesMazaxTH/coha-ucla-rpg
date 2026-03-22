@@ -18,7 +18,7 @@ export default {
     if (healSrc.id === owner?.id) return; // só vale se ele foi quem realmente curou (redundante tho)
     if (healTarget.id === owner.id) return; // impede auto-trigger, evita loop infinito
 
-    const selfHealAmount = Math.round(amount / 5) * 5;
+    const selfHealAmount = amount;
     if (selfHealAmount <= 0) return;
 
     const before = owner.HP;

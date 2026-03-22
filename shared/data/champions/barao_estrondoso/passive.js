@@ -38,7 +38,7 @@ export default {
 
     const bonus = Math.max(
       this.damageTakenBonusFlatMin,
-      Math.floor(damage * (this.damageTakenBonusPercent / 100)),
+      damage * (this.damageTakenBonusPercent / 100),
     );
     const modifiedDamage = damage + bonus;
 
@@ -60,7 +60,7 @@ export default {
       ? this.storageShieldPercent / 100
       : */ this.storageBasePercent / 100;
 
-    const stored = Math.floor(damage * storageRate);
+    const stored = damage * storageRate;
 
     /* console.log(
       `[${owner.name} - Reator Cataclísmico] Dano armazenado: ${stored} (Taxa: ${storageRate * 100}%)`,

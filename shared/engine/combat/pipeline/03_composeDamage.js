@@ -93,7 +93,7 @@ export function composeDamage(event) {
 
   // 1. Tira a foto do dano máximo alcançado antes do alvo se defender
   event.preMitigationDamage = event.damage;
-  console.log(`📸 Dano pré-mitigação: ${event.preMitigationDamage}`);
+  console.log(`📸 Dano pré-mitigação: ${event.preMitigationDamage.toFixed(2)}`);
 
   event.crit ??= { didCrit: false, critExtra: 0 };
 
@@ -104,7 +104,7 @@ export function composeDamage(event) {
     if (event.constructor.debugMode) {
       console.log("⚡ ABSOLUTE DAMAGE");
       console.log("➡️ ignora crítico, defesa e reduções");
-      console.log(`📈 Final: ${event.damage}`);
+      console.log(`📈 Final: ${event.damage.toFixed(2)}`);
       console.groupEnd();
     }
 
@@ -146,13 +146,13 @@ export function composeDamage(event) {
 
     // Defesa
     const defenseMitigation = event.damage * defensePercent;
-    event.damage = Math.max(event.damage - defenseMitigation, 0);
+    event.damage = event.damage - defenseMitigation;
 
     if (debug) {
       console.log(
         `[DAMAGE COMPOSITION] 🛡️ Após defesa (${(defensePercent * 100).toFixed(
           1,
-        )}%): ${event.damage}`,
+        )}%): ${event.damage.toFixed(2)}`,
       );
     }
 
@@ -161,16 +161,16 @@ export function composeDamage(event) {
 
     if (debug) {
       console.log(
-        `[DAMAGE COMPOSITION] 📉 Após redução percentual (${percent}%): ${event.damage}`,
+        `[DAMAGE COMPOSITION] 📉 Após redução percentual (${percent}%): ${event.damage.toFixed(2)}`,
       );
     }
 
     // Redução flat
-    event.damage = Math.max(event.damage - flat, 0);
+    event.damage = event.damage - flat;
 
     if (debug) {
       console.log(
-        `[DAMAGE COMPOSITION] 🧱 Após redução flat (${flat}): ${event.damage}`,
+        `[DAMAGE COMPOSITION] 🧱 Após redução flat (${flat}): ${event.damage.toFixed(2)}`,
       );
     }
   }
@@ -185,33 +185,30 @@ export function composeDamage(event) {
 
     let piercingAfter = piercing - flat; // redução flat afeta o dano perfurante, mas não a redução percentual
 
-    standardAfter = Math.max(standardAfter, 0);
-    piercingAfter = Math.max(piercingAfter, 0);
+    standardAfter = standardAfter < 0 ? 0 : standardAfter;
+    piercingAfter = piercingAfter < 0 ? 0 : piercingAfter;
 
     event.damage = standardAfter + piercingAfter;
   }
 
   // -------- FLOOR --------
   if (!event.context?.ignoreMinimumFloor) {
-    event.damage = Math.max(event.damage, 10);
+    event.damage = Math.max(event.damage, 5);
   }
 
-  event.damage = Math.min(
-    _roundToFive(event.damage),
-    event.constructor.GLOBAL_DMG_CAP,
-  );
+  event.damage = Math.min(event.damage, event.constructor.GLOBAL_DMG_CAP);
 
   // 2. Tira a foto do dano matemático final, pronto para ser aplicado
 
   const damageOverride = event.context?.editMode?.damageOutput;
   console.log(
-    `📸 [DAMAGE COMPOSITION] Dano final calculado (antes de overrides): ${event.damage}`,
+    `📸 [DAMAGE COMPOSITION] Dano final calculado (antes de overrides): ${event.damage.toFixed(2)}`,
   );
 
   if (damageOverride != null) {
     event.damage = damageOverride;
     console.log(
-      `⚡ [DAMAGE COMPOSITION] Override de dano ativado! Dano forçado para: ${event.damage}`,
+      `⚡ [DAMAGE COMPOSITION] Override de dano ativado! Dano forçado para: ${event.damage.toFixed(2)}`,
     );
     if (event.constructor.debugMode) console.groupEnd();
   }
@@ -219,11 +216,7 @@ export function composeDamage(event) {
   event.finalDamage = event.damage;
 
   if (event.constructor.debugMode) {
-    console.log(`[DAMAGE COMPOSITION] 📈 Final: ${event.finalDamage}`);
+    console.log(`[DAMAGE COMPOSITION] 📈 Final: ${event.finalDamage.toFixed(2)}`);
     console.groupEnd();
   }
-}
-
-function _roundToFive(x) {
-  return Math.round(x / 5) * 5;
 }

@@ -5,6 +5,7 @@ export class Player {
     this.team = team;
     this.socketId = null;
     this.selectedChampionKeys = [];
+    this.remainingSwitches = 2;
   }
 
   setSocket(socketId) {

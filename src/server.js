@@ -39,10 +39,10 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
-const TEAM_SIZE = 3;
+const TEAM_SIZE = 4;
 const MAX_SCORE = 3; // primeiro a derrotar 3 campeões inimigos
 const CHAMPION_SELECTION_TIME = 120; // Segundos para seleção de campeões
 const DISCONNECT_TIMEOUT = 30 * 1000; // 30 s para reconexão
@@ -71,6 +71,8 @@ app.get("/", (_req, res) => {
 
 const match = new GameMatch();
 let waitingForAnimations = false;
+
+// Fila de reserva por time: team (1 ou 2) → array de championKeys ainda não spawnados
 
 /** Garante que a entrada do turno atual existe no histórico. */
 function ensureTurnEntry() {
@@ -147,9 +149,9 @@ function spawnChampion({
   });
 
   newChampion.championKey = championKey;
-  console.log(
+  /* console.log(
     `[SPAWN] ${newChampion.name} (ID: ${id}) no time ${team}, no slot ${combatSlot}, com championKey ${championKey}`,
-  );
+  ); */
 
   match.combat.registerChampion(newChampion, { trackSnapshot });
 
@@ -169,8 +171,9 @@ function spawnChampion({
 }
 
 /** Instancia e registra campeões de uma lista de keys em um time (fase de seleção inicial). */
+/** Apenas os 2 primeiros entram em campo; os restantes ficam na fila de reserva. */
 function assignChampionsToTeam(team, championKeys) {
-  championKeys.forEach((championKey, index) => {
+  championKeys.slice(0, 2).forEach((championKey, index) => {
     if (!championKey) return;
     spawnChampion({
       championKey,
@@ -180,6 +183,130 @@ function assignChampionsToTeam(team, championKeys) {
       emit: false,
     });
   });
+}
+
+/** Inicializa a fila de reserva de um jogador (campeões a partir da posição 2). */
+function initReserveQueue(player) {
+  match.combat.reserveQueues.set(player.team, [
+    ...player.selectedChampionKeys.slice(2),
+  ]);
+}
+
+/**
+ * Limpa ultMeter e todos os efeitos temporários de um campeão ao sair de campo por troca.
+ * Modifiers com isPermanent=true (statModifiers) ou permanent=true (damageModifiers) são mantidos.
+ */
+function clearTemporaryEffectsOnSwitch(champion) {
+  champion.ultMeter = 0;
+  champion.tauntEffects = [];
+  champion.damageReductionModifiers = [];
+  champion.damageModifiers = champion.damageModifiers.filter(
+    (m) => m.permanent === true,
+  );
+
+  // Remover statModifiers não-permanentes e reverter os stats afetados
+  const nonPermanent = champion.statModifiers.filter((m) => !m.isPermanent);
+  if (nonPermanent.length > 0) {
+    champion.statModifiers = champion.statModifiers.filter(
+      (m) => m.isPermanent,
+    );
+    const affectedStats = new Set(nonPermanent.map((m) => m.statName));
+    const remaining = champion.statModifiers;
+    const limits = {
+      Critical: { min: 0, max: 95 },
+      Evasion: { min: 0, max: 95 },
+      default: { min: 10, max: 999 },
+    };
+    for (const statName of affectedStats) {
+      const baseKey = `base${statName}`;
+      const baseValue = champion[baseKey];
+      if (baseValue === undefined) continue;
+      let newValue = baseValue;
+      for (const mod of remaining) {
+        if (mod.statName !== statName) continue;
+        const { min, max } = limits[statName] || limits.default;
+        const effectiveMin = mod.ignoreMinimum ? 0 : min;
+        newValue = Math.max(effectiveMin, Math.min(newValue + mod.amount, max));
+      }
+      champion[statName] = newValue;
+    }
+  }
+}
+
+/** Emite backChampionUpdate com a fila completa de reserva do time. */
+function emitBackChampionUpdate(team) {
+  const queue = match.combat.reserveQueues.get(team) || [];
+  io.emit("backChampionUpdate", { team, queue: [...queue] });
+}
+
+/**
+ * Spawna o próximo campeão da fila de reserva do time.
+ *
+ * @param {number} team
+ * @param {object} [opts]
+ * @param {'death'|'switch'} [opts.reason='death']  Por morte automática ou por troca manual.
+ * @param {string|null}      [opts.championToSwitchOutId]  ID do campeão a substituir (apenas reason='switch').
+ * @returns {Champion|null}
+ */
+function spawnFromReserve(
+  team,
+  {
+    reason = "death",
+    championToSwitchOutId = null,
+    reserveChampionKey = null,
+  } = {},
+) {
+  const queue = match.combat.reserveQueues.get(team);
+  if (!queue || queue.length === 0) return null;
+
+  // Capturar o slot do campeão que sai ANTES de removê-lo do campo
+  let inheritedSlot = null;
+
+  if (reason === "switch" && championToSwitchOutId) {
+    const switchedOut = match.combat.activeChampions.get(championToSwitchOutId);
+    if (switchedOut) {
+      inheritedSlot = switchedOut.combatSlot;
+      // Limpar efeitos temporários e guardar a instância no banco
+      clearTemporaryEffectsOnSwitch(switchedOut);
+      match.combat.benchedChampions.set(switchedOut.championKey, switchedOut);
+      // Volta para o final da fila de reserva (não está morto — pode retornar)
+      queue.push(switchedOut.championKey);
+      // Remove do campo sem acionar morte ou pontuação
+      match.combat.activeChampions.delete(championToSwitchOutId);
+      io.emit("championSwitchedOut", championToSwitchOutId);
+    }
+  }
+
+  let championKey;
+  if (reason === "switch" && reserveChampionKey) {
+    const idx = queue.indexOf(reserveChampionKey);
+    if (idx !== -1) queue.splice(idx, 1);
+    championKey = reserveChampionKey;
+  } else {
+    championKey = queue.shift();
+  }
+
+  // Se o campeão já esteve em campo, reutilizar a instância salva no banco
+  const benchedChampion = match.combat.benchedChampions.get(championKey);
+  let spawned;
+
+  if (benchedChampion) {
+    match.combat.benchedChampions.delete(championKey);
+    // Herdar o slot exato de quem saiu; só usa getNextAvailableSlot como fallback (morte)
+    const combatSlot =
+      inheritedSlot ?? match.combat.getNextAvailableSlot(team, TEAM_SIZE);
+    if (combatSlot === null) return null;
+    benchedChampion.combatSlot = combatSlot;
+    // Registra sem adicionar ao combatSnapshot de novo
+    match.combat.registerChampion(benchedChampion, { trackSnapshot: false });
+    io.emit("gameStateUpdate", getGameState());
+    spawned = benchedChampion;
+  } else {
+    spawned = spawnChampion({ championKey, team, combatSlot: inheritedSlot });
+  }
+
+  emitBackChampionUpdate(team);
+  return spawned;
 }
 
 /** Verifica se ambos os jogadores selecionaram seus times e notifica os clientes. */
@@ -515,16 +642,24 @@ function emitCombatAction(envelope) {
 function handleEndTurn() {
   io.emit("turnLocked");
 
-  /* console.log(
-    `[handleEndTurn] [TURN ${match.combat.currentTurn}] Resolvendo ações...`,
-    match.combat.pendingActions,
-  );
-  */
-  // 1. Resolver todas as ações via TurnResolver
+  // 1. Resolver todas as ações via TurnResolver (switches têm prioridade 6 — saem primeiro)
   const resolver = new TurnResolver(match, editMode);
-  const { actionResults, deathResults } = resolver.resolveTurn();
+  const { actionResults, deathResults, switchResults } = resolver.resolveTurn();
 
-  // 2. Emitir envelopes para cada resultado
+  // 2. Processar substituições extraídas pelo TurnResolver
+  for (const sw of switchResults) {
+    const outChamp = match.combat.activeChampions.get(sw.championToSwitchOutId);
+    const outName = outChamp ? formatChampionName(outChamp) : "?";
+    const spawned = spawnFromReserve(sw.team, {
+      reason: "switch",
+      championToSwitchOutId: sw.championToSwitchOutId,
+      reserveChampionKey: sw.reserveChampionKey,
+    });
+    const inName = spawned ? formatChampionName(spawned) : "?";
+    io.emit("combatLog", `${outName} foi substituído por ${inName}!`);
+  }
+
+  // 3. Emitir envelopes para cada resultado
   for (const result of actionResults) {
     if (result.executed) {
       emitCombatEnvelopesFromContext({
@@ -546,9 +681,12 @@ function handleEndTurn() {
     }
   }
 
-  // 3. Emitir mortes
+  // 3. Emitir mortes e spawnar reservas
   for (const death of deathResults) {
     emitChampionDeath(death);
+    if (!match.isGameEnded()) {
+      spawnFromReserve(death.team);
+    }
   }
 
   if (match.isGameEnded()) {
@@ -579,11 +717,15 @@ function handleEndTurn() {
   io.emit("combatPhaseComplete");
 }
 
-function handleScheduledEffect(effect) {
+function handleScheduledEffect(effect, context) {
   switch (effect.type) {
-    case "spawnChampion":
-      spawnChampion(effect.payload);
+    case "spawnChampion": {
+      const spawned = spawnChampion(effect.payload);
+      if (spawned && typeof effect.payload.onSpawn === "function") {
+        effect.payload.onSpawn(spawned, context);
+      }
       break;
+    }
 
     case "damage": {
       const resolver = new TurnResolver(match, editMode);
@@ -656,7 +798,7 @@ function handleStartTurn() {
 
   for (const effect of match.combat.scheduledEffects) {
     if (effect.turnToHappen === currentTurn) {
-      handleScheduledEffect(effect);
+      handleScheduledEffect(effect, turnStartContext);
       if (effect.dialog) {
         turnStartContext.registerDialog(effect.dialog);
       }
@@ -666,10 +808,13 @@ function handleStartTurn() {
   }
   match.combat.scheduledEffects = remaining;
 
-  const deathResults = resolver.processChampionDeaths();
+  const deathResults = resolver.processChampionDeaths(3, turnStartContext);
 
   for (const death of deathResults) {
     emitChampionDeath(death);
+    if (!match.isGameEnded()) {
+      spawnFromReserve(death.team);
+    }
   }
 
   // 3. Limpar expirados
@@ -745,7 +890,8 @@ function resetCombatState() {
 // ============================================================
 
 io.on("connection", (socket) => {
-  // console.log("Um usuário conectado:", socket.id);
+  console.log("Um usuário conectado:", socket.id);
+  console.log("Total de usuários conectados:", io.engine.clientsCount);
 
   // Envia editMode IMEDIATAMENTE ao client SEM propriedades server-only (damageOutput, alwaysCrit, etc.)
   const { damageOutput, alwaysCrit, ...clientEditMode } = editMode;
@@ -775,6 +921,18 @@ io.on("connection", (socket) => {
 
   /** Atribui um slot de jogador e notifica o cliente. */
   function assignPlayerSlot(username) {
+    // Se este socket já possui um slot, não criar outro (evita duplicação por autoLogin + clique manual)
+    const existingSlot = match.getSlotBySocket(socket.id);
+    if (existingSlot !== undefined) {
+      const existingPlayer = match.getPlayer(existingSlot);
+      if (existingPlayer) {
+        return {
+          playerSlot: existingSlot,
+          finalUsername: existingPlayer.username,
+        };
+      }
+    }
+
     let slot = -1;
     if (match.getPlayer(0) === null) slot = 0;
     else if (match.getPlayer(1) === null) slot = 1;
@@ -813,6 +971,10 @@ io.on("connection", (socket) => {
     io.emit("playerCountUpdate", match.getConnectedCount());
     io.emit("playerNamesUpdate", match.getPlayerNamesEntries());
     socket.emit("gameStateUpdate", getGameState());
+    io.emit("switchesUpdate", {
+      team1: match.players[0]?.remainingSwitches ?? 2,
+      team2: match.players[1]?.remainingSwitches ?? 2,
+    });
 
     return { playerSlot: slot, finalUsername };
   }
@@ -928,9 +1090,15 @@ io.on("connection", (socket) => {
       match.players[1].selectedChampionKeys,
     );
 
-    io.emit("scoreUpdate", match.getScorePayload());
+    // Inicializa filas de reserva e notifica clientes
+    initReserveQueue(match.players[0]);
+    initReserveQueue(match.players[1]);
 
+    io.emit("scoreUpdate", match.getScorePayload());
     io.emit("gameStateUpdate", getGameState());
+
+    emitBackChampionUpdate(match.players[0].team);
+    emitBackChampionUpdate(match.players[1].team);
   }
 
   // =============================
@@ -1037,6 +1205,73 @@ io.on("connection", (socket) => {
   );
 
   // =============================
+  //  requestSwitch (prioridade 6 — como Pokémon)
+  // =============================
+
+  socket.on("requestSwitch", ({ championId, reserveChampionKey }) => {
+    const playerSlot = match.getSlotBySocket(socket.id);
+    const player = match.players[playerSlot];
+    const champion = match.combat.activeChampions.get(championId);
+
+    if (!player || !champion || champion.team !== player.team) {
+      return socket.emit("switchDenied", "Sem permissão.");
+    }
+
+    if (player.remainingSwitches <= 0) {
+      return socket.emit(
+        "switchDenied",
+        "Você não tem mais trocas disponíveis.",
+      );
+    }
+
+    const queue = match.combat.reserveQueues.get(champion.team);
+    if (!queue || queue.length === 0) {
+      return socket.emit("switchDenied", "Nenhum campeão na reserva.");
+    }
+
+    if (!reserveChampionKey || !queue.includes(reserveChampionKey)) {
+      return socket.emit("switchDenied", "Campeão de reserva inválido.");
+    }
+
+    const alreadyQueued = match.combat.pendingActions.some(
+      (a) => a.type === "switch" && a.championToSwitchOutId === championId,
+    );
+    if (alreadyQueued) {
+      return socket.emit(
+        "switchDenied",
+        "Este slot já tem uma substituição pendente.",
+      );
+    }
+
+    const action = new Action({
+      userId: championId,
+      skillKey: "__switch__",
+      targetIds: {},
+    });
+    action.type = "switch";
+    action.priority = 6;
+    action.speed = champion.Speed;
+    action.turn = match.getCurrentTurn();
+    action.ultCost = 0;
+    action.team = champion.team;
+    action.championToSwitchOutId = championId;
+    action.reserveChampionKey = reserveChampionKey;
+
+    match.enqueueAction(action);
+
+    player.remainingSwitches--;
+    socket.emit("switchQueued", { championId });
+    io.emit("switchesUpdate", {
+      team1: match.players[0]?.remainingSwitches ?? 2,
+      team2: match.players[1]?.remainingSwitches ?? 2,
+    });
+    io.to(socket.id).emit(
+      "combatLog",
+      `${formatChampionName(champion)} aguardando substituição...`,
+    );
+  });
+
+  // =============================
   //  removeChampion (edit mode / debug)
   // =============================
 
@@ -1055,6 +1290,10 @@ io.on("connection", (socket) => {
 
     const deathResult = match.removeChampionFromGame(championId, MAX_SCORE);
     emitChampionDeath(deathResult);
+
+    if (!match.isGameEnded()) {
+      spawnFromReserve(deathResult.team);
+    }
 
     if (match.isGameEnded()) {
       const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
