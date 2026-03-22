@@ -12,6 +12,19 @@ export function runBeforeHooks(event) {
 
   if (deal.effects.length) event.context.extraEffects.push(...deal.effects);
   if (take.effects.length) event.context.extraEffects.push(...take.effects);
+
+  if (event.crit?.didCrit) {
+    emitCombatEvent(
+      "onCriticalHit",
+      {
+        source: event.attacker,
+        target: event.defender,
+        context: event.context,
+        forced: event.crit?.forced,
+      },
+      event.allChampions ?? event.context?.allChampions,
+    );
+  }
 }
 
 function _applyBeforeDealingPassive(event) {
@@ -40,7 +53,7 @@ function _applyBeforeTakingPassive(event) {
 
 function _processHook(event, eventName, payload) {
   // JSON.stringify força o JS a ler o valor exato AGORA, sem preguiça de log
-/*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions); */
+  /*   console.log("[ALL CHAMPIONS DEBUG]", event.allChampions); */
 
   // Verifique se o event.allChampions não foi redefinido por acidente
   if (!event.allChampions || event.allChampions.length === 0) {

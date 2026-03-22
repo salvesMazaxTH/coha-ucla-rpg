@@ -1,5 +1,3 @@
-import { emitCombatEvent } from "../combatEvents.js";
-
 // ============================================================================
 // AFFINITY SYSTEM
 // ============================================================================
@@ -27,7 +25,7 @@ function applyAffinity(event, debugMode) {
     const relation = _getElementalRelation(skillElement, affinity);
 
     if (relation === "weak") {
-      event.damage = (event.damage * 1.675) + 5;
+      event.damage = event.damage * 1.675 + 5;
       strongestRelation = "weak";
       break;
     }
@@ -110,19 +108,6 @@ function processCrit(event, debugMode) {
   if (debugMode) {
     console.log(
       `[DAMAGE COMPOSITION] 💥 Dano extra de crítico: ${critExtra.toFixed(2)}`,
-    );
-  }
-
-  if (event.crit.didCrit) {
-    emitCombatEvent(
-      "onCriticalHit",
-      {
-        source: event.attacker,
-        target: event.defender,
-        context: event.context,
-        forced: event.crit.forced,
-      },
-      event.context?.allChampions,
     );
   }
 
