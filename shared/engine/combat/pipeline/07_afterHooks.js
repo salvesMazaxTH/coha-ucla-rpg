@@ -9,11 +9,6 @@ export function runAfterHooks(event) {
   if (afterTake.logs.length) event.afterLogs.push(...afterTake.logs);
   if (afterDeal.logs.length) event.afterLogs.push(...afterDeal.logs);
 
-  if (afterTake.effects.length)
-    event.context.extraEffects.push(...afterTake.effects);
-  if (afterDeal.effects.length)
-    event.context.extraEffects.push(...afterDeal.effects);
-
   // 3. Processa Lifesteal
   const lsResult = _applyLifeSteal(event);
 
@@ -103,7 +98,7 @@ function _applyAfterTakingPassive(event) {
 }
 
 function _applyAfterDealingPassive(event) {
-  if (event.context?.isDot) return { logs: [], effects: [] };
+  if (event.context?.isDot) return { logs: [] };
   return _processHook(event, "onAfterDmgDealing", {
     source: event.attacker,
     target: event.defender,
@@ -124,7 +119,7 @@ function _processHook(event, eventName, payload) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
   }
   const results = emitCombatEvent(eventName, payload, event.allChampions) || [];
-  const summary = { logs: [], effects: [] };
+  const summary = { logs: [] };
 
   for (const r of results) {
     if (!r) continue;
@@ -146,8 +141,6 @@ function _processHook(event, eventName, payload) {
         summary.logs.push(...val);
       }
     });
-
-    if (r.effects?.length) summary.effects.push(...r.effects);
   }
   return summary;
 }

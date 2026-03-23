@@ -17,6 +17,7 @@ export class TurnResolver {
     const actionResults = [];
     const switchResults = [];
     let actionOrder = 0;
+    const switchedOutChampionIds = new Set();
 
     const turnExecutionMap = new Map(); // championId -> executionIndex
 
@@ -40,6 +41,10 @@ export class TurnResolver {
       // Switches são retornados para processamento pelo servidor
       if (action.type === "switch") {
         switchResults.push(action);
+        const switchedOutId = action.championToSwitchOutId ?? action.userId;
+        if (switchedOutId) {
+          switchedOutChampionIds.add(switchedOutId);
+        }
         continue;
       }
 
@@ -48,11 +53,24 @@ export class TurnResolver {
 
       const user = this.combat.activeChampions.get(action.userId);
 
+      if (!user || switchedOutChampionIds.has(action.userId)) {
+        this.refundActionResource(user, action);
+        actionResults.push({
+          executed: false,
+          reason: "inactive",
+          user,
+          action,
+          logMessage: `Ação de ${user ? formatChampionName(user) : "campeão desconhecido"} ignorada (não ativo).`,
+        });
+        continue;
+      }
+
       turnExecutionMap.set(user.id, action.executionIndex);
 
       const context = this.createBaseContext({ sourceId: user.id });
       context.executionIndex = action.executionIndex;
       context.turnExecutionMap = turnExecutionMap;
+      context.switchedOutChampionIds = switchedOutChampionIds;
 
       const result = this.executeSkillAction(action, turnExecutionMap, context);
       actionResults.push(result);
@@ -94,8 +112,13 @@ export class TurnResolver {
   executeSkillAction(action, turnExecutionMap, context) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
+    const switchedOutChampionIds = context?.switchedOutChampionIds;
 
-    if (!user || !user.alive) {
+    if (
+      !user ||
+      !user.alive ||
+      (switchedOutChampionIds?.has?.(user.id) ?? false)
+    ) {
       const userName = user ? formatChampionName(user) : "campeão desconhecido";
       this.refundActionResource(user, action);
       return {
@@ -136,8 +159,32 @@ export class TurnResolver {
 
     // console.log("STEP 1 - TARGETS:", roleTargets);
     if (!roleTargets) {
-      this.refundActionResource(user, action);
-      return { executed: false, reason: "no_targets", user, action };
+      context.registerDialog({
+        message: `${formatChampionName(user)} usou <b>${skill.name}</b>, mas não encontrou alvo.`,
+        blocking: true,
+        sourceId: user.id,
+        damageDepth: context.damageDepth ?? 0,
+      });
+
+      this.registerSkillUsageInTurn(user, skill, {});
+
+      context._intermediateSnapshot = snapshotChampions(
+        this.combat.activeChampions,
+      );
+
+      return {
+        executed: true,
+        user,
+        skill,
+        context,
+        action,
+        results: [
+          {
+            log: `${formatChampionName(user)} usou <b>${skill.name}</b>, mas não encontrou alvo.`,
+            noTargets: true,
+          },
+        ],
+      };
     }
 
     const targetsArray = Object.values(roleTargets);
@@ -147,7 +194,12 @@ export class TurnResolver {
       `[executeSkillAction] executionIndex set to ${context.executionIndex} for skill ${skill.name}`,
     );
 
-    this.performSkillExecution(user, skill, targetsArray, context);
+    const skillResults = this.performSkillExecution(
+      user,
+      skill,
+      targetsArray,
+      context,
+    );
 
     // Captura snapshot intermediário AGORA, antes da próxima ação mutar os champions
 
@@ -155,7 +207,14 @@ export class TurnResolver {
       this.combat.activeChampions,
     );
 
-    return { executed: true, user, skill, context, action };
+    return {
+      executed: true,
+      user,
+      skill,
+      context,
+      action,
+      results: skillResults,
+    };
   }
 
   // ============================================================
@@ -212,7 +271,7 @@ export class TurnResolver {
     if (!user || !action) return;
     const amount = Number(action.ultCost) || 0;
     if (amount > 0) {
-      user.addUlt(amount);
+      user.addUlt({ amount });
     }
   }
 
@@ -269,16 +328,6 @@ export class TurnResolver {
 
     this.applyUltMeterFromContext({ user, context });
 
-    for (const r of results) {
-      if (r?.extraEffects?.some((e) => e.type === "dialog")) {
-        /* console.log(
-          "🔵 SERVER → dialog recebido do processDamageEvent:",
-          r.extraEffects,
-        );
-        */
-      }
-    }
-
     // 🔹 7. Hook onActionResolved
     emitCombatEvent(
       "onActionResolved",
@@ -290,6 +339,8 @@ export class TurnResolver {
       },
       this.combat.activeChampions,
     );
+
+    return results;
   }
 
   // ============================================================
@@ -365,6 +416,11 @@ export class TurnResolver {
   resolveSkillTargets(user, skill, action, context) {
     const currentTargets = {};
     let redirected = false;
+    const switchedOutChampionIds = context?.switchedOutChampionIds;
+    const isUnavailableTarget = (champion) =>
+      !champion ||
+      !champion.alive ||
+      (switchedOutChampionIds?.has?.(champion.id) ?? false);
 
     // console.log("==== RESOLVE START ====");
     // console.log("Skill:", skill.key);
@@ -393,7 +449,7 @@ export class TurnResolver {
     if (canRedirect && Array.isArray(skill.targetSpec)) {
       const taunter = this.combat.activeChampions.get(activeTaunt.taunterId);
 
-      if (taunter && taunter.alive) {
+      if (!isUnavailableTarget(taunter)) {
         let redirectionEvents = [];
 
         skill.targetSpec.forEach((spec, index) => {
@@ -408,7 +464,7 @@ export class TurnResolver {
           if (!originalId) return;
 
           const original = this.combat.activeChampions.get(originalId);
-          if (!original || !original.alive) return;
+          if (isUnavailableTarget(original)) return;
 
           if (spec.unique === true) return;
 
@@ -429,7 +485,7 @@ export class TurnResolver {
             const target = this.combat.activeChampions.get(
               action.targetIds[role],
             );
-            if (target && target.alive) {
+            if (!isUnavailableTarget(target)) {
               currentTargets[role] = target;
             }
           }
@@ -470,7 +526,7 @@ export class TurnResolver {
         if (hasAllEnemies || hasAll) {
           const enemies = Array.from(
             this.combat.activeChampions.values(),
-          ).filter((c) => c.team !== user.team && c.alive);
+          ).filter((c) => c.team !== user.team && !isUnavailableTarget(c));
 
           enemies.forEach((enemy, i) => {
             const key = i === 0 ? "enemy" : `enemy${i + 1}`;
@@ -481,7 +537,7 @@ export class TurnResolver {
         if (hasAllAllies || hasAll) {
           const allies = Array.from(
             this.combat.activeChampions.values(),
-          ).filter((c) => c.team === user.team && c.alive);
+          ).filter((c) => c.team === user.team && !isUnavailableTarget(c));
 
           allies.forEach((ally, i) => {
             const key = i === 0 ? "ally" : `ally${i + 1}`;
@@ -494,7 +550,7 @@ export class TurnResolver {
             action.targetIds[role],
           );
 
-          if (target && target.alive) {
+          if (!isUnavailableTarget(target)) {
             currentTargets[role] = target;
           } else if (role === "self") {
             currentTargets[role] = user;

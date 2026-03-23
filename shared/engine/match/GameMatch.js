@@ -205,7 +205,7 @@ class CombatState {
   /**
    * Verifica se o time tem espaço para mais um campeão vivo.
    */
-  canSpawnOnTeam(team, maxPerTeam = 3) {
+  canSpawnOnTeam(team, maxPerTeam = 2) {
     return this.getAliveCountForTeam(team) < maxPerTeam;
   }
 
@@ -213,7 +213,7 @@ class CombatState {
    * Retorna o próximo combatSlot livre (0-based) para um time,
    * ou null se todos os slots 0..maxPerTeam-1 estiverem ocupados.
    */
-  getNextAvailableSlot(team, maxPerTeam = 3) {
+  getNextAvailableSlot(team, maxPerTeam = 2) {
     const occupied = new Set(
       [...this.activeChampions.values()]
         .filter(

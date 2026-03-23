@@ -4,6 +4,20 @@ import { emitCombatEvent } from "../combatEvents.js";
 export function preChecks(event) {
   /*     console.log("DEBUG ATTACKER:", event.attacker);
   console.log("DEBUG DEFENDER:", event.defender); */
+  const activeChampions =
+    event?.context?.activeChampions ?? event?.context?.allChampions;
+  const switchedOutChampionIds = event?.context?.switchedOutChampionIds;
+
+  if (
+    !event?.defender?.id ||
+    !event.defender.alive ||
+    (activeChampions instanceof Map &&
+      !activeChampions.has(event.defender.id)) ||
+    (switchedOutChampionIds?.has?.(event.defender.id) ?? false)
+  ) {
+    return _buildInactiveTargetResult(event);
+  }
+
   // 1️⃣ IMUNIDADE
   const results = emitCombatEvent(
     "onDamageIncoming",
@@ -160,6 +174,37 @@ function _buildImmuneResult(event, customMessage = null) {
     userId: event.attacker?.id ?? null,
     evaded: false,
     immune: true,
+    log,
+    crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
+  };
+}
+
+function _buildInactiveTargetResult(event) {
+  const targetName = formatChampionName(event.defender);
+  const username = event.attacker ? formatChampionName(event.attacker) : null;
+  const skillName = event.skill?.name || "habilidade";
+  const message = `${targetName} não está ativo em combate e não pôde ser atingido.`;
+
+  event.context.registerDialog({
+    message,
+    blocking: true,
+    sourceId: event.attacker?.id ?? null,
+    targetId: event.defender?.id ?? null,
+    damageDepth: event.damageDepth ?? 0,
+  });
+
+  const log = username
+    ? `${username} tentou usar ${skillName} em ${targetName}, mas o alvo não está ativo em combate.`
+    : `${targetName} não está ativo em combate.`;
+
+  return {
+    baseDamage: event.baseDamage,
+    totalDamage: 0,
+    finalHP: event.defender.HP,
+    targetId: event.defender.id,
+    userId: event.attacker?.id ?? null,
+    evaded: false,
+    inactiveTarget: true,
     log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };

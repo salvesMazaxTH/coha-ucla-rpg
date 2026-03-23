@@ -1,12 +1,11 @@
 export default {
   key: "chama_ascendente",
   name: "Chama Ascendente",
-  critBuff: 5,
   critCap: 95,
   enhancedCritBonus: 70,
   atkBuff: 5,
   description() {
-    return `Cada acerto crítico de Vulnara aumenta seu Ataque em ${this.atkBuff}. Cada vez que causa dano, aumenta a chance de crítico em +${this.critBuff}% (máx. ${this.critCap}%). O bônus de crítico de Vulnara é 1,${this.enhancedCritBonus}x.`;
+    return `Cada acerto crítico de Vulnara aumenta seu Ataque em ${this.atkBuff}. O bônus de crítico de Vulnara é 1,${this.enhancedCritBonus}x.`;
   },
 
   hookScope: {
@@ -28,18 +27,5 @@ export default {
       `[PASSIVA — Chama Ascendente] ${owner.name} ganhou +${this.atkBuff} de Ataque. Ataque atual: ${owner.Attack}`,
     );
     */
-  },
-
-  onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
-    owner.modifyStat({
-      statName: "Critical",
-      amount: 5,
-      context,
-      isPermanent: true,
-    });
-
-    return {
-      log: `[PASSIVA — Chama Ascendente] ${owner.name} ganhou +5% Critical.`,
-    };
   },
 };

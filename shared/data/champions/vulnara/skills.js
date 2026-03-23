@@ -12,47 +12,36 @@ const vulnaraSkills = [
   // ========================
 
   // ========================
-  // H1 - Flecha Flamejante
+  // H1 - Instintos Predatórios
   // ========================
 
   {
-    key: "flecha_flamejante",
-    name: "Flecha Flamejante",
-    bf: 65,
+    key: "instinto_predatorio",
+    name: "Instinto Predatório",
 
-    burnBonus: 20,
+    critBuff: 30,
+    duration: 2,
 
     contact: false,
-    damageMode: "standard",
     priority: 0,
 
-    element: "fire",
-
     description() {
-      return `Dispara uma flecha de fogo que causa dano. Contra inimigos queimando, causa +${this.burnBonus} de dano e sempre acerta crítico.`;
+      return `Aguça seus sentidos de combate, ganhando +${this.critBuff}% de chance de crítico por ${this.duration} turnos.`;
     },
 
-    targetSpec: ["enemy"],
+    targetSpec: ["self"],
 
-    resolve({ user, targets, context = {} }) {
-      const [enemy] = targets;
-      let baseDamage = (user.Attack * this.bf) / 100;
-
-      const burning = enemy.hasStatusEffect("queimando");
-
-      if (burning) {
-        baseDamage += this.burnBonus;
-      }
-
-      return new DamageEvent({
-        baseDamage,
-        attacker: user,
-        defender: enemy,
-        skill: this,
+    resolve({ user, context = {} }) {
+      user.modifyStat({
+        statName: "Critical",
+        amount: this.critBuff,
+        duration: this.duration,
         context,
-        critOptions: burning ? { force: true } : undefined,
-        allChampions: context?.allChampions,
-      }).execute();
+      });
+
+      return {
+        log: `${formatChampionName(user)} aguçou seus instintos e ganhou +${this.critBuff}% de crítico por ${this.duration} turnos!`,
+      };
     },
   },
 

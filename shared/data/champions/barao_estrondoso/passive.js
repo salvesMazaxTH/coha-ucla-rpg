@@ -1,5 +1,7 @@
 // shared/champions/barao_estrondoso/passive.js
 
+import { formatChampionName } from "../../../ui/formatters.js";
+
 export default {
   key: "reator_cataclismico",
   name: "Reator Cataclísmico",
@@ -90,7 +92,7 @@ export default {
     owner.applyStatusEffect?.("atordoado", 2, context);
 
     return {
-      log: `${owner.name} sofreu sobrecarga do núcleo e ficará Atordoado!`,
+      log: `${formatChampionName(owner)} sofreu <b>Sobrecarga do Núcleo</b> e ficará <b>Atordoado</b>!`,
     };
   },
 };

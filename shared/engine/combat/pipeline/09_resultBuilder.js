@@ -52,7 +52,7 @@ function _buildLog(user, target, skill, dmg, crit, hpAfter) {
 
   // skill pode ser objeto ou string
   const skillName = skill && typeof skill === "object" ? skill.name : skill;
-  let log = `${userName} usou ${skillName} e causou ${dmg} de dano a ${targetName}`;
+  let log = `${userName} usou <b>${skillName}</b> e causou ${dmg} de dano a ${targetName}`;
 
   if (crit.didCrit)
     log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;

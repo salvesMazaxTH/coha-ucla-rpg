@@ -77,7 +77,6 @@ export class DamageEvent {
 
     this.context.extraDamageQueue ??= [];
     /* this.context.extraLogs ??= []; */
-    this.context.extraEffects ??= [];
   }
 
   execute() {

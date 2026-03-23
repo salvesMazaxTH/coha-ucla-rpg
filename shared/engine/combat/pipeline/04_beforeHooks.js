@@ -10,9 +10,6 @@ export function runBeforeHooks(event) {
   if (deal.logs.length) event.beforeLogs.push(...deal.logs);
   if (take.logs.length) event.beforeLogs.push(...take.logs);
 
-  if (deal.effects.length) event.context.extraEffects.push(...deal.effects);
-  if (take.effects.length) event.context.extraEffects.push(...take.effects);
-
   if (event.crit?.didCrit) {
     emitCombatEvent(
       "onCriticalHit",
@@ -60,7 +57,7 @@ function _processHook(event, eventName, payload) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
   }
   const results = emitCombatEvent(eventName, payload, event.allChampions) || [];
-  const summary = { logs: [], effects: [] };
+  const summary = { logs: [] };
 
   for (const r of results) {
     if (!r) continue;
@@ -85,8 +82,6 @@ function _processHook(event, eventName, payload) {
         summary.logs.push(...val);
       }
     });
-
-    if (r.effects?.length) summary.effects.push(...r.effects);
   }
   return summary;
 }

@@ -11,15 +11,10 @@ export default {
   },
 
   onBeforeDmgTaking({ source, target, owner, crit, context, damage }) {
-    /* console.log(
-      `[PASSIVA RÁLIA] Entrou | Crit=${crit.didCrit} | Bônus atual=${crit.bonus}% | Atacante=${source.name}`,
-    );
-    */
-
     if (!crit.didCrit) return;
 
     return {
-      damage: damage - (crit.critExtra ?? 0),
+      damage: damage / (1 + (crit.critBonusFactor ?? 0)),
       crit: {
         ...crit,
         didCrit: false,
