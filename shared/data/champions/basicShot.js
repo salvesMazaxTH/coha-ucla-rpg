@@ -1,16 +1,16 @@
-// Centralização do Ataque Básico idêntico ao dos skills dos campeões
+// Centralização do Disparo Básico (ranged global)
 import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 
-const basicAttack = {
-  key: "ataque_basico",
-  name: "Ataque Básico",
+const basicShot = {
+  key: "disparo_basico",
+  name: "Disparo Básico",
   bf: 20,
   bonusFlat: 20,
-  contact: true,
+  contact: false,
   damageMode: "standard",
   priority: 0,
   description() {
-    return `\n Ataque básico genérico (BF ${this.bf} + ${this.bonusFlat} bônus flat).`;
+    return `\n Disparo básico genérico, físico e à distância (BF ${this.bf} + ${this.bonusFlat} bônus flat).`;
   },
   targetSpec: ["enemy"],
   resolve({ user, targets, context = {} }) {
@@ -27,4 +27,4 @@ const basicAttack = {
   },
 };
 
-export default basicAttack;
+export default basicShot;

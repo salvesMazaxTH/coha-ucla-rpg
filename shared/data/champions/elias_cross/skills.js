@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicAttack from "../basicAttack.js";
+import basicBlock from "../basicBlock.js";
 
 const eliasCrossSkills = [
   // =========================
-  // Ataque Básico
+  // Bloqueio Básico (global)
   // =========================
-  basicAttack,
+  basicBlock,
   // =========================
   // Habilidades Especiais
   // =========================
@@ -73,7 +73,13 @@ const eliasCrossSkills = [
     resolve({ user, targets, context }) {
       const [enemy] = targets;
 
-      // Aplica bônus temporário
+      // Aplica bônus temporário direto em passiveChance (centralizado)
+      // passiveBonusNextTurn guarda o valor para ser descontado no onTurnStart
+      const initialChance = user.passive?.initialChance ?? 1;
+      user.runtime.passiveChance = Math.min(
+        100,
+        (user.runtime.passiveChance ?? initialChance) + 35,
+      );
       user.runtime.passiveBonusNextTurn = 35;
 
       const baseDamage = (user.Attack * this.bf) / 100;

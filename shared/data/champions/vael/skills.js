@@ -1,12 +1,12 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicAttack from "../basicAttack.js";
+import basicBlock from "../basicBlock.js";
 
 const vaelSkills = [
   // ========================
-  // Ataque Básico
+  // Bloqueio Básico (global)
   // ========================
-  basicAttack,
+  basicBlock,
   // ========================
   // Habilidades Especiais
   // ========================

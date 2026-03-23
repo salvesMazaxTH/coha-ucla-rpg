@@ -19,14 +19,9 @@ export default {
     if (context.damageDepth > 0) return;
 
     owner.runtime.passiveChance ??= this.initialChance;
-    console.log(
-      `[PASSIVA - Elias Cross] chance atual de ativação é ${owner.runtime.passiveChance}%`,
-    );
 
-    const baseChance = owner.runtime.passiveChance ?? this.initialChance;
-    const bonus = owner.runtime.passiveBonusNextTurn ?? 0;
-
-    const chance = Math.min(100, baseChance + bonus) / 100;
+    // passiveChance já inclui qualquer bônus temporário aplicado pela skill
+    const chance = owner.runtime.passiveChance / 100;
 
     const roll = Math.random();
     console.log(
@@ -53,13 +48,14 @@ export default {
   },
 
   onTurnStart({ owner }) {
+    // Desconta o bônus temporário da carga_latente (se houve) antes de somar o ganho do turno
+    const tempBonus = owner.runtime.passiveBonusNextTurn ?? 0;
     owner.runtime.passiveChance = Math.min(
       100,
-      (owner.runtime.passiveChance || this.initialChance) +
+      (owner.runtime.passiveChance || this.initialChance) -
+        tempBonus +
         this.chanceIncreasePerTurn,
     );
-
-    // Limpa o bônus de chance do próximo turno, se houver
     owner.runtime.passiveBonusNextTurn = 0;
   },
 };

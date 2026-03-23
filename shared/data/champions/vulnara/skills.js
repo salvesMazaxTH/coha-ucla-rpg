@@ -1,12 +1,12 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicAttack from "../basicAttack.js";
+import basicShot from "../basicShot.js";
 
 const vulnaraSkills = [
   // ========================
-  // Ataque Básico
+  // Disparo Básico (global)
   // ========================
-  basicAttack,
+  basicShot,
   // ========================
   // Habilidades Especiais
   // ========================

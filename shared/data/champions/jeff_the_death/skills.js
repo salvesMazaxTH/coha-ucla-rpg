@@ -1,13 +1,13 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicAttack from "../basicAttack.js";
+import basicStrike from "../basicStrike.js";
 
 const jeffTheDeathSkills = [
   // =========================
   // Ataque Básico
   // =========================
 
-  basicAttack,
+  basicStrike,
   // =========================
   // Habilidades Especiais
   // =========================

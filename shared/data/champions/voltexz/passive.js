@@ -19,9 +19,6 @@ export default {
   onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
 
-    // Ataque Básico não aplica recuo nem Condutor
-    if (skill.key === "ataque_basico") return;
-
     let log = "";
 
     let recoilDamage = 0;

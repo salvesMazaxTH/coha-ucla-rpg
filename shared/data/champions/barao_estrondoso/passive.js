@@ -83,8 +83,8 @@ export default {
   onAfterDmgDealing({ source, target, owner, damage, context, skill }) {
     if (!skill?.key) return;
 
-    // Ataque básico não causa stun
-    if (skill.key === "basic_attack") return;
+    // Golpe básico não causa stun
+    if (skill.key === "golpe_basico") return;
 
     // Evita loop se alguma skill futura aplicar stun interno
     if (owner.hasStatusEffect?.("atordoado")) return;

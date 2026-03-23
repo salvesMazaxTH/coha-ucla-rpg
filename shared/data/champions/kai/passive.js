@@ -42,7 +42,7 @@ export default {
     console.log(`[${owner.name}] isBrasa: ${isBrasa}, skill: ${skill?.key}`);
 
     // 🔥 GATE PRINCIPAL (o que você pediu)
-    if (!isBrasa && skill?.key !== "ataque_basico") return;
+    if (!isBrasa && skill?.key !== "golpe_basico") return;
 
     const affinities = target.elementalAffinities ?? [];
 
@@ -68,25 +68,5 @@ export default {
         `Não aplicando queimadura em ${target.name} por ataque de ${skill?.key} devido à afinidade elemental. Não tinha brasa viva ativa: ${isBrasa}.`,
       );
     }
-  },
-
-  // APENAS PARA TESTE, NO REAL VAI SER DO JEFF, NÃO DO KAI
-    onAfterDmgTaking({ source, target, owner, damage, context }) {
-    if (target !== owner) return;
-    if (target.HP > 0) return;
-
-    console.log("[Passiva - Jeff] A Morte Não Cessa ativada para", target.id);
-    console.log(
-      `[Passiva - Jeff] Agendando revival para o próximo turno (Turno ${context.currentTurn + 1})`,
-    );
-
-    context.schedule({
-      type: "spawnChampion",
-      turnToHappen: context.currentTurn + 1,
-      payload: {
-        championKey: target.championKey,
-        team: target.team,
-      },
-    });
   },
 };

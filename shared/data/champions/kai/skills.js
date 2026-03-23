@@ -1,9 +1,9 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicAttack from "../basicAttack.js";
+import basicStrike from "../basicStrike.js";
 
 const kaiSkills = [
-  basicAttack,
+  basicStrike,
   {
     key: "gancho_rapido",
     name: "Gancho Rápido",

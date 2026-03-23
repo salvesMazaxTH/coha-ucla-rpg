@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicAttack from "../basicAttack.js";
+import basicBlock from "../basicBlock.js";
 
 const naelthosSkills = [
   // ========================
-  // Ataque Básico
+  // Bloqueio Básico (global)
   // ========================
-  basicAttack,
+  basicBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -124,12 +124,11 @@ const naelthosSkills = [
 
         onDamageIncoming({ target, damage, skill }) {
           if (skill?.element === "lightning") {
-
             target.runtime.hookEffects = target.runtime.hookEffects.filter(
               (e) => e.key !== "forma_aquatica_hook",
             );
 
-            target.runtime.form = null
+            target.runtime.form = null;
 
             return {
               cancel: false,
