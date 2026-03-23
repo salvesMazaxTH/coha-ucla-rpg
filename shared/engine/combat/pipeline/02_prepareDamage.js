@@ -56,8 +56,9 @@ function applyAffinity(event, debugMode) {
     });
   }
 
-  let isWeak = false;
-  let isResist = false;
+  let multiplier = 1;
+  let weakCount = 0;
+  let resistCount = 0;
 
   for (const defEl of defenderElements) {
     const relation = ELEMENTAL_MATRIX[defEl];
@@ -65,38 +66,42 @@ function applyAffinity(event, debugMode) {
     if (!relation) continue;
 
     if (relation.weakTo?.includes(skillElement)) {
-      isWeak = true;
+      multiplier *= 1.675;
+      weakCount++;
     }
 
     if (relation.resists?.includes(skillElement)) {
-      isResist = true;
+      multiplier *= 0.6;
+      resistCount++;
     }
   }
 
-  if (isWeak) {
-    const message = "✨ É SUPER-EFETIVO!";
+  const EPSILON = 0.01;
 
-    event.damage *= 1.675;
+  if (Math.abs(multiplier - 1) < EPSILON) return;
 
+  event.damage *= multiplier;
+  if (multiplier > 1) {
     event.context.registerDialog({
-      message,
+      message: "✨ É SUPER-EFETIVO!",
       blocking: false,
     });
-
-    return;
+  } else if (resistCount < 1) {
+    event.context.registerDialog({
+      message: "🛡️ Não é muito efetivo...",
+      blocking: false,
+    });
   }
 
-  if (isResist) {
-    const message = "🛡️ Não é muito efetivo...";
-
-    event.damage *= 0.6;
-
-    event.context.registerDialog({
-      message,
-      blocking: false,
+  if (debugMode) {
+    console.log("🔥 applyAffinity RESULT:", {
+      skillElement,
+      defender: event.defender.name,
+      multiplier,
+      weakCount,
+      resistCount,
+      finalDamage: event.damage,
     });
-
-    return;
   }
 }
 
