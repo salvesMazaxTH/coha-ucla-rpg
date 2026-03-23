@@ -8,5 +8,5 @@ export default {
 
   Evasion: 5,
 
-  elementalAffinities: ["lightning"],
+  elementalAffinities: ["lightning", "steel"],
 };

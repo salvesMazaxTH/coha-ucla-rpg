@@ -2,13 +2,50 @@
 // AFFINITY SYSTEM
 // ============================================================================
 
-const ELEMENT_CYCLE = ["fire", "ice", "earth", "lightning", "water"];
+const ELEMENTAL_MATRIX = {
+  steel: {
+    weakTo: ["fire"],
+    resists: ["air", "ice"],
+  },
+
+  earth: {
+    weakTo: ["water"],
+    resists: ["lightning", "fire"],
+  },
+
+  fire: {
+    weakTo: ["water", "earth"],
+    resists: ["ice", "air"],
+  },
+
+  water: {
+    weakTo: ["lightning", "ice"],
+    resists: ["fire"],
+  },
+
+  lightning: {
+    weakTo: ["earth"],
+    resists: ["air"],
+  },
+
+  air: {
+    weakTo: ["fire", "ice"],
+    resists: ["earth"],
+  },
+
+  ice: {
+    weakTo: ["fire", "steel"],
+    resists: ["water"],
+  },
+};
 
 function applyAffinity(event, debugMode) {
   const skillElement = event.skill?.element;
 
   if (!skillElement) return;
-  if (!event.defender?.elementalAffinities?.length) return;
+
+  const defenderElements = event.defender?.elementalAffinities || [];
+  if (!defenderElements.length) return;
 
   if (debugMode) {
     console.log("🔥 _applyAffinity chamado:", {
@@ -19,52 +56,48 @@ function applyAffinity(event, debugMode) {
     });
   }
 
-  let strongestRelation = "neutral";
+  let isWeak = false;
+  let isResist = false;
 
-  for (const affinity of event.defender.elementalAffinities) {
-    const relation = _getElementalRelation(skillElement, affinity);
+  for (const defEl of defenderElements) {
+    const relation = ELEMENTAL_MATRIX[defEl];
 
-    if (relation === "weak") {
-      event.damage = event.damage * 1.675 + 5;
-      strongestRelation = "weak";
-      break;
+    if (!relation) continue;
+
+    if (relation.weakTo?.includes(skillElement)) {
+      isWeak = true;
     }
 
-    if (relation === "resist" && strongestRelation !== "weak") {
-      event.damage = event.damage * 0.6;
-      strongestRelation = "resist";
-      break;
+    if (relation.resists?.includes(skillElement)) {
+      isResist = true;
     }
   }
 
-  if (strongestRelation !== "neutral") {
-    const message =
-      strongestRelation === "weak"
-        ? "✨ É SUPER-EFETIVO!"
-        : "🛡️ Não é muito efetivo...";
+  if (isWeak) {
+    const message = "✨ É SUPER-EFETIVO!";
+
+    event.damage *= 1.675;
 
     event.context.registerDialog({
       message,
       blocking: false,
     });
+
+    return;
   }
-}
 
-function _getElementalRelation(attackingElement, defendingElement) {
-  const cycle = ELEMENT_CYCLE;
+  if (isResist) {
+    const message = "🛡️ Não é muito efetivo...";
 
-  const index = cycle.indexOf(attackingElement);
+    event.damage *= 0.6;
 
-  if (index === -1) return "neutral";
+    event.context.registerDialog({
+      message,
+      blocking: false,
+    });
 
-  const strongAgainst = cycle[(index + 1) % cycle.length];
-  const weakAgainst = cycle[(index - 1 + cycle.length) % cycle.length];
-
-  if (defendingElement === strongAgainst) return "weak";
-
-  if (defendingElement === weakAgainst) return "resist";
-
-  return "neutral";
+    return;
+  }
 }
 
 // ============================================================================
