@@ -81,7 +81,7 @@ const naelthosSkills = [
     priority: 2,
     element: "water",
     description() {
-      return `Transforma-se em água pura, ficando inalvejável por ${this.effectDuration} turnos. Pode ser interrompido se executar uma ação.`;
+      return `Transforma-se em água pura, ficando inalvejável por ${this.effectDuration} turnos. Pode ser interrompido se executar uma ação ou se for alvejado por uma habilidade de raio (nesse caso, o dano é reduzido pela metade).`;
     },
     targetSpec: ["self"],
 
@@ -122,7 +122,22 @@ const naelthosSkills = [
           owner.runtime.form = null;
         },
 
-        onDamageIncoming({ target }) {
+        onDamageIncoming({ target, damage, skill }) {
+          if (skill?.element === "lightning") {
+
+            target.runtime.hookEffects = target.runtime.hookEffects.filter(
+              (e) => e.key !== "forma_aquatica_hook",
+            );
+
+            target.runtime.form = null
+
+            return {
+              cancel: false,
+              immune: false,
+              modifiedDamage: damage / 2,
+            };
+          }
+
           return {
             cancel: true,
             immune: true,
@@ -145,7 +160,7 @@ const naelthosSkills = [
       user.runtime.form = "bola_agua"; // Para animação visual
 
       // Apply inerte como status effect (interrompível por ação)
-/*       user.applyStatusEffect("inerte", this.effectDuration, context, {
+      /*       user.applyStatusEffect("inerte", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
  */

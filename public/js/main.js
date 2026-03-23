@@ -579,7 +579,7 @@ const combatAnimations = createCombatAnimationManager({
   },
   updateTurnDisplay,
   applyTurnUpdate,
-  startStatusIndicatorRotation: () => StatusIndicator.startRotationLoop(),
+  syncStatusIndicatorRotation: () => StatusIndicator.syncRotationLoopState(),
   combatDialog,
   combatDialogText,
   editMode,

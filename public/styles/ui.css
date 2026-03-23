@@ -993,40 +993,42 @@
   background: linear-gradient(180deg, #1a1a1a, #0a0a0a);
   border: 2px solid rgba(0, 255, 150, 0.6);
   border-radius: 20px;
-  padding: 30px;
+  padding: 24px 30px;
   width: 90%;
   max-width: 1000px;
-  max-height: 90%;
+  max-height: 95vh;
   box-shadow: 0 0 40px rgba(0, 255, 150, 0.6);
   color: #e6fff2;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
+  overflow-y: auto;
 }
 
 .selection-container h2 {
-  font-size: 2em;
+  font-size: 1.6em;
   color: #00ff99;
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .selection-message {
-  font-size: 1.1em;
+  font-size: 1em;
   color: #caffea;
-  margin-bottom: 15px;
+  margin-bottom: 0;
 }
 
 .available-champions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
-  padding: 15px;
+  flex: 1 1 0;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 12px;
   border: 1px solid rgba(0, 255, 150, 0.3);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.2);
   overflow-y: auto;
-  max-height: 250px;
+  min-height: 180px;
 }
 
 .champion {
@@ -1075,11 +1077,11 @@
 }
 
 .champion-card img {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   object-fit: cover;
   border-radius: 50%;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border: 2px solid #333;
 }
 
@@ -1090,8 +1092,9 @@
 }
 
 .selected-champions-area {
-  margin-top: 10px;
-  padding: 20px;
+  flex-shrink: 1;
+  margin-top: 0;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.3);
@@ -1099,19 +1102,20 @@
 
 .selected-champions-area h3 {
   color: #00ff99;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
+  font-size: 1em;
 }
 
 .selected-champions-slots {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  min-height: 150px;
+  gap: 12px;
+  min-height: 0;
 }
 
 .champion-slot {
-  width: 120px;
-  height: 150px;
+  width: 90px;
+  height: 110px;
   border: 2px dashed rgba(0, 255, 150, 0.5);
   border-radius: 10px;
   display: flex;
@@ -1120,7 +1124,7 @@
   justify-content: center;
   background: rgba(0, 0, 0, 0.4);
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9em;
+  font-size: 0.8em;
   position: relative;
   transition:
     border-color 0.2s,
@@ -1149,9 +1153,9 @@
 }
 
 .champion-slot .champion-card img {
-  width: 90px;
-  height: 90px;
-  margin-bottom: 5px;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 4px;
 }
 
 .champion-slot .champion-card h3 {
@@ -1163,13 +1167,13 @@
   border: none;
   border-radius: 10px;
   color: white;
-  font-size: 1.2em;
+  font-size: 1.1em;
   font-weight: bolder;
-  padding: 15px 35px;
+  padding: 10px 30px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
-  margin-top: 20px;
+  margin-top: 10px;
   cursor: pointer;
   box-shadow: 0 0 15px rgba(0, 255, 150, 0.5);
   transition:

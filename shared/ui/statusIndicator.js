@@ -144,50 +144,52 @@ export const StatusIndicator = {
         portrait.appendChild(indicator);
       }
     }
+
+    // When multiple indicators exist, show only the current rotation index
+    const allIndicators = portrait.querySelectorAll(".status-indicator");
+    if (allIndicators.length > 1) {
+      allIndicators.forEach((el, i) => {
+        el.style.opacity =
+          i === this._rotationIndex % allIndicators.length ? "1" : "0";
+      });
+    } else if (allIndicators.length === 1) {
+      allIndicators[0].style.opacity = "1";
+    }
+
+    this.syncRotationLoopState();
+  },
+
+  hasAnyActiveIndicators() {
+    const portraits = document.querySelectorAll(".champion .portrait");
+    for (const portrait of portraits) {
+      if (portrait.querySelectorAll(".status-indicator").length > 1) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+
+  syncRotationLoopState() {
+    if (this.hasAnyActiveIndicators()) {
+      this.startRotationLoop();
+      return;
+    }
+
+    this.stopRotationLoop();
   },
 
   startRotationLoop() {
-    console.log("[StatusIndicator] Starting rotation loop");
-    /*     if (this._rotationTimer !== null) {
-      console.log("[RotationLoop] already running");
-      return;
-    }
-    console.log("[RotationLoop] started");
-
-    if (this._rotationTimer) return;
+    if (this._rotationTimer !== null) return;
 
     this._rotationTimer = setInterval(() => {
-      console.log(
-        "[RotationLoop] tick antes do incremento",
-        this._rotationIndex,
-      );
-
       this._rotationIndex++;
 
-      console.log(
-        "[RotationLoop] tick depois do incremento",
-        this._rotationIndex,
-      );
-
-      const champions = document.querySelectorAll(".champion");
-
-      console.log("[RotationLoop] champions count:", champions.length);
-
-      champions.forEach((champion) => {
-        const portrait = champion
-          ?.querySelector(".portrait-wrapper")
-          ?.querySelector(".portrait");
+      document.querySelectorAll(".champion").forEach((championEl) => {
+        const portrait = championEl.querySelector(".portrait");
         if (!portrait) return;
 
         const indicators = portrait.querySelectorAll(".status-indicator");
-
-        console.log(
-          "[RotationLoop]",
-          champion.name,
-          "indicators:",
-          indicators.length,
-        );
-
         if (indicators.length <= 1) return;
 
         indicators.forEach((el, i) => {
@@ -195,6 +197,14 @@ export const StatusIndicator = {
             i === this._rotationIndex % indicators.length ? "1" : "0";
         });
       });
-    }, this.ROTATION_INTERVAL); */
+    }, this.ROTATION_INTERVAL);
+  },
+
+  stopRotationLoop() {
+    if (this._rotationTimer !== null) {
+      clearInterval(this._rotationTimer);
+      this._rotationTimer = null;
+      this._rotationIndex = 0;
+    }
   },
 };

@@ -29,8 +29,8 @@ import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js"
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
+  enabled: true,
+  autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,

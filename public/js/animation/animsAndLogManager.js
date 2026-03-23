@@ -108,7 +108,7 @@ function scrollIfNeeded(
  * @param {Function} deps.setCurrentTurn
  * @param {Function} deps.updateTurnDisplay
  * @param {Function} deps.applyTurnUpdate
- * @param {Function} deps.startStatusIndicatorRotation
+ * @param {Function} deps.syncStatusIndicatorRotation
  * @param {Element}  deps.combatDialog
  * @param {Element}  deps.combatDialogText
  */
@@ -1175,8 +1175,8 @@ export function createCombatAnimationManager(deps) {
       syncChampionVFX(champion);
     }
 
-    // Refresh status indicators for all champions
-    deps.startStatusIndicatorRotation([...deps.activeChampions.values()]);
+    // Keep status indicator loop on only when needed
+    deps.syncStatusIndicatorRotation();
 
     deps.onGameStateProcessed?.();
   }

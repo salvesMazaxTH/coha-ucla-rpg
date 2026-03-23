@@ -25,6 +25,7 @@ export function preChecks(event) {
       source: event.attacker,
       target: event.defender,
       damage: event.damage,
+      skill: event.skill,
       context: event.context,
     },
     event.allChampions,
@@ -40,6 +41,14 @@ export function preChecks(event) {
         `[DAMAGE CANCEL] ${event.defender.name} teve o dano cancelado por status-effect`,
       );
       return _buildImmuneResult(event, r.message ?? null);
+    }
+
+    if (r?.modifiedDamage !== undefined) {
+      console.log(
+        `[DAMAGE MODIFIED] ${event.defender.name} teve o dano modificado de ${event.damage} para ${r.modifiedDamage} por status-effect/hook externo. Detalhes:`,
+        r,
+      );
+      event.damage = r.modifiedDamage;
     }
   }
 
