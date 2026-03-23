@@ -69,6 +69,7 @@ export class DamageEvent {
 
     this.preMitigatedDamage = 0;
     this.finalDamage = 0;
+    this.evasionAttempted = false;
 
     this.beforeLogs = [];
     this.afterLogs = [];

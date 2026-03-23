@@ -1940,6 +1940,8 @@ function advanceActionBarSlot(champId) {
 }
 
 function removeActionBar() {
+  removeSkillOverlay();
+
   if (actionBarEl) {
     actionBarEl.remove();
     actionBarEl = null;

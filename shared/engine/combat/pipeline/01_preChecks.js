@@ -64,6 +64,8 @@ export function preChecks(event) {
       debugMode: event.constructor.debugMode,
     });
 
+    event.evasionAttempted = !!evasion?.attempted;
+
     if (evasion?.evaded) {
       event.context.registerDamage({
         target: event.defender,

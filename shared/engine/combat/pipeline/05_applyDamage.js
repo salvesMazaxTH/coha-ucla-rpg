@@ -29,7 +29,7 @@ export function applyDamage(event) {
     isCritical: event.crit?.didCrit,
     isDot: !!event.context.isDot,
     flags: {
-      evaded: event.context.evasionAttempt ? false : undefined,
+      evaded: event.evasionAttempted ? false : undefined,
     },
   });
 
