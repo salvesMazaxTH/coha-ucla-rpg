@@ -13,7 +13,7 @@ const eliasCrossSkills = [
   {
     key: "impacto_relampago",
     name: "Impacto Relâmpago",
-    bf: 80,
+    bf: 70,
     contact: false,
     damageMode: "standard",
     damageBonus: 15,
@@ -67,30 +67,30 @@ const eliasCrossSkills = [
     priority: 0,
     element: "lightning",
     description() {
-      return `Elias Cross ganha +35% de chance na passiva no próximo turno apenas. Se o alvo tiver "Condutor", causa ${this.damageBonus} de dano absoluto a mais.`;
+      return `Elias Cross ganha +35% de chance na passiva neste turno e no próximo (expira em currentTurn + 2). Se o alvo tiver "Condutor", causa ${this.damageBonus} de dano absoluto a mais.`;
     },
     targetSpec: ["enemy", "self"],
     resolve({ user, targets, context }) {
       const [enemy] = targets;
 
-      // Aplica bônus temporário direto em passiveChance (centralizado)
-      // passiveBonusNextTurn guarda o valor para ser descontado no onTurnStart
+      // Aplica o bônus temporário e guarda o valor REAL aplicado para expirar corretamente.
       const initialChance = user.passive?.initialChance ?? 1;
-      user.runtime.passiveChance = Math.min(
-        100,
-        (user.runtime.passiveChance ?? initialChance) + 35,
-      );
-      user.runtime.passiveBonusNextTurn = 35;
+      const currentChance = user.runtime.passiveChance ?? initialChance;
+      const nextChance = Math.min(100, currentChance + 35);
+      const appliedBonus = Math.max(0, nextChance - currentChance);
+
+      user.runtime.passiveChance = nextChance;
+
+      if (appliedBonus > 0) {
+        user.runtime.passiveTempBuffs ??= [];
+        user.runtime.passiveTempBuffs.push({
+          amount: appliedBonus,
+          expiresAtTurn: (context?.currentTurn ?? 0) + 2,
+        });
+      }
 
       const baseDamage = (user.Attack * this.bf) / 100;
       const isOverloaded = enemy.hasStatusEffect("condutor");
-
-      const results = [];
-
-      const pushResult = (r) => {
-        if (Array.isArray(r)) results.push(...r);
-        else if (r) results.push(r);
-      };
 
       const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
@@ -101,16 +101,14 @@ const eliasCrossSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      pushResult(result);
-
-      return results;
+      return Array.isArray(result) ? result : [result];
     },
   },
 
   {
     key: "tempestade_de_raios",
     name: "Tempestade de Raios",
-    bf: 135,
+    bf: 120,
     damageMode: "standard",
     isUltimate: true,
     ultCost: 3,

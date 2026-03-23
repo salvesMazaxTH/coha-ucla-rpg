@@ -4,7 +4,7 @@ import { formatChampionName } from "../../ui/formatters.js";
 const basicBlock = {
   key: "bloqueio_basico",
   name: "Bloqueio Básico",
-  priority: 0,
+  priority: 5,
   effectDuration: 1,
   description() {
     return `\n Bloqueio básico genérico, físico e à distância. Anula totalmente o próximo dano recebido e todos os efeitos de status neste turno.`;

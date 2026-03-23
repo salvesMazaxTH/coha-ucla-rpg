@@ -74,6 +74,44 @@ export class TurnResolver {
 
       const result = this.executeSkillAction(action, turnExecutionMap, context);
       actionResults.push(result);
+
+      const repeat = result?.repeatActionRequest;
+
+      if (repeat?.userId && repeat?.skillKey) {
+        const repeatAction = {
+          userId: repeat.userId,
+          skillKey: repeat.skillKey,
+          targetIds: repeat.targetIds ?? {},
+          priority: Number.isFinite(repeat.priority)
+            ? repeat.priority
+            : (action.priority ?? 0),
+          speed: Number.isFinite(repeat.speed)
+            ? repeat.speed
+            : (action.speed ?? 0),
+          turn: action.turn,
+          ultCost: 0,
+          type: "followUp",
+        };
+
+        repeatAction.executionIndex = actionOrder++;
+
+        const repeatContext = this.createBaseContext({
+          sourceId: repeat.userId,
+        });
+
+        repeatContext.executionIndex = repeatAction.executionIndex;
+        repeatContext.turnExecutionMap = turnExecutionMap;
+        repeatContext.switchedOutChampionIds = switchedOutChampionIds;
+        repeatContext.isPassiveRepeat = true;
+
+        const repeatResult = this.executeSkillAction(
+          repeatAction,
+          turnExecutionMap,
+          repeatContext,
+        );
+
+        actionResults.push(repeatResult);
+      }
     }
 
     const deathContext = this.createBaseContext({ sourceId: null });
@@ -199,6 +237,7 @@ export class TurnResolver {
       skill,
       targetsArray,
       context,
+      action,
     );
 
     // Captura snapshot intermediário AGORA, antes da próxima ação mutar os champions
@@ -214,6 +253,7 @@ export class TurnResolver {
       context,
       action,
       results: skillResults,
+      repeatActionRequest: context.repeatActionRequest || null,
     };
   }
 
@@ -279,7 +319,7 @@ export class TurnResolver {
   //  EXECUÇÃO DE HABILIDADE
   // ============================================================
 
-  performSkillExecution(user, skill, targets, context) {
+  performSkillExecution(user, skill, targets, context, action = null) {
     context.currentSkill = skill;
     // Verificar executionIndex:
     console.log(
@@ -335,6 +375,7 @@ export class TurnResolver {
         source: user,
         targets,
         skill,
+        action,
         context,
       },
       this.combat.activeChampions,
@@ -601,6 +642,8 @@ export class TurnResolver {
         dialogEvents: [],
         redirectionEvents: [],
       },
+
+      repeatActionRequest: null,
 
       healSourceId: sourceId,
       buffSourceId: sourceId,

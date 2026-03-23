@@ -12,50 +12,67 @@ export default {
     onActionResolved: "source",
   },
 
-  onActionResolved({ source, targets, owner, skill, context }) {
-    console.log(
-      `[PASSIVA - Elias Cross] chance atual de ativação é ${owner.runtime.passiveChance ?? this.initialChance}%`,
+  onActionResolved({ owner, skill, action, context }) {
+    if (context?.isPassiveRepeat) return;
+
+    const events = context?.visual?.damageEvents ?? [];
+
+    const didDealMainDamage = events.some(
+      (e) =>
+        (e.damageDepth ?? 0) === 0 && e.sourceId === owner.id && e.amount > 0,
     );
-    if (context.damageDepth > 0) return;
+
+    if (!didDealMainDamage) return;
 
     owner.runtime.passiveChance ??= this.initialChance;
 
-    // passiveChance já inclui qualquer bônus temporário aplicado pela skill
     const chance = owner.runtime.passiveChance / 100;
-
     const roll = Math.random();
-    console.log(
-      `[PASSIVA - Elias Cross] Rolagem: ${roll}, Chance de ativação: ${chance}`,
-    );
 
-    if (roll < chance) {
-      console.log(`[PASSIVA - Elias Cross] Passiva ativada!`);
+    console.log(`[PASSIVA - Elias] roll=${roll} | chance=${chance}`);
 
-      context.registerDialog({
-        message: `<b>[Passiva – "${this.name}"]</b>`,
-        sourceId: owner.id,
-        blocking: true,
-      });
+    if (roll >= chance) return;
 
-      context.damageDepth = 1;
+    context.registerDialog({
+      message: `<b>[Passiva – "${this.name}"]</b>`,
+      sourceId: owner.id,
+      blocking: true,
+    });
 
-      skill.resolve({
-        user: owner,
-        targets,
-        context,
-      });
-    }
+    context.repeatActionRequest = {
+      userId: owner.id,
+      skillKey: skill?.key,
+      targetIds: action?.targetIds ?? {},
+      priority: skill?.priority ?? 0,
+      speed: owner.Speed ?? 0,
+    };
   },
 
-  onTurnStart({ owner }) {
-    // Desconta o bônus temporário da carga_latente (se houve) antes de somar o ganho do turno
-    const tempBonus = owner.runtime.passiveBonusNextTurn ?? 0;
-    owner.runtime.passiveChance = Math.min(
-      100,
-      (owner.runtime.passiveChance || this.initialChance) -
-        tempBonus +
-        this.chanceIncreasePerTurn,
-    );
-    owner.runtime.passiveBonusNextTurn = 0;
+  onTurnStart({ owner, context }) {
+    owner.runtime.passiveChance ??= this.initialChance;
+
+    const turn = context?.currentTurn ?? 0;
+    const buffs = owner.runtime.passiveTempBuffs ?? [];
+
+    let expired = 0;
+
+    const activeBuffs = buffs.filter((b) => {
+      const amount = b?.amount ?? 0;
+      const expires = b?.expiresAtTurn;
+
+      if (Number.isFinite(expires) && expires <= turn) {
+        expired += amount;
+        return false;
+      }
+
+      return true;
+    });
+
+    owner.runtime.passiveTempBuffs = activeBuffs;
+
+    const next =
+      owner.runtime.passiveChance - expired + this.chanceIncreasePerTurn;
+
+    owner.runtime.passiveChance = Math.max(0, Math.min(100, next));
   },
 };
