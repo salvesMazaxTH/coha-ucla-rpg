@@ -9,7 +9,7 @@ const blyskartriSkills = [
     name: "Fluxo Amplificador",
     speedBuff: 5,
     evasionBuff: 10,
-    buffsDuration: 2,
+    buffsDuration: 3,
 
     contact: false,
     priority: 3,
@@ -49,7 +49,7 @@ const blyskartriSkills = [
       });
       */
 
-      if ((ally.runtime.speedBuffStacks || 0) > 0) {
+      if (ally.Speed > ally.baseSpeed) {
         /* console.log(
           "[BLYSKARTRI][fluxo_restaurador] speed already buffed â†’ granting ult",
         );
@@ -84,8 +84,7 @@ const blyskartriSkills = [
 
     description() {
       return `Concede ${this.speedBuff} Velocidade e triplica a Esquiva por ${this.buffsDuration} turnos.
-      Durante este turno, sempre que o alvo Esquivar, causa ${this.piercingDamageBonus} de dano perfurante no agressor.
-      Também causa dano ao inimigo com maior Ataque.`;
+      Enquanto tiver este efeito, sempre que o alvo Esquivar, causa ${this.piercingDamageBonus} de dano perfurante no agressor.`;
     },
 
     targetSpec: ["select:ally"],
@@ -140,98 +139,54 @@ const blyskartriSkills = [
 
         onEvade({ source, target, owner, damage, context }) {
           // owner = aliado buffado
-          /* console.log("[BLYSKARTRI][condutancia_vital] hook triggered", {
+          console.log("[BLYSKARTRI][condutancia_vital] hook triggered", {
             owner: owner?.name,
             damage,
           });
-          */
-
-          const damageEvent = context.visual.damageEvents
-            ?.filter((e) => e.targetId === owner.id)
-            .at(-1);
 
           /* console.log(
             "[BLYSKARTRI][condutancia_vital] last damage event",
             damageEvent,
-          );
-          */
-          if (!damageEvent?.evaded) {
-            /* console.log(
-              "[BLYSKARTRI][condutancia_vital] no evade â†’ no counter",
-            );
-            */
-            return;
-          }
+          ); */
 
-          /* console.log(
+          /*   console.log(
             "[BLYSKARTRI][condutancia_vital] source resolved",
             source?.name,
-          );
-          */
+          ); */
+
           if (!source || !source.alive) return;
 
           const counterDamage = 60;
-          /* console.log("[BLYSKARTRI][condutancia_vital] counter triggered", {
+          /*    console.log("[BLYSKARTRI][condutancia_vital] counter triggered", {
             attacker: source.name,
             damage: counterDamage,
-          });
-          */
+          }); */
 
-          context.extraDamageQueue ??= [];
-
-          context.extraDamageQueue.push({
-            mode: "hybrid",
+          new DamageEvent({
             baseDamage: counterDamage,
+            mode: "hybrid",
             piercingPortion: counterDamage,
-            attacker: user, // Blyskartri Ã© quem causa o dano
+            attacker: user,
             defender: source,
             skill: {
               key: "condutancia_vital_counter",
             },
-          });
+            context,
+            allChampions: context?.allChampions,
+          }).execute();
 
           context.registerDialog({
             message: `${formatChampionName(user)} Blyskartri revidou o ataque de ${formatChampionName(source)} em seu aliado!`,
             sourceId: owner.id,
             targetId: source.id,
-            blocking: false,
+            blocking: true,
           });
         },
       });
 
-      const enemies = Array.from(context.allChampions.values()).filter(
-        (c) => c.team !== user.team && c.HP > 0,
-      );
-
-      /* console.log(
-        "[BLYSKARTRI][condutancia_vital] resolving damage to highest ATK enemy",
-        {
-          enemies: enemies.map((e) => ({
-            name: e.name,
-            Attack: e.Attack,
-          })),
-        },
-      );
-      */
-      const highestAtk = enemies.reduce((a, b) =>
-        a.Attack > b.Attack ? a : b,
-      );
-      /* console.log("[BLYSKARTRI][condutancia_vital] highest ATK enemy", {
-        name: highestAtk.name,
-        Attack: highestAtk.Attack,
-      });
-      */
-
-      const baseDamage = (user.Attack * this.bf) / 100;
-
-      return new DamageEvent({
-        baseDamage,
-        attacker: user,
-        defender: highestAtk,
-        skill: this,
-        context,
-        allChampions: context?.allChampions,
-      }).execute();
+      return {
+        log: `${formatChampionName(user)} fortaleceu ${formatChampionName(ally)}.`,
+      };
     },
   },
 

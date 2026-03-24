@@ -9,15 +9,16 @@ export default {
 
   stackCap: 10,
 
-  description() {
+  description(champion) {
     return `No início de cada turno, Blyskartri ganha +${this.speedPerTurn} Velocidade (máx. +${this.speedCap} acumulado).
     Sempre que Blyskartri ou um aliado ganhar Velocidade ou ativar Esquiva, Blyskartri ganha 1 Acúmulo (máx. ${this.stackCap}).
+    <b>Acúmulos atuais: ${champion.runtime?.impulsoStacks ?? 0}.</b>
     Ao atingir ${this.stackCap}, consome todos os acúmulos e concede +1 barra de Ultômetro ao aliado com menor HP atual (máx. 1 vez por turno).`;
   },
 
   hookScope: {
-    onStatGain: "ally",
-    onEvade: "ally",
+    onStatGain: undefined,
+    onEvade: undefined,
   },
 
   onTurnStart({ owner, context }) {
@@ -49,22 +50,20 @@ export default {
   },
 
   onStatGain({ owner, statName, source, context }) {
+    if (!source || source.team !== owner.team) return;
+
     if (statName !== "Speed") return;
 
-    this._addStack(owner, context, "speed_gain");
+    this._addStack({owner: target, context, reason: "speed_gain"});
   },
 
-  onEvade({ owner, context }) {
-    const damageEvent = context.visual?.damageEvents
-      ?.filter((e) => e.targetId === owner.id)
-      .at(-1);
+  onEvade({ owner, target, context }) {
+    if (!target || target.team !== owner.team) return;
 
-    if (!damageEvent?.evaded) return;
-
-    this._addStack(owner, context, "evade");
+    this._addStack({owner: target, context, reason: "evade"});
   },
 
-  _addStack(owner, context, reason) {
+  _addStack({ owner, context, reason }) {
     owner.runtime ??= {};
     owner.runtime.impulsoStacks ??= 0;
 
@@ -96,7 +95,7 @@ export default {
     });
 
     lowest.addUlt({
-      amount: 1,
+      amount: 4, // 4 unidades internas = 1 barra de ult cheia
       context,
     });
 
