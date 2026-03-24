@@ -177,6 +177,8 @@ export function applyStatModifier(
     context,
     isPermanent = false,
     ignoreMinimum = false,
+    effectSource,
+    statModifierSrc = undefined,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -216,12 +218,21 @@ export function applyStatModifier(
     });
   }
 
-  if (appliedAmount > 0 && context?.registerBuff) {
+  if (appliedAmount !== 0 && context?.registerBuff) {
+    // fallback: se não passar statModifierSrc, assume o próprio champion
+    const src = statModifierSrc !== undefined ? statModifierSrc : champion;
+    const resolvedSourceId = _resolveStatModifierSrcId({
+      champion,
+      context,
+      statModifierSrc: src,
+      appliedAmount,
+    });
+
     context.registerBuff({
       target: champion,
       amount: appliedAmount,
       statName,
-      sourceId: context.buffSourceId,
+      sourceId: resolvedSourceId,
     });
   }
 
@@ -255,6 +266,7 @@ export function buffStat(
     isPermanent = false,
     isPercent = false,
     ignoreMinimum = false,
+    statModifierSrc = undefined,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -286,6 +298,7 @@ export function buffStat(
     context,
     isPermanent,
     ignoreMinimum,
+    statModifierSrc,
   });
 }
 
@@ -305,6 +318,7 @@ export function debuffStat(
     isPermanent = false,
     isPercent = false,
     ignoreMinimum = false,
+    effectSource,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -334,6 +348,7 @@ export function debuffStat(
     context,
     isPermanent,
     ignoreMinimum,
+    effectSource,
   });
 }
 
@@ -353,6 +368,7 @@ export function modifyStat(
     isPermanent = false,
     isPercent = false,
     ignoreMinimum = false,
+    effectSource,
   } = {},
 ) {
   if (amount === 0) {
@@ -368,7 +384,14 @@ export function modifyStat(
       isPermanent,
       isPercent,
       ignoreMinimum,
+      effectSource,
     });
+  }
+
+  if (!effectSource && !context?.effectSourceId) {
+    throw new Error(
+      `[modifyStat] Debuff em ${champion?.name ?? "unknown"} requer effectSource explícito ou context.effectSourceId`,
+    );
   }
 
   return debuffStat(champion, {
@@ -379,7 +402,38 @@ export function modifyStat(
     isPermanent,
     isPercent,
     ignoreMinimum,
+    effectSource,
   });
+}
+
+function _resolveStatModifierSrcId({
+  champion,
+  context,
+  statModifierSrc,
+  appliedAmount,
+}) {
+  if (statModifierSrc && typeof statModifierSrc === "object") {
+    return statModifierSrc.id;
+  }
+
+  if (
+    typeof statModifierSrc === "string" ||
+    typeof statModifierSrc === "number"
+  ) {
+    return statModifierSrc;
+  }
+
+  if (appliedAmount > 0) {
+    return context?.statModifierSrcId || champion?.id;
+  }
+
+  if (context?.statModifierSrcId) {
+    return context.statModifierSrcId;
+  }
+
+  throw new Error(
+    `[modifyStat] Debuff em ${champion?.name ?? "unknown"} requer statModifierSrc explícito ou context.statModifierSrcId`,
+  );
 }
 
 /**

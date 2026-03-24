@@ -7,10 +7,10 @@ export default {
   },
 
   hookScope: {
-    onBeforeDmgTaking: "target",
+    onBeforeDmgTaking: "defender",
   },
 
-  onBeforeDmgTaking({ source, target, owner, crit, context, damage }) {
+  onBeforeDmgTaking({ attacker, defender, owner, crit, context, damage }) {
     if (!crit.didCrit) return;
 
     return {

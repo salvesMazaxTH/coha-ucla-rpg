@@ -9,14 +9,14 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "target",
+    onAfterDmgTaking: "defender",
   },
 
-  onAfterDmgTaking({ source, target, owner, damage, context }) {
+  onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
     // não aplica em si mesmo
-    if (target.id === owner?.id) return;
+    if (defender.id === owner?.id) return;
 
-    source.applyStatusEffect("queimando", this.burnDuration, context);
+    attacker.applyStatusEffect("queimando", this.burnDuration, context);
   },
 };

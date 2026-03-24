@@ -30,12 +30,13 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "target",
-    onAfterDmgDealing: "source",
+    onBeforeDmgTaking: "defender",
+    onAfterDmgTaking: "defender",
+    onAfterDmgDealing: "attacker",
   },
 
   // 🔴 Recebe 10% de dano adicional (mínimo +10)
-  onBeforeDmgTaking({ source, target, owner, damage, context }) {
+  onBeforeDmgTaking({ attacker, defender, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     const bonus = Math.max(
@@ -50,7 +51,7 @@ export default {
   },
 
   // 🔴 Armazena dano recebido (30% ou 40% se blindado)
-  onAfterDmgTaking({ source, target, owner, damage, context }) {
+  onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     /* console.log(
@@ -80,7 +81,7 @@ export default {
   },
 
   // 🔴 Após usar qualquer habilidade (exceto ataque básico), fica Atordoado
-  onAfterDmgDealing({ source, target, owner, damage, context, skill }) {
+  onAfterDmgDealing({ attacker, defender, owner, damage, context, skill }) {
     if (!skill?.key) return;
 
     // Golpe básico não causa stun

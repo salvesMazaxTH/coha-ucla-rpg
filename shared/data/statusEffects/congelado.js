@@ -30,23 +30,23 @@ const congelado = {
   },
 
   hookScope: {
-    onValidateAction: "source",
-    onAfterDmgTaking: "target",
+    onValidateAction: "actionSource",
+    onAfterDmgTaking: "defender",
   },
 
-  onValidateAction({ source }) {
+  onValidateAction({ actionSource }) {
     return {
       deny: true,
-      message: `${formatChampionName(source)} está Congelado e não pode agir!`,
+      message: `${formatChampionName(actionSource)} está Congelado e não pode agir!`,
     };
   },
 
-  onAfterDmgTaking({ source, target, owner, damage, context }) {
+  onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
-    owner.removeStatusEffect("congelado");
+    defender.removeStatusEffect("congelado");
 
     return {
-      log: `${formatChampionName(owner)} foi descongelado após receber dano!`,
+      log: `${formatChampionName(defender)} foi descongelado após receber dano!`,
     };
   },
 };

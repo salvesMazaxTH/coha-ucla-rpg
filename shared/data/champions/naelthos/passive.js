@@ -13,10 +13,10 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "target",
+    onAfterDmgTaking: "defender",
   },
 
-  onAfterDmgTaking({ source, target, owner, damage, context }) {
+  onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
 
     /* console.log(
@@ -24,7 +24,7 @@ export default {
       "owner:",
       owner?.name,
       "receiver:",
-      target?.name,
+      defender?.name,
     );
     */
     let heal = Math.floor(damage / this.hpPerStack) * this.healPerStack;

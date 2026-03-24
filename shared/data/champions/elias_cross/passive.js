@@ -9,7 +9,7 @@ export default {
   },
 
   hookScope: {
-    onActionResolved: "source",
+    onActionResolved: "actionSource",
   },
 
   onActionResolved({ owner, skill, action, context }) {

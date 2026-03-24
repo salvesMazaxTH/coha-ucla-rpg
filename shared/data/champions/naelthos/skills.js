@@ -98,9 +98,9 @@ const naelthosSkills = [
         expiresAtTurn: currentTurn + this.effectDuration,
 
         hookScope: {
-          onDamageIncoming: "target",
+          onDamageIncoming: "defender",
           onStatusEffectIncoming: "target",
-          onActionResolved: "source",
+          onActionResolved: "actionSource",
         },
 
         onTurnStart({ owner, context }) {
@@ -112,8 +112,8 @@ const naelthosSkills = [
           owner.runtime.form = null;
         },
 
-        onActionResolved({ source, owner, skill }) {
-          if (source !== owner) return;
+        onActionResolved({ actionSource, owner, skill }) {
+          if (actionSource !== owner) return;
           if (skill?.key === "forma_aquatica") return;
 
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
@@ -122,13 +122,13 @@ const naelthosSkills = [
           owner.runtime.form = null;
         },
 
-        onDamageIncoming({ target, damage, skill }) {
+        onDamageIncoming({ defender, damage, skill }) {
           if (skill?.element === "lightning") {
-            target.runtime.hookEffects = target.runtime.hookEffects.filter(
+            defender.runtime.hookEffects = defender.runtime.hookEffects.filter(
               (e) => e.key !== "forma_aquatica_hook",
             );
 
-            target.runtime.form = null;
+            defender.runtime.form = null;
 
             return {
               cancel: false,
@@ -140,7 +140,7 @@ const naelthosSkills = [
           return {
             cancel: true,
             immune: true,
-            message: `${formatChampionName(target)} está em Forma Aquática! É inalvejável e imune a dano!`,
+            message: `${formatChampionName(defender)} está em Forma Aquática! É inalvejável e imune a dano!`,
           };
         },
 

@@ -55,7 +55,7 @@ function _buildLog(user, target, skill, dmg, crit, hpAfter) {
   let log = `${userName} usou <b>${skillName}</b> e causou ${dmg} de dano a ${targetName}`;
 
   if (crit.didCrit)
-    log += ` (CRÍTICO ${(1 + crit.critBonusFactor).toFixed(2)}x)`;
+    log += ` (CRÍTICO)`;
 
   log += `\nHP final de ${targetName}: ${hpAfter}/${target.maxHP}`;
 

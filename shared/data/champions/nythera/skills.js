@@ -78,11 +78,11 @@ const nytheraSkills = [
         expiresAt: context?.currentTurn + this.effectDuration,
 
         hookScope: {
-          onAfterDmgTaking: "target",
+          onAfterDmgTaking: "defender",
         },
 
-        onAfterDmgTaking({ source, target, damage, context }) {
-          source.applyStatusEffect("congelado", this.freezeDuration, context);
+        onAfterDmgTaking({ attacker, defender, damage, context }) {
+          attacker.applyStatusEffect("congelado", this.freezeDuration, context);
         },
       };
 

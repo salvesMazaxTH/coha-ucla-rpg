@@ -14,8 +14,8 @@ export function runBeforeHooks(event) {
     emitCombatEvent(
       "onCriticalHit",
       {
-        source: event.attacker,
-        target: event.defender,
+        attacker: event.attacker,
+        defender: event.defender,
         context: event.context,
         forced: event.crit?.forced,
       },
@@ -30,8 +30,8 @@ function _applyBeforeDealingPassive(event) {
     damage: event.damage,
     crit: event.crit,
     skill: event.skill,
-    source: event.attacker,
-    target: event.defender,
+    attacker: event.attacker,
+    defender: event.defender,
     context: event.context,
   });
 }
@@ -42,8 +42,8 @@ function _applyBeforeTakingPassive(event) {
     damage: event.damage,
     crit: event.crit,
     skill: event.skill,
-    source: event.attacker,
-    target: event.defender,
+    attacker: event.attacker,
+    defender: event.defender,
     context: event.context,
   });
 }

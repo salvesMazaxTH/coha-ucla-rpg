@@ -10,7 +10,7 @@ export default {
   },
 
   hookScope: {
-    onAfterHealing: "source",
+    onAfterHealing: "healSrc",
   },
 
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {

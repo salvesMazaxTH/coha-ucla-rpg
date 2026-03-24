@@ -21,11 +21,11 @@ const basicBlock = {
       expiresAtTurn: context?.currentTurn + this.effectDuration,
 
       hookScope: {
-        onDamageIncoming: "target",
+        onDamageIncoming: "defender",
         onStatusEffectIncoming: "target",
       },
 
-      onDamageIncoming({ target }) {
+      onDamageIncoming({ defender }) {
         // remover depois de anular o primeiro dano
         user.runtime.hookEffects = user.runtime.hookEffects.filter(
           (e) => e.key !== "bloqueio_basico_effect",
@@ -34,7 +34,7 @@ const basicBlock = {
         return {
           cancel: true,
           immune: true,
-          message: `${formatChampionName(target)} bloqueou o ataque com Bloqueio Básico!`,
+          message: `${formatChampionName(defender)} bloqueou o ataque com Bloqueio Básico!`,
         };
       },
 

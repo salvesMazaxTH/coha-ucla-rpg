@@ -134,10 +134,10 @@ const blyskartriSkills = [
         expiresAtTurn: context.currentTurn + this.buffsDuration,
 
         hookScope: {
-          onEvade: "target",
+          onEvade: "defender",
         },
 
-        onEvade({ source, target, owner, damage, context }) {
+        onEvade({ attacker, defender, owner, damage, context }) {
           // owner = aliado buffado
           console.log("[BLYSKARTRI][condutancia_vital] hook triggered", {
             owner: owner?.name,
@@ -151,14 +151,14 @@ const blyskartriSkills = [
 
           /*   console.log(
             "[BLYSKARTRI][condutancia_vital] source resolved",
-            source?.name,
+            attacker?.name,
           ); */
 
-          if (!source || !source.alive) return;
+          if (!attacker || !attacker.alive) return;
 
           const counterDamage = 60;
           /*    console.log("[BLYSKARTRI][condutancia_vital] counter triggered", {
-            attacker: source.name,
+            attacker: attacker.name,
             damage: counterDamage,
           }); */
 
@@ -167,7 +167,7 @@ const blyskartriSkills = [
             mode: "hybrid",
             piercingPortion: counterDamage,
             attacker: user,
-            defender: source,
+            defender: attacker,
             skill: {
               key: "condutancia_vital_counter",
             },
@@ -176,9 +176,9 @@ const blyskartriSkills = [
           }).execute();
 
           context.registerDialog({
-            message: `${formatChampionName(user)} Blyskartri revidou o ataque de ${formatChampionName(source)} em seu aliado!`,
+            message: `${formatChampionName(user)} Blyskartri revidou o ataque de ${formatChampionName(attacker)} em seu aliado!`,
             sourceId: owner.id,
-            targetId: source.id,
+            targetId: attacker.id,
             blocking: true,
           });
         },
@@ -217,42 +217,42 @@ const blyskartriSkills = [
 
     resolve({ user, targets, context = {} }) {
       const [ally] = targets;
-      /* console.log("[BLYSKARTRI][horizonte_infinito] resolve", {
-        caster: user?.name,
-        ally: ally?.name,
-        turn: context.currentTurn,
-      });
-      */
 
       ally.addDamageModifier({
         id: "horizonte_infinito",
-
         expiresAtTurn: context.currentTurn + this.effectDuration,
-
-        apply: ({ baseDamage, source }) => {
-          const bonusSpeed = Math.max(0, source.Speed - source.baseSpeed);
-
+        apply: ({ baseDamage, attacker, defender }, eventContext = {}) => {
+          // Bônus por velocidade
+          const bonusSpeed = Math.max(0, attacker.Speed - attacker.baseSpeed);
           const stacks = Math.floor(bonusSpeed / 5);
-          /* console.log("[BLYSKARTRI][horizonte_infinito] damage modifier", {
-            user: source.name,
-            baseDamage,
-            bonusSpeed,
-            stacks,
-          });
-          */
+          let resultDamage = baseDamage;
+          if (stacks > 0) {
+            const bonusPercent = stacks * 3;
+            const bonusDamage = baseDamage * (bonusPercent / 100);
+            resultDamage += bonusDamage;
+          }
 
-          if (stacks <= 0) return baseDamage;
-
-          const bonusPercent = stacks * 3;
-
-          const bonusDamage = baseDamage * (bonusPercent / 100);
-          /* console.log("[BLYSKARTRI][horizonte_infinito] bonus applied", {
-            bonusPercent,
-            bonusDamage,
-          });
-          */
-
-          return baseDamage + bonusDamage;
+          // Bônus perfurante se agir antes do alvo direto
+          // Busca o alvo direto (defender)
+          // Busca context.executionIndex e context.turnExecutionMap
+          const execIdx = eventContext.executionIndex ?? context.executionIndex;
+          const turnMap =
+            eventContext.turnExecutionMap ?? context.turnExecutionMap;
+          let actedBeforeTarget = false;
+          if (
+            defender &&
+            execIdx !== undefined &&
+            turnMap &&
+            typeof turnMap.get === "function"
+          ) {
+            const targetIdx = turnMap.get(defender.id);
+            actedBeforeTarget = targetIdx === undefined || execIdx < targetIdx;
+          }
+          if (actedBeforeTarget) {
+            // piercingDamageBonus definido na skill
+            resultDamage += this.piercingDamageBonus || 0;
+          }
+          return resultDamage;
         },
       });
 
@@ -263,18 +263,18 @@ const blyskartriSkills = [
 
         expiresAtTurn: context.currentTurn + this.effectDuration,
 
-        onAfterDmgDealing({ owner, source, target, damage, context }) {
+        onAfterDmgDealing({ owner, attacker, defender, damage, context }) {
           /* console.log("[BLYSKARTRI][horizonte_infinito] after damage hook", {
             attacker: owner?.name,
-            target: target?.name,
+            target: defender?.name,
             damage,
           });
           */
-          if (!target?.alive) return;
+          if (!defender?.alive) return;
           const currentIndex = context.currentAction?.initiativeIndex;
 
           const targetAction = context.turnActions?.find(
-            (a) => a.championId === target.id,
+            (a) => a.championId === defender.id,
           );
           /* console.log("[BLYSKARTRI][horizonte_infinito] initiative check", {
             currentIndex,
@@ -302,8 +302,7 @@ const blyskartriSkills = [
             baseDamage: this.piercingDamageBonus,
             piercingPortion: this.piercingDamageBonus,
             attacker: owner,
-            source: owner,
-            target,
+            defender,
             skill: {
               key: "horizonte_infinito_bonus",
             },

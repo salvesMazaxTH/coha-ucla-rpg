@@ -19,8 +19,8 @@ export function preChecks(event) {
   const results = emitCombatEvent(
     "onDamageIncoming",
     {
-      source: event.attacker,
-      target: event.defender,
+      attacker: event.attacker,
+      defender: event.defender,
       damage: event.damage,
       skill: event.skill,
       context: event.context,
@@ -74,8 +74,8 @@ export function preChecks(event) {
       emitCombatEvent(
         "onEvade",
         {
-          source: event.attacker,
-          target: event.defender,
+          attacker: event.attacker,
+          defender: event.defender,
           damage: event.damage,
           context: event.context,
         },

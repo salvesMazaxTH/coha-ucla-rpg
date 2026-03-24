@@ -5,15 +5,15 @@ const condutor = {
   subtypes: ["damageMod", "lightning"],
 
   hookScope: {
-    onAfterDmgTaking: "target",
+    onBeforeDmgTaking: "defender",
   },
 
-  onAfterDmgTaking({ target, damage, context, skill }) {
+  onBeforeDmgTaking({ defender, damage, context, skill }) {
     if (skill.element !== "lightning") return;
 
     damage = Math.round(damage * 1.2);
 
-    return damage;
+    return { damage };
   },
 };
 

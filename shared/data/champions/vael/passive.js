@@ -10,10 +10,10 @@ export default {
   },
 
   hookScope: {
-    onCriticalHit: "source",
+    onCriticalHit: "attacker",
   },
 
-  onCriticalHit({ target, context, owner }) {
+  onCriticalHit({ defender, context, owner }) {
     owner.modifyStat({
       statName: "Critical",
       amount: this.critBuff,

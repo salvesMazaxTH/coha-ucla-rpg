@@ -7,13 +7,13 @@ const atordoado = {
   subtypes: ["hardCC"],
 
   hookScope: {
-    onValidateAction: "source",
+    onValidateAction: "actionSource",
   },
 
-  onValidateAction({ source }) {
+  onValidateAction({ actionSource }) {
     return {
       deny: true,
-      message: `${formatChampionName(source)} está Atordoado e não pode agir!`,
+      message: `${formatChampionName(actionSource)} está Atordoado e não pode agir!`,
     };
   },
 };

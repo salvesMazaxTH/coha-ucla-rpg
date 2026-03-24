@@ -8,11 +8,11 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "target",
+    onAfterDmgTaking: "defender",
   },
 
   // Marca dano recebido no turno
-  onAfterDmgTaking({ source, target, owner, context }) {
+  onAfterDmgTaking({ attacker, defender, owner, context }) {
     owner.runtime = owner.runtime || {};
     owner.runtime.sereneDamagedTurn = context.currentTurn;
   },

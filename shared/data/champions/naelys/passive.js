@@ -20,11 +20,11 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgDealing: "source",
-    onAfterHealing: "source",
+    onAfterDmgDealing: "attacker",
+    onAfterHealing: "healSrc",
   },
 
-  onAfterDmgDealing({ source, owner, damage, context }) {
+  onAfterDmgDealing({ attacker, owner, damage, context }) {
     if (!damage || damage <= 0) return;
 
     owner.runtime = owner.runtime || {};

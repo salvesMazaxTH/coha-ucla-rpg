@@ -7,7 +7,7 @@ const paralisado = {
   subtypes: ["softCC", "statMod", "lightning"],
 
   hookScope: {
-    onValidateAction: "source",
+    onValidateAction: "actionSource",
   },
 
   onStatusEffectAdded({ owner, duration, context }) {
@@ -24,16 +24,16 @@ const paralisado = {
     };
   },
 
-  onValidateAction({ source }) {
+  onValidateAction({ actionSource }) {
     const chanceOfActing = 0.6; // 60% de chance de agir normalmente
     const roll = Math.random();
     console.log(
-      `[PARALISADO] Rolando para ação de ${formatChampionName(source)} (Paralisado): ${roll.toFixed(2)} vs ${chanceOfActing}. Conseguiu agir? ${roll < chanceOfActing ? "Sim" : "Não"}`,
+      `[PARALISADO] Rolando para ação de ${formatChampionName(actionSource)} (Paralisado): ${roll.toFixed(2)} vs ${chanceOfActing}. Conseguiu agir? ${roll < chanceOfActing ? "Sim" : "Não"}`,
     );
     if (roll >= chanceOfActing) {
       return {
         deny: true,
-        message: `${formatChampionName(source)} está Paralisado e não pode agir!`,
+        message: `${formatChampionName(actionSource)} está Paralisado e não pode agir!`,
       };
     }
   },

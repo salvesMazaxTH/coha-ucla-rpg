@@ -7,15 +7,15 @@ const imunidadeAbsoluta = {
   subtypes: ["immunity"],
 
   hookScope: {
-    onDamageIncoming: "target",
+    onDamageIncoming: "defender",
     onStatusEffectIncoming: "target",
   },
 
-  onDamageIncoming({ target }) {
+  onDamageIncoming({ defender }) {
     return {
       cancel: true,
       immune: true,
-      message: `${formatChampionName(target)} está com <b>${this.name}</b> e é imune a dano!`,
+      message: `${formatChampionName(defender)} está com <b>${this.name}</b> e é imune a dano!`,
     };
   },
 

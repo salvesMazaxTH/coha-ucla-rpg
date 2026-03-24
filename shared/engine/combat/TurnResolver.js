@@ -312,7 +312,7 @@ export class TurnResolver {
     const results = emitCombatEvent(
       "onValidateAction",
       {
-        source: user,
+        actionSource: user,
         skill: action?.skill,
       },
       this.combat.activeChampions,
@@ -402,7 +402,7 @@ export class TurnResolver {
     emitCombatEvent(
       "onActionResolved",
       {
-        source: user,
+        actionSource: user,
         targets,
         skill,
         action,
@@ -636,7 +636,7 @@ export class TurnResolver {
       repeatActionRequest: null,
 
       healSourceId: sourceId,
-      buffSourceId: sourceId,
+      statModifierSrcId: sourceId,
 
       schedule(scheduledEffect) {
         combat.scheduledEffects.push(scheduledEffect);
@@ -685,6 +685,7 @@ export class TurnResolver {
           obliterate: !!flags?.isObliterate,
         });
       },
+
       // -- HEAL REGISTRY -- //
       registerHeal({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
@@ -702,6 +703,7 @@ export class TurnResolver {
           sourceId: sourceChamp?.id || target.id,
           amount: value,
         });
+
         // 🔥 Dispara hook de cura
         emitCombatEvent(
           "onAfterHealing",
@@ -714,20 +716,42 @@ export class TurnResolver {
           this.allChampions,
         );
       },
+
       // -- BUFF REGISTRY -- //
       registerBuff({ target, amount, statName, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return;
 
-        this.visual.buffEvents.push({
-          // eventIndex: this.nextEventIndex(),
-          type: "buff",
-          targetId: target.id,
-          sourceId: sourceId || this.buffSourceId || target.id,
-          amount: value,
-          statName,
-        });
+        const sourceChamp =
+          combat.activeChampions.get(sourceId) ||
+          combat.activeChampions.get(this.statModifierSrcId) ||
+          target;
+
+        // Mantém comportamento anterior de UI/ult: apenas ganhos positivos entram em buffEvents
+        if (value > 0) {
+          this.visual.buffEvents.push({
+            // eventIndex: this.nextEventIndex(),
+            type: "buff",
+            targetId: target.id,
+            sourceId: sourceChamp?.id || target.id,
+            amount: value,
+            statName,
+          });
+        }
+
+        emitCombatEvent(
+          "onBuffingStat",
+          {
+            buffSrc: sourceChamp || null,
+            buffTarget: target,
+            statName,
+            amount: value,
+            context: this,
+          },
+          this.allChampions,
+        );
       },
+
       // -- SHIELD REGISTRY -- //
       registerShield({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;

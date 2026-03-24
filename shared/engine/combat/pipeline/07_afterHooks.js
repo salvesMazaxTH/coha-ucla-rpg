@@ -87,8 +87,8 @@ function _applyLifeSteal(event) {
 
 function _applyAfterTakingPassive(event) {
   return _processHook(event, "onAfterDmgTaking", {
-    source: event.attacker,
-    target: event.defender,
+    attacker: event.attacker,
+    defender: event.defender,
     skill: event.skill,
     damage: event.damage,
     mode: event.mode,
@@ -100,8 +100,8 @@ function _applyAfterTakingPassive(event) {
 function _applyAfterDealingPassive(event) {
   if (event.context?.isDot) return { logs: [] };
   return _processHook(event, "onAfterDmgDealing", {
-    source: event.attacker,
-    target: event.defender,
+    attacker: event.attacker,
+    defender: event.defender,
     damage: event.damage,
     mode: event.mode,
     crit: event.crit,

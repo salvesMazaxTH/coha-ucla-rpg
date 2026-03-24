@@ -60,12 +60,19 @@ const kaiSkills = [
         expiresAt: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE
-        onAfterDmgTaking({ source, target, skill, damage, owner, context }) {
-          if (target !== owner) return;
+        onAfterDmgTaking({
+          attacker,
+          defender,
+          skill,
+          damage,
+          owner,
+          context,
+        }) {
+          if (defender !== owner) return;
           if (!skill?.contact) return;
           if (damage <= 0) return;
           if (skill?.key === "postura_da_brasa_viva_counter") return;
-          if (!source?.alive) return;
+          if (!attacker?.alive) return;
 
           context.extraDamageQueue ??= [];
 
@@ -74,7 +81,7 @@ const kaiSkills = [
             baseDamage: counterAtkDmg,
             piercingPortion: counterAtkDmg,
             attacker: owner,
-            defender: source,
+            defender: attacker,
             skill: {
               key: "postura_da_brasa_viva_counter",
               name: "Contra-ataque Brasa Viva",
@@ -83,22 +90,22 @@ const kaiSkills = [
           });
 
           context.registerDialog({
-            message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(source)}!`,
+            message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(attacker)}!`,
             sourceId: owner.id,
             targetId: owner.id,
           });
 
-          source.applyStatusEffect("queimando", 2, context, {
+          attacker.applyStatusEffect("queimando", 2, context, {
             source: owner,
           });
 
           return {
-            log: `${formatChampionName(source)} é queimado ao atingir ${formatChampionName(owner)} em contato!`,
+            log: `${formatChampionName(attacker)} é queimado ao atingir ${formatChampionName(owner)} em contato!`,
           };
         },
 
-        onAfterDmgDealing({ source, target, owner, damage, context }) {
-          if (source !== owner) return;
+        onAfterDmgDealing({ attacker, defender, owner, damage, context }) {
+          if (attacker !== owner) return;
           if (damage <= 0) return;
 
           // 🔥 TRANSIÇÃO
@@ -117,14 +124,14 @@ const kaiSkills = [
 
           // 🔥 EFEITO ATIVO
           if (this.state === "brasa_viva") {
-            if (!target?.applyStatusEffect) return;
+            if (!defender?.applyStatusEffect) return;
 
-            target.applyStatusEffect("queimando", 2, context, {
+            defender.applyStatusEffect("queimando", 2, context, {
               source: owner,
             });
 
             return {
-              log: `${formatChampionName(target)} está Queimando (Brasa Viva)!`,
+              log: `${formatChampionName(defender)} está Queimando (Brasa Viva)!`,
             };
           }
         },

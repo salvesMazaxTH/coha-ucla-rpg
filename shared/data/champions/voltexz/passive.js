@@ -12,11 +12,11 @@ export default {
     return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Condutor". Ao atacar um alvo com "Condutor", Voltexz causa ${this.condutorBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
   hookScope: {
-    onAfterDmgDealing: "source",
-    onBeforeDmgDealing: "source",
+    onAfterDmgDealing: "attacker",
+    onBeforeDmgDealing: "attacker",
   },
 
-  onAfterDmgDealing({ source, target, owner, skill, damage, context }) {
+  onAfterDmgDealing({ attacker, defender, owner, skill, damage, context }) {
     if ((context.damageDepth ?? 0) > 0) return; // Evita recuo em dano causado pelo próprio recuo e etc.
 
     let log = "";
@@ -51,40 +51,48 @@ export default {
       });
     }
 
-    if (target.hasStatusEffect?.("condutor")) {
-      target.removeStatusEffect("condutor");
+    if (defender.hasStatusEffect?.("condutor")) {
+      defender.removeStatusEffect("condutor");
       return;
     }
 
-    target.applyStatusEffect("condutor", this.condutorDuration, context, {
+    defender.applyStatusEffect("condutor", this.condutorDuration, context, {
       sourceSkill: skill,
     });
 
     return { log };
   },
 
-  onBeforeDmgDealing({ source, target, owner, crit, damage, context, skill }) {
-    // console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(source));
+  onBeforeDmgDealing({
+    attacker,
+    defender,
+    owner,
+    crit,
+    damage,
+    context,
+    skill,
+  }) {
+    // console.log("🔥 onBeforeDmgDealing TRIGGER:", formatChampionName(attacker));
 
     // console.log("OWNER:", owner?.name);
-    // console.log("DMG SRC:", source?.name);
-    // console.log("ALVO:", target?.name);
-    // console.log("HAS CONDUTOR?", target?.hasStatusEffect?.("condutor"));
+    // console.log("DMG SRC:", attacker?.name);
+    // console.log("ALVO:", defender?.name);
+    // console.log("HAS CONDUTOR?", defender?.hasStatusEffect?.("condutor"));
 
-    if (!target.hasStatusEffect?.("condutor")) return;
+    if (!defender.hasStatusEffect?.("condutor")) return;
 
     const bonusDamage = (damage * this.condutorBonusPercent) / 100;
 
-    target.removeStatusEffect("condutor");
+    defender.removeStatusEffect("condutor");
 
     context.registerDialog({
-      message: `${formatChampionName(target)} foi consumido por <b>"Condutor"</b>!`,
-      sourceId: source.id,
-      targetId: target.id,
+      message: `${formatChampionName(defender)} foi consumido por <b>"Condutor"</b>!`,
+      sourceId: attacker.id,
+      targetId: defender.id,
       blocking: false,
     });
 
-    let log = `⚡ ACERTO ! ${formatChampionName(source)} explorou "Condutor" de ${formatChampionName(target)} (+${this.condutorBonusPercent}% dano)!`;
+    let log = `⚡ ACERTO ! ${formatChampionName(attacker)} explorou "Condutor" de ${formatChampionName(defender)} (+${this.condutorBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

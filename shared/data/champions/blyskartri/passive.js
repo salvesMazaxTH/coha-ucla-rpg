@@ -17,7 +17,7 @@ export default {
   },
 
   hookScope: {
-    onStatGain: undefined,
+    onBuffingStat: undefined,
     onEvade: undefined,
   },
 
@@ -49,18 +49,25 @@ export default {
     });
   },
 
-  onStatGain({ owner, statName, source, context }) {
-    if (!source || source.team !== owner.team) return;
+  onBuffingStat({
+    owner,
+    statName,
+    buffSrc,
+    buffTarget,
+    context,
+  }) {
+    if (!buffSrc || buffSrc.team !== owner.team) return;
+    if (!buffTarget || buffTarget.team !== owner.team) return;
 
     if (statName !== "Speed") return;
 
-    this._addStack({owner: target, context, reason: "speed_gain"});
+    this._addStack({ owner, context, reason: "speed_gain" });
   },
 
-  onEvade({ owner, target, context }) {
-    if (!target || target.team !== owner.team) return;
+  onEvade({ owner, defender, context }) {
+    if (!defender || defender.team !== owner.team) return;
 
-    this._addStack({owner: target, context, reason: "evade"});
+    this._addStack({ owner, context, reason: "evade" });
   },
 
   _addStack({ owner, context, reason }) {
@@ -80,7 +87,7 @@ export default {
 
     if (owner.runtime.impulsoTriggeredTurn) return;
 
-    const allies = context.allChampions.filter(
+    const allies = Array.from(context.allChampions.values()).filter(
       (c) => c.team === owner.team && c.HP > 0,
     );
 

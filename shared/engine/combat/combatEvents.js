@@ -64,29 +64,7 @@ export function emitCombatEvent(eventName, payload, champions) {
 
       const scope = source.hookScope?.[eventName];
 
-      const sourceActor = payload.source || payload.healSrc || null;
-
-      const targetActor = payload.target || payload.healTarget || null;
-
-      if (scope === "source" && champ !== sourceActor) continue;
-
-      if (scope === "target" && champ !== targetActor) continue;
-
-      if (
-        scope === "sourceOrTarget" &&
-        champ !== sourceActor &&
-        champ !== targetActor
-      )
-        continue;
-
-      if (scope === "allies") {
-        if (
-          !sourceActor ||
-          champ.team !== sourceActor.team ||
-          champ === sourceActor
-        )
-          continue;
-      }
+      if (scope && payload[scope] !== champ) continue;
 
       try {
         // console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);

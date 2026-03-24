@@ -9,27 +9,27 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgTaking: "target",
+    onAfterDmgTaking: "defender",
   },
 
-  onAfterDmgTaking({ source, target, owner, damage, context }) {
-    if (target !== owner) return;
-    if (target.HP > 0) return;
+  onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
+    if (defender !== owner) return;
+    if (defender.HP > 0) return;
 
-    console.log("[Passiva - Jeff] A Morte Não Cessa ativada para", target.id);
+    console.log("[Passiva - Jeff] A Morte Não Cessa ativada para", defender.id);
     console.log(
       `[Passiva - Jeff] Agendando revival para o próximo turno (Turno ${context.currentTurn + 1})`,
     );
 
-    target.runtime.deathCounter ??= 0;
-    target.runtime.deathCounter++;
+    defender.runtime.deathCounter ??= 0;
+    defender.runtime.deathCounter++;
 
     context.schedule({
       type: "spawnChampion",
       turnToHappen: context.currentTurn + 1,
       payload: {
-        championKey: target.championKey,
-        team: target.team,
+        championKey: defender.championKey,
+        team: defender.team,
         onSpawn: (champion, context) => {
           champion.HP = Math.floor(champion.maxHP * 0.75);
           // buff pela própria morte, já que onChampionDeath é pulado quando Jeff morre
@@ -49,7 +49,7 @@ export default {
         },
       },
       dialog: {
-        message: `[Passiva - <b>A Morte Não Cessa</b>] ${formatChampionName(target)} retorna ao campo de batalha!`,
+        message: `[Passiva - <b>A Morte Não Cessa</b>] ${formatChampionName(defender)} retorna ao campo de batalha!`,
         sourceId: null,
         targetId: null,
         blocking: true,

@@ -46,23 +46,32 @@ const reyskaroneSkills = [
         expiresAtTurn: context.currentTurn + this.tributeDuration,
 
         hookScope: {
-          onBeforeDmgDealing: "target",
+          onAfterDmgDealing: "defender",
         },
 
-        onBeforeDmgDealing: ({ source, target, context }) => {
-          if (target !== enemy) return;
+        onBeforeDmgDealing: ({
+          attacker,
+          defender,
+          skill,
+          damage,
+          owner,
+          context,
+        }) => {
+          if (defender !== enemy) return;
 
           // bônus de dano
-          target.runtime.pendingFlatDamageBonus =
-            (target.runtime.pendingFlatDamageBonus || 0) +
-            this.tributeBonusDamage;
+          const bonusDamage = this.tributeBonusDamage;
+
+          return {
+            damage: damage + bonusDamage,
+          };
+        },
+
+        onAfterDmgDealing: ({ attacker, defender, owner, context }) => {
+          if (defender !== enemy) return;
 
           // cura o atacante
-          context.registerHeal({
-            target: source,
-            amount: this.tributeHeal,
-            sourceId: enemy.id,
-          });
+          attacker.heal(this.tributeHeal, context, owner);
         },
       });
 

@@ -15,12 +15,12 @@ export default {
   },
 
   hookScope: {
-    onAfterDmgDealing: "source",
-    onBeforeDmgDealing: "source",
+    onAfterDmgDealing: "attacker",
+    onBeforeDmgDealing: "attacker",
   },
 
-  onBeforeDmgDealing({ source, owner, skill, damage }) {
-    if (source !== owner) return;
+  onBeforeDmgDealing({ attacker, owner, skill, damage }) {
+    if (attacker !== owner) return;
 
     const isBrasa = owner.runtime?.fireStance === "brasa_viva";
 
@@ -33,10 +33,10 @@ export default {
     };
   },
 
-  onAfterDmgDealing({ source, target, owner, damage, context, skill }) {
-    if (source !== owner) return;
+  onAfterDmgDealing({ attacker, defender, owner, damage, context, skill }) {
+    if (attacker !== owner) return;
     if (damage <= 0) return;
-    if (!target) return;
+    if (!defender) return;
 
     const isBrasa = owner.runtime?.fireStance === "brasa_viva";
     console.log(`[${owner.name}] isBrasa: ${isBrasa}, skill: ${skill?.key}`);
@@ -44,7 +44,7 @@ export default {
     // 🔥 GATE PRINCIPAL (o que você pediu)
     if (!isBrasa && skill?.key !== "golpe_basico") return;
 
-    const affinities = target.elementalAffinities ?? [];
+    const affinities = defender.elementalAffinities ?? [];
 
     if (
       isBrasa ||
@@ -53,19 +53,19 @@ export default {
       const burnDuration = isBrasa ? 2 : this.burnDuration;
 
       console.log(
-        `Aplicando queimadura padrão (duração: ${burnDuration}) em ${target.name} por ataque de ${skill?.key}.`,
+        `Aplicando queimadura padrão (duração: ${burnDuration}) em ${defender.name} por ataque de ${skill?.key}.`,
       );
 
-      target.applyStatusEffect("queimando", burnDuration, context, {
+      defender.applyStatusEffect("queimando", burnDuration, context, {
         source: owner.name,
       });
 
       return {
-        log: `${formatChampionName(source)} aplicou Queimadura em ${formatChampionName(target)}.`,
+        log: `${formatChampionName(attacker)} aplicou Queimadura em ${formatChampionName(defender)}.`,
       };
     } else {
       console.log(
-        `Não aplicando queimadura em ${target.name} por ataque de ${skill?.key} devido à afinidade elemental. Não tinha brasa viva ativa: ${isBrasa}.`,
+        `Não aplicando queimadura em ${defender.name} por ataque de ${skill?.key} devido à afinidade elemental. Não tinha brasa viva ativa: ${isBrasa}.`,
       );
     }
   },

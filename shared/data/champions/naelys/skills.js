@@ -117,14 +117,21 @@ const naelysSkills = [
         expiresAt: context.currentTurn + 2,
         lastTriggerTurn: null,
 
-        onAfterDmgTaking({ source, target, damage, skill, owner, context }) {
+        onAfterDmgTaking({
+          attacker,
+          defender,
+          damage,
+          skill,
+          owner,
+          context,
+        }) {
           // console.log("[NAELYS] Hook onAfterDmgTaking disparado.");
-          // console.log("[NAELYS] Target:", target?.name);
+          // console.log("[NAELYS] Target:", defender?.name);
           // console.log("[NAELYS] Damage:", damage);
           // console.log("[NAELYS] Skill recebida:", skill?.key);
 
-          if (target !== owner) {
-            // console.log("[NAELYS] Ignorado: target !== owner");
+          if (defender !== owner) {
+            // console.log("[NAELYS] Ignorado: defender !== owner");
             return;
           }
 
@@ -159,7 +166,7 @@ const naelysSkills = [
             mode: "standard",
             baseDamage,
             attacker: owner,
-            defender: source,
+            defender: attacker,
             skill: {
               ...basic,
               key: "massa_do_mar_revolto_counter",

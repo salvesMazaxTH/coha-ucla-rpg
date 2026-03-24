@@ -241,12 +241,15 @@ function applyDamageModifiers(event, debugMode) {
     if (mod.apply) {
       const oldDamage = event.damage;
 
-      const out = mod.apply({
-        baseDamage: event.damage,
-        attacker: event.attacker,
-        defender: event.defender,
-        skill: event.skill,
-      });
+      const out = mod.apply(
+        {
+          baseDamage: event.damage,
+          attacker: event.attacker,
+          defender: event.defender,
+          skill: event.skill,
+        },
+        event.context,
+      );
 
       if (typeof out === "number") {
         event.damage = out;

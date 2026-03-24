@@ -152,18 +152,19 @@ const sereneSkills = [
           ownerId,
 
           hookScope: {
-            onBeforeDmgTaking: "target",
+            onBeforeDmgTaking: "defender",
           },
 
-          onBeforeDmgTaking({ source, target, owner, damage, context }) {
+          onBeforeDmgTaking({ attacker, defender, owner, damage, context }) {
             // console.log("════════ EPIFANIA CHECK ════════");
             // console.log("[EPIFANIA] Hook disparado");
             // console.log("[EPIFANIA] Alvo:", owner.name);
             // console.log("[EPIFANIA] HP atual:", owner.HP);
             // console.log("[EPIFANIA] Dano recebido:", damage);
-            // console.log("[EPIFANIA] Atacante:", source?.name);
+            // console.log("[EPIFANIA] Atacante:", attacker?.name);
 
-            if (!target || target.id !== owner.id || target !== owner) return;
+            if (!defender || defender.id !== owner.id || defender !== owner)
+              return;
 
             owner.runtime.preventObliterate = true;
 
@@ -208,13 +209,13 @@ const sereneSkills = [
             };
           },
 
-          onActionResolved({ source, skill, context }) {
+          onActionResolved({ actionSource, skill, context }) {
             // console.log("════════ EPIFANIA CLEANUP ════════");
             // console.log("[EPIFANIA] ActionResolved disparado");
-            // console.log("[EPIFANIA] Usuário da ação:", source?.name);
+            // console.log("[EPIFANIA] Usuário da ação:", actionSource?.name);
             // console.log("[EPIFANIA] Skill:", skill?.key);
 
-            if (source.id !== ownerId) {
+            if (actionSource.id !== ownerId) {
               // console.log("[EPIFANIA] Ignorado → ação não é da Serene");
               return;
             }
@@ -227,7 +228,7 @@ const sereneSkills = [
             // console.log("[EPIFANIA] Serene agiu → removendo proteção");
 
             context.aliveChampions.forEach((champ) => {
-              if (champ.team !== source.team) return;
+              if (champ.team !== actionSource.team) return;
 
               // console.log("[EPIFANIA] Removendo proteção de:", champ.name);
 
@@ -244,7 +245,7 @@ const sereneSkills = [
             });
 
             return {
-              log: `${formatChampionName(source)} superou o Limiar da Existência e recuperou sua mortalidade...`,
+              log: `${formatChampionName(actionSource)} superou o Limiar da Existência e recuperou sua mortalidade...`,
             };
           },
         };

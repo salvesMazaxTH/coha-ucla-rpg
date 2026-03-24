@@ -7,25 +7,25 @@ const inerte = {
   subtypes: ["hardCC"],
 
   hookScope: {
-    onValidateAction: "source",
+    onValidateAction: "actionSource",
   },
 
-  onValidateAction({ source }) {
-    const k = source.getStatusEffect("inerte");
+  onValidateAction({ actionSource }) {
+    const k = actionSource.getStatusEffect("inerte");
 
     let deny = true;
 
     if (k?.canBeInterruptedByAction) {
-      source.removeStatusEffect("inerte");
+      actionSource.removeStatusEffect("inerte");
       deny = false;
       return {
-        message: `O efeito "Inerte" de ${formatChampionName(source)} foi interrompido!`,
+        message: `O efeito "Inerte" de ${formatChampionName(actionSource)} foi interrompido!`,
       };
     }
 
     return {
       deny,
-      message: `${formatChampionName(source)} está Inerte e não pode agir!`,
+      message: `${formatChampionName(actionSource)} está Inerte e não pode agir!`,
     };
   },
 };
