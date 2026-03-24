@@ -255,6 +255,7 @@ function spawnFromReserve(
     reason = "death",
     championToSwitchOutId = null,
     reserveChampionKey = null,
+    switchedOutChampion = null,
   } = {},
 ) {
   const queue = match.combat.reserveQueues.get(team);
@@ -264,7 +265,9 @@ function spawnFromReserve(
   let inheritedSlot = null;
 
   if (reason === "switch" && championToSwitchOutId) {
-    const switchedOut = match.combat.activeChampions.get(championToSwitchOutId);
+    const switchedOut =
+      switchedOutChampion ??
+      match.combat.activeChampions.get(championToSwitchOutId);
     if (switchedOut) {
       inheritedSlot = switchedOut.combatSlot;
       // Limpar efeitos temporários e guardar a instância no banco
@@ -674,12 +677,15 @@ function handleEndTurn() {
       continue;
     }
 
-    const outChamp = match.combat.activeChampions.get(sw.championToSwitchOutId);
+    const outChamp =
+      sw.switchedOutChampion ??
+      match.combat.activeChampions.get(sw.championToSwitchOutId);
     const outName = outChamp ? formatChampionName(outChamp) : "?";
     const spawned = spawnFromReserve(sw.team, {
       reason: "switch",
       championToSwitchOutId: sw.championToSwitchOutId,
       reserveChampionKey: sw.reserveChampionKey,
+      switchedOutChampion: sw.switchedOutChampion,
     });
     const inName = spawned ? formatChampionName(spawned) : "?";
     io.emit("combatLog", `${outName} foi substituído por ${inName}!`);

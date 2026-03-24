@@ -426,3 +426,296 @@ body.team-selection-active .team-container:hover {
     height: 38px;
   }
 }
+
+/* ============================================
+   MOBILE LAYOUT - TABLET & MEDIUM SCREENS
+   ============================================ */
+
+@media (max-width: 768px) {
+  header {
+    width: 95%;
+    padding: 10px 16px;
+    margin: 8px auto;
+  }
+
+  header h1 {
+    font-size: 1.2rem;
+  }
+
+  .arena {
+    width: 95%;
+    min-height: 500px;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  .team-container {
+    padding: 8px;
+    padding-bottom: 70px;
+  }
+
+  .team-container::before {
+    font-size: clamp(1.5rem, 5vw, 4rem);
+  }
+
+  .player-name-display {
+    font-size: 1rem;
+    margin-bottom: 2px;
+    padding: 3px;
+  }
+
+  .back-champion-display {
+    bottom: 10%;
+    width: 150px;
+    min-height: 75px;
+    padding: 6px;
+  }
+
+  .reserve-card {
+    width: 60px;
+    min-height: 66px;
+  }
+
+  .reserve-card img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .reserve-name {
+    font-size: 0.62rem;
+  }
+}
+
+/* ============================================
+   MOBILE LAYOUT - SMALL SCREENS (520px - 600px)
+   ============================================ */
+
+@media (max-width: 600px) {
+  header {
+    width: 96%;
+    padding: 8px 12px;
+    margin: 6px auto;
+  }
+
+  header h1 {
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+  }
+
+  .turn-display {
+    padding: 4px 12px;
+  }
+
+  .turn-display p {
+    font-size: 0.9rem;
+  }
+
+  .arena {
+    width: 97%;
+    min-height: 420px;
+    gap: 12px;
+    padding: 10px;
+    border-width: 3px;
+  }
+
+  .team-container {
+    padding: 6px;
+    padding-bottom: 60px;
+    gap: 8px;
+  }
+
+  .team-container::before {
+    font-size: clamp(1.2rem, 4vw, 3rem);
+  }
+
+  .player-name-display {
+    font-size: 0.95rem;
+    padding: 2px;
+    margin-bottom: 1px;
+  }
+
+  .champion {
+    transform: scale(0.85);
+  }
+
+  .back-champion-display {
+    bottom: 8%;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    min-height: 70px;
+    padding: 5px;
+  }
+
+  .back-champion-display[data-side="enemy"] {
+    left: auto;
+    right: 8px;
+  }
+
+  .reserve-header {
+    min-height: 20px;
+    padding: 0 1px;
+  }
+
+  .reserve-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+  }
+
+  .switch-counter {
+    min-width: 20px;
+    height: 18px;
+    font-size: 0.65rem;
+    padding: 0 5px;
+  }
+
+  .reserve-cards {
+    gap: 6px;
+  }
+
+  .reserve-card {
+    width: 58px;
+    min-height: 64px;
+    padding: 4px 3px;
+  }
+
+  .reserve-card img {
+    width: 34px;
+    height: 34px;
+    border-width: 1.5px;
+  }
+
+  .reserve-name {
+    font-size: 0.58rem;
+    line-height: 1;
+  }
+}
+
+/* ============================================
+   MOBILE LAYOUT - EXTRA SMALL SCREENS (< 430px)
+   ============================================ */
+
+@media (max-width: 430px) {
+  html {
+    font-size: 13px;
+  }
+
+  header {
+    width: 97%;
+    padding: 6px 10px;
+    margin: 4px auto;
+    border-radius: 10px;
+  }
+
+  header h1 {
+    font-size: 1rem;
+    letter-spacing: 0px;
+    font-weight: 500;
+  }
+
+  .turn-controls {
+    gap: 8px;
+  }
+
+  .turn-display {
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
+  .turn-display p {
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+  }
+
+  .arena {
+    width: 98%;
+    min-height: 380px;
+    gap: 8px;
+    padding: 8px;
+    border-width: 2px;
+    margin: 8px auto;
+  }
+
+  .team-container {
+    padding: 4px;
+    padding-bottom: 50px;
+    gap: 4px;
+  }
+
+  .team-container::before {
+    font-size: clamp(1rem, 3.5vw, 2.5rem);
+  }
+
+  .player-name-display {
+    font-size: 0.85rem;
+    padding: 1px;
+    margin-bottom: 0px;
+    border-bottom: 0.5px solid rgba(0, 255, 150, 0.2);
+  }
+
+  .champion {
+    transform: scale(0.75);
+  }
+
+  .back-champion-display {
+    bottom: 6%;
+    left: 6px;
+    right: 6px;
+    width: auto;
+    min-height: 66px;
+    padding: 4px;
+    border-radius: 10px;
+    gap: 6px;
+  }
+
+  .back-champion-display[data-side="ally"] {
+    border: 1.5px solid rgba(0, 150, 255, 0.4);
+  }
+
+  .back-champion-display[data-side="enemy"] {
+    border: 1.5px solid rgba(255, 0, 0, 0.4);
+  }
+
+  .reserve-header {
+    min-height: 18px;
+    padding: 0;
+  }
+
+  .reserve-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+  }
+
+  .switch-counter {
+    min-width: 18px;
+    height: 16px;
+    font-size: 0.6rem;
+    padding: 0 4px;
+  }
+
+  .reserve-cards {
+    gap: 5px;
+  }
+
+  .reserve-card {
+    width: 54px;
+    min-height: 60px;
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .reserve-card img {
+    width: 32px;
+    height: 32px;
+    border-width: 1px;
+  }
+
+  .reserve-name {
+    font-size: 0.54rem;
+    line-height: 1;
+  }
+
+  .reserve-card.clickable:hover {
+    transform: translateY(0px);
+  }
+}

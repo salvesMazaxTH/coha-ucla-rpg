@@ -6,14 +6,11 @@ export function preChecks(event) {
   console.log("DEBUG DEFENDER:", event.defender); */
   const activeChampions =
     event?.context?.activeChampions ?? event?.context?.allChampions;
-  const switchedOutChampionIds = event?.context?.switchedOutChampionIds;
 
   if (
     !event?.defender?.id ||
     !event.defender.alive ||
-    (activeChampions instanceof Map &&
-      !activeChampions.has(event.defender.id)) ||
-    (switchedOutChampionIds?.has?.(event.defender.id) ?? false)
+    (activeChampions instanceof Map && !activeChampions.has(event.defender.id))
   ) {
     return _buildInactiveTargetResult(event);
   }

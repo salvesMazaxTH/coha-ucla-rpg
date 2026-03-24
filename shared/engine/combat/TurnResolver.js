@@ -17,7 +17,6 @@ export class TurnResolver {
     const actionResults = [];
     const switchResults = [];
     let actionOrder = 0;
-    const switchedOutChampionIds = new Set();
 
     const turnExecutionMap = new Map(); // championId -> executionIndex
 
@@ -38,13 +37,10 @@ export class TurnResolver {
 
       const action = actions.shift(); // remove a próxima ação
 
-      // Switches são retornados para processamento pelo servidor
+      // Switch é executado inline: remove o campeão de activeChampions imediatamente
       if (action.type === "switch") {
-        switchResults.push(action);
-        const switchedOutId = action.championToSwitchOutId ?? action.userId;
-        if (switchedOutId) {
-          switchedOutChampionIds.add(switchedOutId);
-        }
+        const switchResult = this.executeSwitch(action);
+        if (switchResult) switchResults.push(switchResult);
         continue;
       }
 
@@ -53,14 +49,14 @@ export class TurnResolver {
 
       const user = this.combat.activeChampions.get(action.userId);
 
-      if (!user || switchedOutChampionIds.has(action.userId)) {
+      if (!user) {
         this.refundActionResource(user, action);
         actionResults.push({
           executed: false,
           reason: "inactive",
           user,
           action,
-          logMessage: `Ação de ${user ? formatChampionName(user) : "campeão desconhecido"} ignorada (não ativo).`,
+          logMessage: `Ação de campeão desconhecido ignorada (não ativo).`,
         });
         continue;
       }
@@ -70,54 +66,88 @@ export class TurnResolver {
       const context = this.createBaseContext({ sourceId: user.id });
       context.executionIndex = action.executionIndex;
       context.turnExecutionMap = turnExecutionMap;
-      context.switchedOutChampionIds = switchedOutChampionIds;
 
       const result = this.executeSkillAction(action, turnExecutionMap, context);
       actionResults.push(result);
 
       const repeat = result?.repeatActionRequest;
-
-      if (repeat?.userId && repeat?.skillKey) {
-        const repeatAction = {
-          userId: repeat.userId,
-          skillKey: repeat.skillKey,
-          targetIds: repeat.targetIds ?? {},
-          priority: Number.isFinite(repeat.priority)
-            ? repeat.priority
-            : (action.priority ?? 0),
-          speed: Number.isFinite(repeat.speed)
-            ? repeat.speed
-            : (action.speed ?? 0),
-          turn: action.turn,
-          ultCost: 0,
-          type: "followUp",
-        };
-
-        repeatAction.executionIndex = actionOrder++;
-
-        const repeatContext = this.createBaseContext({
-          sourceId: repeat.userId,
-        });
-
-        repeatContext.executionIndex = repeatAction.executionIndex;
-        repeatContext.turnExecutionMap = turnExecutionMap;
-        repeatContext.switchedOutChampionIds = switchedOutChampionIds;
-        repeatContext.isPassiveRepeat = true;
-
-        const repeatResult = this.executeSkillAction(
-          repeatAction,
-          turnExecutionMap,
-          repeatContext,
-        );
-
-        actionResults.push(repeatResult);
-      }
+      actionOrder = this.handleRepeatAction(
+        repeat,
+        action,
+        actionOrder,
+        actionResults,
+        turnExecutionMap,
+      );
     }
 
     const deathContext = this.createBaseContext({ sourceId: null });
     const deathResults = this.processChampionDeaths(3, deathContext);
 
     return { actionResults, deathResults, switchResults };
+  }
+
+  // ============================================================
+  //  EXECUÇÃO DE SWITCH
+  // ============================================================
+
+  executeSwitch(action) {
+    const outId = action.championToSwitchOutId ?? action.userId;
+    if (outId) {
+      const champion = this.combat.activeChampions.get(outId);
+      if (champion) {
+        action.switchedOutChampion = champion; // passado ao servidor para bookkeeping (bench, slot, efeitos)
+        this.combat.activeChampions.delete(outId);
+      }
+    }
+    return action;
+  }
+
+  // ============================================================
+  //  MANIPULAÇÃO DE REPEAT ACTION (Passivas)
+  // ============================================================
+
+  handleRepeatAction(
+    repeat,
+    baseAction,
+    actionOrder,
+    actionResults,
+    turnExecutionMap,
+  ) {
+    if (!repeat?.userId || !repeat?.skillKey) return actionOrder;
+
+    const repeatAction = {
+      userId: repeat.userId,
+      skillKey: repeat.skillKey,
+      targetIds: repeat.targetIds ?? {},
+      priority: Number.isFinite(repeat.priority)
+        ? repeat.priority
+        : (baseAction.priority ?? 0),
+      speed: Number.isFinite(repeat.speed)
+        ? repeat.speed
+        : (baseAction.speed ?? 0),
+      turn: baseAction.turn,
+      ultCost: 0,
+      type: "followUp",
+    };
+
+    repeatAction.executionIndex = actionOrder++;
+
+    const repeatContext = this.createBaseContext({
+      sourceId: repeat.userId,
+    });
+
+    repeatContext.executionIndex = repeatAction.executionIndex;
+    repeatContext.turnExecutionMap = turnExecutionMap;
+    repeatContext.isPassiveRepeat = true;
+
+    const repeatResult = this.executeSkillAction(
+      repeatAction,
+      turnExecutionMap,
+      repeatContext,
+    );
+
+    actionResults.push(repeatResult);
+    return actionOrder;
   }
 
   // ============================================================
@@ -150,13 +180,11 @@ export class TurnResolver {
   executeSkillAction(action, turnExecutionMap, context) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
-    const switchedOutChampionIds = context?.switchedOutChampionIds;
 
-    if (
-      !user ||
-      !user.alive ||
-      (switchedOutChampionIds?.has?.(user.id) ?? false)
-    ) {
+    const isInactive =
+      !user || !user.alive || switchedOutChampionIds?.has?.(user.id);
+
+    if (isInactive) {
       const userName = user ? formatChampionName(user) : "campeão desconhecido";
       this.refundActionResource(user, action);
       return {
@@ -421,16 +449,11 @@ export class TurnResolver {
     const buffEvents = context.visual.buffEvents || [];
 
     // 🔹 GANHO DO USUÁRIO
-    if (damageEvents.length > 0) {
+    if (damageEvents.length) {
       const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
-      const applied = user.addUlt({ amount: regenAmount, context });
-      // console.log("[ULT - DEALER]", user.name, applied);
-    } else if (healEvents.length > 0) {
-      const applied = user.addUlt({ amount: 1, context });
-      // console.log("[ULT - HEAL]", user.name, applied);
-    } else if (buffEvents.length > 0) {
-      const applied = user.addUlt({ amount: 1, context });
-      // console.log("[ULT - BUFF]", user.name, applied);
+      user.addUlt({ amount: regenAmount, context });
+    } else if (healEvents.length || buffEvents.length) {
+      user.addUlt({ amount: 1, context });
     }
 
     // 🔹 GANHO DE QUEM SOFREU DANO
@@ -455,160 +478,125 @@ export class TurnResolver {
   // ============================================================
 
   resolveSkillTargets(user, skill, action, context) {
-    const currentTargets = {};
-    let redirected = false;
-    const switchedOutChampionIds = context?.switchedOutChampionIds;
-    const isUnavailableTarget = (champion) =>
-      !champion ||
-      !champion.alive ||
-      (switchedOutChampionIds?.has?.(champion.id) ?? false);
-
-    // console.log("==== RESOLVE START ====");
-    // console.log("Skill:", skill.key);
-    // console.log("Incoming targetIds:", action.targetIds);
-    // console.log("TauntEffects:", user.tauntEffects);
-
     context ??= this.createBaseContext({ sourceId: action?.userId });
 
-    // =========================
-    // TAUNT
-    // =========================
+    const isUnavailable = (c) => !c || !c.alive;
 
+    const targets =
+      this._resolveTauntTargets(user, skill, action, context, isUnavailable) ??
+      this._resolveAoETargets(user, skill, isUnavailable) ??
+      this._resolveDirectTargets(user, action, isUnavailable);
+
+    return targets && Object.keys(targets).length > 0 ? targets : null;
+  }
+
+  _resolveTauntTargets(user, skill, action, context, isUnavailable) {
     const activeTaunt = user.tauntEffects?.find(
-      (effect) => effect.expiresAtTurn > this.combat.currentTurn,
+      (e) => e.expiresAtTurn > this.combat.currentTurn,
     );
 
-    const hasTaunt = !!activeTaunt;
-
-    const canRedirect =
-      hasTaunt && action?.targetIds && Object.keys(action.targetIds).length > 0;
-
-    // =========================
-    // REDIRECTION
-    // =========================
-
-    if (canRedirect && Array.isArray(skill.targetSpec)) {
-      const taunter = this.combat.activeChampions.get(activeTaunt.taunterId);
-
-      if (!isUnavailableTarget(taunter)) {
-        let redirectionEvents = [];
-
-        skill.targetSpec.forEach((spec, index) => {
-          const type = typeof spec === "string" ? spec : spec.type;
-
-          if (type !== "enemy") return;
-
-          const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
-
-          const originalId = action.targetIds?.[roleKey];
-
-          if (!originalId) return;
-
-          const original = this.combat.activeChampions.get(originalId);
-          if (isUnavailableTarget(original)) return;
-
-          if (spec.unique === true) return;
-
-          currentTargets[roleKey] = taunter;
-          redirected = true;
-
-          redirectionEvents.push({
-            type: "tauntRedirection",
-            attackerId: user.id,
-            fromTargetId: original.id,
-            toTargetId: taunter.id,
-          });
-        });
-
-        // Preencher demais roles não redirecionados
-        for (const role in action.targetIds) {
-          if (!currentTargets[role]) {
-            const target = this.combat.activeChampions.get(
-              action.targetIds[role],
-            );
-            if (!isUnavailableTarget(target)) {
-              currentTargets[role] = target;
-            }
-          }
-        }
-
-        if (redirected) {
-          context.visual.redirectionEvents =
-            context.visual.redirectionEvents || [];
-
-          context.visual.redirectionEvents.push(...redirectionEvents);
-
-          /* console.log(
-            `${formatChampionName(user)} foi provocado e redirecionou seu ataque para ${formatChampionName(taunter)}!`,
-          );
-          */
-        }
-      }
-    }
-
-    // =========================
-    // NORMAL RESOLUTION (if nothing redirected)
-    // =========================
-
-    if (!redirected) {
-      const normalizedSpec = Array.isArray(skill.targetSpec)
-        ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
-        : [];
-
-      const hasAll = normalizedSpec.includes("all");
-      const hasAllEnemies =
-        normalizedSpec.includes("all-enemies") ||
-        normalizedSpec.includes("all:enemy");
-      const hasAllAllies =
-        normalizedSpec.includes("all-allies") ||
-        normalizedSpec.includes("all:ally");
-
-      if (hasAllEnemies || hasAllAllies || hasAll) {
-        if (hasAllEnemies || hasAll) {
-          const enemies = Array.from(
-            this.combat.activeChampions.values(),
-          ).filter((c) => c.team !== user.team && !isUnavailableTarget(c));
-
-          enemies.forEach((enemy, i) => {
-            const key = i === 0 ? "enemy" : `enemy${i + 1}`;
-            currentTargets[key] = enemy;
-          });
-        }
-
-        if (hasAllAllies || hasAll) {
-          const allies = Array.from(
-            this.combat.activeChampions.values(),
-          ).filter((c) => c.team === user.team && !isUnavailableTarget(c));
-
-          allies.forEach((ally, i) => {
-            const key = i === 0 ? "ally" : `ally${i + 1}`;
-            currentTargets[key] = ally;
-          });
-        }
-      } else if (action?.targetIds) {
-        for (const role in action.targetIds) {
-          const target = this.combat.activeChampions.get(
-            action.targetIds[role],
-          );
-
-          if (!isUnavailableTarget(target)) {
-            currentTargets[role] = target;
-          } else if (role === "self") {
-            currentTargets[role] = user;
-          }
-        }
-      }
-    }
-
-    if (Object.keys(currentTargets).length === 0) {
-      /* console.log(
-        `Nenhum alvo válido para a ação de ${formatChampionName(user)}. Ação cancelada.`,
-      );
-      */
+    if (
+      !activeTaunt ||
+      !action?.targetIds ||
+      Object.keys(action.targetIds).length === 0
+    )
       return null;
+    if (!Array.isArray(skill.targetSpec)) return null;
+
+    const taunter = this.combat.activeChampions.get(activeTaunt.taunterId);
+    if (isUnavailable(taunter)) return null;
+
+    const targets = {};
+    const redirectionEvents = [];
+    let redirected = false;
+
+    skill.targetSpec.forEach((spec, index) => {
+      const type = typeof spec === "string" ? spec : spec.type;
+      if (type !== "enemy") return;
+
+      const roleKey = index === 0 ? "enemy" : `enemy${index + 1}`;
+      const originalId = action.targetIds?.[roleKey];
+      if (!originalId) return;
+
+      const original = this.combat.activeChampions.get(originalId);
+      if (isUnavailable(original)) return;
+      if (spec.unique === true) return;
+
+      targets[roleKey] = taunter;
+      redirected = true;
+      redirectionEvents.push({
+        type: "tauntRedirection",
+        attackerId: user.id,
+        fromTargetId: original.id,
+        toTargetId: taunter.id,
+      });
+    });
+
+    if (!redirected) return null;
+
+    // Preencher roles não redirecionados com os alvos originais
+    for (const role in action.targetIds) {
+      if (!targets[role]) {
+        const target = this.combat.activeChampions.get(action.targetIds[role]);
+        if (!isUnavailable(target)) targets[role] = target;
+      }
     }
 
-    return currentTargets;
+    context.visual.redirectionEvents = context.visual.redirectionEvents || [];
+    context.visual.redirectionEvents.push(...redirectionEvents);
+
+    return targets;
+  }
+
+  _resolveAoETargets(user, skill, isUnavailable) {
+    const normalizedSpec = Array.isArray(skill.targetSpec)
+      ? skill.targetSpec.map((s) => (typeof s === "string" ? s : s.type))
+      : [];
+
+    const hasAll = normalizedSpec.includes("all");
+    const hasAllEnemies =
+      normalizedSpec.includes("all-enemies") ||
+      normalizedSpec.includes("all:enemy");
+    const hasAllAllies =
+      normalizedSpec.includes("all-allies") ||
+      normalizedSpec.includes("all:ally");
+
+    if (!hasAll && !hasAllEnemies && !hasAllAllies) return null;
+
+    const targets = {};
+
+    if (hasAllEnemies || hasAll) {
+      Array.from(this.combat.activeChampions.values())
+        .filter((c) => c.team !== user.team && !isUnavailable(c))
+        .forEach((enemy, i) => {
+          targets[i === 0 ? "enemy" : `enemy${i + 1}`] = enemy;
+        });
+    }
+
+    if (hasAllAllies || hasAll) {
+      Array.from(this.combat.activeChampions.values())
+        .filter((c) => c.team === user.team && !isUnavailable(c))
+        .forEach((ally, i) => {
+          targets[i === 0 ? "ally" : `ally${i + 1}`] = ally;
+        });
+    }
+
+    return targets;
+  }
+
+  _resolveDirectTargets(user, action, isUnavailable) {
+    if (!action?.targetIds) return null;
+
+    const targets = {};
+    for (const role in action.targetIds) {
+      const target = this.combat.activeChampions.get(action.targetIds[role]);
+      if (!isUnavailable(target)) {
+        targets[role] = target;
+      } else if (role === "self") {
+        targets[role] = user;
+      }
+    }
+    return targets;
   }
 
   // ============================================================

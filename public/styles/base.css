@@ -12,6 +12,24 @@ html {
   font-size: 14px;
 }
 
+@media (max-width: 768px) {
+  html {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 600px) {
+  html {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 430px) {
+  html {
+    font-size: 11px;
+  }
+}
+
 html,
 body {
   font-family: "Montserrat", sans-serif;
