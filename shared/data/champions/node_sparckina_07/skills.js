@@ -37,22 +37,21 @@ const nodeSparckina07Skills = [
   {
     key: "radiant_Rush",
     name: "Radiant Rush",
-    speedBuff: 15,
-    evasionPercent: 10,
-    buffDuration: 2,
+    speedBuff: 10,
+    evasionPercent: 5,
     contact: false,
 
     priority: 0,
     element: "lightning",
     description() {
-      return `Aumenta a Velocidade em ${this.speedBuff} e a Esquiva em ${this.evasionPercent}% da Velocidade por ${this.buffDuration} turnos.`;
+      return `Aumenta a Velocidade em ${this.speedBuff} e a Esquiva em ${this.evasionPercent}% da Velocidade.`;
     },
     targetSpec: ["self"],
     resolve({ user, context = {} }) {
       user.modifyStat({
         statName: "Speed",
         amount: this.speedBuff,
-        duration: this.buffDuration,
+        isPermanent: true,
         context,
       });
 
@@ -62,7 +61,7 @@ const nodeSparckina07Skills = [
       user.modifyStat({
         statName: "Evasion",
         amount: evasionBuff,
-        duration: this.buffDuration,
+        isPermanent: true,
         context,
       });
 

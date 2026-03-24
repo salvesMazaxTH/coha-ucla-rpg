@@ -188,7 +188,7 @@ export function applyStatModifier(
 
   const limits = {
     Critical: { min: 0, max: 95 },
-    Evasion: { min: 0, max: 95 },
+    Evasion: { min: 0, max: 75 },
     default: { min: 10, max: 999 },
   };
 
