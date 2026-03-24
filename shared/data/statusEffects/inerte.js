@@ -11,20 +11,8 @@ const inerte = {
   },
 
   onValidateAction({ actionSource }) {
-    const k = actionSource.getStatusEffect("inerte");
-
-    let deny = true;
-
-    if (k?.canBeInterruptedByAction) {
-      actionSource.removeStatusEffect("inerte");
-      deny = false;
-      return {
-        message: `O efeito "Inerte" de ${formatChampionName(actionSource)} foi interrompido!`,
-      };
-    }
-
     return {
-      deny,
+      deny: true,
       message: `${formatChampionName(actionSource)} está Inerte e não pode agir!`,
     };
   },
