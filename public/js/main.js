@@ -479,8 +479,8 @@ let playerTeam = null;
 let username = null;
 const playerNames = new Map(); // slot → nome de usuário
 
-// Reserva por time: array de championKeys
-const teamReserveQueue = new Map(); // team → string[]
+// Reserva/switch desativados.
+// const teamReserveQueue = new Map(); // team → string[]
 
 // --- Turno & combate ---
 let currentTurn = 1;
@@ -491,7 +491,7 @@ let gameEnded = false;
 const activeChampions = new Map();
 
 // --- Seleção de campeões ---
-const TEAM_SIZE = 4;
+const TEAM_SIZE = 3;
 let selectedChampions = Array(TEAM_SIZE).fill(null);
 let championSelectionTimer = null;
 let championSelectionTimeLeft = 0;
@@ -520,7 +520,7 @@ const disconnectionMessage = document.getElementById("disconnection-message");
 
 // --- Conteúdo principal (arena) ---
 const mainContent = document.getElementById("main-content");
-const endTurnBtn = document.querySelector("#end-turn-btn");
+const skipSlotBtn = document.querySelector("#skip-slot-btn");
 const combatDialog = document.getElementById("combat-dialog");
 const combatDialogText = document.getElementById("combat-dialog-text");
 
@@ -547,13 +547,13 @@ const surrenderOverlay = document.getElementById("surrender-overlay");
 const surrenderCancel = document.getElementById("surrender-cancel");
 const surrenderConfirm = document.getElementById("surrender-confirm");
 
-// --- Campeões de retaguarda (reserva) ---
-const backChampionDisplayTeam1 = document.getElementById(
-  "backChampionDisplayTeam1",
-);
-const backChampionDisplayTeam2 = document.getElementById(
-  "backChampionDisplayTeam2",
-);
+// --- Campeões de retaguarda (reserva) desativados ---
+// const backChampionDisplayTeam1 = document.getElementById(
+//   "backChampionDisplayTeam1",
+// );
+// const backChampionDisplayTeam2 = document.getElementById(
+//   "backChampionDisplayTeam2",
+// );
 
 // ============================================================
 //  EXPORTS GLOBAIS (usados por AnimsAndLogManager e outros)
@@ -635,8 +635,8 @@ socket.on("playerAssigned", (data) => {
     document.body.classList.remove("perspective-team2");
   }
 
-  rebuildReserveDisplay(1);
-  rebuildReserveDisplay(2);
+  // rebuildReserveDisplay(1);
+  // rebuildReserveDisplay(2);
 });
 
 socket.on("waitingForOpponent", (message) => {
@@ -657,9 +657,9 @@ socket.on("allPlayersConnected", () => {
   mainContent.classList.remove("hidden");
   mainContent.classList.add("visible");
 
-  // Anexa o listener de fim de turno (usa a ref já existente)
-  if (endTurnBtn) {
-    endTurnBtn.addEventListener("click", endTurn);
+  // Anexa o listener de pular slot (usa a ref já existente)
+  if (skipSlotBtn) {
+    skipSlotBtn.addEventListener("click", skipCurrentSlot);
   }
 
   // Reseta estado de seleção para novo jogo
@@ -1391,7 +1391,9 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   }
 
   socket.emit("useSkill", { userId, skillKey, targetIds });
-  advanceActionBarSlot(userId);
+  if (!editMode.actMultipleTimesPerTurn) {
+    advanceActionBarSlot(userId);
+  }
 
   document.getElementById("undo-actions-btn").disabled = false;
 });
@@ -1634,7 +1636,6 @@ socket.on("actionsCanceled", () => {
   document.getElementById("undo-actions-btn").disabled = true;
 
   hasConfirmedEndTurn = false;
-  endTurnBtn.disabled = false;
 
   activeChampions.forEach((champion) => {
     champion.resetActionStatus();
@@ -1652,7 +1653,6 @@ function applyTurnUpdate(turn) {
   currentTurn = turn;
   updateTurnDisplay(currentTurn);
   hasConfirmedEndTurn = false;
-  endTurnBtn.disabled = false;
 
   activeChampions.forEach((champion) => champion.resetActionStatus());
   activeChampions.forEach((champion) => {
@@ -1684,12 +1684,8 @@ function endTurn() {
     return;
   }
 
-  const confirmed = confirm("Tem certeza que deseja encerrar este turno?");
-  if (!confirmed) return;
-
   socket.emit("endTurn");
   hasConfirmedEndTurn = true;
-  endTurnBtn.disabled = true;
   removeActionBar();
   logCombat("Você confirmou o fim do turno. Aguardando o outro jogador...");
 
@@ -1734,121 +1730,52 @@ function logCombat(text) {
 }
 
 // ============================================================
-//  EXIBIÇÃO DO CAMPEÃO DE RETAGUARDA
+//  EXIBIÇÃO DO CAMPEÃO DE RETAGUARDA (DESATIVADA)
 // ============================================================
 
-const remainingSwitchesPerTeam = new Map([
-  [1, 2],
-  [2, 2],
-]);
+// const remainingSwitchesPerTeam = new Map([
+//   [1, 0],
+//   [2, 0],
+// ]);
 
-socket.on("switchesUpdate", ({ team1, team2 }) => {
-  remainingSwitchesPerTeam.set(1, team1);
-  remainingSwitchesPerTeam.set(2, team2);
-  rebuildReserveDisplay(1);
-  rebuildReserveDisplay(2);
-});
+// socket.on("switchesUpdate", ({ team1, team2 }) => {
+//   remainingSwitchesPerTeam.set(1, team1);
+//   remainingSwitchesPerTeam.set(2, team2);
+//   rebuildReserveDisplay(1);
+//   rebuildReserveDisplay(2);
+// });
 
-socket.on("backChampionUpdate", ({ team, queue }) => {
-  teamReserveQueue.set(team, queue ?? []);
-  rebuildReserveDisplay(team);
-});
+// socket.on("backChampionUpdate", ({ team, queue }) => {
+//   teamReserveQueue.set(team, queue ?? []);
+//   rebuildReserveDisplay(team);
+// });
 
-function getReserveDisplayElement(team) {
-  if (playerTeam === 1 || playerTeam === 2) {
-    return team === playerTeam
-      ? backChampionDisplayTeam1
-      : backChampionDisplayTeam2;
-  }
+// function getReserveDisplayElement(team) {
+//   if (playerTeam === 1 || playerTeam === 2) {
+//     return team === playerTeam
+//       ? backChampionDisplayTeam1
+//       : backChampionDisplayTeam2;
+//   }
+//
+//   return team === 1 ? backChampionDisplayTeam1 : backChampionDisplayTeam2;
+// }
 
-  return team === 1 ? backChampionDisplayTeam1 : backChampionDisplayTeam2;
+function rebuildReserveDisplay(_team) {
+  // Reserva/switch UI desativados.
 }
 
-function rebuildReserveDisplay(team) {
-  const displayElement = getReserveDisplayElement(team);
-  if (!displayElement) return;
+// socket.on("championSwitchedOut", (championId) => {
+//   combatAnimations.handleChampionSwitchedOut(championId);
+// });
 
-  const queue = teamReserveQueue.get(team) ?? [];
+// socket.on("switchQueued", ({ championId }) => {
+//   document.getElementById("undo-actions-btn").disabled = false;
+//   advanceActionBarSlot(championId);
+// });
 
-  if (queue.length === 0) {
-    displayElement.innerHTML = "";
-    displayElement.classList.add("hidden");
-    displayElement.classList.remove("visible");
-    return;
-  }
-
-  const isOwnTeam = team === playerTeam;
-  const activeChamp = getActionBarChampion();
-  const teamSwitches = remainingSwitchesPerTeam.get(team) ?? 0;
-  const canSwitch =
-    isOwnTeam && !!activeChamp && !window.gameEnded && teamSwitches > 0;
-
-  displayElement.dataset.side = isOwnTeam ? "ally" : "enemy";
-
-  displayElement.innerHTML = "";
-
-  const header = document.createElement("div");
-  header.className = "reserve-header";
-
-  const label = document.createElement("span");
-  label.className = "reserve-label";
-  label.textContent = "Trocas";
-
-  const counter = document.createElement("span");
-  counter.className = "switch-counter";
-  counter.textContent = String(teamSwitches);
-
-  header.appendChild(label);
-  header.appendChild(counter);
-  displayElement.appendChild(header);
-
-  const cardsContainer = document.createElement("div");
-  cardsContainer.className = "reserve-cards";
-  displayElement.appendChild(cardsContainer);
-
-  queue.forEach((key) => {
-    const data = championDB[key];
-    if (!data) return;
-
-    const card = document.createElement("div");
-    card.className = "reserve-card" + (canSwitch ? " clickable" : "");
-    card.dataset.reserveKey = key;
-
-    const portrait = document.createElement("img");
-    portrait.src = data.portrait;
-    portrait.alt = data.name;
-
-    const name = document.createElement("span");
-    name.className = "reserve-name";
-    name.textContent = data.name;
-    name.title = data.name;
-
-    card.appendChild(portrait);
-    card.appendChild(name);
-
-    if (canSwitch) {
-      card.addEventListener("click", () => handleSwitchViaReserveCard(key));
-    }
-
-    cardsContainer.appendChild(card);
-  });
-
-  displayElement.classList.remove("hidden");
-  displayElement.classList.add("visible");
-}
-
-socket.on("championSwitchedOut", (championId) => {
-  combatAnimations.handleChampionSwitchedOut(championId);
-});
-
-socket.on("switchQueued", ({ championId }) => {
-  document.getElementById("undo-actions-btn").disabled = false;
-  advanceActionBarSlot(championId);
-});
-
-socket.on("switchDenied", (message) => {
-  alert(message);
-});
+// socket.on("switchDenied", (message) => {
+//   alert(message);
+// });
 
 // ============================================================
 //  ACTION BAR (slot-by-slot action selection)
@@ -1879,7 +1806,10 @@ function initActionBar() {
 
 function showActionBarSlot() {
   removeActionBar();
-  if (currentActionBarSlot >= actionBarSlotOrder.length) return;
+  if (currentActionBarSlot >= actionBarSlotOrder.length) {
+    if (actionBarSlotOrder.length > 0) endTurn();
+    return;
+  }
 
   const champion = getActionBarChampion();
   if (!champion) return;
@@ -1927,16 +1857,24 @@ function showActionBarSlot() {
   actionBarEl.appendChild(skillsBar);
   teamContainer.appendChild(actionBarEl);
 
-  // Update reserve display: mark cards as clickable now that the action bar is active
-  rebuildReserveDisplay(playerTeam);
+  if (skipSlotBtn) skipSlotBtn.disabled = false;
+
+  // Update reserve display disabled.
+  // rebuildReserveDisplay(playerTeam);
 }
 
 function advanceActionBarSlot(champId) {
   if (actionBarSlotOrder[currentActionBarSlot] === champId) {
     currentActionBarSlot++;
     showActionBarSlot();
-    rebuildReserveDisplay(playerTeam);
+    // rebuildReserveDisplay(playerTeam);
   }
+}
+
+function skipCurrentSlot() {
+  if (currentActionBarSlot >= actionBarSlotOrder.length) return;
+  currentActionBarSlot++;
+  showActionBarSlot();
 }
 
 function removeActionBar() {
@@ -1946,19 +1884,15 @@ function removeActionBar() {
     actionBarEl.remove();
     actionBarEl = null;
   }
-  // Rebuild reserve display without active action bar (removes clickability)
-  if (playerTeam !== null) rebuildReserveDisplay(playerTeam);
+  if (skipSlotBtn) skipSlotBtn.disabled = true;
+  // Rebuild reserve display disabled.
+  // if (playerTeam !== null) rebuildReserveDisplay(playerTeam);
 }
 
-function handleSwitchViaReserveCard(reserveKey) {
-  if (window.gameEnded) return;
-  const activeChamp = getActionBarChampion();
-  if (!activeChamp) return;
-  socket.emit("requestSwitch", {
-    championId: activeChamp.id,
-    reserveChampionKey: reserveKey,
-  });
-}
+/* function handleSwitchViaReserveCard(reserveKey) {
+  // Lógica de switch/reserva desativada.
+  void reserveKey;
+} */
 
 // ============================================================
 //  SURRENDER (Render-se)

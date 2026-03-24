@@ -17,6 +17,12 @@ export default {
 
     if (!skill.contact) return;
 
+    // não empilhar com o efeito da skill, que faz o mesmo, mas melhor
+    if (owner.runtime?.hookEffects?.some(effect => effect.key === "camara_de_estase")) {
+      console.log(`[PASSIVA — Presságio Glacial] ${formatChampionName(owner)} já tem um efeito de gancho que aplica "Congelado". Ignorando aplicação adicional.`);
+      return;
+    }
+
     const alreadyFrozen = source.hasStatusEffect("congelado");
     const alreadyChilled = source.hasStatusEffect("gelado");
 

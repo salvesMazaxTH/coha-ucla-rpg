@@ -41,7 +41,7 @@ const nodeSparckina07Skills = [
     evasionPercent: 5,
     contact: false,
 
-    priority: 0,
+    priority: 3,
     element: "lightning",
     description() {
       return `Aumenta a Velocidade em ${this.speedBuff} e a Esquiva em ${this.evasionPercent}% da Velocidade.`;

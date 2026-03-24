@@ -52,20 +52,22 @@ export function applyStatusEffect(
   }
 
   const { currentTurn } = context || {};
-  const isStackable = statusEffectKey === "poison";
+
+  const isStackable =
+    StatusEffectsRegistry[statusEffectKey].isStackable || false;
+
+  if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
+    return;
+  }
 
   console.log(
     `[STATUS APPLY] ${champion.name} tentando receber "${statusEffectKey}" (duration=${duration})`,
   );
-  
+
   duration = Number.isFinite(duration) ? duration : 1;
 
   const persistent = metadata?.persistent || false;
   if (persistent) duration = Infinity;
-
-  if (hasStatusEffect(champion, statusEffectKey) && !isStackable) {
-    champion.statusEffects.delete(statusEffectKey);
-  }
 
   champion.statusEffects.set(statusEffectKey, {
     expiresAtTurn: Number.isFinite(currentTurn)
@@ -152,7 +154,7 @@ function _canApplyStatusEffect(
       if (existingBehavior?.subtypes?.includes("hardCC")) {
         return {
           allowed: false,
- /*          message: `${champion.name} já está incapacitado.`, */
+          /*          message: `${champion.name} já está incapacitado.`, */
         };
       }
     }

@@ -42,8 +42,8 @@ const editMode = {
   freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
-const TEAM_SIZE = 4;
-const ACTIVE_PER_TEAM = 2; // máximo de campeões simultâneos em campo por time
+const TEAM_SIZE = 3;
+const ACTIVE_PER_TEAM = 3; // máximo de campeões simultâneos em campo por time
 const MAX_SCORE = 3; // primeiro a derrotar 3 campeões inimigos
 const CHAMPION_SELECTION_TIME = 120; // Segundos para seleção de campeões
 const DISCONNECT_TIMEOUT = 30 * 1000; // 30 s para reconexão
@@ -172,9 +172,9 @@ function spawnChampion({
 }
 
 /** Instancia e registra campeões de uma lista de keys em um time (fase de seleção inicial). */
-/** Apenas os 2 primeiros entram em campo; os restantes ficam na fila de reserva. */
+/** Apenas os ACTIVE_PER_TEAM primeiros entram em campo; os restantes ficam na fila de reserva. */
 function assignChampionsToTeam(team, championKeys) {
-  championKeys.slice(0, 2).forEach((championKey, index) => {
+  championKeys.slice(0, ACTIVE_PER_TEAM).forEach((championKey, index) => {
     if (!championKey) return;
     spawnChampion({
       championKey,
@@ -186,59 +186,23 @@ function assignChampionsToTeam(team, championKeys) {
   });
 }
 
-/** Inicializa a fila de reserva de um jogador (campeões a partir da posição 2). */
-function initReserveQueue(player) {
-  match.combat.reserveQueues.set(player.team, [
-    ...player.selectedChampionKeys.slice(2),
-  ]);
+/** Inicializa a fila de reserva de um jogador (DESATIVADO). */
+function initReserveQueue(_player) {
+  // Sistema de reservas desativado para modo 3x3 fixo.
 }
 
 /**
  * Limpa ultMeter e todos os efeitos temporários de um campeão ao sair de campo por troca.
  * Modifiers com isPermanent=true (statModifiers) ou permanent=true (damageModifiers) são mantidos.
  */
-function clearTemporaryEffectsOnSwitch(champion) {
-  champion.ultMeter = 0;
-  champion.tauntEffects = [];
-  champion.damageReductionModifiers = [];
-  champion.damageModifiers = champion.damageModifiers.filter(
-    (m) => m.permanent === true,
-  );
-
-  // Remover statModifiers não-permanentes e reverter os stats afetados
-  const nonPermanent = champion.statModifiers.filter((m) => !m.isPermanent);
-  if (nonPermanent.length > 0) {
-    champion.statModifiers = champion.statModifiers.filter(
-      (m) => m.isPermanent,
-    );
-    const affectedStats = new Set(nonPermanent.map((m) => m.statName));
-    const remaining = champion.statModifiers;
-    const limits = {
-      Critical: { min: 0, max: 95 },
-      Evasion: { min: 0, max: 95 },
-      default: { min: 10, max: 999 },
-    };
-    for (const statName of affectedStats) {
-      const baseKey = `base${statName}`;
-      const baseValue = champion[baseKey];
-      if (baseValue === undefined) continue;
-      let newValue = baseValue;
-      for (const mod of remaining) {
-        if (mod.statName !== statName) continue;
-        const { min, max } = limits[statName] || limits.default;
-        const effectiveMin = mod.ignoreMinimum ? 0 : min;
-        newValue = Math.max(effectiveMin, Math.min(newValue + mod.amount, max));
-      }
-      champion[statName] = newValue;
-    }
-  }
+function clearTemporaryEffectsOnSwitch(_champion) {
+  // Sistema de switch desativado para modo 3x3 fixo.
 }
 
-/** Emite backChampionUpdate com a fila completa de reserva do time. */
-function emitBackChampionUpdate(team) {
-  const queue = match.combat.reserveQueues.get(team) || [];
-  io.emit("backChampionUpdate", { team, queue: [...queue] });
-}
+// /** Emite backChampionUpdate com a fila completa de reserva do time. */
+// function emitBackChampionUpdate(_team) {
+//   // Sistema de reservas desativado para modo 3x3 fixo.
+// }
 
 /**
  * Spawna o próximo campeão da fila de reserva do time.
@@ -249,69 +213,10 @@ function emitBackChampionUpdate(team) {
  * @param {string|null}      [opts.championToSwitchOutId]  ID do campeão a substituir (apenas reason='switch').
  * @returns {Champion|null}
  */
-function spawnFromReserve(
-  team,
-  {
-    reason = "death",
-    championToSwitchOutId = null,
-    reserveChampionKey = null,
-    switchedOutChampion = null,
-  } = {},
-) {
-  const queue = match.combat.reserveQueues.get(team);
-  if (!queue || queue.length === 0) return null;
-
-  // Capturar o slot do campeão que sai ANTES de removê-lo do campo
-  let inheritedSlot = null;
-
-  if (reason === "switch" && championToSwitchOutId) {
-    const switchedOut =
-      switchedOutChampion ??
-      match.combat.activeChampions.get(championToSwitchOutId);
-    if (switchedOut) {
-      inheritedSlot = switchedOut.combatSlot;
-      // Limpar efeitos temporários e guardar a instância no banco
-      clearTemporaryEffectsOnSwitch(switchedOut);
-      match.combat.benchedChampions.set(switchedOut.championKey, switchedOut);
-      // Volta para o final da fila de reserva (não está morto — pode retornar)
-      queue.push(switchedOut.championKey);
-      // Remove do campo sem acionar morte ou pontuação
-      match.combat.activeChampions.delete(championToSwitchOutId);
-      io.emit("championSwitchedOut", championToSwitchOutId);
-    }
-  }
-
-  let championKey;
-  if (reason === "switch" && reserveChampionKey) {
-    const idx = queue.indexOf(reserveChampionKey);
-    if (idx !== -1) queue.splice(idx, 1);
-    championKey = reserveChampionKey;
-  } else {
-    championKey = queue.shift();
-  }
-
-  // Se o campeão já esteve em campo, reutilizar a instância salva no banco
-  const benchedChampion = match.combat.benchedChampions.get(championKey);
-  let spawned;
-
-  if (benchedChampion) {
-    match.combat.benchedChampions.delete(championKey);
-    // Herdar o slot exato de quem saiu; só usa getNextAvailableSlot como fallback (morte)
-    const combatSlot =
-      inheritedSlot ?? match.combat.getNextAvailableSlot(team, ACTIVE_PER_TEAM);
-    if (combatSlot === null) return null;
-    benchedChampion.combatSlot = combatSlot;
-    // Registra sem adicionar ao combatSnapshot de novo
-    match.combat.registerChampion(benchedChampion, { trackSnapshot: false });
-    io.emit("gameStateUpdate", getGameState());
-    spawned = benchedChampion;
-  } else {
-    spawned = spawnChampion({ championKey, team, combatSlot: inheritedSlot });
-  }
-
-  emitBackChampionUpdate(team);
-  return spawned;
-}
+// function spawnFromReserve(_team, _opts = {}) {
+//   // Sistema de reservas desativado para modo 3x3 fixo.
+//   return null;
+// }
 
 /** Verifica se ambos os jogadores selecionaram seus times e notifica os clientes. */
 function checkAllTeamsSelected() {
@@ -322,10 +227,6 @@ function checkAllTeamsSelected() {
   }
   return false;
 }
-
-// --- Animação de morte: atraso para o client reproduzir a animação ---
-const CLIENT_DEATH_ANIMATION_DURATION = 2000;
-const SERVER_DELAY_AFTER_ANIMATION = 500;
 
 /** Emite os sockets de morte de um campeão a partir do resultado de match.removeChampionFromGame(). */
 function emitChampionDeath(deathResult) {
@@ -659,37 +560,9 @@ function handleEndTurn() {
 
   // 1. Resolver todas as ações via TurnResolver (switches têm prioridade 6 — saem primeiro)
   const resolver = new TurnResolver(match, editMode);
-  const { actionResults, deathResults, switchResults } = resolver.resolveTurn();
+  const { actionResults, deathResults } = resolver.resolveTurn();
 
-  // 2. Processar substituições extraídas pelo TurnResolver
-  const deadChampionIds = new Set(deathResults.map((d) => d.championId));
-
-  for (const sw of switchResults) {
-    // Se o campeão a ser trocado morreu neste turno, cancelar o switch
-    // (a morte já vai spawnar a reserva na etapa de mortes)
-    if (deadChampionIds.has(sw.championToSwitchOutId)) {
-      const player = match.players.find((p) => p?.team === sw.team);
-      if (player) player.remainingSwitches++;
-      io.emit("switchesUpdate", {
-        team1: match.players[0]?.remainingSwitches ?? 2,
-        team2: match.players[1]?.remainingSwitches ?? 2,
-      });
-      continue;
-    }
-
-    const outChamp =
-      sw.switchedOutChampion ??
-      match.combat.activeChampions.get(sw.championToSwitchOutId);
-    const outName = outChamp ? formatChampionName(outChamp) : "?";
-    const spawned = spawnFromReserve(sw.team, {
-      reason: "switch",
-      championToSwitchOutId: sw.championToSwitchOutId,
-      reserveChampionKey: sw.reserveChampionKey,
-      switchedOutChampion: sw.switchedOutChampion,
-    });
-    const inName = spawned ? formatChampionName(spawned) : "?";
-    io.emit("combatLog", `${outName} foi substituído por ${inName}!`);
-  }
+  // 2. Processamento de switch/substituição desativado (modo 3x3 fixo).
 
   // 3. Emitir envelopes para cada resultado
   for (const result of actionResults) {
@@ -714,12 +587,9 @@ function handleEndTurn() {
     }
   }
 
-  // 3. Emitir mortes e spawnar reservas
+  // 3. Emitir mortes
   for (const death of deathResults) {
     emitChampionDeath(death);
-    if (!match.isGameEnded()) {
-      spawnFromReserve(death.team);
-    }
   }
 
   if (match.isGameEnded()) {
@@ -845,9 +715,6 @@ function handleStartTurn() {
 
   for (const death of deathResults) {
     emitChampionDeath(death);
-    if (!match.isGameEnded()) {
-      spawnFromReserve(death.team);
-    }
   }
 
   // 3. Limpar expirados
@@ -1004,10 +871,10 @@ io.on("connection", (socket) => {
     io.emit("playerCountUpdate", match.getConnectedCount());
     io.emit("playerNamesUpdate", match.getPlayerNamesEntries());
     socket.emit("gameStateUpdate", getGameState());
-    io.emit("switchesUpdate", {
-      team1: match.players[0]?.remainingSwitches ?? 2,
-      team2: match.players[1]?.remainingSwitches ?? 2,
-    });
+    // io.emit("switchesUpdate", {
+    //   team1: match.players[0]?.remainingSwitches ?? 0,
+    //   team2: match.players[1]?.remainingSwitches ?? 0,
+    // });
 
     return { playerSlot: slot, finalUsername };
   }
@@ -1123,15 +990,15 @@ io.on("connection", (socket) => {
       match.players[1].selectedChampionKeys,
     );
 
-    // Inicializa filas de reserva e notifica clientes
-    initReserveQueue(match.players[0]);
-    initReserveQueue(match.players[1]);
+    // Sistema de reserva/switch desativado.
+    // initReserveQueue(match.players[0]);
+    // initReserveQueue(match.players[1]);
 
     io.emit("scoreUpdate", match.getScorePayload());
     io.emit("gameStateUpdate", getGameState());
 
-    emitBackChampionUpdate(match.players[0].team);
-    emitBackChampionUpdate(match.players[1].team);
+    // emitBackChampionUpdate(match.players[0].team);
+    // emitBackChampionUpdate(match.players[1].team);
   }
 
   // =============================
@@ -1238,71 +1105,12 @@ io.on("connection", (socket) => {
   );
 
   // =============================
-  //  requestSwitch (prioridade 6 — como Pokémon)
+  //  requestSwitch (DESATIVADO)
   // =============================
 
-  socket.on("requestSwitch", ({ championId, reserveChampionKey }) => {
-    const playerSlot = match.getSlotBySocket(socket.id);
-    const player = match.players[playerSlot];
-    const champion = match.combat.activeChampions.get(championId);
-
-    if (!player || !champion || champion.team !== player.team) {
-      return socket.emit("switchDenied", "Sem permissão.");
-    }
-
-    if (player.remainingSwitches <= 0) {
-      return socket.emit(
-        "switchDenied",
-        "Você não tem mais trocas disponíveis.",
-      );
-    }
-
-    const queue = match.combat.reserveQueues.get(champion.team);
-    if (!queue || queue.length === 0) {
-      return socket.emit("switchDenied", "Nenhum campeão na reserva.");
-    }
-
-    if (!reserveChampionKey || !queue.includes(reserveChampionKey)) {
-      return socket.emit("switchDenied", "Campeão de reserva inválido.");
-    }
-
-    const alreadyQueued = match.combat.pendingActions.some(
-      (a) => a.type === "switch" && a.championToSwitchOutId === championId,
-    );
-    if (alreadyQueued) {
-      return socket.emit(
-        "switchDenied",
-        "Este slot já tem uma substituição pendente.",
-      );
-    }
-
-    const action = new Action({
-      userId: championId,
-      skillKey: "__switch__",
-      targetIds: {},
-    });
-    action.type = "switch";
-    action.priority = 6;
-    action.speed = champion.Speed;
-    action.turn = match.getCurrentTurn();
-    action.ultCost = 0;
-    action.team = champion.team;
-    action.championToSwitchOutId = championId;
-    action.reserveChampionKey = reserveChampionKey;
-
-    match.enqueueAction(action);
-
-    player.remainingSwitches--;
-    socket.emit("switchQueued", { championId });
-    io.emit("switchesUpdate", {
-      team1: match.players[0]?.remainingSwitches ?? 2,
-      team2: match.players[1]?.remainingSwitches ?? 2,
-    });
-    io.to(socket.id).emit(
-      "combatLog",
-      `${formatChampionName(champion)} aguardando substituição...`,
-    );
-  });
+  // socket.on("requestSwitch", () => {
+  //   return socket.emit("switchDenied", "Sistema de trocas desativado.");
+  // });
 
   // =============================
   //  removeChampion (edit mode / debug)
@@ -1324,9 +1132,7 @@ io.on("connection", (socket) => {
     const deathResult = match.removeChampionFromGame(championId, MAX_SCORE);
     emitChampionDeath(deathResult);
 
-    if (!match.isGameEnded()) {
-      spawnFromReserve(deathResult.team);
-    }
+    // Sistema de reserva/switch desativado.
 
     if (match.isGameEnded()) {
       const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;

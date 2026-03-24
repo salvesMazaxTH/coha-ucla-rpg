@@ -1,7 +1,7 @@
 # GAME_ARCHITECTURE.md — Champion Arena (UCLA RPG)
 
 > Documentação mestre da arquitetura do sistema. Referência técnica completa para desenvolvimento, manutenção e extensão do jogo.
-> **v5.1** — Atualiza para refletir o novo formato de **equipe de 4 campeões com 2 slots simultâneos**, sistema de **Switch (troca em combate)**, **TurnResolver** como classe dedicada, **delegação de Champion em 4 módulos**, **reorganização de arquivos de campeões** (`data.js` / `skills.js` / `passive.js`), novos hooks e eventos de rede, e ajustes de fórmulas (ultCap, ult regen, afinidades, floor de dano).
+> **v5.1 (estado operacional atual)** — O modo jogável atual voltou a ser **3v3 fixo**: cada jogador seleciona **3 campeões**, com **3 slots simultâneos em campo** (inicial e máximo). O sistema de **Switch/troca/reserva está temporariamente desabilitado por tempo indeterminado**.
 
 ---
 
@@ -24,7 +24,7 @@
 15. [Sistema de StatusEffects](#15-sistema-de-statuseffects)
 16. [Sistema de Escudos (Shields)](#16-sistema-de-escudos-shields)
 17. [Sistema de Modificadores de Dano](#17-sistema-de-modificadores-de-dano)
-18. [Sistema de Switch (Troca em Combate)](#18-sistema-de-switch-troca-em-combate)
+18. [Status do Sistema de Switch (Temporariamente Desabilitado)](#18-status-do-sistema-de-switch-temporariamente-desabilitado)
 19. [Gerenciador de Animações — AnimsAndLogManager](#19-gerenciador-de-animações--animsandlogmanager)
 20. [Sistema de VFX — vfxManager](#20-sistema-de-vfx--vfxmanager)
 21. [Indicadores de Status — StatusIndicator](#21-indicadores-de-status--statusindicator)
@@ -37,11 +37,11 @@
 
 ## 1. Visão Geral
 
-**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de **4 campeões** cada, e alternam turnos usando habilidades até que um time tenha **3 campeões eliminados** (primeiro a 3 pontos vence).
+**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de **3 campeões** cada, e alternam turnos usando habilidades até que um time tenha **3 campeões eliminados** (primeiro a 3 pontos vence).
 
-### Formato de Equipe (v5.1)
+### Formato de Equipe (estado operacional atual)
 
-Cada jogador seleciona **4 campeões**. Apenas **2 ficam em campo simultaneamente** — os outros 2 compõem a **fila de reserva**. Quando um campeão em campo morre, o próximo da reserva entra automaticamente. O jogador também pode trocar um campeão vivo via **Switch** (ver seção 18).
+Cada jogador seleciona **3 campeões**. Os **3 ficam em campo simultaneamente** e esse também é o **máximo por time** durante a partida. O sistema de **Switch/troca/reserva** está **temporariamente desabilitado por tempo indeterminado**.
 
 ### Princípios Arquiteturais
 
@@ -189,7 +189,7 @@ Cada jogador seleciona **4 campeões**. Apenas **2 ficam em campo simultaneament
 ## 4. Fluxo de Jogo (Game Loop)
 
 ```
-[LOGIN] → [SELEÇÃO DE CAMPEÕES (4)] → [ARENA / TURNOS (2 ativos + reserva)] → [FIM DE JOGO]
+[LOGIN] → [SELEÇÃO DE CAMPEÕES (3)] → [ARENA / TURNOS (3 ativos fixos)] → [FIM DE JOGO]
 ```
 
 O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ver seção 6). `GameMatch` delega estado de lobby a `LobbyState` e estado de combate a `CombatState` — o `server.js` acessa ambos via interface pública de `GameMatch`.
@@ -207,18 +207,17 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 ### 4.2 Seleção de Campeões
 
 1. Quando ambos os jogadores conectam, servidor emite `allPlayersConnected` seguido de `startChampionSelection`.
-2. Cliente exibe grade. Jogador monta equipe de **4 campeões** (drag & drop para ordenar).
-3. Ao confirmar, cliente emite `selectTeam` com `{ team, champions: string[4] }`.
+2. Cliente exibe grade. Jogador monta equipe de **3 campeões** (drag & drop para ordenar).
+3. Ao confirmar, cliente emite `selectTeam` com `{ team, champions: string[3] }`.
 4. Servidor valida. Quando **ambos** confirmam, emite `allTeamsSelected` + `gameStateUpdate`.
 
 > Timer de seleção: **120 segundos**. Ao expirar, campeões aleatórios preenchem os slots vazios.
 
 ### 4.3 Início de Partida
 
-1. Servidor instancia os 2 primeiros campeões de cada equipe via `assignChampionsToTeam()` — slots 0 e 1.
-2. Os campeões 3 e 4 de cada equipe vão para a **fila de reserva** (`reserveQueues`).
-3. Servidor emite `backChampionUpdate` com a fila de reserva de cada time.
-4. Partida começa com `match.startCombat()`.
+1. Servidor instancia os 3 campeões de cada equipe via `assignChampionsToTeam()` — slots 0, 1 e 2.
+2. Não há fila de reserva no modo atual.
+3. Partida começa com `match.startCombat()`.
 
 ### 4.4 Turno
 
@@ -231,12 +230,14 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 1. Emite `turnLocked` para travar a UI dos jogadores.
 2. Instancia `TurnResolver` e chama `resolver.resolveTurn()`:
    - Ordena `pendingActions` por `priority DESC` → `speed DESC` → desempate aleatório.
-   - Processa switches (prioridade 6 — saem primeiro, como Pokémon).
-   - Executa cada ação de skill via `executeSkillAction()`.
-   - Processa mortes pós-resolução via `processChampionDeaths()`.
-3. Processa substituições de switch retornadas pelo TurnResolver via `spawnFromReserve()`.
+
+- Sistema de switch está desativado no modo atual.
+- Executa cada ação de skill via `executeSkillAction()`.
+- Processa mortes pós-resolução via `processChampionDeaths()`.
+
+3. Não processa substituições (switch/reserva desativados).
 4. Emite envelopes `combatAction` para cada resultado de ação executada.
-5. Emite mortes de campeões e spawna reservas automaticamente.
+5. Emite mortes de campeões (sem spawn automático de reserva no modo atual).
 6. Dispara hooks `onTurnEnd`.
 7. Limpa ações, avança turno, emite `combatPhaseComplete`.
 
@@ -250,12 +251,12 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 6. Emite envelope de "Início do Turno" com os efeitos visuais.
 7. Emite `turnUpdate` e `gameStateUpdate`.
 
-### 4.5 Morte e Substituição
+### 4.5 Morte e Pontuação (sem substituição)
 
 - Se HP chega a 0 dentro de `applyDamage`, `target.alive = false`.
 - Mortes são processadas pelo `TurnResolver.processChampionDeaths()` apenas **após todas as ações do turno** serem resolvidas.
 - Para cada morte: `match.removeChampionFromGame(championId, MAX_SCORE)`, que registra no histórico, pontua para o adversário, move para `deadChampions`.
-- Se o time ainda tem reservas, `spawnFromReserve(team)` traz o próximo campeão.
+- Não há substituição automática por reserva no modo atual.
 - Se algum time atingiu `MAX_SCORE = 3`, emite `gameOver`. Caso contrário, o jogo continua.
 
 ### 4.6 Fim de Jogo
@@ -269,19 +270,19 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 
 ### Eventos Cliente → Servidor
 
-| Evento                     | Payload                              | Descrição                                      |
-| -------------------------- | ------------------------------------ | ---------------------------------------------- |
-| `requestPlayerSlot`        | `username: string`                   | Solicita entrada no jogo                       |
-| `selectTeam`               | `{ team, champions: string[] }`      | Confirma seleção de equipe (4 campeões)        |
-| `requestSkillUse`          | `{ userId, skillKey }`               | Pré-validação antes de mostrar overlay de alvo |
-| `useSkill`                 | `{ userId, skillKey, targetIds }`    | Enfileira ação com alvos confirmados           |
-| `requestSwitch`            | `{ championId, reserveChampionKey }` | Solicita troca de campeão em campo             |
-| `requestUndoActions`       | —                                    | Cancela todas as ações pendentes do jogador    |
-| `endTurn`                  | —                                    | Confirma fim de turno                          |
-| `surrender`                | —                                    | Rendição imediata                              |
-| `combatAnimationsFinished` | —                                    | Informa que o cliente terminou as animações    |
-| `debugResetCombat`         | —                                    | Reset de combate (debug)                       |
-| `removeChampion`           | `{ championId }`                     | Remove campeão (edit mode)                     |
+| Evento                     | Payload                           | Descrição                                      |
+| -------------------------- | --------------------------------- | ---------------------------------------------- |
+| `requestPlayerSlot`        | `username: string`                | Solicita entrada no jogo                       |
+| `selectTeam`               | `{ team, champions: string[] }`   | Confirma seleção de equipe (3 campeões)        |
+| `requestSkillUse`          | `{ userId, skillKey }`            | Pré-validação antes de mostrar overlay de alvo |
+| `useSkill`                 | `{ userId, skillKey, targetIds }` | Enfileira ação com alvos confirmados           |
+| `requestSwitch`            | —                                 | **Desativado por tempo indeterminado**         |
+| `requestUndoActions`       | —                                 | Cancela todas as ações pendentes do jogador    |
+| `endTurn`                  | —                                 | Confirma fim de turno                          |
+| `surrender`                | —                                 | Rendição imediata                              |
+| `combatAnimationsFinished` | —                                 | Informa que o cliente terminou as animações    |
+| `debugResetCombat`         | —                                 | Reset de combate (debug)                       |
+| `removeChampion`           | `{ championId }`                  | Remove campeão (edit mode)                     |
 
 ### Eventos Servidor → Cliente
 
@@ -299,16 +300,16 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 | `combatPhaseComplete`       | —                               | Todas as ações foram emitidas                |
 | `turnLocked`                | —                               | Turno travado para resolução                 |
 | `championRemoved`           | `championId: string`            | Campeão morreu                               |
-| `championSwitchedOut`       | `championId: string`            | Campeão foi substituído (switch)             |
-| `backChampionUpdate`        | `{ team, queue: string[] }`     | Atualiza fila de reserva                     |
+| `championSwitchedOut`       | —                               | **Desativado por tempo indeterminado**       |
+| `backChampionUpdate`        | —                               | **Desativado por tempo indeterminado**       |
 | `turnUpdate`                | `number`                        | Número do novo turno                         |
 | `playerConfirmedEndTurn`    | `playerSlot: number`            | Um jogador confirmou fim de turno            |
 | `playerCanceledEndTurn`     | `playerSlot: number`            | Jogador cancelou confirmação de turno        |
 | `waitingForOpponentEndTurn` | `string`                        | Aguardando adversário                        |
 | `scoreUpdate`               | `{ player1, player2 }`          | Placar atualizado                            |
-| `switchesUpdate`            | `{ team1, team2 }`              | Switches restantes por time                  |
-| `switchQueued`              | `{ championId }`                | Switch aceito e enfileirado                  |
-| `switchDenied`              | `string`                        | Motivo da negação de switch                  |
+| `switchesUpdate`            | —                               | **Desativado por tempo indeterminado**       |
+| `switchQueued`              | —                               | **Desativado por tempo indeterminado**       |
+| `switchDenied`              | —                               | **Desativado por tempo indeterminado**       |
 | `skillApproved`             | `{ userId, skillKey }`          | Skill pré-validada                           |
 | `skillDenied`               | `string`                        | Motivo da negação                            |
 | `actionFailed`              | `string`                        | Ação rejeitada                               |
@@ -403,15 +404,15 @@ new Player({ id, username, team });
 | `username`             | `string`       | Nome exibido                                    |
 | `team`                 | `1 \| 2`       | Time do jogador                                 |
 | `socketId`             | `string\|null` | Socket atual (pode mudar em reconexão)          |
-| `selectedChampionKeys` | `string[]`     | Keys dos 4 campeões selecionados (em ordem)     |
-| `remainingSwitches`    | `number`       | Switches restantes no jogo (padrão: 2)          |
+| `selectedChampionKeys` | `string[]`     | Keys dos 3 campeões selecionados (em ordem)     |
+| `remainingSwitches`    | `number`       | Mantido por compatibilidade; atualmente 0       |
 
 #### Métodos
 
 ```js
 player.setSocket(socketId);
 player.clearSocket();
-player.setSelectedChampionKeys(keys); // Define seleção de equipe (array de 4)
+player.setSelectedChampionKeys(keys); // Define seleção de equipe (array de 3)
 player.clearChampionSelection();
 player.isTeamSelected(); // → boolean (seleção não-vazia)
 ```
@@ -432,7 +433,7 @@ const match = new GameMatch();
 GameMatch
 ├── players: [Player|null, Player|null]   ← slot 0 e slot 1
 ├── lobby: LobbyState                     ← sockets, timers de seleção e desconexão
-└── combat: CombatState                   ← campeões, turnos, ações, placar, reservas
+└── combat: CombatState                   ← campeões, turnos, ações e placar
 ```
 
 ---
@@ -466,7 +467,7 @@ combat.currentTurn; // number — turno atual (começa em 1)
 combat.pendingActions; // Action[] — ações enfileiradas no turno corrente
 combat.activeChampions; // Map<id, Champion> — campeões ativos em campo
 combat.deadChampions; // Map<id, Champion> — campeões eliminados
-combat.benchedChampions; // Map<championKey, Champion> — campeões no banco (switch)
+// combat.benchedChampions; // desativado no modo atual
 combat.playerScores; // [number, number] — pontos por slot
 combat.gameEnded; // boolean
 combat.started; // boolean
@@ -475,7 +476,7 @@ combat.finishedAnimationSockets; // Set<socketId>
 combat.combatSnapshot; // [{championKey, id, team, combatSlot}] — composição inicial
 combat.turnHistory; // Map<turn, TurnData>
 combat.scheduledEffects; // Effect[] — efeitos agendados para turnos futuros
-combat.reserveQueues; // Map<team, championKey[]> — fila de reserva
+// combat.reserveQueues; // desativado no modo atual
 ```
 
 #### Métodos de CombatState
@@ -968,7 +969,7 @@ Para cada extra em context.extraDamageQueue:
 
 ```js
 const resolver = new TurnResolver(match, editMode);
-const { actionResults, deathResults, switchResults } = resolver.resolveTurn();
+const { actionResults, deathResults } = resolver.resolveTurn();
 ```
 
 ### Fluxo de `resolveTurn()`
@@ -976,10 +977,12 @@ const { actionResults, deathResults, switchResults } = resolver.resolveTurn();
 1. **Loop de ações**: Enquanto houver ações pendentes:
    - Ordena por `priority DESC` → `speed DESC` → `Math.random()`.
    - Shifts a próxima ação.
-   - **Switches** (action.type === "switch") são coletados separadamente em `switchResults`.
-   - Skills normais executam `executeSkillAction()`.
+
+- Sistema de switch está desativado no modo atual.
+- Skills normais executam `executeSkillAction()`.
+
 2. **Mortes pós-turno**: `processChampionDeaths()` coleta campeões com `alive === false`.
-3. Retorna `{ actionResults, deathResults, switchResults }`.
+3. Retorna `{ actionResults, deathResults }`.
 
 ### `executeSkillAction(action, turnExecutionMap, context)`
 
@@ -1383,45 +1386,23 @@ Escudos regulares são consumidos em ordem FIFO.
 
 ---
 
-## 18. Sistema de Switch (Troca em Combate)
+## 18. Status do Sistema de Switch (Temporariamente Desabilitado)
 
-Inspirado no sistema de Pokémon. Cada jogador tem **2 trocas por partida** para substituir um campeão vivo em campo por um da reserva.
+O sistema de **Switch/troca/reserva** está **temporariamente desabilitado por tempo indeterminado**.
 
-### Fluxo
+### Status atual
 
-```
-1. CLIENT: socket.emit("requestSwitch", { championId, reserveChampionKey })
-2. SERVER: Valida permissão, switches restantes, reserva não-vazia, chave válida
-3. SERVER: Cria Action com type:"switch", priority:6, speed = Speed do campeão
-4. SERVER: Enfileira ação → match.enqueueAction(action)
-5. SERVER: player.remainingSwitches-- → emits switchQueued, switchesUpdate
+- `requestSwitch` está desativado.
+- Não há processamento de `switchResults` no fluxo de turno.
+- Não há `spawnFromReserve()` no modo jogável atual.
+- Eventos visuais de switch (`championSwitchedOut`, `backChampionUpdate`, `switchesUpdate`, `switchQueued`) estão desativados.
 
-RESOLUÇÃO (durante handleEndTurn):
-6. TurnResolver.resolveTurn() → coleta switchResults (prioridade 6 = sai primeiro)
-7. server.js processa cada switch via spawnFromReserve(team, { reason: 'switch', ... })
-   ├── Captura combatSlot do campeão que sai
-   ├── clearTemporaryEffectsOnSwitch(outChampion)
-   │     ├── ultMeter = 0
-   │     ├── Remove tauntEffects, damageReductionModifiers
-   │     ├── Remove damageModifiers não-permanentes
-   │     └── Remove statModifiers não-permanentes (recalcula stats)
-   ├── Guarda outChampion em benchedChampions (pode voltar depois)
-   ├── Adiciona championKey de volta ao final da fila de reserva
-   ├── Remove do campo (io.emit "championSwitchedOut")
-   └── Spawna novo campeão (reutiliza instância se já esteve em campo)
-```
+### Modo jogável vigente
 
-### Regras de Switch
-
-- **Prioridade 6**: Switches são resolvidos **antes de qualquer skill** (skills têm priority 0-5).
-- **2 trocas por partida** por jogador (`player.remainingSwitches`).
-- Campeão switchado **mantém HP atual**, mas **perde**:
-  - UltMeter (zerado)
-  - Status effects temporários (purge)
-  - Stat modifiers não-permanentes (revertidos ao base)
-  - Taunt effects e damage reduction modifiers
-- Campeão switchado volta para o **final da fila de reserva** (pode retornar).
-- Instâncias salvas em `combat.benchedChampions` são reutilizadas ao respawnar.
+- Formato **3v3 fixo**.
+- **3 campeões por equipe** na seleção inicial.
+- **3 campeões simultâneos em campo**.
+- **3 como máximo por equipe** durante toda a partida.
 
 ---
 
@@ -1445,7 +1426,7 @@ combatAnimations.handleCombatLog(text); // enqueue "combatLog"
 combatAnimations.handleGameStateUpdate(gameState); // enqueue "gameStateUpdate"
 combatAnimations.handleTurnUpdate(turn); // enqueue "turnUpdate"
 combatAnimations.handleChampionRemoved(championId); // enqueue "championRemoved"
-combatAnimations.handleChampionSwitchedOut(champId); // enqueue "championSwitchedOut"
+// combatAnimations.handleChampionSwitchedOut(champId); // desativado no modo atual
 combatAnimations.handleCombatPhaseComplete(); // enqueue "combatPhaseComplete"
 combatAnimations.handleGameOver(data); // enqueue "gameOver"
 combatAnimations.appendToLog(text);
@@ -1460,7 +1441,7 @@ combatAnimations.reset();
 | `gameStateUpdate`     | `processGameStateUpdate(gameState)`                              |
 | `turnUpdate`          | `processTurnUpdate(turn)`                                        |
 | `championRemoved`     | `processChampionRemoved(id)` — animação de morte                 |
-| `championSwitchedOut` | `processChampionSwitchedOut(id)` — switch anim                   |
+| `championSwitchedOut` | Desativado no modo atual                                         |
 | `combatLog`           | `processCombatLog(text)` — dialog se relevante                   |
 | `combatPhaseComplete` | Marca `currentPhase = "combat"` → dispara onQueueEmpty ao drenar |
 | `gameOver`            | `handleGameOver(data)` — overlay final                           |
@@ -1732,9 +1713,9 @@ export default championDB;
 
 ## 25. Decisões de Design e Convenções
 
-### Por que equipes de 4 com 2 slots?
+### Por que 3v3 fixo no estado atual?
 
-O formato 4×2 permite composição estratégica: 2 campeões em campo + 2 de reserva forçam o jogador a planejar substituições e ordens de entrada. O sistema de Switch (inspirado em Pokémon) adiciona camada tática extra.
+O formato **3v3 fixo** simplifica o fluxo de partida, reduz variáveis de sincronização de estado e mantém o combate mais previsível no estado atual do projeto. O sistema de switch permanece desativado por tempo indeterminado.
 
 ### Por que DamageEvent em vez de CombatResolver singleton?
 
@@ -1799,14 +1780,14 @@ Flags que afetam combate (`damageOutput`, `alwaysCrit`, `alwaysEvade`, `executio
 
 | Constante                 | Valor   | Descrição                      |
 | ------------------------- | ------- | ------------------------------ |
-| `TEAM_SIZE`               | 4       | Campeões por equipe na seleção |
+| `TEAM_SIZE`               | 3       | Campeões por equipe na seleção |
 | `MAX_SCORE`               | 3       | Pontos para vencer             |
-| Slots simultâneos         | 2       | Campeões em campo por time     |
+| Slots simultâneos         | 3       | Campeões em campo por time     |
 | `CHAMPION_SELECTION_TIME` | 120s    | Timer de seleção               |
 | `DISCONNECT_TIMEOUT`      | 30s     | Timeout de reconexão           |
 | `ultCap` (padrão)         | 24      | 6 barras × 4 unidades          |
 | Ult regen global          | +3/turn | Regen para todos os vivos      |
-| Switches por jogador      | 2       | Trocas permitidas na partida   |
+| Switches por jogador      | 0       | Sistema desativado atualmente  |
 
 ### Campeões Registrados (v5.1)
 

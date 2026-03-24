@@ -15,6 +15,8 @@ export class TurnResolver {
 
   resolveTurn() {
     const actionResults = [];
+    // Lógica de trocas/switches desativada: mantido apenas para compatibilidade
+    // de shape com o servidor.
     const switchResults = [];
     let actionOrder = 0;
 
@@ -37,12 +39,12 @@ export class TurnResolver {
 
       const action = actions.shift(); // remove a próxima ação
 
-      // Switch é executado inline: remove o campeão de activeChampions imediatamente
-      if (action.type === "switch") {
-        const switchResult = this.executeSwitch(action);
-        if (switchResult) switchResults.push(switchResult);
-        continue;
-      }
+      // Lógica de trocas/switches desativada.
+      // if (action.type === "switch") {
+      //   const switchResult = this.executeSwitch(action);
+      //   if (switchResult) switchResults.push(switchResult);
+      //   continue;
+      // }
 
       // 🔹 registra a posição da execução
       action.executionIndex = actionOrder++;
@@ -87,20 +89,20 @@ export class TurnResolver {
   }
 
   // ============================================================
-  //  EXECUÇÃO DE SWITCH
+  //  EXECUÇÃO DE SWITCH (DESATIVADA)
   // ============================================================
 
-  executeSwitch(action) {
-    const outId = action.championToSwitchOutId ?? action.userId;
-    if (outId) {
-      const champion = this.combat.activeChampions.get(outId);
-      if (champion) {
-        action.switchedOutChampion = champion; // passado ao servidor para bookkeeping (bench, slot, efeitos)
-        this.combat.activeChampions.delete(outId);
-      }
-    }
-    return action;
-  }
+  // executeSwitch(action) {
+  //   const outId = action.championToSwitchOutId ?? action.userId;
+  //   if (outId) {
+  //     const champion = this.combat.activeChampions.get(outId);
+  //     if (champion) {
+  //       action.switchedOutChampion = champion; // passado ao servidor para bookkeeping (bench, slot, efeitos)
+  //       this.combat.activeChampions.delete(outId);
+  //     }
+  //   }
+  //   return action;
+  // }
 
   // ============================================================
   //  MANIPULAÇÃO DE REPEAT ACTION (Passivas)
@@ -181,8 +183,8 @@ export class TurnResolver {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
     const user = this.combat.activeChampions.get(action.userId);
 
-    const isInactive =
-      !user || !user.alive || switchedOutChampionIds?.has?.(user.id);
+    // Referência a estado de "switched out" desativada junto com a lógica de switch.
+    const isInactive = !user || !user.alive;
 
     if (isInactive) {
       const userName = user ? formatChampionName(user) : "campeão desconhecido";

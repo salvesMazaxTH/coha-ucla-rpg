@@ -186,9 +186,9 @@ export function createCombatAnimationManager(deps) {
         await processChampionRemoved(item.data);
         break;
 
-      case "championSwitchedOut":
-        await processChampionSwitchedOut(item.data);
-        break;
+      // case "championSwitchedOut":
+      //   await processChampionSwitchedOut(item.data);
+      //   break;
 
       case "combatLog":
         await processCombatLog(item.data);
@@ -1190,17 +1190,17 @@ export function createCombatAnimationManager(deps) {
   }
 
   // ============================================================
-  //  CHAMPION SWITCHED OUT (no death animation — instant remove)
+  //  CHAMPION SWITCHED OUT (DESATIVADO)
   // ============================================================
 
-  async function processChampionSwitchedOut(championId) {
-    const champion = deps.activeChampions.get(championId);
-    if (!champion) return;
-
-    champion.el?.remove();
-    champion.el = null;
-    deps.activeChampions.delete(championId);
-  }
+  // async function processChampionSwitchedOut(championId) {
+  //   const champion = deps.activeChampions.get(championId);
+  //   if (!champion) return;
+  //
+  //   champion.el?.remove();
+  //   champion.el = null;
+  //   deps.activeChampions.delete(championId);
+  // }
 
   // ============================================================
   //  CHAMPION REMOVED (death animation)
@@ -1304,9 +1304,9 @@ export function createCombatAnimationManager(deps) {
     handleChampionRemoved(championId) {
       enqueue("championRemoved", championId);
     },
-    handleChampionSwitchedOut(championId) {
-      enqueue("championSwitchedOut", championId);
-    },
+    // handleChampionSwitchedOut(championId) {
+    //   enqueue("championSwitchedOut", championId);
+    // },
     handleGameOver(data) {
       enqueue("gameOver", data);
     },

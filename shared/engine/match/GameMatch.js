@@ -89,8 +89,8 @@ class CombatState {
     this.combatSnapshot = [];
     this.turnHistory = new Map();
     this.scheduledEffects = [];
-    this.reserveQueues = new Map();
-    this.benchedChampions = new Map();
+    // this.reserveQueues = new Map();
+    // this.benchedChampions = new Map();
   }
 
   resetProgress() {
@@ -102,8 +102,8 @@ class CombatState {
     this.scheduledEffects = [];
     this.playerScores = [0, 0];
     this.gameEnded = false;
-    this.reserveQueues = new Map();
-    this.benchedChampions = new Map();
+    // this.reserveQueues = new Map();
+    // this.benchedChampions = new Map();
   }
 
   start() {
@@ -205,7 +205,7 @@ class CombatState {
   /**
    * Verifica se o time tem espaço para mais um campeão vivo.
    */
-  canSpawnOnTeam(team, maxPerTeam = 2) {
+  canSpawnOnTeam(team, maxPerTeam = 3) {
     return this.getAliveCountForTeam(team) < maxPerTeam;
   }
 
@@ -213,7 +213,7 @@ class CombatState {
    * Retorna o próximo combatSlot livre (0-based) para um time,
    * ou null se todos os slots 0..maxPerTeam-1 estiverem ocupados.
    */
-  getNextAvailableSlot(team, maxPerTeam = 2) {
+  getNextAvailableSlot(team, maxPerTeam = 3) {
     const occupied = new Set(
       [...this.activeChampions.values()]
         .filter(

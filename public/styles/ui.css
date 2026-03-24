@@ -6,17 +6,18 @@
    BUTTON STYLES
    ============================================ */
 
-#end-turn-btn {
+#skip-slot-btn {
   background: linear-gradient(180deg, #ff3c3c, #b30000);
   border: none;
   border-radius: 10px;
 
-  padding: clamp(5px, 1vw, 8px) clamp(12px, 2vw, 18px);
-  font-size: clamp(0.75rem, 1.5vw, 1rem);
+  padding: clamp(4px, 0.8vw, 6px) clamp(8px, 1.5vw, 14px);
+  font-size: clamp(0.65rem, 1.3vw, 0.95rem);
 
   color: white;
   font-weight: bold;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 
   cursor: pointer;
 
@@ -26,17 +27,17 @@
     box-shadow 0.1s ease;
 }
 
-#end-turn-btn:hover {
+#skip-slot-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
 }
 
-#end-turn-btn:active {
+#skip-slot-btn:active {
   transform: scale(0.97);
   box-shadow: 0 0 8px rgba(255, 0, 0, 0.4);
 }
 
-#end-turn-btn:disabled {
+#skip-slot-btn:disabled {
   background: linear-gradient(180deg, #555, #333);
   border-color: #666;
   color: #aaa;
@@ -93,11 +94,16 @@
 .action-bar-skill-btn {
   flex: 1;
   max-width: 24%;
-  padding: clamp(4px, 0.8vw, 8px) clamp(3px, 0.6vw, 6px);
+  padding: clamp(4px, 0.8vw, 8px) clamp(3px, 1vw, 10px);
 
   background: linear-gradient(180deg, #1a3a5c, #0f2540);
-  border: 1px solid rgba(80, 160, 255, 0.35);
+  border: 1.65px solid rgba(80, 160, 255, 0.35);
   border-radius: clamp(5px, 0.8vw, 8px);
+
+  box-shadow:
+    0 0 10px rgba(0, 200, 255, 0.4),
+    0 0 20px rgba(0, 120, 255, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.7);
 
   color: #b8dcf8;
   font-size: clamp(0.55em, 1vw, 0.72em);
@@ -116,18 +122,27 @@
 }
 
 .action-bar-skill-btn.ultimate {
-  background: linear-gradient(180deg, #4a1270, #2d0850);
-  border-color: rgba(180, 80, 255, 0.45);
-  color: #e0b8ff;
+  border: 1.65px solid rgba(255, 215, 0, 0.6);
+  box-shadow:
+    0 0 10px rgba(255, 215, 0, 0.5),
+    0 0 20px rgba(255, 180, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(180deg, #5a3a00, #2b1a00);
+  color: #ffe9a6;
 }
 
-.action-bar-skill-btn:hover:not(:disabled) {
+.action-bar-skill-btn:not(.ultimate):hover:not(:disabled) {
   transform: scale(1.04);
   box-shadow: 0 0 8px rgba(80, 160, 255, 0.4);
 }
 
 .action-bar-skill-btn.ultimate:hover:not(:disabled) {
-  box-shadow: 0 0 8px rgba(180, 80, 255, 0.5);
+  transform: scale(1.05);
+
+  box-shadow:
+    0 0 14px rgba(255, 230, 120, 0.9),
+    0 0 28px rgba(255, 200, 0, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.9);
 }
 
 .action-bar-skill-btn:active:not(:disabled) {
@@ -138,6 +153,7 @@
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 /* ============================================
@@ -147,7 +163,7 @@
 .portrait-wrapper {
   display: inline-flex;
   padding: clamp(3px, 0.6vw, 6px);
-  width: clamp(120px, 26vw, 250px);
+  width: 100%;
   height: auto;
   border-radius: 50%;
   overflow: hidden;
@@ -1032,7 +1048,7 @@
 }
 
 .champion {
-  width: 25%;
+  width: 28%;
   height: auto;
   user-select: none;
   -webkit-user-drag: none;
@@ -1485,10 +1501,11 @@ body.perspective-team2 .combat-dialog-bubble .team-2 {
   border-radius: 10px;
 
   color: #d8d8d8;
-  font-size: 0.95rem;
+  font-size: clamp(0.65rem, 1.3vw, 0.95rem);
   font-weight: 600;
 
-  padding: 8px 16px;
+  padding: clamp(4px, 0.8vw, 8px) clamp(8px, 1.5vw, 16px);
+  white-space: nowrap;
 
   cursor: pointer;
 
@@ -1784,12 +1801,14 @@ body.perspective-team2 .combat-dialog-bubble .team-2 {
   border: none;
   color: #555;
   font-family: "Montserrat", sans-serif;
-  font-size: 0.7rem;
+  font-size: clamp(0.65rem, 1.2vw, 0.87rem);
   font-weight: 500;
   letter-spacing: 0.5px;
   cursor: pointer;
-  padding: 4px 10px;
+  padding: clamp(2px, 0.5vw, 4px) clamp(6px, 1vw, 10px);
   border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition:
     color 0.3s ease,
     background 0.3s ease,
