@@ -780,6 +780,25 @@ socket.on("opponentReconnected", () => {
 });
 
 // ============================================================
+//  CONFIRMAÇÃO AO FECHAR/RECARREGAR A ABA
+// ============================================================
+
+window.addEventListener("beforeunload", function (e) {
+  // Só exibe o aviso se o usuário estiver logado e não estiver na tela de login
+  if (
+    playerId !== null &&
+    playerTeam !== null &&
+    !loginScreen.classList.contains("active") &&
+    !gameEnded
+  ) {
+    const confirmationMessage =
+      "Tem certeza que deseja sair? Você pode perder seu progresso na partida.";
+    (e || window.event).returnValue = confirmationMessage; // Para navegadores antigos
+    return confirmationMessage; // Para navegadores modernos
+  }
+});
+
+// ============================================================
 //  NOMES DOS JOGADORES & PLACAR
 // ============================================================
 
