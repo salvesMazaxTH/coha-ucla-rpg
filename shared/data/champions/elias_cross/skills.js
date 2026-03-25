@@ -112,14 +112,14 @@ const eliasCrossSkills = [
     damageMode: "standard",
     isUltimate: true,
     ultCost: 3,
-    recoilDamage: 40,
+    recoilDamage: 25,
     recoilDamageMode: "absolute",
     contact: false,
     priority: 0,
     cannotBeEvaded: true,
     element: "lightning",
     description() {
-      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage} de dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são obliterados, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
+      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage}% de sua vida máxima como dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são obliterados, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
     obliterateRule(ctx) {
@@ -176,7 +176,7 @@ const eliasCrossSkills = [
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
-            baseDamage: this.recoilDamage,
+            baseDamage: (user.MaxHP * this.recoilDamage) / 100,
             mode: this.recoilDamageMode,
             attacker: user,
             defender: user,
