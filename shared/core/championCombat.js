@@ -177,7 +177,6 @@ export function applyStatModifier(
     context,
     isPermanent = false,
     ignoreMinimum = false,
-    effectSource,
     statModifierSrc = undefined,
   } = {},
 ) {
@@ -318,7 +317,7 @@ export function debuffStat(
     isPermanent = false,
     isPercent = false,
     ignoreMinimum = false,
-    effectSource,
+    statModifierSrc = undefined,
   } = {},
 ) {
   if (!(statName in champion)) {
@@ -348,7 +347,7 @@ export function debuffStat(
     context,
     isPermanent,
     ignoreMinimum,
-    effectSource,
+    statModifierSrc,
   });
 }
 
@@ -368,7 +367,7 @@ export function modifyStat(
     isPermanent = false,
     isPercent = false,
     ignoreMinimum = false,
-    effectSource,
+    statModifierSrc,
   } = {},
 ) {
   if (amount === 0) {
@@ -376,6 +375,7 @@ export function modifyStat(
   }
 
   if (amount > 0) {
+    // Para buffs, se statModifierSrc não for passado, assume o próprio campeão
     return buffStat(champion, {
       statName,
       amount,
@@ -384,13 +384,15 @@ export function modifyStat(
       isPermanent,
       isPercent,
       ignoreMinimum,
-      effectSource,
+      statModifierSrc:
+        statModifierSrc !== undefined ? statModifierSrc : champion,
     });
   }
 
-  if (!effectSource && !context?.effectSourceId) {
+  // Para debuffs, exige statModifierSrc explícito ou context.statModifierSrcId
+  if (!statModifierSrc && !context?.statModifierSrcId) {
     throw new Error(
-      `[modifyStat] Debuff em ${champion?.name ?? "unknown"} requer effectSource explícito ou context.effectSourceId`,
+      `[modifyStat] Debuff em ${champion?.name ?? "unknown"} requer statModifierSrc explícito ou context.statModifierSrcId`,
     );
   }
 
@@ -402,7 +404,7 @@ export function modifyStat(
     isPermanent,
     isPercent,
     ignoreMinimum,
-    effectSource,
+    statModifierSrc,
   });
 }
 

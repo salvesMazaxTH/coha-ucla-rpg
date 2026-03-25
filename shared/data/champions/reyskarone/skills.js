@@ -124,6 +124,7 @@ const reyskaroneSkills = [
         amount: this.atkBuff,
         duration: this.buffDuration,
         context,
+        statModifierSrc: user,
       });
 
       ally.modifyStat({
@@ -131,6 +132,7 @@ const reyskaroneSkills = [
         amount: this.lifeStealBuff,
         duration: this.buffDuration,
         context,
+        statModifierSrc: user,
       });
 
       return {
@@ -170,6 +172,7 @@ const reyskaroneSkills = [
         duration: this.buffDuration,
         context,
         isPercent: true,
+        statModifierSrc: user,
       });
 
       ally.modifyStat({
@@ -177,6 +180,7 @@ const reyskaroneSkills = [
         amount: this.lifeStealBuff,
         duration: this.buffDuration,
         context,
+        statModifierSrc: user,
       });
 
       return {

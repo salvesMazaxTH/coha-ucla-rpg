@@ -2,6 +2,7 @@ import { startShield } from "./shieldCanvas.js";
 import { startFireStance } from "./fireStanceCanvas.js";
 import { startFrozenCanvas } from "./frozenCanvas.js";
 import { startWaterBubble } from "./waterBubbleCanvas.js";
+import { startAbraçoDaMorteMark } from "./abracoDaMorteMarkCanvas.js";
 
 // no futuro:
 // import { startBurn } from "./burnCanvas.js";
@@ -19,6 +20,8 @@ const VFXTriggers = {
   congelado: (champion) => champion.statusEffects?.has("congelado"),
 
   waterBubble: (champion) => champion.runtime?.form === "bola_agua",
+
+  abracoDaMorteMark: (champion) => champion.runtime?.markedByAbraçoDaMorte,
 };
 
 const activeEffects = new WeakMap();
@@ -102,6 +105,10 @@ export function playVFX(type, canvas, data = {}) {
     case "waterBubble":
       controller = startWaterBubble(canvas, data);
       break;
+
+    case "abracoDaMorteMark":
+      controller = startAbraçoDaMorteMark(canvas, data);
+      break;  
 
     default:
       return;

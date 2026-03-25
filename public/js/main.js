@@ -1674,15 +1674,16 @@ function applyTurnUpdate(turn) {
   hasConfirmedEndTurn = false;
 
   activeChampions.forEach((champion) => champion.resetActionStatus());
+  
   activeChampions.forEach((champion) => {
     const context = {
       freeCostSkills: editMode?.freeCostSkills === true,
     };
     champion.updateUI(context);
-    requestAnimationFrame(
-      () => StatusIndicator.updateChampionIndicators(champion),
-      syncChampionVFX(champion),
-    );
+    requestAnimationFrame(() => {
+      (StatusIndicator.updateChampionIndicators(champion),
+        syncChampionVFX(champion));
+    });
   });
 
   // Inicializa seleção de ações por slot

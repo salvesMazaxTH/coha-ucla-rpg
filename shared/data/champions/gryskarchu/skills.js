@@ -102,12 +102,14 @@ const gryskarchuSkills = [
       let healAmount = ally.maxHP * (this.healPercent / 100);
 
       ally.heal(healAmount, context, user);
+
       ally.modifyStat({
         statName: "Defense",
         amount: this.defBuff,
         duration: this.buffDuration,
         context,
         isPercent: true,
+        statModifierSrc: user, // Gryskarchu é explicitamente a fonte do buff
       });
 
       const bonus = ally.Defense * (this.defDamageBonus / 100);

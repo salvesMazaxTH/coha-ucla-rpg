@@ -51,7 +51,7 @@ const nytheraSkills = [
     name: "Câmara de Estase",
     effectDuration: 2,
     contact: false,
-    freezeDuration: 1,
+    freezeDuration: 2,
 
     priority: 3,
     element: "ice",
@@ -68,6 +68,8 @@ const nytheraSkills = [
         context,
       });
 
+      const freezeDuration = this.freezeDuration;
+
       user.runtime.hookEffects ??= [];
 
       if (!user.runtime.hookEffects)
@@ -82,7 +84,7 @@ const nytheraSkills = [
         },
 
         onAfterDmgTaking({ attacker, defender, damage, context }) {
-          attacker.applyStatusEffect("congelado", this.freezeDuration, context);
+          attacker.applyStatusEffect("congelado", freezeDuration, context);
         },
       };
 
@@ -101,7 +103,7 @@ const nytheraSkills = [
     bonusIfFrozen: 50,
 
     contact: false,
-    priority: 0,
+    priority: 1,
 
     isUltimate: true,
     ultCost: 3,

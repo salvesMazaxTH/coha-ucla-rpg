@@ -6,16 +6,19 @@ export function startFrozenCanvas(canvas) {
 
   const box = canvas.parentElement;
 
+  let lastW = 0,
+    lastH = 0;
   function syncSize() {
     const w = box.clientWidth;
     const h = box.clientHeight;
-
     if (!w || !h) return;
-
-    canvas.width = w;
-    canvas.height = h;
+    if (w !== lastW || h !== lastH) {
+      canvas.width = w;
+      canvas.height = h;
+      lastW = w;
+      lastH = h;
+    }
   }
-
   syncSize();
   window.addEventListener("resize", syncSize);
 
@@ -105,7 +108,8 @@ export function startFrozenCanvas(canvas) {
     }
   }
 
-  const motes = Array.from({ length: 38 }, () => new IceMote());
+  // Reduzido de 38 para 18 motes
+  const motes = Array.from({ length: 18 }, () => new IceMote());
 
   /* ───────── ICE PARTICLES ───────── */
 
@@ -149,7 +153,8 @@ export function startFrozenCanvas(canvas) {
     }
   }
 
-  const snowParticles = Array.from({ length: 60 }, () => new SnowParticle());
+  // Reduzido de 60 para 24 partículas
+  const snowParticles = Array.from({ length: 24 }, () => new SnowParticle());
 
   /* ───────── MIST ───────── */
 
@@ -200,7 +205,8 @@ export function startFrozenCanvas(canvas) {
     }
   }
 
-  const mists = Array.from({ length: 14 }, () => new MistStreak());
+  // Reduzido de 14 para 6 streaks de névoa
+  const mists = Array.from({ length: 6 }, () => new MistStreak());
 
   /* ───────── FROST VIGNETTE ───────── */
 
@@ -305,14 +311,13 @@ export function startFrozenCanvas(canvas) {
   /* ───────── CRYSTALS ───────── */
 
   function drawCrystals(time) {
+    // Reduz profundidade de 4 para 3
     crystalSeeds.forEach((seed, i) => {
       const baseLen = W() * 0.13;
       const pulse = 0.88 + 0.12 * Math.sin(time * 0.001 + i * 1.1);
-
       const len = baseLen * pulse;
       const alpha = 0.45 * pulse;
-
-      drawCrystalBranch(seed.x * W(), seed.y * H(), seed.angle, len, 4, alpha);
+      drawCrystalBranch(seed.x * W(), seed.y * H(), seed.angle, len, 3, alpha);
     });
   }
 
@@ -374,18 +379,15 @@ export function startFrozenCanvas(canvas) {
 
   function render() {
     if (!running) return;
-
+    syncSize();
     ctx.clearRect(0, 0, W(), H());
-
     drawFrostVignette(time);
     drawCracks(time);
     drawCrystals(time);
-
     snowParticles.forEach((p) => {
       p.update();
       p.draw();
     });
-
     mists.forEach((m) => {
       m.update();
       m.draw();
@@ -394,22 +396,22 @@ export function startFrozenCanvas(canvas) {
       m.update(time);
       m.draw(time);
     });
-
     maybeSpawnGlint(time);
     drawGlint(time);
-
+    // FILTRO AZUL-GELO SOBRE O CANVAS
+    ctx.save();
+    ctx.globalAlpha = 0.32; // ajuste a opacidade se quiser mais/menos azul
+    ctx.fillStyle = "#aeeaff"; // azul-gelo
+    ctx.fillRect(0, 0, W(), H());
+    ctx.restore();
     time += 0.016;
-
-    requestAnimationFrame(render);
   }
 
   let frameId;
-
   function loop() {
     render();
     frameId = requestAnimationFrame(loop);
   }
-
   frameId = requestAnimationFrame(loop);
   return {
     stop() {

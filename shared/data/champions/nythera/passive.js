@@ -1,7 +1,9 @@
+import { formatChampionName } from "../../../ui/formatters.js";
+
 export default {
   name: "Presságio Glacial",
   chillDuration: 2,
-  freezeDuration: 1,
+  freezeDuration: 2,
   description() {
     return `Sempre que Nythera sofrer dano que cause contato (exceto dano absoluto): o agressor recebe ❄️ Gelado.
 
