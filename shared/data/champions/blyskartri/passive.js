@@ -1,19 +1,18 @@
 import { formatChampionName } from "../../../ui/formatters.js";
+import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 
 export default {
-  key: "impulso_crescente",
-  name: "Impulso Crescente",
-
-  speedPerTurn: 5,
-  speedCap: 25,
-
-  stackCap: 10,
+  key: "progressao_irrefreavel",
+  name: "Progressão Irrefreável",
+  stackCap: 8,
+  speedPercentAsDamage: 0.85,
 
   description(champion) {
-    return `No início de cada turno, Blyskartri ganha +${this.speedPerTurn} Velocidade (máx. +${this.speedCap} acumulado).
-    Sempre que Blyskartri ou um aliado ganhar Velocidade ou ativar Esquiva, Blyskartri ganha 1 Acúmulo (máx. ${this.stackCap}).
-    <b>Acúmulos atuais: ${champion.runtime?.impulsoStacks ?? 0}.</b>
-    Ao atingir ${this.stackCap}, consome todos os acúmulos e concede +1 barra de Ultômetro ao aliado com menor HP atual (máx. 1 vez por turno).`;
+    return `Sempre que Blyskartri ou um aliado ganhar Velocidade ou Esquiva, Blyskartri ganha 1 Acúmulo; se Esquivar um ataque, ganha 1 Acúmulo adicional (máx. ${this.stackCap}).
+
+    Acúmulos atuais: <b>${champion.runtime?.impulsoStacks ?? 0}</b>
+
+    Ao atingir ${this.stackCap}, consome todos os acúmulos e causa imediatamente dano híbrido (50%) equivalente a ${this.speedPercentAsDamage * 100}% da Velocidade do personagem aliado mais rápido ao inimigo com menor vida.`;
   },
 
   hookScope: {
@@ -21,47 +20,17 @@ export default {
     onEvade: undefined,
   },
 
-  onTurnStart({ owner, context }) {
-    owner.runtime ??= {};
-    owner.runtime.impulsoSpeed ??= 0;
-    owner.runtime.impulsoStacks ??= 0;
-
-    owner.runtime.impulsoTriggeredTurn = false;
-
-    if (owner.runtime.impulsoSpeed >= this.speedCap) return;
-
-    const gain = Math.min(
-      this.speedPerTurn,
-      this.speedCap - owner.runtime.impulsoSpeed,
-    );
-
-    owner.runtime.impulsoSpeed += gain;
-
-    console.log("[BLYSKARTRI][PASSIVE] Speed gain", {
-      gain,
-      total: owner.runtime.impulsoSpeed,
-    });
-
-    owner.modifyStat({
-      statName: "Speed",
-      amount: gain,
-      context,
-    });
-  },
-
-  onBuffingStat({
-    owner,
-    statName,
-    buffSrc,
-    buffTarget,
-    context,
-  }) {
+  onBuffingStat({ owner, statName, buffSrc, buffTarget, context }) {
     if (!buffSrc || buffSrc.team !== owner.team) return;
     if (!buffTarget || buffTarget.team !== owner.team) return;
 
-    if (statName !== "Speed") return;
+    if (statName !== "Speed" && statName !== "Evasion") return;
 
-    this._addStack({ owner, context, reason: "speed_gain" });
+    this._addStack({
+      owner,
+      context,
+      reason: `${statName.toLowerCase()}_gain`,
+    });
   },
 
   onEvade({ owner, defender, context }) {
@@ -85,28 +54,69 @@ export default {
 
     if (owner.runtime.impulsoStacks < this.stackCap) return;
 
-    if (owner.runtime.impulsoTriggeredTurn) return;
-
-    const allies = Array.from(context.allChampions.values()).filter(
-      (c) => c.team === owner.team && c.HP > 0,
-    );
+    const allies = context.aliveChampions.filter((c) => c.team === owner.team);
 
     if (!allies.length) return;
 
-    const lowest = allies.reduce((a, b) =>
-      a.HP / a.maxHP < b.HP / b.maxHP ? a : b,
+    const fastestAlly = allies.reduce((a, b) => (a.Speed > b.Speed ? a : b));
+
+    console.log(
+      "[BLYSKARTRI][PASSIVE] STACK CAP REACHED → dealing damage to 'target' based on 'fastestAlly': ",
+      {
+        fastestAlly: formatChampionName(fastestAlly.name),
+        allies: allies.map((a) => formatChampionName(a.name)),
+      },
     );
 
-    console.log("[BLYSKARTRI][PASSIVE] STACK CAP REACHED → granting ult", {
-      target: lowest.name,
+    const damageAmount = Math.floor(
+      fastestAlly.Speed * this.speedPercentAsDamage,
+    );
+
+    const enemies =
+      context?.allChampions instanceof Map
+        ? [...context.allChampions.values()].filter(
+            (c) => c.team !== owner.team && c.HP > 0,
+          )
+        : [];
+
+    const lowestHealthEnemy = enemies.reduce((a, b) => {
+      if (a.HP < b.HP) return a;
+      if (b.HP < a.HP) return b;
+
+      // empate → aleatório
+      return Math.random() < 0.5 ? a : b;
+    }, enemies[0]);
+
+    console.log(
+      "[BLYSKARTRI][PASSIVE] lowest health enemy selected as target: ",
+      {
+        lowestHealthEnemy: formatChampionName(lowestHealthEnemy.name),
+        enemies: enemies.map((e) => formatChampionName(e.name)),
+      },
+    );
+
+    context.registerDialog({
+      message: `${formatChampionName(owner)} explodiu em velocidade e descarregou os acúmulos sobre ${formatChampionName(lowestHealthEnemy)}!`,
+      sourceId: owner.id,
+      targetId: owner.id,
     });
 
-    lowest.addUlt({
-      amount: 4, // 4 unidades internas = 1 barra de ult cheia
+    const damageEvent = new DamageEvent({
+      baseDamage: damageAmount,
+      attacker: owner,
+      defender: lowestHealthEnemy,
+      mode: DamageEvent.Modes.HYBRID,
+      piercingPortion: damageAmount / 2, // Dano perfurante (50% do total)
+      skill: {
+        key: "progressao_irrefreavel_explosion",
+        contact: false,
+      },
       context,
-    });
+      allChampions: context?.allChampions,
+    }).execute();
 
     owner.runtime.impulsoStacks = 0;
-    owner.runtime.impulsoTriggeredTurn = true;
+
+    return damageEvent;
   },
 };

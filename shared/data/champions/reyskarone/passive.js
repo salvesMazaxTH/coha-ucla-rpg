@@ -10,7 +10,7 @@ export default {
   },
 
   hookScope: {
-    onAfterLifeSteal: "allies",
+    onAfterLifeSteal: "undefined",
   },
 
   onAfterLifeSteal({ source, amount, owner, context }) {
@@ -25,6 +25,14 @@ export default {
       amount,
     );
     */
+
+    // validações básicas
+    if (!source || !owner) return;
+    // não triggar em inimigos
+    if (source.team !== owner.team) return;
+    // ignorar self (se quiser manter essa regra)
+    if (source === owner) return;
+
     const heal = amount * (this.lifeStealHealPercent / 100);
     if (heal <= 0 || owner.HP >= owner.maxHP) return;
 

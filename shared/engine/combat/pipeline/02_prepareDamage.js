@@ -205,7 +205,7 @@ function _rollCrit(user, context, critOptions = {}, debugMode = false) {
 function applyDamageModifiers(event, debugMode) {
   if (!event.attacker?.getDamageModifiers) {
     if (debugMode) {
-      console.log(`⚠️ [MODIFIERS] Nenhum modificador de dano disponível`);
+      console.log(`⚠️ [DAMAGEMODIFIERS] Nenhum modificador de dano disponível`);
     }
     return;
   }
@@ -220,7 +220,7 @@ function applyDamageModifiers(event, debugMode) {
   const modifiers = event.attacker.getDamageModifiers();
 
   if (debugMode) {
-    console.log(`🎯 Total de modificadores: ${modifiers.length}`);
+    console.log(`[DAMAGE MODIFIERS] 🎯 Total de modificadores: ${modifiers.length}`);
   }
 
   if (!Array.isArray(modifiers)) {

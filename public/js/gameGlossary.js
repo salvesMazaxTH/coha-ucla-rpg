@@ -68,6 +68,12 @@ export const GAME_GLOSSARY = {
       "Ignora Defesa, mas ainda pode critar e sofrer bônus ou reduções.",
   },
 
+  híbrido: {
+    title: "Dano Híbrido",
+    description:
+      "Dano que é parte perfurante (ignora Defesa) e parte padrão (considera Defesa).",
+  },
+
   absoluto: {
     title: "Dano Absoluto",
     description:
