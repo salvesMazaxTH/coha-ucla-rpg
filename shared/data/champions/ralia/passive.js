@@ -2,8 +2,8 @@ export default {
   name: "Desacreditar",
   critReduction: 45,
   description() {
-    return `🧿 PASSIVA — Desacreditar
-      Sempre que Rália sofrer um Acerto Crítico, o crítico é anulado completamente.`;
+    return `
+      Acertos Críticos contra Rália são anulados e causam dano normal.`;
   },
 
   hookScope: {
