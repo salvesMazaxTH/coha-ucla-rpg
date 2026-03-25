@@ -1,3 +1,25 @@
+/**
+ * PADRÃO DE TRIGGERS DE VFX
+ *
+ * Existem dois grupos de triggers para efeitos visuais (VFX):
+ *
+ * 1. StatusEffectVFX: lista de status effects genéricos que ativam VFX automaticamente.
+ *    Basta adicionar o nome do status effect na lista para ativar o VFX correspondente.
+ *    Exemplo: "congelado".
+ *
+ * 2. ExclusiveVFXTriggers: triggers exclusivos para efeitos que NÃO são status effects genéricos,
+ *    mas sim estados runtime, marcas especiais ou efeitos únicos de personagem/habilidade.
+ *    Exemplo: shield, fireStanceIdle, waterBubble, etc.
+ *
+ * Para adicionar um novo VFX de status effect:
+ *   - Adicione o nome do status effect em StatusEffectVFX.
+ *   - Implemente a função playVFX correspondente.
+ *
+ * Para adicionar um novo VFX exclusivo:
+ *   - Adicione um trigger em ExclusiveVFXTriggers seguindo o critério acima.
+ *
+ * syncChampionVFX cuida de ativar/desativar ambos os grupos automaticamente.
+ */
 import { startShield } from "./shieldCanvas.js";
 import { startFireStance } from "./fireStanceCanvas.js";
 import { startFrozenCanvas } from "./frozenCanvas.js";
@@ -8,7 +30,17 @@ import { startAbraçoDaMorteMark } from "./abracoDaMorteMarkCanvas.js";
 // import { startBurn } from "./burnCanvas.js";
 // import { startFreeze } from "./freezeCanvas.js";
 
-const VFXTriggers = {
+// Triggers automáticos para status effects genéricos (nome do status effect === nome do VFX)
+const StatusEffectVFX = [
+  "congelado",
+  // Adicione outros status effects que tenham VFX próprios aqui
+];
+
+// Triggers exclusivos/habilidades:
+// Use esta estrutura para efeitos visuais que NÃO são status effects genéricos,
+// mas sim estados runtime, marcas especiais, ou efeitos únicos de personagem/habilidade.
+// Critério: se não for status effect padronizado, coloque aqui.
+const ExclusiveVFXTriggers = {
   shield: (champion) =>
     Array.isArray(champion.runtime?.shields) &&
     champion.runtime.shields.length > 0,
@@ -17,11 +49,10 @@ const VFXTriggers = {
 
   fireStanceActive: (champion) => champion.runtime?.fireStance === "brasa_viva",
 
-  congelado: (champion) => champion.statusEffects?.has("congelado"),
-
   waterBubble: (champion) => champion.runtime?.form === "bola_agua",
 
   abracoDaMorteMark: (champion) => champion.runtime?.markedByAbraçoDaMorte,
+  // Adicione outros triggers exclusivos seguindo o critério acima
 };
 
 const activeEffects = new WeakMap();
@@ -33,7 +64,26 @@ export function syncChampionVFX(champion) {
   champion._vfxState ??= {};
   champion._vfxCanvases ??= {};
 
-  for (const [type, trigger] of Object.entries(VFXTriggers)) {
+  // 1. Automatizar triggers de status effects
+  for (const type of StatusEffectVFX) {
+    const shouldExist = champion.statusEffects?.has(type);
+    const exists = champion._vfxState[type];
+
+    if (shouldExist && !exists) {
+      const canvas = createVFXCanvas(type, champion);
+      champion._vfxCanvases[type] = canvas;
+      playVFX(type, canvas);
+    }
+
+    if (!shouldExist && exists) {
+      removeVFXCanvas(champion, type);
+    }
+
+    champion._vfxState[type] = shouldExist;
+  }
+
+  // 2. Triggers exclusivos/habilidades
+  for (const [type, trigger] of Object.entries(ExclusiveVFXTriggers)) {
     const shouldExist = trigger(champion);
     const exists = champion._vfxState[type];
 
@@ -108,7 +158,7 @@ export function playVFX(type, canvas, data = {}) {
 
     case "abracoDaMorteMark":
       controller = startAbraçoDaMorteMark(canvas, data);
-      break;  
+      break;
 
     default:
       return;
