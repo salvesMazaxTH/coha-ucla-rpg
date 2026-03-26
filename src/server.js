@@ -232,6 +232,17 @@ function checkAllTeamsSelected() {
 function emitChampionDeath(deathResult) {
   if (!deathResult) return;
 
+  const champ = match.combat.activeChampions.get(deathResult.championId) ||
+  match.combat.deadChampions.get(deathResult.championId);
+
+  console.log("[BACKEND][DEATH BEFORE EMIT]", {
+    id: champ?.id,
+    name: champ?.name,
+    HP: champ?.HP,
+    alive: champ?.alive,
+    deathClaimTriggered: champ?.runtime?.deathClaimTriggered,
+  });
+
   if (deathResult.scored) {
     io.emit("scoreUpdate", match.getScorePayload());
     io.emit(
@@ -240,8 +251,19 @@ function emitChampionDeath(deathResult) {
     );
   }
 
+  const state = getGameState();
+
+  const deadChamp = state.champions.find(
+    (c) => c.id === deathResult.championId,
+  );
+
+  console.log("[BACKEND][GAMESTATE SNAPSHOT]", {
+    found: !!deadChamp,
+    deathClaimTriggered: deadChamp?.runtime?.deathClaimTriggered,
+  });
+
+  io.emit("gameStateUpdate", state);
   io.emit("championRemoved", deathResult.championId);
-  io.emit("gameStateUpdate", getGameState());
 }
 
 // ============================================================
@@ -680,13 +702,6 @@ function handleStartTurn() {
     champ.runtime = champ.runtime || {};
     champ.runtime.currentContext = turnStartContext;
   });
-
-  /*   POSSIVELMENTE OBSOLETO com novo modelo de hooks e .js de cada statusEffect
-// 2. Tick DoTs e outras statusEffects de início de turno
-  processTurnStartStatusEffects({
-    activeChampions: Array.from(match.combat.activeChampions.values()),
-    context: turnStartContext,
-  }); */
 
   // 3. Hooks onTurnStart (DoTs, passivas reativas, etc.)
   emitCombatEvent(

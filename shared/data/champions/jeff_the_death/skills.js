@@ -1,13 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicStrike from "../basicStrike.js";
+import basicBlock from "../basicBlock.js";
 
 const jeffTheDeathSkills = [
   // =========================
-  // Ataque Básico
+  // Bloqueio Básico (global)
   // =========================
-
-  basicStrike,
+  basicBlock,
   // =========================
   // Habilidades Especiais
   // =========================
@@ -95,7 +94,15 @@ const jeffTheDeathSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      user.runtime.deathCounter ??= 0;
+      const damageResult = new DamageEvent({
+        baseDamage,
+        mode: this.damageMode,
+        attacker: user,
+        defender: enemy,
+        skill: this,
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
 
       // Marcar o inimigo
       enemy.runtime.markedByAbraçoDaMorte = true;
@@ -165,8 +172,82 @@ const jeffTheDeathSkills = [
             );
           }
         },
-        //return ??;
       });
+
+      return damageResult;
+    },
+  },
+
+  {
+    key: "inevitabilidade_da_morte",
+    name: "Inevitabilidade da Morte",
+    bf: 50,
+
+    contact: false,
+    damageMode: "standard",
+
+    isUltimate: true,
+    ultCost: 3,
+
+    priority: 0,
+
+    threshold: 0.95, // 0.25
+    // porcentagem de HP para ativar a execução (25%) // (95% PARA TESTES APENAS) //
+    description() {
+      return `Jeff causa dano moderado ao alvo e o marca para morrer. No início do próximo turno, se o alvo estiver abaixo de ${this.threshold * 100}% de HP, a Morte o reclama!`;
+    },
+    targetSpec: ["enemy"],
+    resolve({ user, targets, context = {} }) {
+      const [enemy] = targets;
+      const baseDamage = (user.Attack * this.bf) / 100;
+
+      const damageResult = new DamageEvent({
+        baseDamage,
+        mode: this.damageMode,
+        attacker: user,
+        defender: enemy,
+        skill: this,
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
+
+      const threshold = this.threshold;
+
+      // Hook interno da lógica de "execução inevitável"
+      const hook = {
+        key: "death_claim_execution",
+        group: "deathClaim",
+
+        priority: -999, // se implementar
+
+        onTurnStart({ owner, context }) {
+          if (!owner.alive) return;
+
+          if (owner.HP / owner.maxHP <= threshold) {
+            owner.runtime.deathClaimTriggered = true;
+
+            owner.HP = 0;
+            owner.alive = false;
+          }
+
+          // remove a si mesmo
+          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+            (he) => he.key !== "death_claim_execution",
+          );
+        },
+      };
+      console.log(
+        `[JEFF][INEVITABILIDADE DA MORTE] Hook de execução a ser registrado para ${formatChampionName(enemy.name)}. hook: `,
+        hook,
+      );
+      enemy.runtime.hookEffects ??= [];
+      enemy.runtime.hookEffects.push(hook);
+      console.log(
+        `[JEFF][INEVITABILIDADE DA MORTE] Hook registrado. hookEffects atuais de ${formatChampionName(enemy.name)}: `,
+        enemy.runtime.hookEffects,
+      );
+
+      return damageResult;
     },
   },
 ];

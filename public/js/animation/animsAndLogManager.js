@@ -3,6 +3,7 @@ import { formatChampionName } from "../../../shared/ui/formatters.js";
 import { syncChampionVFX } from "../../../shared/vfx/vfxManager.js";
 import { playObliterateEffect } from "../../../shared/vfx/obliterate.js";
 import { StatusIndicator } from "../../../shared/ui/statusIndicator.js";
+import { playDeathClaimEffect } from "../../../shared/vfx/deathClaim.js";
 
 // ============================================================
 //  AnimsAndLogManager.js — Combat Animation & Log System (v2)
@@ -1222,7 +1223,18 @@ export function createCombatAnimationManager(deps) {
       return;
     }
 
-    if (!el.dataset.obliterated) {
+    if (champion.runtime?.deathClaimTriggered) {
+      // special vfx + dialog for Jeff_The_Death claim/special execution
+      const name = formatChampionName(champion);
+
+      playDeathClaimEffect(el);
+
+      await showBlockingDialog(`A Morte reclama ${name}!`);
+
+      await wait(TIMING.DEATH_CLAIM_EFFECT);
+
+      // normal death
+    } else if (!el.dataset.obliterated) {
       // Apply dying class — triggers CSS collapse animation
       el.classList.add("dying");
 
