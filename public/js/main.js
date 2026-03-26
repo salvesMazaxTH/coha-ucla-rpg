@@ -1674,7 +1674,7 @@ function applyTurnUpdate(turn) {
   hasConfirmedEndTurn = false;
 
   activeChampions.forEach((champion) => champion.resetActionStatus());
-  
+
   activeChampions.forEach((champion) => {
     const context = {
       freeCostSkills: editMode?.freeCostSkills === true,
@@ -1864,6 +1864,16 @@ function showActionBarSlot() {
     );
     btn.addEventListener("mouseleave", () => removeSkillOverlay());
     btn.addEventListener("click", () => handleSkillUsage(btn));
+
+    // Disable contact skill if champion is enraizado
+    const hasEnraizado =
+      champion.statusEffects &&
+      champion.statusEffects.has &&
+      champion.statusEffects.has("enraizado");
+    if (skill.contact && hasEnraizado) {
+      btn.disabled = true;
+      btn.title = "Não pode usar habilidades de contato enquanto Enraizado.";
+    }
 
     if (isUlt) {
       const cost = champion.getSkillCost(skill);
