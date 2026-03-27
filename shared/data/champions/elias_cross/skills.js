@@ -176,7 +176,7 @@ const eliasCrossSkills = [
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
-            baseDamage: (user.MaxHP * this.recoilDamage) / 100,
+            baseDamage: (user.maxHP * this.recoilDamage) / 100,
             mode: this.recoilDamageMode,
             attacker: user,
             defender: user,

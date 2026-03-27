@@ -185,7 +185,7 @@ const blyskartriSkills = [
     name: "Horizonte Infinito",
     damageMode: "standard",
 
-    dmgBonus: 35, // Bônus de dano por velocidade acima da base (em %)
+    dmgBonus: 10, // Bônus de dano por velocidade acima da base (em %)
     speedPerStack: 5,
 
     piercingDamageBonus: 75,
@@ -207,6 +207,14 @@ const blyskartriSkills = [
 
     resolve({ user, targets, context = {} }) {
       const [ally] = targets;
+
+      const alreadyHasModifier = ally.getDamageModifiers().some((mod) => mod.id === "horizonte_infinito");
+
+      if (alreadyHasModifier) {
+        return {
+          log: `${formatChampionName(ally)} já está sob o efeito de Horizonte Infinito.`,
+        };
+      }
 
       ally.addDamageModifier({
         id: "horizonte_infinito",

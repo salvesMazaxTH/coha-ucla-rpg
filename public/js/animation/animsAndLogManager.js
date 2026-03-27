@@ -1101,6 +1101,10 @@ export function createCombatAnimationManager(deps) {
   }
 
   function syncChampionFromSnapshot(champion, snap) {
+    if (snap.portrait != undefined) {
+      champion.portrait = snap.portrait;
+    }
+
     // 🔥 HP só é aplicado se NÃO houve animação de dano
     if (snap.HP !== undefined) {
       champion.HP = snap.HP;

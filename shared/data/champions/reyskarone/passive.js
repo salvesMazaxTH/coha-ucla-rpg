@@ -11,6 +11,7 @@ export default {
 
   hookScope: {
     onAfterLifeSteal: "undefined",
+    onAfterDmgTaking: "defender"
   },
 
   onAfterLifeSteal({ source, amount, owner, context }) {
@@ -42,4 +43,11 @@ export default {
       log: `↳ [PASSIVA — Ecos de Vitalidade] ${formatChampionName(owner)} absorveu ecos vitais de ${formatChampionName(source)} (+${heal} HP).`,
     };
   },
+
+  /* ------------------
+  // APENAS PARA TESTES //
+  * -------------------*/
+    onAfterDmgTaking({attacker, defender, owner, context}) {
+      owner.portrait = "/assets/portraits/reyskarone_bombado.webp"
+    }
 };

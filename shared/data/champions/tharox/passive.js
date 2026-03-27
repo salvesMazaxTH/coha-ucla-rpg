@@ -32,7 +32,7 @@ export default {
       isPermanent: true,
     });
 
-    owner.modifyHP(this.hpBonus, { context, maxHPOnly: true, isPermanent: true });
+    owner.modifyHP(this.hpBonus, { context, affectMax: true, isPermanent: true });
 
     let log = `[Passiva - Massa Inamolgável] ${owner.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${owner.Defense}, HP: ${owner.HP}/${owner.maxHP})`;
 

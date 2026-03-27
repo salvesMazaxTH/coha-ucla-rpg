@@ -118,6 +118,14 @@ export function updateChampionUI(champion, context) {
   if (!champion.el) return;
 
   // =========================
+  // PORTRAIT
+  // ============ =============
+  const portrait = champion.el.querySelector(".portrait img");
+  if (portrait) {
+    portrait.src = champion.portrait;
+  }
+
+  // =========================
   // HP
   // =========================
 
