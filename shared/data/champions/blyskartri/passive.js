@@ -26,17 +26,29 @@ export default {
 
     if (statName !== "Speed" && statName !== "Evasion") return;
 
-    this._addStack({
+    const stackResult = this._addStack({
       owner,
       context,
       reason: `${statName.toLowerCase()}_gain`,
     });
+
+    if (stackResult?.log) return stackResult;
+
+    return {
+      log: `${formatChampionName(owner)} ganhou 1 Acúmulo de Impulso. Acúmulos totais atuais: ${owner.runtime.impulsoStacks}`,
+    };
   },
 
   onEvade({ owner, defender, context }) {
     if (!defender || defender.team !== owner.team) return;
 
-    this._addStack({ owner, context, reason: "evade" });
+    const stackResult = this._addStack({ owner, context, reason: "evade" });
+
+    if (stackResult?.log) return stackResult;
+
+    return {
+      log: `${formatChampionName(owner)} ganhou 1 Acúmulo de Impulso. Acúmulos totais atuais: ${owner.runtime.impulsoStacks}`,
+    };
   },
 
   _addStack({ owner, context, reason }) {
@@ -63,8 +75,8 @@ export default {
     console.log(
       "[BLYSKARTRI][PASSIVE] STACK CAP REACHED → dealing damage to 'target' based on 'fastestAlly': ",
       {
-        fastestAlly: formatChampionName(fastestAlly.name),
-        allies: allies.map((a) => formatChampionName(a.name)),
+        fastestAlly: formatChampionName(fastestAlly),
+        allies: allies.map((a) => formatChampionName(a)),
       },
     );
 
@@ -90,8 +102,8 @@ export default {
     console.log(
       "[BLYSKARTRI][PASSIVE] lowest health enemy selected as target: ",
       {
-        lowestHealthEnemy: formatChampionName(lowestHealthEnemy.name),
-        enemies: enemies.map((e) => formatChampionName(e.name)),
+        lowestHealthEnemy: formatChampionName(lowestHealthEnemy),
+        enemies: enemies.map((e) => formatChampionName(e)),
       },
     );
 
@@ -117,6 +129,6 @@ export default {
 
     owner.runtime.impulsoStacks = 0;
 
-    return damageEvent;
+    return { damageEvent, log: `${formatChampionName(owner)} explodiu em velocidade e descarregou os acúmulos sobre ${formatChampionName(lowestHealthEnemy)}!` };
   },
 };

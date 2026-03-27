@@ -53,7 +53,7 @@ const tharoxSkills = [
         });
 
         return {
-          log: `${user.name} executou Provocação Primeva. Mas falhou. Taunt Streak resetada.`,
+          log: `${formatChampionName(user)} executou <b>Provocação Primeva</b>. Mas falhou. Taunt Streak resetada.`,
         };
       }
 
@@ -91,7 +91,7 @@ const tharoxSkills = [
       });
 
       return {
-        log: `${userName} executou Provocação Primeva. Todos os inimigos foram provocados e ${userName} recebeu -${this.damageReductionAmount} de Redução de Dano.`,
+        log: `${userName} executou <b>Provocação Primeva</b>. Todos os inimigos foram provocados e ${userName} recebeu ${this.damageReductionAmount} de Redução de Dano.`,
       };
     },
   },
@@ -172,7 +172,7 @@ const tharoxSkills = [
 
       const userName = formatChampionName(user);
       return {
-        log: `${userName} executou Apoteose do Monólito, liberando sua forma de guerra. Ganhou +${this.defGain} Defesa e +${this.hpGain} HP Máximo. Além disso, curou ${proportionalHeal} HP! (Defense: ${user.Defense}, HP: ${user.HP}/${user.maxHP})`,
+        log: `${userName} executou <b>Apoteose do Monólito</b>, liberando sua forma de guerra. Ganhou +${this.defGain} Defesa e +${this.hpGain} HP Máximo. Além disso, curou ${proportionalHeal} HP! (Defense: ${user.Defense}, HP: ${user.HP}/${user.maxHP})`,
       };
     },
   },

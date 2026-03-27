@@ -19,7 +19,7 @@ export default {
 
     if (owner.runtime.tharoxInerciaStacks < this.stacksNeeded) {
       return {
-        log: `[Passiva - Massa Inamolgável] ${owner.name} acumulou Inércia (${owner.runtime.tharoxInerciaStacks}/${this.stacksNeeded}).`,
+        log: `<b>[Passiva - Massa Inamolgável]</b> ${formatChampionName(owner)} acumulou Inércia (${owner.runtime.tharoxInerciaStacks}/${this.stacksNeeded}).`,
       };
     }
 
@@ -34,7 +34,7 @@ export default {
 
     owner.modifyHP(this.hpBonus, { context, affectMax: true, isPermanent: true });
 
-    let log = `[Passiva - Massa Inamolgável] ${owner.name} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${owner.Defense}, HP: ${owner.HP}/${owner.maxHP})`;
+    let log = `<b>[Passiva - Massa Inamolgável]</b> ${formatChampionName(owner)} consumiu ${this.stacksNeeded} Inércia e ganhou +${this.defBonus} Defesa e +${this.hpBonus} HP! (Defesa: ${owner.Defense}, HP: ${owner.HP}/${owner.maxHP})`;
 
     if (statResult?.log) {
       log += `\n${statResult.log}`;

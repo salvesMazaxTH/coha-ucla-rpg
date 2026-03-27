@@ -84,7 +84,7 @@ const kaeldrathVulcanoSkills = [
 
       results.push(primaryResult);
 
-      if (primaryResult.totalDamage > 0)
+      if (!primaryResult?.evaded && !primaryResult?.immune && primaryResult.totalDamage > 0)
         enemy.applyStatusEffect("queimando", this.burnDuration, context);
 
       const [secondaryTarget] = context.getAdjacentChampions(enemy, {

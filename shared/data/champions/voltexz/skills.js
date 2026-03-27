@@ -107,8 +107,8 @@ const voltexzSkills = [
         mainDamage?.totalDamage,
       );
 
-      // Aplica o efeito de paralisia
-      if (mainDamage.totalDamage > 0) {
+      // Aplica o efeito de paralisia (só se o golpe chegou)
+      if (!mainDamage?.evaded && !mainDamage?.immune && mainDamage?.totalDamage > 0) {
         paralyzed = enemy.applyStatusEffect(
           "paralisado",
           this.paralyzeDuration,

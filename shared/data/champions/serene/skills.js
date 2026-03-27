@@ -64,13 +64,6 @@ const sereneSkills = [
 
       const baseDamage = enemy.maxHP * (this.hpDamagePercent / 100);
 
-      // aplica status
-      const stunned = enemy.applyStatusEffect(
-        "atordoado",
-        this.stunDuration,
-        context,
-      );
-
       // resolve dano
       const result = new DamageEvent({
         baseDamage,
@@ -83,11 +76,18 @@ const sereneSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      // adiciona log da skill
-      if (result?.log && stunned) {
-        result.log += `\n${enemy.name} foi atordoado pela Quietude!`;
-      } else if (stunned) {
-        result.log = `${enemy.name} foi atordoado pela Quietude!`;
+      // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
+      if (!result?.evaded && !result?.immune) {
+        const stunned = enemy.applyStatusEffect(
+          "atordoado",
+          this.stunDuration,
+          context,
+        );
+        if (result?.log && stunned) {
+          result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        } else if (stunned) {
+          result.log = `${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        }
       }
 
       return result;

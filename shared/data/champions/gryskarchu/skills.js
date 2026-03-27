@@ -29,12 +29,6 @@ const gryskarchuSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const rooted = enemy.applyStatusEffect(
-        "enraizado",
-        this.rootDuration,
-        context,
-      );
-
       const result = new DamageEvent({
         baseDamage,
         attacker: user,
@@ -43,9 +37,19 @@ const gryskarchuSkills = [
         context,
         allChampions: context?.allChampions,
       }).execute();
-      if (rooted && result?.log) {
-        result.log += `\n${enemy.name} foi Enraizado!`;
+
+      // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
+      if (!result?.evaded && !result?.immune) {
+        const rooted = enemy.applyStatusEffect(
+          "enraizado",
+          this.rootDuration,
+          context,
+        );
+        if (rooted && result?.log) {
+          result.log += `\n${enemy.name} foi Enraizado!`;
+        }
       }
+
       return result;
     },
   },

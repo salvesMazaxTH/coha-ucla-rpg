@@ -185,6 +185,10 @@ const blyskartriSkills = [
             targetId: attacker.id,
             blocking: true,
           });
+
+          return {
+            log : `${formatChampionName(user)} revidou o ataque de ${formatChampionName(attacker)} em seu aliado!`,
+          };
         },
       });
 
