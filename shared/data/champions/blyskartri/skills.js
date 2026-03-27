@@ -111,6 +111,11 @@ const blyskartriSkills = [
 
       ally.runtime.hookEffects ??= [];
 
+      // Prevent hook stacking
+      ally.runtime.hookEffects = ally.runtime.hookEffects.filter(
+        (h) => h.key !== "condutancia_vital_counter"
+      );
+
       /* console.log("[BLYSKARTRI][condutancia_vital] hookEffects initialized", {
         hookEffects: ally.runtime.hookEffects,
       });
@@ -124,6 +129,15 @@ const blyskartriSkills = [
 
         hookScope: {
           onEvade: "defender",
+          onTurnStart: "owner",
+        },
+
+        onTurnStart({ owner, context }) {
+          if (context.currentTurn < this.expiresAtTurn) return;
+
+          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+            (e) => e.key !== "condutancia_vital_counter"
+          );
         },
 
         onEvade({ attacker, defender, owner, damage, context }) {
