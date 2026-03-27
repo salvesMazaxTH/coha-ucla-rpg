@@ -144,13 +144,15 @@ const tharoxSkills = [
     },
     targetSpec: ["self"],
     resolve({ user, context = {} }) {
-      user.modifyHP(this.hpGain, { maxHPOnly: true });
+      user.modifyHP(this.hpGain, { context, maxHPOnly: true, isPermanent: true });
+      
       user.modifyStat({
         statName: "Defense",
         amount: this.defGain,
         context,
         isPermanent: true,
       }); // Aumenta DEF permanentemente
+      
       const proportionalHeal = user.Defense - this.baseDef;
       user.heal(proportionalHeal, context);
 
