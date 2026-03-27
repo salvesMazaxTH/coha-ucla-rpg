@@ -109,17 +109,25 @@ const eliasCrossSkills = [
     key: "tempestade_de_raios",
     name: "Tempestade de Raios",
     bf: 120,
+
     damageMode: "standard",
+
     isUltimate: true,
-    ultCost: 3,
+    ultCost: 4,
+
     recoilDamage: 25,
+    reductedDamagePercent: 20,
     recoilDamageMode: "absolute",
+
+    cannotBeEvaded: true,
+
     contact: false,
     priority: 0,
-    cannotBeEvaded: true,
+
     element: "lightning",
+
     description() {
-      return `Causa dano a TODOS os personagens, não afeta o próprio Elias e nem aliados com 'Afinidade: Raio' ou 'Terra'. No entanto, Elias sofre ${this.recoilDamage}% de sua vida máxima como dano absoluto de recuo. Quaisquer dos alvos que  estiverem abaixo de 17% do HP são obliterados, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
+      return `Causa dano a TODOS os personagens, não afeta o próprio Elias. Personagens com 'Afinidade: Raio' ou 'Terra' sofrem apenas ${this.reductedDamagePercent}% do dano. No entanto, Elias sofre ${this.recoilDamage}% de sua vida máxima como dano absoluto de recuo. Quaisquer dos alvos que estiverem abaixo de 17% do HP são obliterados, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
     obliterateRule(ctx) {
@@ -129,6 +137,7 @@ const eliasCrossSkills = [
     },
 
     targetSpec: ["all"],
+
     resolve({ user, targets, context }) {
       const baseDamage = (user.Attack * this.bf) / 100;
 
@@ -140,39 +149,25 @@ const eliasCrossSkills = [
           ? [targets]
           : [];
 
-      let lastValidTargetIndex = -1;
+      // acha uma única iteração válida pra acoplar o recoil
+      const recoilIndex = targetList.findIndex((t) => t?.alive && t !== user);
 
       for (let i = 0; i < targetList.length; i++) {
         const target = targetList[i];
 
-        if (target === user) continue;
-
-        const affinities = target.elementalAffinities || [];
-        // só os aliados que possuem afinidade com raio ou terra ficam imunes
-        if (
-          target.team === user.team &&
-          (affinities.includes("lightning") || affinities.includes("earth"))
-        )
-          continue;
-
-        lastValidTargetIndex = i;
-      }
-
-      for (let i = 0; i < targetList.length; i++) {
-        const target = targetList[i];
-
+        if (!target?.alive) continue;
         if (target === user) continue;
 
         const affinities = target.elementalAffinities || [];
 
-        if (
-          target.team === user.team &&
-          (affinities.includes("lightning") || affinities.includes("earth"))
-        )
-          continue;
+        let finalBaseDamage = baseDamage;
 
-        // se o alvo é o último, injeta recoil
-        if (i === lastValidTargetIndex) {
+        if (affinities.includes("lightning") || affinities.includes("earth")) {
+          finalBaseDamage = baseDamage * (this.reductedDamagePercent / 100);
+        }
+
+        // 🔥 injeta recoil em UMA única execução válida
+        if (i === recoilIndex) {
           context.extraDamageQueue ??= [];
 
           context.extraDamageQueue.push({
@@ -185,7 +180,7 @@ const eliasCrossSkills = [
         }
 
         const result = new DamageEvent({
-          baseDamage,
+          baseDamage: finalBaseDamage,
           attacker: user,
           defender: target,
           skill: this,
@@ -195,6 +190,18 @@ const eliasCrossSkills = [
 
         if (Array.isArray(result)) results.push(...result);
         else if (result) results.push(result);
+      }
+
+      const eliasUltLog = `${formatChampionName(user)} sofreu ${this.recoilDamage}% de sua vida máxima como dano absoluto de recuo.`;
+
+      // injeta em apenas UM resultado (o primeiro válido)
+      if (results.length > 0) {
+        results[0].log = (results[0].log ?? "") + `\n${eliasUltLog}`;
+      } else {
+        // fallback opcional
+        console.warn(
+          "Tempestade de Raios: nenhum resultado para anexar log de recoil",
+        );
       }
 
       return results;

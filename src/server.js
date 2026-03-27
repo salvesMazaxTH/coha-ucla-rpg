@@ -33,7 +33,7 @@ const editMode = {
   autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
@@ -89,11 +89,20 @@ function logTurnEvent(eventType, eventData) {
 //  SERIALIZAÇÃO DO ESTADO
 // ============================================================
 
-function getGameState() {
+function getGameState(extraChampions = []) {
+  const champions = Array.from(match.combat.activeChampions.values()).map((c) =>
+    c.serialize(),
+  );
+
+  // Garantir que campeões extras (ex: recém-mortos) estejam no payload se o frontend ainda os vir como ativos
+  for (const extra of extraChampions) {
+    if (extra && !champions.find((c) => c.id === extra.id)) {
+      champions.push(extra.serialize());
+    }
+  }
+
   return {
-    champions: Array.from(match.combat.activeChampions.values()).map((c) =>
-      c.serialize(),
-    ),
+    champions,
     currentTurn: match.combat.currentTurn,
   };
 }
@@ -232,8 +241,9 @@ function checkAllTeamsSelected() {
 function emitChampionDeath(deathResult) {
   if (!deathResult) return;
 
-  const champ = match.combat.activeChampions.get(deathResult.championId) ||
-  match.combat.deadChampions.get(deathResult.championId);
+  const champ =
+    match.combat.activeChampions.get(deathResult.championId) ||
+    match.combat.deadChampions.get(deathResult.championId);
 
   console.log("[BACKEND][DEATH BEFORE EMIT]", {
     id: champ?.id,
@@ -247,19 +257,23 @@ function emitChampionDeath(deathResult) {
     io.emit("scoreUpdate", match.getScorePayload());
     io.emit(
       "combatLog",
-      `${formatPlayerName(match.players[deathResult.scoringPlayerSlot]?.username, deathResult.scoringTeam)} marcou um ponto!`,
+      `${formatPlayerName(
+        match.players[deathResult.scoringPlayerSlot]?.username,
+        deathResult.scoringTeam,
+      )} marcou um ponto!`,
     );
   }
 
-  const state = getGameState();
+  // Garantimos que o estado do campeão morto (com runtime atualizado) seja enviado
+  const state = getGameState(champ ? [champ] : []);
 
-  const deadChamp = state.champions.find(
+  const deadChampInState = state.champions.find(
     (c) => c.id === deathResult.championId,
   );
 
   console.log("[BACKEND][GAMESTATE SNAPSHOT]", {
-    found: !!deadChamp,
-    deathClaimTriggered: deadChamp?.runtime?.deathClaimTriggered,
+    found: !!deadChampInState,
+    deathClaimTriggered: deadChampInState?.runtime?.deathClaimTriggered,
   });
 
   io.emit("gameStateUpdate", state);

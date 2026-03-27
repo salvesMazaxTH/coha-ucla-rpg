@@ -191,8 +191,8 @@ const jeffTheDeathSkills = [
 
     priority: 0,
 
-    threshold: 0.95, // 0.25
-    // porcentagem de HP para ativar a execução (25%) // (95% PARA TESTES APENAS) //
+    threshold: 0.25,
+    // porcentagem de HP para ativar a execução (25%)
     description() {
       return `Jeff causa dano moderado ao alvo e o marca para morrer. No início do próximo turno, se o alvo estiver abaixo de ${this.threshold * 100}% de HP, a Morte o reclama!`;
     },

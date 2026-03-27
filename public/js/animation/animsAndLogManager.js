@@ -38,6 +38,8 @@ const TIMING = {
   // Sequencing gaps
   BETWEEN_EFFECTS: 60, // Reduced from 120
   BETWEEN_ACTIONS: 60, // Reduced from 60
+
+  DEATH_CLAIM_EFFECT: 5600,
 };
 
 // ============================================================

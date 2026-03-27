@@ -1,6 +1,7 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
 export default {
+  key: "fonte_da_vida",
   name: "Fonte da Vida",
   selfHeal: 15,
   hpThreshold: 50,
