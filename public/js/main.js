@@ -443,6 +443,7 @@ import { StatusIndicator } from "../../shared/ui/statusIndicator.js";
 import { createCombatAnimationManager } from "./animation/animsAndLogManager.js";
 import { GAME_GLOSSARY } from "./gameGlossary.js";
 import { syncChampionVFX } from "../../shared/vfx/vfxManager.js";
+import { audioManager } from "./utils/AudioManager.js";
 
 // ============================================================
 //  SOCKET
@@ -592,6 +593,12 @@ const combatAnimations = createCombatAnimationManager({
     if (playerTeam !== null) initActionBar();
   },
 });
+
+// ============================================================
+//  AUDIO
+// ============================================================
+
+audioManager.preloadAll();
 
 // ============================================================
 //  LOGIN & CONEXÃO
@@ -879,6 +886,9 @@ socket.on("allTeamsSelected", () => {
   championSelectionScreen.classList.add("hidden");
   mainContent.classList.remove("hidden");
   mainContent.classList.add("visible");
+
+  // Play main soundtrack playlist (alternates between tracks)
+  audioManager.playMusic(["main", "main2"]);
 
   // Reseta estado de seleção
   selectedChampions = Array(TEAM_SIZE).fill(null);
@@ -1647,6 +1657,9 @@ socket.on("turnUpdate", (turn) => {
 socket.on("gameOver", (data) => {
   combatAnimations.handleGameOver(data);
   gameEnded = true;
+
+  // Stop music when game is over
+  if (audioManager.stopMusic) audioManager.stopMusic();
 
   removeActionBar();
 });

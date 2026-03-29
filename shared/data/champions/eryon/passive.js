@@ -1,6 +1,6 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
-function _processResonance(owner, threshold, ultGain, context) {
+function _processResonance(owner, threshold, ultGain, context, resolver) {
   let procs = 0;
 
   while ((owner.runtime.ressonanceStacks || 0) >= threshold) {
@@ -12,7 +12,16 @@ function _processResonance(owner, threshold, ultGain, context) {
 
     owner.runtime.ressonanceStacks -= threshold;
 
-    ally.addUlt({ amount: ultGain, context });
+    if (resolver?.registerResourceChange) {
+      resolver.registerResourceChange({
+        target: ally,
+        amount: ultGain,
+        context,
+        sourceId: owner.id,
+      });
+    } else {
+      ally.addUlt(ultGain);
+    }
     procs++;
   }
 
@@ -40,7 +49,7 @@ export default {
     onResourceSpend: undefined,
   },
 
-  onResourceGain({ owner, target, amount, context }) {
+  onResourceGain({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
     if (target.id === owner.id) return;
     if (amount <= 0) return;
@@ -53,6 +62,7 @@ export default {
       this.stacksCap,
       this.ultGain,
       context,
+      resolver,
     );
 
     if (procs > 0) {
@@ -74,7 +84,7 @@ export default {
     };
   },
 
-  onResourceSpend({ owner, target, amount, context }) {
+  onResourceSpend({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
     if (target.id === owner.id) return;
     if (amount <= 0) return;
@@ -87,6 +97,7 @@ export default {
       this.stacksCap,
       this.ultGain,
       context,
+      resolver,
     );
 
     if (procs > 0) {

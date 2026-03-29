@@ -71,6 +71,7 @@ export function emitCombatEvent(eventName, payload, champions) {
         const res = hook.call(source, {
           ...payload,
           owner: champ,
+          emitter: emitCombatEvent,
         });
 
         if (res) {

@@ -378,11 +378,12 @@ export class TurnResolver {
       }
     }
 
-    // 🔹 3. Executar skill
+    // 🔹 3. Executar skill - Passa o resolver (this) desacoplado do contexto
     const result = skill.resolve({
       user,
       targets,
       context,
+      resolver: this,
     });
 
     // 🔹 4. Limpar contexto
@@ -453,9 +454,19 @@ export class TurnResolver {
     // 🔹 GANHO DO USUÁRIO
     if (damageEvents.length) {
       const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
-      user.addUlt({ amount: regenAmount, context });
+      this.registerResourceChange({
+        target: user,
+        amount: regenAmount,
+        context,
+        sourceId: user.id,
+      });
     } else if (healEvents.length || buffEvents.length) {
-      user.addUlt({ amount: 1, context });
+      this.registerResourceChange({
+        target: user,
+        amount: 1,
+        context,
+        sourceId: user.id,
+      });
     }
 
     // 🔹 GANHO DE QUEM SOFREU DANO
@@ -470,9 +481,50 @@ export class TurnResolver {
       const target = this.combat.activeChampions.get(targetId);
       if (!target || !target.alive) continue;
 
-      const applied = target.addUlt({ amount: 1, context });
-      // console.log("[ULT - TAKEN]", target.name, applied);
+      this.registerResourceChange({
+        target,
+        amount: 1,
+        context,
+        sourceId: user?.id,
+      });
     }
+  }
+
+  /**
+   * Ponto único de entrada (Backend) para mudança de recursos com emissão de hooks.
+   * Orquestra: Mudança de Estado (Champion) -> Visual (Context) -> Gameplay Hooks (Emitter).
+   */
+  registerResourceChange({ target, amount, context, sourceId }) {
+    if (!target || amount === 0) return 0;
+
+    // 1. Backend State Change (Champion)
+    const applied =
+      amount > 0 ? target.addUlt(amount) : target.spendUlt(amount);
+
+    if (applied === 0) return 0;
+
+    const eventType = applied > 0 ? "onResourceGain" : "onResourceSpend";
+    const payloadType = applied > 0 ? "resourceGain" : "resourceSpend";
+
+    // 2. Frontend Visual Registration (Context)
+    context.registerResourceChange({ target, amount: applied, sourceId });
+
+    // 3. Backend Gameplay Logic (Hooks)
+    emitCombatEvent(
+      eventType,
+      {
+        target,
+        amount: Math.abs(applied),
+        context,
+        type: payloadType,
+        resourceType: "ult",
+        source: this.combat.activeChampions.get(sourceId) || null,
+        resolver: this, // Desacoplado do contexto, passado como bridge
+      },
+      this.combat.activeChampions,
+    );
+
+    return applied;
   }
 
   // ============================================================
@@ -765,71 +817,27 @@ export class TurnResolver {
           amount: value,
         });
       },
-      // -- RESOURCE REGISTRY -- //
+      // -- RESOURCE REGISTRY (Visual Only) -- //
       registerResourceChange({ target, amount, sourceId } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return 0;
 
-        let applied = 0;
-
-        if (value > 0) {
-          applied = target.addUlt({
-            amount: value,
-            source: combat.activeChampions.get(sourceId) || target,
-            context: this,
-          });
-        } else {
-          const spend = Math.abs(value);
-          if (!target.spendUlt(spend)) return 0;
-          applied = -spend;
-        }
-
-        if (applied === 0) return 0;
-
-        const eventType = applied > 0 ? "resourceGain" : "resourceSpend";
+        const eventType = value > 0 ? "resourceGain" : "resourceSpend";
 
         this.visual.resourceEvents.push({
-          // eventIndex: this.nextEventIndex(),
           type: eventType,
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
-          amount: Math.abs(applied),
+          amount: Math.abs(value),
           resourceType: "ult",
         });
 
-        // 🔥 Agora dispara hook corretamente
-        emitCombatEvent(
-          applied > 0 ? "onResourceGain" : "onResourceSpend",
-          {
-            target: target,
-            amount: Math.abs(applied),
-            context: this,
-            type: eventType,
-            resourceType: "ult",
-            source: combat.activeChampions.get(sourceId) || null,
-          },
-          this.allChampions,
-        );
-
-        return applied;
+        return value;
       },
-      // -- ULT GAIN REGISTRY -- //
+
+      // -- ULT GAIN REGISTRY (Visual Only) -- //
       registerUltGain({ target, amount, sourceId } = {}) {
-        const value = Number(amount) || 0;
-        if (!target?.id || value <= 0) return 0;
-
-        const applied = amount ?? 0;
-        if (applied > 0) {
-          this.visual.resourceEvents.push({
-            // eventIndex: this.nextEventIndex(),
-            type: "resourceGain",
-            targetId: target.id,
-            sourceId: sourceId || target.id,
-            amount: applied,
-          });
-        }
-
-        return applied;
+        return this.registerResourceChange({ target, amount, sourceId });
       },
       // -- DIALOG REGISTRY -- //
       registerDialog({

@@ -247,30 +247,17 @@ export class Champion {
   }
 
   addUlt(input) {
-    const { amount, context } = input;
-
+    const amount = typeof input === "object" ? input.amount : Number(input);
     if (!Number.isInteger(amount) || amount <= 0) return 0;
 
-    // 🔥 Primeiro altera o estado
-    const applied = this._applyUltDelta(amount);
-
-    // 🔥 Depois registra visual
-    if (applied > 0 && context?.registerUltGain) {
-      context.registerUltGain({
-        target: this,
-        amount: applied,
-        sourceId: this.id,
-      });
-    }
-
-    return applied;
+    return this._applyUltDelta(amount);
   }
 
   spendUlt(cost) {
-    if (this.ultMeter < cost) return false;
+    const amount = Math.abs(Number(cost) || 0);
+    if (this.ultMeter < amount) return 0;
 
-    this._applyUltDelta(-cost);
-    return true;
+    return this._applyUltDelta(-amount);
   }
 
   // Núcleo interno

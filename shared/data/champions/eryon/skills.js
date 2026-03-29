@@ -21,7 +21,7 @@ const eryonSkills = [
       return `Ajusta o ultômetro de todos os aliados para a média atual +2 unidades.`;
     },
     targetSpec: ["self"],
-    resolve({ user, context }) {
+    resolve({ user, context, resolver }) {
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
       if (!allies.length) return;
 
@@ -32,10 +32,13 @@ const eryonSkills = [
         const targetValue = Math.min(ally.ultCap, avg + 2);
         const delta = targetValue - ally.ultMeter;
 
-        if (delta > 0) {
-          ally.addUlt({ amount: delta, context });
-        } else if (delta < 0) {
-          ally.spendUlt(Math.abs(delta));
+        if (delta !== 0) {
+          resolver.registerResourceChange({
+            target: ally,
+            amount: delta,
+            context,
+            sourceId: user.id,
+          });
         }
       }
 

@@ -4,6 +4,7 @@ import { syncChampionVFX } from "../../../shared/vfx/vfxManager.js";
 import { playObliterateEffect } from "../../../shared/vfx/obliterate.js";
 import { StatusIndicator } from "../../../shared/ui/statusIndicator.js";
 import { playDeathClaimEffect } from "../../../shared/vfx/deathClaim.js";
+import { audioManager } from "../utils/AudioManager.js";
 
 // ============================================================
 //  AnimsAndLogManager.js — Combat Animation & Log System (v2)
@@ -419,6 +420,7 @@ export function createCombatAnimationManager(deps) {
 
     // 3. Feedback Visual Imediato (Shake/Piscar e Float)
     championEl.classList.add("damage");
+    audioManager.play("damage");
 
     if (portraitWrapper) {
       const floatValue = obliterate ? "999" : `-${amount}`;
@@ -496,6 +498,9 @@ export function createCombatAnimationManager(deps) {
     // showNonBlockingDialog(`${targetName} recuperou vida.`, true);
 
     await showBlockingDialog(`${targetName} recuperou vida.`, true);
+
+    // Play healing SFX
+    audioManager.play("heal");
 
     // Apply .heal class to .champion element
     championEl.classList.add("heal");
@@ -803,6 +808,9 @@ export function createCombatAnimationManager(deps) {
       "active",
       isWinner ? "win-background" : "lose-background",
     );
+
+    // Play appropriate sound
+    audioManager.play(isWinner ? "victory" : "defeat");
 
     // Timer for return to login
     const timerOverlay = document.getElementById("timerOverlay");
