@@ -1993,3 +1993,189 @@ body.perspective-team2 .combat-dialog-bubble .team-2 {
     max-height: 90vh;
   }
 }
+
+/* ============================================
+   SETTINGS UI
+   ============================================ */
+
+.settings-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ccc;
+  width: clamp(28px, 4.5vw, 36px);
+  height: clamp(28px, 4.5vw, 36px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+  background: rgba(0, 200, 255, 0.15);
+  border-color: rgba(0, 200, 255, 0.4);
+  color: #00c8ff;
+  transform: rotate(45deg);
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.settings-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settings-dialog {
+  background: linear-gradient(135deg, #1a1e26 0%, #0d0f14 100%);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+  border-radius: 16px;
+  width: min(90vw, 400px);
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 200, 255, 0.1);
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.settings-overlay.active .settings-dialog {
+  transform: translateY(0);
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #90d0f0;
+  letter-spacing: 0.5px;
+}
+
+.settings-close-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.settings-close-btn:hover {
+  color: #fff;
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-label span {
+  font-size: 0.9rem;
+  color: #ccc;
+  font-weight: 500;
+}
+
+/* Custom Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #333;
+  transition: 0.4s;
+  border-radius: 20px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #999;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #00c8ff;
+}
+
+input:checked + .slider:before {
+  transform: translateX(14px);
+  background-color: white;
+}
+
+/* Custom Range Color */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #00c8ff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 200, 255, 0.4);
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}

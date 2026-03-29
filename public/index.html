@@ -58,6 +58,9 @@
           <button id="surrender-btn" class="surrender-btn" title="Render-se">
             Render-se
           </button>
+          <button id="settings-btn" class="settings-btn" title="Configurações">
+            <i class="bx bx-cog"></i>
+          </button>
         </div>
       </header>
 
@@ -134,6 +137,8 @@
       </div>
     </div>
 
+    <div id="webgl-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="/js/main.js"></script>
     <!--  <script type="module" src="../exportChampionsToJson.js"></script> -->
@@ -160,6 +165,38 @@
     <div id="combat-dialog" class="combat-dialog hidden" aria-live="polite">
       <div class="combat-dialog-bubble">
         <p id="combat-dialog-text"></p>
+      </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="settings-overlay hidden">
+      <div class="settings-dialog">
+        <div class="settings-header">
+          <h3>Configurações de Áudio</h3>
+          <button id="settings-close" class="settings-close-btn">&times;</button>
+        </div>
+        <div class="settings-content">
+          <div class="settings-group">
+            <div class="settings-label">
+              <span>Música de Fundo</span>
+              <label class="switch">
+                <input type="checkbox" id="music-toggle" checked />
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+          <div class="settings-group">
+            <div class="settings-label">
+              <span>Efeitos Sonoros (SFX)</span>
+              <label class="switch">
+                <input type="checkbox" id="sfx-toggle" checked />
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5" />
+          </div>
+        </div>
       </div>
     </div>
     <button id="undo-actions-btn" hidden>Desfazer ações</button>

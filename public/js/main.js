@@ -548,6 +548,15 @@ const surrenderOverlay = document.getElementById("surrender-overlay");
 const surrenderCancel = document.getElementById("surrender-cancel");
 const surrenderConfirm = document.getElementById("surrender-confirm");
 
+// --- Configurações de Áudio ---
+const settingsBtn = document.getElementById("settings-btn");
+const settingsOverlay = document.getElementById("settings-overlay");
+const settingsClose = document.getElementById("settings-close");
+const musicToggle = document.getElementById("music-toggle");
+const musicVolumeSlider = document.getElementById("music-volume");
+const sfxToggle = document.getElementById("sfx-toggle");
+const sfxVolumeSlider = document.getElementById("sfx-volume");
+
 // --- Campeões de retaguarda (reserva) desativados ---
 // const backChampionDisplayTeam1 = document.getElementById(
 //   "backChampionDisplayTeam1",
@@ -599,6 +608,45 @@ const combatAnimations = createCombatAnimationManager({
 // ============================================================
 
 audioManager.preloadAll();
+
+// ============================================================
+//  CONFIGURAÇÕES DE ÁUDIO (UI)
+// ============================================================
+
+function openSettings() {
+  settingsOverlay.classList.remove("hidden");
+  // Pequeno delay para a animação CSS
+  setTimeout(() => settingsOverlay.classList.add("active"), 10);
+}
+
+function closeSettings() {
+  settingsOverlay.classList.remove("active");
+  setTimeout(() => settingsOverlay.classList.add("hidden"), 300);
+}
+
+settingsBtn.addEventListener("click", openSettings);
+settingsClose.addEventListener("click", closeSettings);
+
+settingsOverlay.addEventListener("click", (e) => {
+  if (e.target === settingsOverlay) closeSettings();
+});
+
+// Sincronização com AudioManager
+musicToggle.addEventListener("change", (e) => {
+  audioManager.toggleMusic(e.target.checked);
+});
+
+musicVolumeSlider.addEventListener("input", (e) => {
+  audioManager.setMusicVolume(parseFloat(e.target.value));
+});
+
+sfxToggle.addEventListener("change", (e) => {
+  audioManager.toggleSFX(e.target.checked);
+});
+
+sfxVolumeSlider.addEventListener("input", (e) => {
+  audioManager.setSFXVolume(parseFloat(e.target.value));
+});
 
 // ============================================================
 //  LOGIN & CONEXÃO
@@ -888,7 +936,8 @@ socket.on("allTeamsSelected", () => {
   mainContent.classList.add("visible");
 
   // Play main soundtrack playlist (alternates between tracks)
-  audioManager.playMusic(["main", "main2"]);
+  // Repeat main2 twice because it's shorter than main
+  audioManager.playMusic(["main", "main2", "main2"]);
 
   // Reseta estado de seleção
   selectedChampions = Array(TEAM_SIZE).fill(null);

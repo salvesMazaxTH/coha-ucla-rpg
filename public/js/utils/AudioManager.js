@@ -23,8 +23,15 @@ class AudioManager {
     this.isPlaylistMode = false;
     this.playlist = ["main", "main2"];
     this.playlistIndex = 0;
-    this.globalVolume = 0.5; // Master volume
-    this.enabled = true;
+
+    // Independent Settings
+    this.sfxVolume = 0.5;
+    this.musicVolume = 0.5;
+    this.sfxEnabled = true;
+    this.musicEnabled = true;
+
+    // Master Volume (multiplier for both)
+    this.globalVolume = 1.0;
   }
 
   /**
@@ -62,7 +69,7 @@ class AudioManager {
    * @param {object} options - overrideVolume, loop, playbackRate
    */
   play(key, options = {}) {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
 
     let sound = this.sounds[key];
     const entry = this.registry[key];
@@ -73,10 +80,10 @@ class AudioManager {
       if (!sound) return;
     }
 
-    // Professional touch: For one-off SFX, we want overlapping sounds
-    // Calculate final volume: (Per-SFX volume OR 1.0) * (Master Volume)
+    // Calculate final volume: (Per-SFX volume OR 1.0) * (SFX Volume) * (Master Volume)
     const sfxBaseVolume = entry?.volume ?? 1.0;
-    const finalVolume = (options.volume ?? sfxBaseVolume) * this.globalVolume;
+    const finalVolume =
+      (options.volume ?? sfxBaseVolume) * this.sfxVolume * this.globalVolume;
 
     if (!sound.paused) {
       const clone = sound.cloneNode();
@@ -93,7 +100,11 @@ class AudioManager {
    * @param {string|array} key - The key in the musicRegistry or an array of keys
    */
   playMusic(key) {
-    if (!this.enabled) return;
+    if (!this.musicEnabled) {
+      // Still set the key for later if enabled
+      this.pendingMusic = key;
+      return;
+    }
 
     if (Array.isArray(key)) {
       this.isPlaylistMode = true;
@@ -127,7 +138,8 @@ class AudioManager {
     }
 
     music.loop = !fromPlaylist; // If single track, loop. If playlist, wait for ended.
-    const finalVolume = (entry?.volume ?? 1.0) * this.globalVolume;
+    const musicBaseVolume = entry?.volume ?? 1.0;
+    const finalVolume = musicBaseVolume * this.musicVolume * this.globalVolume;
     music.volume = Math.max(0, Math.min(1, finalVolume));
 
     if (fromPlaylist) {
@@ -156,10 +168,62 @@ class AudioManager {
 
   setVolume(v) {
     this.globalVolume = Math.max(0, Math.min(1, v));
+    this._syncVolumes();
+  }
+
+  setSFXVolume(v) {
+    this.sfxVolume = Math.max(0, Math.min(1, v));
+  }
+
+  setMusicVolume(v) {
+    this.musicVolume = Math.max(0, Math.min(1, v));
+    this._syncVolumes();
+  }
+
+  toggleSFX(state) {
+    this.sfxEnabled = state !== undefined ? state : !this.sfxEnabled;
+  }
+
+  toggleMusic(state) {
+    this.musicEnabled = state !== undefined ? state : !this.musicEnabled;
+
+    if (!this.musicEnabled) {
+      this._pauseMusicOnly();
+    } else {
+      // Resume or start music if it was playing
+      if (this.isPlaylistMode) {
+        this._startPlaylistTrack();
+      } else if (this.currentMusicKey) {
+        this._playSingleTrack(this.currentMusicKey);
+      } else if (this.pendingMusic) {
+        this.playMusic(this.pendingMusic);
+      } else {
+        // Fallback to start
+        this.playMusic(["main", "main2"]);
+      }
+    }
+  }
+
+  _syncVolumes() {
+    if (this.currentMusic && this.currentMusicKey) {
+      const entry = this.musicRegistry[this.currentMusicKey];
+      const musicBaseVolume = entry?.volume ?? 1.0;
+      const finalVolume =
+        musicBaseVolume * this.musicVolume * this.globalVolume;
+      this.currentMusic.volume = Math.max(0, Math.min(1, finalVolume));
+    }
+  }
+
+  _pauseMusicOnly() {
+    if (this.currentMusic) {
+      this.currentMusic.pause();
+    }
   }
 
   toggleSound(state) {
-    this.enabled = state !== undefined ? state : !this.enabled;
+    const s = state !== undefined ? state : !this.sfxEnabled;
+    this.toggleSFX(s);
+    this.toggleMusic(s);
   }
 }
 

@@ -33,13 +33,13 @@
   z-index: 50;
 }
 
-.death-claim-canvas {
-  position: absolute;
+/* .death-claim-canvas-fullscreen {
+  position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 60;
-  border-radius: inherit;
-}
+  z-index: 1000;
+} */
+
 
 .obliterate-flash {
   animation: execFlash 120ms ease-out;

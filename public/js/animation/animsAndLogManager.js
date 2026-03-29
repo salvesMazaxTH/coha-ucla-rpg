@@ -1241,7 +1241,7 @@ export function createCombatAnimationManager(deps) {
       // special vfx + dialog for Jeff_The_Death claim/special execution
       const name = formatChampionName(champion);
 
-      playDeathClaimEffect(el);
+      await playDeathClaimEffect(el);
 
       await showBlockingDialog(`A Morte reclama ${name}!`);
 
