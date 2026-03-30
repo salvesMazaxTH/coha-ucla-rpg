@@ -1,3 +1,4 @@
+// step9 - resultBuilder.js - Consolida o resultado final do ataque, incluindo logs, dano total, HP final, etc. Pode ser um objeto ou um array (em caso de contra-ataques/reflects).
 import { formatChampionName } from "../../../ui/formatters.js";
 
 export function buildFinalResult(event) {

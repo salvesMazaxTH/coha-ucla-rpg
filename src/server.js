@@ -500,8 +500,11 @@ function emitCombatAction(envelope) {
 function emitCombatLogsFromResults(results = []) {
   if (!Array.isArray(results) || results.length === 0) return;
 
-  for (const result of results) {
-    const log = result?.log;
+  // Suporta: objeto plano, array de objetos, arrays aninhados, DamageEvent, { log: ... }
+  const flatResults = results.flat(Infinity);
+  for (const result of flatResults) {
+    if (!result || typeof result !== "object") continue;
+    const log = result.log;
     if (typeof log === "string" && log.trim()) {
       io.emit("combatLog", log);
     }

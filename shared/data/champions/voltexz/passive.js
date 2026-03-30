@@ -47,6 +47,7 @@ export default {
           duration: 1000,
         },
       });
+      log += `[Passiva - <b>Sobrecarga Instável</b>] ${formatChampionName(owner)} sofreu ${Math.floor(recoilDamage)} de dano de recuo.`;
     }
 
     if (defender.hasStatusEffect?.("condutor")) {

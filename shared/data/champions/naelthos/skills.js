@@ -31,7 +31,7 @@ const naelthosSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       const healAmount = this.healAmount;
 
-      const logs = [];
+      const results = [];
 
       // 🗡️ Dano no inimigo (se ainda vivo)
       if (enemy) {
@@ -43,7 +43,7 @@ const naelthosSkills = [
           context,
           allChampions: context?.allChampions,
         }).execute();
-        logs.push(damageResult);
+        results.push(damageResult);
       }
       let allyLog = "";
       let statLog = "";
@@ -64,11 +64,11 @@ const naelthosSkills = [
         allyLog = `${userName} tenta curar um aliado, mas nenhum está disponível.`;
       }
 
-      logs.push({
+      results.push({
         log: `${allyLog} ${statLog}`,
       });
 
-      return { logs };
+      return results;
     },
   },
 
@@ -94,59 +94,47 @@ const naelthosSkills = [
         key: "forma_aquatica_hook",
         group: "skill",
         form: "bola_agua",
-
         expiresAtTurn: currentTurn + this.effectDuration,
-
         hookScope: {
           onDamageIncoming: "defender",
           onStatusEffectIncoming: "target",
           onActionResolved: "actionSource",
         },
-
         onTurnStart({ owner, context }) {
           if (context.currentTurn < this.expiresAtTurn) return;
-
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
             (e) => e.key !== "forma_aquatica_hook",
           );
           owner.runtime.form = null;
         },
-
         onActionResolved({ actionSource, owner, skill }) {
           if (actionSource !== owner) return;
           if (skill?.key === "forma_aquatica") return;
-
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
             (e) => e.key !== "forma_aquatica_hook",
           );
           owner.runtime.form = null;
         },
-
         onDamageIncoming({ defender, damage, skill }) {
           if (skill?.element === "lightning") {
             defender.runtime.hookEffects = defender.runtime.hookEffects.filter(
               (e) => e.key !== "forma_aquatica_hook",
             );
-
             defender.runtime.form = null;
-
             return {
               cancel: false,
               immune: false,
               modifiedDamage: damage / 2,
             };
           }
-
           return {
             cancel: true,
             immune: true,
             message: `${formatChampionName(defender)} está em Forma Aquática! É inalvejável e imune a dano!`,
           };
         },
-
         onStatusEffectIncoming({ target, statusEffect }) {
           if (statusEffect.type !== "debuff") return;
-
           return {
             cancel: true,
             immune: true,
@@ -164,9 +152,11 @@ const naelthosSkills = [
       });
  */
       const userName = formatChampionName(user);
-      return {
-        log: `${userName} usa Forma Aquática! Está inalvejável até o turno ${currentTurn + this.effectDuration}. (Pode ser interrompido por ação do usuário).`,
-      };
+      return [
+        {
+          log: `${userName} usa Forma Aquática! Está inalvejável até o turno ${currentTurn + this.effectDuration}. (Pode ser interrompido por ação do usuário).`,
+        },
+      ];
     },
   },
 
@@ -221,11 +211,13 @@ const naelthosSkills = [
       });
 
       const userName = formatChampionName(user);
-      return {
-        log: `${userName} invoca o Mar Primordial! HP máximo dobrado; efeito "Mar em Ascensão" ativo neste e nos próximos 2 turnos.`,
-      };
+      return [
+        {
+          log: `${userName} invoca o Mar Primordial! HP máximo dobrado; efeito "Mar em Ascensão" ativo neste e nos próximos 2 turnos.`,
+        },
+      ];
     },
   },
 ];
 
-export default naelthosSkills;
+export default naelthosSkills;  
