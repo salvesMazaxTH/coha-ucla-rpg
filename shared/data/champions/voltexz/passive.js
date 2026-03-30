@@ -40,6 +40,8 @@ export default {
         defender: owner,
         skill: {
           key: "sobrecarga_instavel_recoil",
+          name: "Recuo (Sobrecarga Instável)",
+          suppressLog: true, // <- flag para suprimir log padrão
         },
 
         dialog: {

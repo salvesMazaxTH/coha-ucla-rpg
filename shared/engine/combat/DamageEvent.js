@@ -100,6 +100,20 @@ export class DamageEvent {
 
     this.context.ignoreMinimumFloor = false;
 
+    // SUPRIMIR log padrão se skill.suppressLog === true
+    if (this.skill && this.skill.suppressLog) {
+      // Retorna apenas o objeto de resultado, mas sem o campo 'log' padrão
+      const result = buildFinalResult(this);
+      if (Array.isArray(result)) {
+        result.forEach((r) => {
+          if (r && r.log) r.log = undefined;
+        });
+      } else if (result && result.log) {
+        result.log = undefined;
+      }
+      return result;
+    }
+
     return buildFinalResult(this);
   }
 }
