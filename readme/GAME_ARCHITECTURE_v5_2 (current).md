@@ -105,6 +105,14 @@ Cada jogador seleciona **3 campeões**. Os **3 ficam em campo simultaneamente** 
 │   │   │   ├── snapshotChampions.js # Serialização para sync com cliente
 │   │   │   ├── TurnResolver.js     # Resolução completa de um turno
 │   │   │   └── pipeline/           # Etapas numeradas da pipeline de dano
+
+**Sobre o campo `timing` (`pre`/`post`) nos diálogos:**
+
+Eventos visuais (como dano, cura, buff, etc.) podem registrar diálogos associados ao evento, usando o campo `timing`:
+- `pre`: o diálogo é exibido antes da animação do evento.
+- `post`: o diálogo é exibido após a animação do evento.
+Se não houver evento visual associado, o diálogo é enviado como global (fora da ordem dos eventos).
+Esses campos permitem controlar a ordem e o momento exato em que mensagens aparecem durante a sequência de animações, garantindo feedback claro e contextual ao jogador.
 │   │   │       ├── 01_preChecks.js
 │   │   │       ├── 02_prepareDamage.js
 │   │   │       ├── 03_composeDamage.js
@@ -322,60 +330,80 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 | `playerNamesUpdate`         | `[slot, username][]`            | Nomes dos jogadores                          |
 | `editModeUpdate`            | `object`                        | Configurações de edit mode (sem server-only) |
 
-### 5.1 Envelopes de Ação (`combatAction`)
+### 5.2 Envelope de Ação (`combatAction`), Contexto e Timing (v5.1)
 
-O envelope é o contrato principal entre servidor e cliente. O servidor envia **arrays tipados separados por grupo** — o cliente itera sobre eles por chave, animando cada grupo em sequência:
+O envelope enviado do servidor para o cliente contém:
 
 ```js
 {
   action: {
-    userId: string,
-    userName: string,
-    skillKey: string,
-    skillName: string,
-    targetId: string | null,
-    targetName: string | null,       // HTML formatado com cores de time
+    userId, userName, skillKey, skillName, targetId, targetName
   },
-
-  damageEvents: [
-    {
-      type: "damage",
-      targetId: string,
-      sourceId: string,
-      amount: number,
-      isCritical: boolean,
-      damageDepth: number,
-      evaded?: boolean,
-      immune?: boolean,
-      immuneMessage?: string | null,
-      shieldBlocked?: boolean,
-      obliterate?: boolean,
-      isDot?: boolean,
-    }
-  ],
-  healEvents:         [{ type:"heal",              targetId, sourceId, amount }],
-  shieldEvents:       [{ type:"shield",            targetId, sourceId, amount }],
-  buffEvents:         [{ type:"buff",              targetId, sourceId, amount, statName }],
-  resourceEvents:     [{ type:"resourceGain"|"resourceSpend", targetId, sourceId, amount, resourceType:"ult" }],
-  dialogEvents:       [{ type:"dialog",            message, blocking?, sourceId?, targetId?, damageDepth? }],
-  redirectionEvents?: [{ type:"tauntRedirection",  attackerId, fromTargetId, toTargetId }],
-
-  state: [                           // Snapshot intermediário de todos os campeões
-    { id, championKey, team, combatSlot, HP, maxHP, ultMeter, ultCap,
-      runtime, statusEffects, Attack, Defense, Speed, Evasion, Critical, LifeSteal }
-  ]
+  damageEvents: [ { ... } ],
+  healEvents: [ { ... } ],
+  shieldEvents: [ { ... } ],
+  buffEvents: [ { ... } ],
+  resourceEvents: [ { ... } ],
+  dialogEvents: [ { ... } ],
+  redirectionEvents: [ { ... } ],
+  state: [ { ... } ]
 }
 ```
 
-### 5.2 Sincronização de Animações (Handshake)
+- **Diálogos**: Todos os diálogos de combate agora usam `showDialog(message, duration?)` (bloqueante se sem duração, não-bloqueante se com duração).
+- **Sequenciamento**: O cliente processa cada grupo (damageEvents, healEvents, etc.) em ordem, animando cada um sequencialmente.
+- **Contexto**: O contexto (`context`) é criado por `TurnResolver.createBaseContext`, contendo informações do turno, campeões vivos, buffers de eventos visuais, etc.
+- **Agendamento**: Efeitos podem ser agendados via `context.schedule`, processados em turnos futuros.
 
-Após a resolução do turno, o servidor emite todos os envelopes de combate e finaliza com `combatPhaseComplete`. Cada cliente processa sua fila de animações e, ao finalizar, emite `combatAnimationsFinished`. Quando **ambos** os clientes confirmarem, o servidor executa `handleStartTurn()`.
+#### Constantes de Timing (v5.1)
 
+```js
+FLOAT_LIFETIME:   1900ms    // Número flutuante de dano
+DEATH_ANIM:       2000ms    // Colapso de morte
+DIALOG_DISPLAY:   2350ms    // Balão de diálogo
+DIALOG_LEAVE:      160ms    // Fade out do diálogo
+BETWEEN_EFFECTS:    60ms    // Intervalo entre efeitos
+BETWEEN_ACTIONS:    60ms    // Intervalo entre ações
 ```
-Server: handleEndTurn → emit combatAction(s) → emit combatPhaseComplete
-Client: animQueue drains → onQueueEmpty → emit combatAnimationsFinished
-Server: ambos finished → handleStartTurn → emit turnUpdate + gameStateUpdate
-```
+
+- **Esses valores controlam a duração de animações, diálogos e intervalos entre efeitos/ações.**
+- **Toda a lógica de timing está centralizada em `animsAndLogManager.js` e alinhada ao CSS.**
+
+#### Mudanças recentes
+
+- Sistema de diálogos unificado (`showDialog`/`runDialogs`).
+- Diálogos agora podem ser bloqueantes ou não-bloqueantes conforme o campo `duration`.
+- Remoção de APIs antigas de diálogo.
+- Refatoração para centralizar e simplificar a exibição de diálogos.
+
+### 5.2 Mudanças v5.1.x — Sistema de Diálogos Unificado
+
+**[2026-03-30]**
+
+- **Unificação do sistema de diálogos:**
+  - Todos os diálogos de combate agora são exibidos via uma única função `showDialog(message, duration?)`.
+  - O parâmetro `duration` é opcional:
+    - Se fornecido, o diálogo é exibido de forma não-bloqueante e some automaticamente após o tempo especificado (em ms).
+    - Se omitido, o diálogo é bloqueante: só avança após o usuário clicar ou pressionar skip (nunca avança sozinho).
+- **Remoção de APIs antigas:**
+  - As funções `showBlockingDialog` e `showNonBlockingDialog` foram removidas.
+  - Todos os pontos de exibição de diálogo (eventos, globais, helpers de animação) usam agora `showDialog` ou `runDialogs`.
+- **API de múltiplos diálogos:**
+  - O helper `runDialogs(dialogs)` exibe uma sequência de diálogos, respeitando o campo `duration` ou `blocking` de cada item.
+  - Exemplo de uso:
+    ```js
+    runDialogs([
+      { message: "Mensagem 1", duration: 1200 },
+      { message: "Mensagem 2" }, // bloqueante
+      { message: "Mensagem 3", duration: 800 },
+    ]);
+    ```
+- **Semântica preservada:**
+  - O comportamento de bloqueio permanece: diálogos sem `duration` nunca avançam sozinhos.
+  - Diálogos não-bloqueantes (`duration` ou `{ blocking: false }`) avançam automaticamente após o tempo.
+- **Refatoração interna:**
+  - A lógica de exibição de diálogos foi centralizada e simplificada.
+  - Funções intermediárias redundantes (ex: `processEventDialogs`) foram eliminadas e a lógica foi injetada diretamente nos despachantes de eventos.
 
 ---
 
@@ -1036,7 +1064,7 @@ Cria o objeto `context` completo com todos os registries e helpers. Ver seção 
 
 ### O Objeto `context`
 
-Criado por `TurnResolver.createBaseContext()` a cada execução de skill ou início de turno. Serve como **acumulador de eventos de visualização**.
+Criado por `TurnResolver.createBaseContext()` a cada execução de skill ou início de turno. Serve como **acumulador de eventos de visualização** e helpers para a pipeline de combate.
 
 ```js
 context = {
@@ -1044,9 +1072,7 @@ context = {
   editMode: object,
   allChampions: Map,
   aliveChampions: Champion[],
-  executionIndex: number,         // posição da ação na fila do turno
-  turnExecutionMap: Map,          // championId → executionIndex
-  currentSkill: Skill,            // skill sendo executada
+  // executionIndex, turnExecutionMap, currentSkill: podem ser injetados conforme necessário
 
   visual: {
     damageEvents:      [],
@@ -1054,8 +1080,8 @@ context = {
     buffEvents:        [],
     resourceEvents:    [],
     shieldEvents:      [],
-    dialogEvents:      [],
     redirectionEvents: [],
+    globalDialogs:     [], // fallback para diálogos não associados a eventos
   },
 
   // Helpers
@@ -1064,14 +1090,40 @@ context = {
   getAdjacentChampions(target, {side}),   // → Champion[] adjacentes
 
   // Registries
-  registerDamage({ target, amount, sourceId, isCritical, damageDepth, isDot, flags }),
-  registerHeal({ target, amount, sourceId }),
-  registerBuff({ target, amount, statName, sourceId }),
-  registerShield({ target, amount, sourceId }),
-  registerResourceChange({ target, amount, sourceId }),  // → dispara hook onResourceGain/Spend
-  registerUltGain({ target, amount, sourceId }),
-  registerDialog({ message, blocking, sourceId, targetId, damageDepth }),
+  registerDamage({ ... }),
+  registerHeal({ ... }),
+  registerBuff({ ... }),
+  registerShield({ ... }),
+  registerResourceChange({ ... }),
+  registerUltGain({ ... }),
+  registerDialog({ ... }),
 }
+```
+
+#### Novo sistema de diálogos contextualizados
+
+Ao invés de um array separado `dialogEvents`, agora os diálogos são automaticamente vinculados ao último evento relevante registrado (dano, cura, buff, escudo, recurso etc.) via o campo `dialogs` de cada evento. Isso garante que mensagens de diálogo sejam exibidas junto ao evento visual correspondente na UI.
+
+Se um diálogo for registrado quando não há evento relevante (ex: diálogos globais de sistema), ele é adicionado ao array `visual.globalDialogs`.
+
+Exemplo de evento com diálogos:
+
+```js
+{
+  type: "damage",
+  targetId: "ralia-uuid-...",
+  sourceId: "kael-uuid-...",
+  amount: 120,
+  dialogs: [
+    { message: "Ralia resistiu ao golpe!", blocking: true, sourceId: ..., targetId: ... }
+  ]
+}
+```
+
+O fallback global:
+
+```js
+visual.globalDialogs.push({ message: "Algo aconteceu!", ... });
 ```
 
 ### Efeitos Agendados (`context.schedule`)
@@ -1093,6 +1145,8 @@ Efeitos são armazenados em `combat.scheduledEffects` e processados em `handleSt
 emitCombatEnvelopesFromContext({ user, skill, context })
   └── buildMainEnvelopeFromContext()
         → filtra context.visual.* onde damageDepth === 0
+        → cada evento pode conter seu array de dialogs
+        → globalDialogs são enviados separadamente se existirem
         → gera { action, damageEvents, healEvents, ..., state }
         → io.emit("combatAction", envelope)
 ```
@@ -1774,7 +1828,7 @@ Dano e cura trafegam como **floats** por toda a pipeline e só sofrem `Math.floo
 
 ### `editMode` separado entre server e client
 
-Flags que afetam combate (`damageOutput`, `alwaysCrit`, `alwaysEvade`, `executionOverride`) não são enviadas ao cliente.
+Flags que afetam combate (`damageOutput`, `alwaysCrit`, `alwaysEvade`, `executionOverride`) não são enviados ao cliente.
 
 ### Constantes de Jogo
 

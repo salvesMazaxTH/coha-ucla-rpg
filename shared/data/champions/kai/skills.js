@@ -87,12 +87,11 @@ const kaiSkills = [
               name: "Contra-ataque Brasa Viva",
               contact: true,
             },
-          });
 
-          context.registerDialog({
-            message: `${formatChampionName(owner)} executou um contra-ataque da Brasa Viva em ${formatChampionName(attacker)}!`,
-            sourceId: owner.id,
-            targetId: owner.id,
+            dialog: {
+              message: `${formatChampionName(owner)} contra-ataca com a Postura da Brasa Viva!`,
+              duration: 1000,
+            },
           });
 
           attacker.applyStatusEffect("queimando", 2, context, {

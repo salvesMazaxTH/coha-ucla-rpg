@@ -213,11 +213,16 @@ export function createCombatAnimationManager(deps) {
   }
 
   async function processCombatLog(text) {
+    console.log("[DEBUG] processCombatLog called with:", text);
     if (shouldShowLogDialog(text)) {
       const dialogText = stripHtmlTags(text);
-      await showBlockingDialog(dialogText);
+      // showNonBlockingDialog removido
+      console.log(
+        `[AnimManager] dialogText:`,
+        dialogText,
+        "não fazer nada, trecho legado para possível futura reativação",
+      );
     }
-
     appendToLog(text);
   }
 
@@ -248,140 +253,89 @@ export function createCombatAnimationManager(deps) {
   //  COMBAT ACTION PROCESSING
   // ============================================================
 
-  async function processCombatAction(envelope) {
-    console.log("[processCombatAction] ➡️ processCombatAction START");
+  function createEventDispatcher() {
+    const handlers = {
+      damageEvents: { handler: animateDamage },
+      healEvents: { handler: animateHeal },
+      shieldEvents: { handler: animateShield },
+      buffEvents: { handler: animateBuff, single: true },
+      resourceEvents: { handler: animateResourceChange },
+      redirectionEvents: { handler: animateTauntRedirection },
+    };
 
-    const { action, log, state, ...eventGroups } = envelope;
+    const keys = Object.keys(handlers);
 
-    // 1. Sempre exibe o dialog de uso da skill, independentemente de efeitos
-    if (action) {
-      currentPhase = "combat";
-
-      if (typeof handleActionDialog === "function") {
-        console.log("[processCombatAction] 💬 ACTION dialog");
-        await handleActionDialog(action);
+    async function runEvent(event, handler) {
+      if (event.preDialogs?.length) {
+        await runDialogs(event.preDialogs);
+      }
+      await Promise.resolve(handler(event));
+      if (event.postDialogs?.length) {
+        await runDialogs(event.postDialogs);
       }
     }
 
-    // // reconstruir ordem real (versão com eventIndex)
-    // const orderedEvents = [
-    //   ...(eventGroups.damageEvents ?? []),
-    //   ...(eventGroups.healEvents ?? []),
-    //   ...(eventGroups.shieldEvents ?? []),
-    //   ...(eventGroups.buffEvents ?? []),
-    //   ...(eventGroups.resourceEvents ?? []),
-    //   ...(eventGroups.dialogEvents ?? []),
-    //   ...(eventGroups.redirectionEvents ?? []),
-    // ].sort((a, b) => a.eventIndex - b.eventIndex);
-    //
-    // for (const event of orderedEvents) {
-    //   switch (event.type) {
-    //     case "damage":
-    //       await animateDamage(event);
-    //       break;
-    //
-    //     case "heal":
-    //       await animateHeal(event);
-    //       break;
-    //
-    //     case "shield":
-    //       await animateShield(event);
-    //       break;
-    //
-    //     case "buff":
-    //       await animateBuff(event);
-    //       break;
-    //
-    //     case "resourceGain":
-    //     case "resourceSpend":
-    //       animateResourceChange(event);
-    //       break;
-    //
-    //     case "redirection":
-    //       animateTauntRedirection(event);
-    //       break;
-    //
-    //     case "dialog":
-    //       if (event.blocking ?? true) {
-    //         await showBlockingDialog(event.message);
-    //       } else {
-    //         showNonBlockingDialog(event.message);
-    //         await wait(770);
-    //       }
-    //       break;
-    //
-    //     default:
-    //       console.warn("Evento desconhecido:", event);
-    //   }
-    // }
+    async function runGroup(key, events) {
+      if (!Array.isArray(events) || events.length === 0) return;
 
-    for (const [key, events] of Object.entries(eventGroups)) {
-      if (!Array.isArray(events) || events.length === 0) continue;
+      const config = handlers[key];
 
-      console.log(`[processCombatAction] 📚 GROUP: ${key} (${events.length})`);
-
-      // 👇 tratamento especial
-      if (key === "buffEvents") {
-        await animateBuff(events[0]);
-        continue; // pula o loop interno
+      if (!config) {
+        console.warn("Evento desconhecido:", key);
+        return;
       }
 
-      for (let i = 0; i < events.length; i++) {
-        const event = events[i];
+      const { handler, single } = config;
 
-        console.log("👉 EVENT:", key, event);
-
-        switch (key) {
-          case "damageEvents":
-            console.log("💥 animateDamage START");
-            await animateDamage(event);
-            console.log("💥 animateDamage END");
-            break;
-
-          case "healEvents":
-            await animateHeal(event);
-            break;
-
-          case "shieldEvents":
-            await animateShield(event);
-            break;
-
-          /*           case "buffEvents":
-            await animateBuff(event);
-            break; */
-
-          case "resourceEvents":
-            animateResourceChange(event);
-            break;
-
-          case "redirectionEvents":
-            animateTauntRedirection(event);
-            break;
-
-          case "dialogEvents":
-            console.log("💬 dialog START");
-            if (event.blocking ?? true) {
-              await showBlockingDialog(event.message);
-            } else {
-              showNonBlockingDialog(event.message);
-              await wait(770);
-            }
-            console.log("💬 dialog END");
-            break;
-
-          default:
-            console.warn("Evento desconhecido:", key, event);
+      if (single) {
+        const event = events[0];
+        if (event) {
+          await runEvent(event, handler);
         }
+        return;
+      }
+
+      for (const event of events) {
+        if (!event) continue;
+        await runEvent(event, handler);
       }
     }
 
-    console.log("[processCombatAction] 📸 APPLY SNAPSHOT");
+    return {
+      keys,
+      runGroup,
+    };
+  }
+
+  async function processCombatAction(envelope) {
+    const dispatcher = createEventDispatcher();
+    const { action, log, state } = envelope;
+
+    // action dialog
+    if (action && typeof handleActionDialog === "function") {
+      currentPhase = "combat";
+      await handleActionDialog(action);
+    }
+
+    // GLOBAL dialogs (SEMPRE executa)
+    if (envelope.globalDialogs?.length) {
+      await runDialogs(envelope.globalDialogs);
+    }
+    const hasAnyEvent = dispatcher.keys.some((key) => envelope[key]?.length);
+
+    if (!hasAnyEvent) {
+      if (state) applyStateSnapshots(state);
+      if (log) appendToLog(log);
+      return;
+    }
+
+    // event loop
+    for (const key of dispatcher.keys) {
+      await dispatcher.runGroup(key, envelope[key]);
+    }
+
     if (state) applyStateSnapshots(state);
-
-    console.log("[processCombatAction] 🧾 APPEND LOG");
     if (log) appendToLog(log);
-
-    console.log("[processCombatAction] ⬅️ processCombatAction END");
   }
 
   // ============================================================
@@ -395,30 +349,46 @@ export function createCombatAnimationManager(deps) {
 
   async function animateDamage(effect) {
     const { targetId, amount, isCritical, isDot, obliterate } = effect;
+
     const champion = deps.activeChampions.get(targetId);
     const championEl = getChampionElement(targetId);
 
-    if (!championEl) return;
-    // Garante que o alvo esteja visível antes de iniciar a animação
-    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
-    const actualPortrait = portraitWrapper.querySelector(".portrait");
-    scrollIfNeeded(actualPortrait, { threshold: 0.85 });
+    if (!championEl) return Promise.resolve();
 
-    // 1. Guardas de Interrupção (Evasão, Imunidade, Escudo)
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper?.querySelector(".portrait");
+
+    if (actualPortrait) {
+      scrollIfNeeded(actualPortrait, { threshold: 0.85 });
+    }
+
+    // ========================
+    // INTERRUPÇÕES
+    // ========================
+
     if (effect.evaded !== undefined) {
       await animateEvasion(effect);
       if (effect.evaded) return;
     }
+
     if (effect.immune) return await animateImmune(effect);
     if (effect.shieldBlocked) return await animateShieldBlock(effect);
     if (!obliterate && (!amount || amount <= 0)) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
 
-    // 2. Diálogos de pré-dano (DoT)
-    if (isDot) await showBlockingDialog(`${targetName} sofreu dano.`, true);
+    // ========================
+    // PRÉ-DANO (DOT)
+    // ========================
 
-    // 3. Feedback Visual Imediato (Shake/Piscar e Float)
+    if (isDot) {
+      await showDialog(`${targetName} sofreu dano.`);
+    }
+
+    // ========================
+    // FEEDBACK VISUAL IMEDIATO
+    // ========================
+
     championEl.classList.add("damage");
     audioManager.play("damage");
 
@@ -427,6 +397,7 @@ export function createCombatAnimationManager(deps) {
       const extraClass = obliterate
         ? "obliterate"
         : `damage-tier-${getDamageTier(amount)}`;
+
       createFloatElement(
         portraitWrapper,
         floatValue,
@@ -435,24 +406,43 @@ export function createCombatAnimationManager(deps) {
       );
     }
 
-    // 4. Atualização de Estado e Animações Específicas
+    // ========================
+    // EXECUÇÃO PRINCIPAL
+    // ========================
+
     if (obliterate) {
       updateVisualHP(targetId, -champion.currentHp, 0);
+
       await playObliterateEffect(championEl);
+
       championEl.dataset.obliterated = "true";
-    } else {
-      updateVisualHP(targetId, -amount);
-      if (isCritical) {
-        await showBlockingDialog(
-          `UM ACERTO CRÍTICO! ${targetName} sofreu um dano devastador!`,
-          true,
-        );
-      }
-      // Espera o fim da animação de "damage" (shake) e um respiro
-      await waitForAnimation(championEl, 600);
-      await wait(450);
-      championEl.classList.remove("damage");
+
+      return; // já aguardou tudo
     }
+
+    // dano normal
+    updateVisualHP(targetId, -amount);
+
+    // ========================
+    // CRÍTICO (dialog interno)
+    // ========================
+
+    if (isCritical) {
+      await showDialog(
+        `UM ACERTO CRÍTICO! ${targetName} sofreu um dano devastador!`,
+      );
+    }
+
+    // ========================
+    // ESPERA REAL DA ANIMAÇÃO
+    // ========================
+
+    await waitForAnimation(championEl, 600);
+
+    // ⚠️ esse delay é importante pro pacing visual
+    await wait(450);
+
+    championEl.classList.remove("damage");
   }
 
   /** * Helper única para limpar o boilerplate de eventos de animação
@@ -495,9 +485,7 @@ export function createCombatAnimationManager(deps) {
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
 
-    // showNonBlockingDialog(`${targetName} recuperou vida.`, true);
-
-    await showBlockingDialog(`${targetName} recuperou vida.`, true);
+    await showDialog(`${targetName} recuperou vida.`);
 
     // Play healing SFX
     audioManager.play("heal");
@@ -538,7 +526,7 @@ export function createCombatAnimationManager(deps) {
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
 
-    await showBlockingDialog(`${name} tentou esquivar o ataque...`, true);
+    await showDialog(`${name} tentou esquivar o ataque...`);
 
     if (evaded) {
       // 🔥 INICIA A ANIMAÇÃO
@@ -548,22 +536,19 @@ export function createCombatAnimationManager(deps) {
       await waitForAnimation(championEl, 600);
 
       championEl.classList.remove("evasion");
-      await showBlockingDialog(`${name} CONSEGUIU esquivar o ataque!!`, true);
+      await showDialog(`${name} CONSEGUIU esquivar o ataque!!`);
       // meme/trollagem
-      await showBlockingDialog(`e conseguiu!`, true);
+      await showDialog(`e conseguiu!`);
       const randomTrollMessage = Math.random();
       if (randomTrollMessage < 0.5) {
-        await showBlockingDialog(`e conseguiu!!`, true);
-        await showBlockingDialog(`e conseguiu!!! 🤗`, true);
-        await showBlockingDialog(`e conseguiu!!! 🥳`, true);
+        await showDialog(`e conseguiu!!`);
+        await showDialog(`e conseguiu!!! 🤗`);
+        await showDialog(`e conseguiu!!! 🥳`);
       } else {
-        await showBlockingDialog(
-          `...mas foi tão ruim que tropeçou e caiu no chão.`,
-          true,
-        );
+        await showDialog(`...mas foi tão ruim que tropeçou e caiu no chão.`);
       }
     } else {
-      await showBlockingDialog(`...mas falhou em esquivar.`, true);
+      await showDialog(`...mas falhou em esquivar.`);
     }
   }
 
@@ -587,8 +572,8 @@ export function createCombatAnimationManager(deps) {
     const champion = deps.activeChampions.get(targetId);
 
     const name = champion ? formatChampionName(champion) : "Alvo";
-    // showNonBlockingDialog(`${name} recebeu um escudo.`, true);
-    await showBlockingDialog(`${name} recebeu um escudo.`, true);
+
+    await showDialog(`${name} recebeu um escudo.`);
 
     // Create floating shield number inside .portrait-wrapper
     if (portraitWrapper) {
@@ -653,7 +638,7 @@ export function createCombatAnimationManager(deps) {
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
     const message = immuneMessage || `${name} está <b>Imune!</b>`;
-    await showBlockingDialog(message, true);
+    await showDialog(message);
   }
 
   // ============================================================
@@ -664,8 +649,8 @@ export function createCombatAnimationManager(deps) {
     const { targetId } = effect;
     const champion = deps.activeChampions.get(targetId);
     const name = champion ? formatChampionName(champion) : "Alvo";
-    // showNonBlockingDialog(`O escudo de ${name} bloqueou o ataque!`, true);
-    await showBlockingDialog(`O escudo de ${name} bloqueou o ataque!`, true);
+
+    await showDialog(`O escudo de ${name} bloqueou o ataque!`);
   }
 
   // ============================================================
@@ -708,8 +693,8 @@ export function createCombatAnimationManager(deps) {
     } else {
       text = `${resolvedTargetName} foi fortalecido.`;
     }
-    // showNonBlockingDialog(text, true);
-    await showBlockingDialog(text, true);
+
+    await showDialog(text);
 
     if (championEl) {
       championEl.classList.add("buff");
@@ -737,13 +722,9 @@ export function createCombatAnimationManager(deps) {
     const portraitWrapper = championEl?.querySelector(".portrait-wrapper");
 
     // Show taunt dialog
-    // showNonBlockingDialog(
-    //   `${name} foi <b>provocado</b> e teve seu alvo redirecionado!`,
-    //   true,
-    // );
-    await showBlockingDialog(
+
+    await showDialog(
       `${name} foi <b>provocado</b> e teve seu alvo redirecionado!`,
-      true,
     );
 
     if (championEl) {
@@ -964,8 +945,8 @@ export function createCombatAnimationManager(deps) {
 
     const { userId, userName, skillName, targetId, targetName } = action;
 
-    // Resolve usuário pelo estado atual (preferível ao nome cru)
     const userChampion = deps.activeChampions.get(userId);
+
     const resolvedUserName = userChampion
       ? formatChampionName(userChampion)
       : userName || "Alguém";
@@ -974,22 +955,14 @@ export function createCombatAnimationManager(deps) {
       ? `<b>${typeof skillName === "object" ? skillName.name : skillName}</b>`
       : "<b>uma habilidade</b>";
 
-    let dialogText;
+    // 🔹 CONFIA 100% NO SERVER
+    const hasValidTarget = targetId && targetId !== userId && targetName;
 
-    // Se tiver alvo e não for self-target
-    if (targetId && targetId !== userId) {
-      const targetChampion = deps.activeChampions.get(targetId);
+    const dialogText = hasValidTarget
+      ? `${resolvedUserName} usou ${resolvedSkillName} em ${targetName}.`
+      : `${resolvedUserName} usou ${resolvedSkillName}.`;
 
-      const resolvedTargetName =
-        targetName ||
-        (targetChampion ? formatChampionName(targetChampion) : "Alvo");
-
-      dialogText = `${resolvedUserName} usou ${resolvedSkillName} em ${resolvedTargetName}.`;
-    } else {
-      dialogText = `${resolvedUserName} usou ${resolvedSkillName}.`;
-    }
-
-    await showBlockingDialog(dialogText, true);
+    await showDialog(dialogText);
   }
 
   function createDialogController() {
@@ -1032,53 +1005,74 @@ export function createCombatAnimationManager(deps) {
     };
   }
 
-  async function showBlockingDialog(text) {
+  /**
+   * Unified dialog display. If duration is provided, dialog auto-closes after duration ms. If omitted, dialog is blocking and always waits for user or skip (never auto-advances).
+   * @param {string} text
+   * @param {number} [duration] - Optional duration in ms. If omitted, dialog is blocking (user/skip only).
+   */
+  async function showDialog(text, duration) {
     const dialog = deps.combatDialog;
     const dialogText = deps.combatDialogText;
     if (!dialog || !dialogText) return;
 
+    if (duration) {
+      // Non-blocking dialog: auto-close after duration, but allow skip
+      const dialogController = createDialogController();
+      activeDialogController = dialogController;
+      dialogText.innerHTML = text;
+      dialog.classList.remove("hidden", "leaving");
+      dialog.classList.add("active");
+      await wait(20); // allow DOM update
+      // Wait for either duration or skip
+      let finished = false;
+      const timer = wait(duration).then(() => {
+        finished = true;
+        dialogController.requestSkip();
+      });
+      await dialogController.waitWithOptionalSkip(duration + 100); // allow skip at any time
+      dialog.classList.add("leaving");
+      await wait(TIMING.DIALOG_LEAVE);
+      dialog.classList.remove("active", "leaving");
+      dialog.classList.add("hidden");
+      if (activeDialogController === dialogController) {
+        activeDialogController = null;
+      }
+      dialogController.dispose();
+      return;
+    }
+
+    // Blocking dialog: waits for skip/user
     const dialogController = createDialogController();
     activeDialogController = dialogController;
-
     dialogText.innerHTML = text;
-
     dialog.classList.remove("hidden", "leaving");
     dialog.classList.add("active");
-
     await dialogController.waitWithOptionalSkip(TIMING.DIALOG_DISPLAY);
-
     dialog.classList.add("leaving");
     await dialogController.waitWithOptionalSkip(TIMING.DIALOG_LEAVE);
-
     dialog.classList.remove("active", "leaving");
     dialog.classList.add("hidden");
-
     if (activeDialogController === dialogController) {
       activeDialogController = null;
     }
-
     dialogController.dispose();
   }
 
-  async function showNonBlockingDialog(text) {
-    const dialog = deps.combatDialog;
-    const dialogText = deps.combatDialogText;
-    if (!dialog || !dialogText) return;
-
-    dialogText.innerHTML = text;
-
-    dialog.classList.remove("hidden", "leaving");
-    dialog.classList.add("active");
-
-    await wait(500);
-    setTimeout(() => {
-      dialog.classList.add("leaving");
-
-      setTimeout(() => {
-        dialog.classList.remove("active", "leaving");
-        dialog.classList.add("hidden");
-      }, TIMING.DIALOG_LEAVE);
-    }, TIMING.DIALOG_DISPLAY);
+  /**
+   * Runs a sequence of dialogs, respecting blocking/duration semantics.
+   * Each dialog object: { message, duration? }
+   * If duration is omitted, dialog is blocking (user/skip).
+   */
+  async function runDialogs(dialogs) {
+    for (const d of dialogs) {
+      if (d.duration) {
+        await showDialog(d.message, d.duration);
+      } else if (d.blocking === false) {
+        await showDialog(d.message, 1000); // default non-blocking duration
+      } else {
+        await showDialog(d.message);
+      }
+    }
   }
 
   // ============================================================
@@ -1243,7 +1237,7 @@ export function createCombatAnimationManager(deps) {
 
       await playDeathClaimEffect(el);
 
-      await showBlockingDialog(`A Morte reclama ${name}!`);
+      await showDialog(`A Morte reclama ${name}!`);
 
       await wait(TIMING.DEATH_CLAIM_EFFECT);
 
@@ -1271,10 +1265,17 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   function appendToLog(text) {
-    if (!text) return;
+    console.log("[DEBUG] appendToLog called with:", text);
+    if (!text) {
+      console.warn("[DEBUG] appendToLog: text is falsy");
+      return;
+    }
 
     const log = document.getElementById("combat-log");
-    if (!log) return;
+    if (!log) {
+      console.warn("[DEBUG] appendToLog: #combat-log element not found");
+      return;
+    }
 
     const currentTurn = deps.getCurrentTurn();
 

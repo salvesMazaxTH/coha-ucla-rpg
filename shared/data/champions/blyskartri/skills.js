@@ -113,7 +113,7 @@ const blyskartriSkills = [
 
       // Prevent hook stacking
       ally.runtime.hookEffects = ally.runtime.hookEffects.filter(
-        (h) => h.key !== "condutancia_vital_counter"
+        (h) => h.key !== "condutancia_vital_counter",
       );
 
       /* console.log("[BLYSKARTRI][condutancia_vital] hookEffects initialized", {
@@ -136,7 +136,7 @@ const blyskartriSkills = [
           if (context.currentTurn < this.expiresAtTurn) return;
 
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-            (e) => e.key !== "condutancia_vital_counter"
+            (e) => e.key !== "condutancia_vital_counter",
           );
         },
 
@@ -183,11 +183,10 @@ const blyskartriSkills = [
             message: `${formatChampionName(user)} revidou o ataque de ${formatChampionName(attacker)} em seu aliado!`,
             sourceId: owner.id,
             targetId: attacker.id,
-            blocking: true,
           });
 
           return {
-            log : `${formatChampionName(user)} revidou o ataque de ${formatChampionName(attacker)} em seu aliado!`,
+            log: `${formatChampionName(user)} revidou o ataque de ${formatChampionName(attacker)} em seu aliado!`,
           };
         },
       });
@@ -226,7 +225,9 @@ const blyskartriSkills = [
     resolve({ user, targets, context = {} }) {
       const [ally] = targets;
 
-      const alreadyHasModifier = ally.getDamageModifiers().some((mod) => mod.id === "horizonte_infinito");
+      const alreadyHasModifier = ally
+        .getDamageModifiers()
+        .some((mod) => mod.id === "horizonte_infinito");
 
       if (alreadyHasModifier) {
         return {
@@ -268,17 +269,20 @@ const blyskartriSkills = [
           });
 
           const targetIdx = turnMap?.get(defender?.id);
-          console.log("[BLYSKARTRI][horizonte_infinito] target index vs attacker index", {
-            targetIdx,
-            execIdx,
-          });
+          console.log(
+            "[BLYSKARTRI][horizonte_infinito] target index vs attacker index",
+            {
+              targetIdx,
+              execIdx,
+            },
+          );
 
           const actedBeforeTarget =
             execIdx !== undefined &&
             (targetIdx === undefined || execIdx < targetIdx);
-            console.log("[BLYSKARTRI][horizonte_infinito] acted before target?", {
-              actedBeforeTarget,
-            });
+          console.log("[BLYSKARTRI][horizonte_infinito] acted before target?", {
+            actedBeforeTarget,
+          });
 
           if (actedBeforeTarget) {
             // piercingDamageBonus definido na skill

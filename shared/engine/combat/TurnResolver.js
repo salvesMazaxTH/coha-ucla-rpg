@@ -229,7 +229,7 @@ export class TurnResolver {
     if (!roleTargets) {
       context.registerDialog({
         message: `${formatChampionName(user)} usou <b>${skill.name}</b>, mas não encontrou alvo.`,
-        blocking: true,
+
         sourceId: user.id,
         damageDepth: context.damageDepth ?? 0,
       });
@@ -681,9 +681,12 @@ export class TurnResolver {
         buffEvents: [],
         resourceEvents: [],
         shieldEvents: [],
-        dialogEvents: [],
         redirectionEvents: [],
+        // fallback (mantém compatibilidade)
+        globalDialogs: [],
       },
+
+      _lastEventRef: null, // referência para o último evento registrado, útil para diálogos que precisam se referir a ele
 
       repeatActionRequest: null,
 
@@ -721,7 +724,9 @@ export class TurnResolver {
       } = {}) {
         if (!target?.id) return;
 
-        this.visual.damageEvents.push({
+        this._lastEventRef = null;
+
+        const event = {
           // eventIndex: this.nextEventIndex(),
           type: "damage",
           sourceId: sourceId || null,
@@ -735,7 +740,12 @@ export class TurnResolver {
           immuneMessage: flags?.immuneMessage ?? null,
           shieldBlocked: !!flags?.shieldBlocked,
           obliterate: !!flags?.isObliterate,
-        });
+          preDialogs: [],
+          postDialogs: [],
+        };
+
+        this.visual.damageEvents.push(event);
+        this._lastEventRef = event; // referência para possível uso em diálogos relacionados a esse dano
       },
 
       // -- HEAL REGISTRY -- //
@@ -748,13 +758,19 @@ export class TurnResolver {
           combat.activeChampions.get(this.healSourceId) ||
           target;
 
-        this.visual.healEvents.push({
-          // eventIndex: this.nextEventIndex(),
+        this._lastEventRef = null;
+
+        const event = {
           type: "heal",
           targetId: target.id,
           sourceId: sourceChamp?.id || target.id,
           amount: value,
-        });
+          preDialogs: [],
+          postDialogs: [],
+        };
+
+        this.visual.healEvents.push(event);
+        this._lastEventRef = event; // referência para possível uso em diálogos relacionados a essa cura
 
         // 🔥 Dispara hook de cura
         emitCombatEvent(
@@ -779,16 +795,25 @@ export class TurnResolver {
           combat.activeChampions.get(this.statModifierSrcId) ||
           target;
 
+        this._lastEventRef = null;
+
         // Mantém comportamento anterior de UI/ult: apenas ganhos positivos entram em buffEvents
         if (value > 0) {
-          this.visual.buffEvents.push({
+          const event = {
             // eventIndex: this.nextEventIndex(),
             type: "buff",
             targetId: target.id,
             sourceId: sourceChamp?.id || target.id,
             amount: value,
             statName,
-          });
+            preDialogs: [],
+            postDialogs: [],
+          };
+
+          this.visual.buffEvents.push(event);
+          this._lastEventRef = event;
+        } else {
+          this._lastEventRef = null; // mudanças negativas não geram evento visual, então limpa a referência para evitar associações incorretas em diálogos
         }
 
         emitCombatEvent(
@@ -809,13 +834,19 @@ export class TurnResolver {
         const value = Number(amount) || 0;
         if (!target?.id || value <= 0) return;
 
-        this.visual.shieldEvents.push({
-          // eventIndex: this.nextEventIndex(),
+        this._lastEventRef = null;
+
+        const event = {
           type: "shield",
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
           amount: value,
-        });
+          preDialogs: [],
+          postDialogs: [],
+        };
+
+        this.visual.shieldEvents.push(event);
+        this._lastEventRef = event;
       },
       // -- RESOURCE REGISTRY (Visual Only) -- //
       registerResourceChange({ target, amount, sourceId } = {}) {
@@ -824,13 +855,18 @@ export class TurnResolver {
 
         const eventType = value > 0 ? "resourceGain" : "resourceSpend";
 
-        this.visual.resourceEvents.push({
+        const event = {
           type: eventType,
           targetId: target.id,
           sourceId: sourceId || this.healSourceId || target.id,
           amount: Math.abs(value),
           resourceType: "ult",
-        });
+          preDialogs: [],
+          postDialogs: [],
+        };
+
+        this.visual.resourceEvents.push(event);
+        this._lastEventRef = event;
 
         return value;
       },
@@ -842,22 +878,30 @@ export class TurnResolver {
       // -- DIALOG REGISTRY -- //
       registerDialog({
         message,
-        blocking = true,
+        timing = "pre",
         sourceId = null,
         targetId = null,
-        damageDepth,
+        duration = null,
       } = {}) {
         if (!message) return;
 
-        this.visual.dialogEvents.push({
-          // eventIndex: this.nextEventIndex(),
-          type: "dialog",
+        const dialogObj = {
           message,
-          blocking,
-          sourceId: sourceId || null,
-          targetId: targetId || null,
-          damageDepth: damageDepth ?? this.damageDepth ?? 0,
-        });
+          sourceId,
+          targetId,
+          duration,
+        };
+
+        if (this._lastEventRef) {
+          const key = timing === "post" ? "postDialogs" : "preDialogs";
+
+          this._lastEventRef[key] ??= []; // 🔥 garante array
+          this._lastEventRef[key].push(dialogObj);
+        } else {
+          // fallback global
+          this.visual.globalDialogs ??= [];
+          this.visual.globalDialogs.push(dialogObj);
+        }
       },
     };
   }

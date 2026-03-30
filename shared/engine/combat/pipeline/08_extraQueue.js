@@ -30,7 +30,12 @@ export function processExtraQueue(event) {
     // 2. Executamos a pipeline completa do novo evento
     const result = extraEvent.execute();
 
-    // 3. Acumulamos o resultado formatado
+    // 3. Se o evento gerou um diálogo, registramos no contexto para ser exibido depois
+    if (extra.dialog && extraEvent.context._lastEventRef) {
+      extraEvent.context._lastEventRef.postDialogs.push(extra.dialog);
+    }
+
+    // 4. Acumulamos o resultado formatado
     if (Array.isArray(result)) results.push(...result);
     else if (result) results.push(result);
   }

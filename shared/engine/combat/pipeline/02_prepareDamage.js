@@ -82,15 +82,17 @@ function applyAffinity(event, debugMode) {
 
   event.damage *= multiplier;
   if (multiplier > 1) {
-    event.context.registerDialog({
+    event.affinityDialog = {
       message: "✨ É SUPER-EFETIVO!",
-      blocking: false,
-    });
-  } else if (resistCount < 1) {
-    event.context.registerDialog({
+      duration: 1000,
+      timing: "post",
+    };
+  } else if (multiplier < 1) {
+    event.affinityDialog = {
       message: "🛡️ Não é muito efetivo...",
-      blocking: false,
-    });
+      duration: 1000,
+      timing: "post",
+    };
   }
 
   if (debugMode) {
@@ -220,7 +222,9 @@ function applyDamageModifiers(event, debugMode) {
   const modifiers = event.attacker.getDamageModifiers();
 
   if (debugMode) {
-    console.log(`[DAMAGE MODIFIERS] 🎯 Total de modificadores: ${modifiers.length}`);
+    console.log(
+      `[DAMAGE MODIFIERS] 🎯 Total de modificadores: ${modifiers.length}`,
+    );
   }
 
   if (!Array.isArray(modifiers)) {

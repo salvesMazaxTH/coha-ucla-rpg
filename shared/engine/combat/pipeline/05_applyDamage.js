@@ -33,6 +33,12 @@ export function applyDamage(event) {
     },
   });
 
+  // Agora _lastEventRef está correto, registre o dialog de afinidade se existir
+  if (event.affinityDialog) {
+    event.context.registerDialog(event.affinityDialog);
+    delete event.affinityDialog;
+  }
+
   if (event.constructor.debugMode) {
     console.log(`📍 HP Depois: ${event.hpAfter}/${event.defender.maxHP}`);
     console.log(`✅ Dano efetivo: ${event.actualDmg}`);

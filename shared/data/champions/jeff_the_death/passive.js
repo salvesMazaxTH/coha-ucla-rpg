@@ -52,7 +52,6 @@ export default {
         message: `[Passiva - <b>A Morte Não Cessa</b>] ${formatChampionName(defender)} retorna ao campo de batalha!`,
         sourceId: null,
         targetId: null,
-        blocking: true,
       },
     });
   },

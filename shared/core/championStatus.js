@@ -45,7 +45,6 @@ export function applyStatusEffect(
         `${formatChampionName(champion)} não pode receber "${statusEffectKey}".`,
       sourceId: champion.id,
       targetId: champion.id,
-      blocking: true,
     });
 
     return false;
@@ -94,7 +93,7 @@ export function applyStatusEffect(
     message: `${formatChampionName(champion)} recebeu "<b>${statusEffectKey.charAt(0).toUpperCase() + statusEffectKey.slice(1)}</b>".`,
     sourceId: champion.id,
     targetId: champion.id,
-    blocking: true,
+    timing: "post",
   });
 
   return true;

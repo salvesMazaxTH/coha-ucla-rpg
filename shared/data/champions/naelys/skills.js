@@ -172,6 +172,11 @@ const naelysSkills = [
               key: "massa_do_mar_revolto_counter",
               name: "Contra-ataque Mar Revolto",
             },
+
+            dialog: {
+              message: `${formatChampionName(owner)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(source)}!`,
+              duration: 1000,
+            },
           });
 
           /* console.log(
@@ -179,11 +184,6 @@ const naelysSkills = [
             source?.name,
           );
           */
-          context.registerDialog({
-            message: `${formatChampionName(owner)} executou um contra-ataque da Massa do Mar Revolto em ${formatChampionName(source)}!`,
-            sourceId: owner.id,
-            targetId: source.id,
-          });
 
           return {
             log: `🌊 ${formatChampionName(owner)} contra-ataca com a força do mar!`,

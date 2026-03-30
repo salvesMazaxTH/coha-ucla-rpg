@@ -79,7 +79,7 @@ const reyskaroneSkills = [
         message: `${formatChampionName(enemy)} foi marcado com <b>Tributo</b>!`,
         sourceId: user.id,
         targetId: user.id,
-        blocking: false,
+        duration: 1000,
       });
 
       // ataque imediato

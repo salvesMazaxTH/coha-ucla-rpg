@@ -1,3 +1,5 @@
+import { formatChampionName } from "../../../ui/formatters.js";
+
 export default {
   name: "Massa Inamolgável",
   stacksNeeded: 2,

@@ -36,7 +36,6 @@ export default {
     context.registerDialog({
       message: `<b>[Passiva – "${this.name}"]</b>`,
       sourceId: owner.id,
-      blocking: true,
     });
 
     context.repeatActionRequest = {

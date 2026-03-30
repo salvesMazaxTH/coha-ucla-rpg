@@ -41,13 +41,11 @@ export default {
         skill: {
           key: "sobrecarga_instavel_recoil",
         },
-      });
 
-      context.registerDialog({
-        message: `${formatChampionName(owner)} sofreu ${Math.floor(recoilDamage)} de recuo por "<b>Sobrecarga Instável</b>"!`,
-        sourceId: owner.id,
-        targetId: owner.id,
-        blocking: false,
+        dialog: {
+          message: `${formatChampionName(owner)} sofreu ${Math.floor(recoilDamage)} de recuo por "<b>Sobrecarga Instável</b>"!`,
+          duration: 1000,
+        },
       });
     }
 
@@ -89,7 +87,8 @@ export default {
       message: `${formatChampionName(defender)} foi consumido por <b>"Condutor"</b>!`,
       sourceId: attacker.id,
       targetId: defender.id,
-      blocking: false,
+      duration: 1000,
+      timing: "post",
     });
 
     let log = `⚡ ACERTO ! ${formatChampionName(attacker)} explorou "Condutor" de ${formatChampionName(defender)} (+${this.condutorBonusPercent}% dano)!`;

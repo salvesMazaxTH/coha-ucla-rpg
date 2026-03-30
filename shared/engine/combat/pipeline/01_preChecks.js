@@ -195,7 +195,7 @@ function _buildInactiveTargetResult(event) {
 
   event.context.registerDialog({
     message,
-    blocking: true,
+
     sourceId: event.attacker?.id ?? null,
     targetId: event.defender?.id ?? null,
     damageDepth: event.damageDepth ?? 0,

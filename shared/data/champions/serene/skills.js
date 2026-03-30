@@ -200,7 +200,6 @@ const sereneSkills = [
               message: `${formatChampionName(owner)} escapou da morte graças à Epifania do Limiar!`,
               sourceId: owner.id,
               targetId: owner.id,
-              blocking: true,
             });
 
             return {

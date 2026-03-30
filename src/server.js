@@ -349,7 +349,7 @@ function buildEmitTargetInfo(realTargetIds) {
         match.combat.activeChampions.get(id) ??
         match.combat.deadChampions.get(id);
 
-      return champ ? formatChampionName(champ) : "Desconecido";
+      return champ ? formatChampionName(champ) : "Desconhecido";
     });
 
     const last = names.pop();
@@ -390,7 +390,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
       shieldEvents = [],
       buffEvents = [],
       resourceEvents = [],
-      dialogEvents = [],
+      globalDialogs = [],
     } = mainEnvelope;
 
     const hasVisualChanges =
@@ -399,7 +399,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
       shieldEvents.length ||
       buffEvents.length ||
       resourceEvents.length ||
-      dialogEvents.length;
+      globalDialogs.length;
 
     const shouldEmit = mainEnvelope.action || hasVisualChanges;
 
@@ -420,7 +420,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
     shieldEvents = [],
     buffEvents = [],
     resourceEvents = [],
-    dialogEvents = [],
+    globalDialogs = [],
   } = context.visual || {};
 
   const userId = user?.id ?? null;
@@ -431,19 +431,32 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
   const mainShield = shieldEvents.filter((s) => (s.damageDepth ?? 0) === 0);
   const mainBuff = buffEvents.filter((b) => (b.damageDepth ?? 0) === 0);
   const mainResource = resourceEvents.filter((r) => (r.damageDepth ?? 0) === 0);
-  const mainDialog = dialogEvents.filter((d) => (d.damageDepth ?? 0) === 0);
 
-  const affectedIds = new Set(
-    [...mainDamage, ...mainHeal, ...mainShield, ...mainBuff, ...mainResource]
-      .map((e) => e.targetId)
-      .filter(Boolean),
-  );
+  // Coleta todos os alvos afetados (dano, cura, buff, shield)
+  const allTargetIds = [...mainDamage, ...mainHeal, ...mainShield, ...mainBuff]
+    .map((e) => e.targetId)
+    .filter((id) => id && id !== userId);
 
-  const realTargetIds = [
-    ...new Set(
-      mainDamage.map((e) => e.targetId).filter((id) => id && id !== userId),
-    ),
-  ];
+  // Remove duplicatas
+  const uniqueTargetIds = [...new Set(allTargetIds)];
+
+  // Separa inimigos e aliados
+  const userTeam = user?.team;
+  const enemies = uniqueTargetIds.filter((id) => {
+    const champ =
+      match.combat.activeChampions.get(id) ??
+      match.combat.deadChampions.get(id);
+    return champ && userTeam !== undefined && champ.team !== userTeam;
+  });
+  const allies = uniqueTargetIds.filter((id) => {
+    const champ =
+      match.combat.activeChampions.get(id) ??
+      match.combat.deadChampions.get(id);
+    return champ && userTeam !== undefined && champ.team === userTeam;
+  });
+
+  // Regra: se houver inimigos, só mostra inimigos; senão, mostra aliados
+  const realTargetIds = enemies.length > 0 ? enemies : allies;
 
   const { targetId, targetName } = buildEmitTargetInfo(realTargetIds);
 
@@ -463,104 +476,12 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
     shieldEvents: mainShield,
     buffEvents: mainBuff,
     resourceEvents: mainResource,
-    dialogEvents: mainDialog,
+
+    globalDialogs,
+
     state: context._intermediateSnapshot,
   };
 }
-
-/* function buildReactionEnvelopesFromContext({ user, skill, context }) {
-  const {
-    damageEvents = [],
-    healEvents = [],
-    shieldEvents = [],
-    buffEvents = [],
-    resourceEvents = [],
-    dialogEvents = [],
-  } = context.visual || {};
-
-  const userId = user?.id ?? null;
-  const userName = user?.name ?? null;
-
-  const allDepths = new Set([
-    ...damageEvents.map((e) => e.damageDepth ?? 0),
-    ...healEvents.map((e) => e.damageDepth ?? 0),
-    ...shieldEvents.map((e) => e.damageDepth ?? 0),
-    ...buffEvents.map((e) => e.damageDepth ?? 0),
-    ...resourceEvents.map((e) => e.damageDepth ?? 0),
-    ...dialogEvents.map((e) => e.damageDepth ?? 0),
-  ]);
-
-  const reactionDepths = [...allDepths]
-    .filter((depth) => depth > 0)
-    .sort((a, b) => a - b);
-
-  const envelopes = [];
-
-  for (const depth of reactionDepths) {
-    const damageForDepth = damageEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-    const healForDepth = healEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-    const shieldForDepth = shieldEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-    const buffForDepth = buffEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-    const resourceForDepth = resourceEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-    const dialogForDepth = dialogEvents.filter(
-      (e) => (e.damageDepth ?? 0) === depth,
-    );
-
-    const affectedForDepth = new Set(
-      [
-        ...damageForDepth,
-        ...healForDepth,
-        ...shieldForDepth,
-        ...buffForDepth,
-        ...resourceForDepth,
-      ]
-        .map((e) => e.targetId)
-        .filter(Boolean),
-    );
-
-    const reactionTargetIds = [
-      ...new Set(
-        [...damageForDepth, ...healForDepth, ...shieldForDepth]
-          .map((e) => e.targetId)
-          .filter((id) => id && id !== userId),
-      ),
-    ];
-
-    const { targetId, targetName } = buildEmitTargetInfo(reactionTargetIds);
-
-    envelopes.push({
-      action: {
-        userId: damageForDepth[0]?.sourceId ?? userId,
-        userName:
-          match.combat.activeChampions.get(damageForDepth[0]?.sourceId)?.name ??
-          userName,
-        skillKey: `${skill.key}-reaction-${depth}`,
-        skillName: `${skill.name} (Reação ${depth})`,
-        targetId,
-        targetName,
-      },
-      damageEvents: damageForDepth,
-      healEvents: healForDepth,
-      shieldEvents: shieldForDepth,
-      buffEvents: buffForDepth,
-      resourceEvents: resourceForDepth,
-      dialogEvents: dialogForDepth,
-      state: snapshotChampions([...affectedForDepth]),
-    });
-  }
-
-  return envelopes;
-} */
 
 /**
  * Emite um envelope de ação de combate para todos os clientes.
@@ -614,7 +535,6 @@ function handleEndTurn() {
         dialogEvents: [
           {
             message: result.denial.message,
-            blocking: true,
           },
         ],
       });
