@@ -32,6 +32,7 @@ export default {
       payload: {
         championKey: defender.championKey,
         team: defender.team,
+        combatSlot: defender.combatSlot, // Garante o mesmo slot
         reviveFrom: defender, // Passa referência do Jeff antigo
         onSpawn: (champion, context, reviveFrom) => {
           // Copia todos os dados relevantes do Jeff antigo para o novo

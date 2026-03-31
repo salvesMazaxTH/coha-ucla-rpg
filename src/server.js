@@ -617,7 +617,15 @@ function handleEndTurn() {
 function handleScheduledEffect(effect, context) {
   switch (effect.type) {
     case "spawnChampion": {
-      const spawned = spawnChampion(effect.payload);
+      // Se for revival, remova o antigo Jeff antes de spawnar o novo
+      if (effect.payload.reviveFrom && effect.payload.reviveFrom.id) {
+        match.combat.removeChampion(effect.payload.reviveFrom.id);
+      }
+      // Garante que o novo Jeff nasce no mesmo combatSlot
+      const spawned = spawnChampion({
+        ...effect.payload,
+        combatSlot: effect.payload.combatSlot ?? null,
+      });
       // Suporte para transferência de estado do Jeff antigo
       if (spawned && typeof effect.payload.onSpawn === "function") {
         // Se reviveFrom foi passado, injeta como 3º argumento
