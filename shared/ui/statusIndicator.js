@@ -1,3 +1,18 @@
+// Ícones Boxicons para seta para cima/baixo
+const BUFF_ICON = {
+  type: "icon",
+  value:
+    "<i class='bx bxs-up-arrow' style='color:#00c853;font-size:1.5em;'></i>",
+  background: "rgba(0,255,0,0.15)",
+  name: "buff",
+};
+const DEBUFF_ICON = {
+  type: "icon",
+  value:
+    "<i class='bx bxs-down-arrow' style='color:#d50000;font-size:1.5em;'></i>",
+  background: "rgba(255,0,0,0.15)",
+  name: "debuff",
+};
 /**
  * Sistema de indicadores visuais para status de campeões
  * Gerencia exibição de ícones e efeitos visuais baseados em statusEffects
@@ -79,6 +94,64 @@ export const StatusIndicator = {
     const activeStatuses = new Set(
       [...champion.statusEffects.keys()].map((s) => s.toLowerCase()),
     );
+
+    // --- BUFF/DEBUFF INDICATORS ---
+    // Remove buff/debuff indicators antigos
+    portrait
+      .querySelectorAll(".status-indicator-buff, .status-indicator-debuff")
+      .forEach((el) => el.remove());
+
+    // Detecta buffs/debuffs ativos
+    let hasBuff = false;
+    let hasDebuff = false;
+    // Buff: statModifiers positivos, damageModifiers positivos, damageReduction positivo
+    if (
+      Array.isArray(champion.statModifiers) &&
+      champion.statModifiers.some((m) => m.value > 0)
+    )
+      hasBuff = true;
+    if (
+      Array.isArray(champion.damageModifiers) &&
+      champion.damageModifiers.some((m) => m.value > 0)
+    )
+      hasBuff = true;
+    if (
+      Array.isArray(champion.damageReductionModifiers) &&
+      champion.damageReductionModifiers.some((m) => m.value > 0)
+    )
+      hasBuff = true;
+    // Debuff: statModifiers negativos, damageModifiers negativos
+    if (
+      Array.isArray(champion.statModifiers) &&
+      champion.statModifiers.some((m) => m.value < 0)
+    )
+      hasDebuff = true;
+    if (
+      Array.isArray(champion.damageModifiers) &&
+      champion.damageModifiers.some((m) => m.value < 0)
+    )
+      hasDebuff = true;
+
+    // Adiciona indicator de buff
+    if (hasBuff) {
+      const buffDiv = document.createElement("div");
+      buffDiv.className = "status-indicator status-indicator-buff";
+      buffDiv.dataset.statusEffect = "buff";
+      buffDiv.title = "Buff";
+      buffDiv.innerHTML = BUFF_ICON.value;
+      buffDiv.style.backgroundColor = BUFF_ICON.background;
+      portrait.appendChild(buffDiv);
+    }
+    // Adiciona indicator de debuff
+    if (hasDebuff) {
+      const debuffDiv = document.createElement("div");
+      debuffDiv.className = "status-indicator status-indicator-debuff";
+      debuffDiv.dataset.statusEffect = "debuff";
+      debuffDiv.title = "Debuff";
+      debuffDiv.innerHTML = DEBUFF_ICON.value;
+      debuffDiv.style.backgroundColor = DEBUFF_ICON.background;
+      portrait.appendChild(debuffDiv);
+    }
 
     // remove indicadores que não existem mais
     portrait.querySelectorAll(".status-indicator").forEach((el) => {

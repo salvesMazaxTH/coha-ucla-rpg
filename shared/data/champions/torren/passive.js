@@ -1,3 +1,7 @@
+import { formatChampionName } from "../../../ui/formatters.js";
+
+formatChampionName
+
 export default {
   key: "torren_passive",
   name: "Torren-PASSIVE",

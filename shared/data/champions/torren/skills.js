@@ -65,7 +65,7 @@ const torrenSkills = [
     description() {
       return `Causa dano perfurante ao inimigo com menor ataque e aplica provocação nele por ${this.tauntDuration} turno(s).`;
     },
-    targetSpec: ["enemy"],
+    targetSpec: ["all:enemy"],
 
     resolve({ user, targets, context = {} }) {
       const baseDamage = (user.Attack * this.bf) / 100;
@@ -88,9 +88,14 @@ const torrenSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      weakestEnemy.applyTaunt(user.id, this.tauntDuration, context);
+      const tauntLog = weakestEnemy.applyTaunt(
+        user.id,
+        this.tauntDuration,
+        context,
+      );
 
-      return damageEvent;
+      // Return both damage and taunt log if present
+      return tauntLog ? [damageEvent, tauntLog] : damageEvent;
     },
   },
 

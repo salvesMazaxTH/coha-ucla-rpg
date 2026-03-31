@@ -76,14 +76,17 @@ const tharoxSkills = [
       ).filter((c) => c.team !== user.team && c.alive);
 
       enemyChampions.forEach((enemy) => {
-        enemy.applyTaunt(user.id, this.tauntDuration, context);
+        tauntLogs.push(enemy.applyTaunt(user.id, this.tauntDuration, context));
       });
 
       const userName = formatChampionName(user);
-
-      return {
+      // Filter out falsy (e.g., if taunt not applied)
+      const logs = tauntLogs.filter(Boolean);
+      logs.unshift({
         log: `${userName} executou <b>Provocação Primeva</b>. Todos os inimigos foram provocados e ${userName} recebeu ${this.damageReductionAmount} de Redução de Dano.`,
-      };
+      });
+      return logs;
+      const tauntLogs = [];
     },
   },
 

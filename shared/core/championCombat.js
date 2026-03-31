@@ -1,3 +1,5 @@
+import { formatChampionName } from "../ui/formatters.js";
+
 export function roundToFive(x) {
   return Math.round(x / 5) * 5;
 }
@@ -85,10 +87,26 @@ export function applyTaunt(champion, taunterId, duration, context) {
     taunterId: taunterId,
     expiresAtTurn: context.currentTurn + duration,
   });
-  /* console.log(
-    `[Champion] ${champion.name} taunted by ${taunterId}. Will expire at turn ${context.currentTurn + duration}.`,
-  );
-  */
+  // Engine-level log and dialog
+  const tauntSource = context?.allChampions?.get?.(taunterId);
+
+  const tauntSourceName = tauntSource ? formatChampionName(tauntSource) : taunterId;
+
+  const logMsg = `${formatChampionName(champion)} foi provocado por <b>${tauntSourceName}</b>.`;
+
+  if (context?.registerDialog) {
+    context.registerDialog({
+      message: logMsg,
+      sourceId: taunterId,
+      targetId: champion.id,
+    });
+  }
+  return {
+    log: logMsg,
+    taunterId,
+    targetId: champion.id,
+    type: "tauntApply",
+  };
 }
 
 /**
