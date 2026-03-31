@@ -10,6 +10,7 @@ const queimando = {
     const damage = 15 + Math.floor(owner.maxHP * 0.04); // dano base + 4% do HP máximo
 
     context.isDot = true;
+    context.damageDepth = 1;
 
     const dmgEvent = new DamageEvent({
       attacker: null,

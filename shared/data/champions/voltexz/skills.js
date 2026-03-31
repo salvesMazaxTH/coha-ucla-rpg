@@ -121,9 +121,11 @@ const voltexzSkills = [
           `${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`,
         );
         */
-        if (damageResult?.log) {
-          damageResult.log += `\n${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
-        }
+        // if (paralyzed && paralyzed.log && damageResult?.log) {
+        //   damageResult.log += `\n${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
+        // } else if (paralyzed && paralyzed.log) {
+        //   damageResult.log = `${formatChampionName(enemy)} foi PARALISADO por Choque Estático e perderá sua próxima ação!`;
+        // }
       }
 
       return results;

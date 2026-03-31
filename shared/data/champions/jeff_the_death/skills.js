@@ -126,6 +126,7 @@ const jeffTheDeathSkills = [
           }
 
           context.isDot = true;
+          context.damageDepth = 1;
 
           new DamageEvent({
             baseDamage: punishDamage,

@@ -20,6 +20,7 @@ import vulnara from "./vulnara/index.js";
 import kael_drath_vulcano from "./kael_drath_vulcano/index.js";
 import jeff_the_death from "./jeff_the_death/index.js";
 import eryon from "./eryon/index.js";
+import torren from "./torren/index.js";
 
 const championDB = {
   ralia,
@@ -44,6 +45,7 @@ const championDB = {
   kael_drath_vulcano,
   jeff_the_death,
   eryon,
+  torren,
 };
 
 export default championDB;

@@ -1164,6 +1164,8 @@ function updateChampionSelectionTimerUI() {
 
 socket.on("championRemoved", (championId) => {
   combatAnimations.handleChampionRemoved(championId);
+  // After removal, re-sort DOM to match logical slot order
+  sortTeamContainersByCombatSlot();
 });
 
 /** Cria e renderiza um novo campeão no campo de batalha. */
@@ -1233,8 +1235,35 @@ function createNewChampion(championData) {
   }, 0);
 
   return champion;
+    // After creation, re-sort DOM to match logical slot order
+    // (in case of respawn or debug add)
+    sortTeamContainersByCombatSlot();
 }
 
+  // Ensures the DOM order of .champion elements in each .team-X container matches logical combatSlot order
+  function sortTeamContainersByCombatSlot() {
+    // For each team present in the DOM
+    const teamNumbers = new Set(Array.from(activeChampions.values()).map(c => c.team));
+    for (const team of teamNumbers) {
+      const teamContainer = document.querySelector(`.team-${team}`);
+      if (!teamContainer) continue;
+      // Get all champion elements in this container
+      const championEls = Array.from(teamContainer.querySelectorAll('.champion'));
+      // Map: championId -> element
+      const elById = new Map(championEls.map(el => [el.dataset.championId, el]));
+      // Get all active champions for this team, sorted by combatSlot
+      const sorted = Array.from(activeChampions.values())
+        .filter(c => c.team === team)
+        .sort((a, b) => (a.combatSlot ?? 0) - (b.combatSlot ?? 0));
+      // Remove all .champion elements from container
+      championEls.forEach(el => teamContainer.removeChild(el));
+      // Re-append in correct order
+      for (const champ of sorted) {
+        const el = elById.get(champ.id?.toString() || champ.id);
+        if (el) teamContainer.appendChild(el);
+      }
+    }
+  }
 /*   */
 // Overlay de stats rápidos (hover/touch no retrato)
 let quickStatsOverlay = null;

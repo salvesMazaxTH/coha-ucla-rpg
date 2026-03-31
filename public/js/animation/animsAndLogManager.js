@@ -317,6 +317,8 @@ export function createCombatAnimationManager(deps) {
       await handleActionDialog(action);
     }
 
+    /* console.log("[DEBUG] [JEFF REVIVAL DIALOG] CLIENT RECEIVED ENVELOPE:", envelope); */
+
     // GLOBAL dialogs (SEMPRE executa)
     if (envelope.globalDialogs?.length) {
       await runDialogs(envelope.globalDialogs);

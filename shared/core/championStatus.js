@@ -9,6 +9,17 @@ export function normalizeStatusEffectName(champion, statusEffectName) {
 }
 
 /**
+ * Auxiliary function for logs and interface
+ * @param {string} statusEffectKey - Name of the statusEffect
+ * @returns {string} - Formatted name for display
+ */
+function formatStatusDisplayName(statusEffectKey) {
+  return statusEffectKey
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
  * Apply a statusEffect effect to this champion
  * @param {object} champion - The champion instance
  * @param {string} statusEffectKey - Name of the statusEffect (e.g., 'inerte', 'imunidade absoluta')
@@ -24,7 +35,9 @@ export function applyStatusEffect(
   metadata = {},
 ) {
   if (!statusEffectKey) return false;
-  if (!StatusEffectsRegistry[statusEffectKey]) {
+
+  const behavior = StatusEffectsRegistry[statusEffectKey];
+  if (!behavior) {
     throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
     );
@@ -46,57 +59,37 @@ export function applyStatusEffect(
       sourceId: champion.id,
       targetId: champion.id,
     });
-
     return false;
   }
 
   const { currentTurn } = context || {};
-
-  const isStackable =
-    StatusEffectsRegistry[statusEffectKey].isStackable || false;
+  const isStackable = behavior.isStackable || false;
 
   if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
     return;
   }
 
-  console.log(
-    `[STATUS APPLY] ${champion.name} tentando receber "${statusEffectKey}" (duration=${duration})`,
-  );
-
   duration = Number.isFinite(duration) ? duration : 1;
-
-  const persistent = metadata?.persistent || false;
-  if (persistent) duration = Infinity;
+  if (metadata?.persistent) duration = Infinity;
 
   champion.statusEffects.set(statusEffectKey, {
-    expiresAtTurn: Number.isFinite(currentTurn)
-      ? currentTurn + Number(duration || 0)
-      : NaN,
+    expiresAtTurn: Number.isFinite(currentTurn) ? currentTurn + duration : NaN,
     duration,
     appliedAtTurn: currentTurn,
     ...metadata,
   });
 
-  /* console.log(
-    `[STATUS APPLY] ${champion.name} recebeu "${statusEffectKey}" até turno ${currentTurn + duration}`,
-  );
-  */
   _attachStatusEffectBehavior(champion, statusEffectKey, duration, context);
 
-  console.log("STATUS MAP:", [...champion.statusEffects.keys()]);
-  console.log(
-    "HOOK EFFECTS:",
-    champion.runtime.hookEffects.map((e) => e.key),
-  );
+  // Uso da nova função de display
+  const statusDisplayName = formatStatusDisplayName(statusEffectKey);
 
-  context.registerDialog({
-    message: `${formatChampionName(champion)} recebeu "<b>${statusEffectKey.charAt(0).toUpperCase() + statusEffectKey.slice(1)}</b>".`,
-    sourceId: champion.id,
+  return {
+    log: `${formatChampionName(champion)} recebeu <b>${statusDisplayName}</b>.`,
+    statusEffectKey,
     targetId: champion.id,
-    timing: "post",
-  });
-
-  return true;
+    type: "statusEffectApply",
+  };
 }
 
 function _canApplyStatusEffect(
@@ -149,13 +142,10 @@ function _canApplyStatusEffect(
   if (behavior?.subtypes?.includes("hardCC")) {
     for (const [existingStatusEffect] of champion.statusEffects) {
       const existingBehavior = StatusEffectsRegistry[existingStatusEffect];
-
-      if (existingBehavior?.subtypes?.includes("hardCC")) {
-        return {
-          allowed: false,
-          /*          message: `${champion.name} já está incapacitado.`, */
-        };
-      }
+      // Capitaliza a primeira letra e substitui underscores por espaço
+      const statusDisplayName = statusEffectKey
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
     }
   }
 

@@ -83,11 +83,11 @@ const sereneSkills = [
           this.stunDuration,
           context,
         );
-        if (result?.log && stunned) {
-          result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
-        } else if (stunned) {
-          result.log = `${formatChampionName(enemy)} foi atordoado pela Quietude!`;
-        }
+        // if (stunned && stunned.log && result?.log) {
+        //   result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        // } else if (stunned && stunned.log) {
+        //   result.log = `${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        // }
       }
 
       return result;

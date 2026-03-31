@@ -7,6 +7,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import path, { format } from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 import { GameMatch } from "../shared/engine/match/GameMatch.js";
 import { Player } from "../shared/engine/match/Player.js";
@@ -157,6 +158,37 @@ function spawnChampion({
   const newChampion = Champion.fromBaseData(baseData, id, team, {
     combatSlot,
   });
+
+  function applySeasonalSkin(champion) {
+    const chance = 0.75;
+    const roll = Math.random();
+    if (roll > chance) return;
+
+    const basePath = champion.portrait;
+
+    const fileName = basePath.split("/").pop();
+    if (!fileName) return;
+
+    const baseName = fileName.replace(".webp", "");
+
+    const winterPath = `/assets/portraits/${baseName}_curtindo_o_inverno.webp`;
+
+    // caminho físico no disco (ajusta se necessário)
+    const absolutePath = path.join(
+      process.cwd(),
+      "public",
+      "assets",
+      "portraits",
+      `${baseName}_curtindo_o_inverno.webp`,
+    );
+
+    // 👇 só aplica se existir
+    if (fs.existsSync(absolutePath)) {
+      champion.portrait = winterPath;
+    }
+  }
+
+  applySeasonalSkin(newChampion);
 
   newChampion.championKey = championKey;
   /* console.log(
@@ -404,6 +436,9 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     const shouldEmit = mainEnvelope.action || hasVisualChanges;
 
     if (shouldEmit) {
+      /* console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ENVELOPE SEND ===", {
+        globalDialogs: context.visual.globalDialogs,
+      }); */
       emitCombatAction(mainEnvelope);
     }
   }
@@ -633,6 +668,12 @@ function handleStartTurn() {
   const resolver = new TurnResolver(match, editMode);
   const turnStartContext = resolver.createBaseContext({ sourceId: null });
 
+  console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX ID:");
+  console.dir(turnStartContext, { depth: 2 });
+
+  console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX.VISUAL INICIAL: ");
+  console.dir(turnStartContext.visual, { depth: null });
+
   // 1. Injetar contexto
   match.combat.activeChampions.forEach((champ) => {
     if (!champ.alive) return;
@@ -655,7 +696,31 @@ function handleStartTurn() {
     if (effect.turnToHappen === currentTurn) {
       handleScheduledEffect(effect, turnStartContext);
       if (effect.dialog) {
+        console.log("[DEBUG] [JEFF REVIVAL DIALOG] → REGISTRANDO DIALOG");
+
+        console.log(
+          "[DEBUG] [JEFF REVIVAL DIALOG] → DIALOG RAW:",
+          effect.dialog,
+        );
+
+        console.log(
+          "[DEBUG] [JEFF REVIVAL DIALOG] → MESSAGE:",
+          effect.dialog?.message,
+        );
+
+        console.log(
+          "[DEBUG] [JEFF REVIVAL DIALOG] → TYPE:",
+          typeof effect.dialog?.message,
+        );
+
         turnStartContext.registerDialog(effect.dialog);
+
+        console.log(
+          "[DEBUG] [JEFF REVIVAL DIALOG] → globalDialogs (safe):",
+          Array.isArray(turnStartContext.visual.globalDialogs)
+            ? turnStartContext.visual.globalDialogs.map((d) => d && d.message)
+            : turnStartContext.visual.globalDialogs,
+        );
       }
     } else {
       remaining.push(effect);
@@ -694,6 +759,19 @@ function handleStartTurn() {
   match.combat.activeChampions.forEach((champ) => {
     if (champ.runtime) delete champ.runtime.currentContext;
   });
+
+  console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ANTES DO EMIT ===", {
+    globalDialogs: turnStartContext.visual.globalDialogs,
+    damageEvents: turnStartContext.visual.damageEvents,
+    healEvents: turnStartContext.visual.healEvents,
+    buffEvents: turnStartContext.visual.buffEvents,
+  });
+
+  console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX FINAL: ");
+  console.dir(turnStartContext, { depth: 2 });
+
+  console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX.VISUAL FINAL: ");
+  console.dir(turnStartContext.visual, { depth: null });
 
   // 🔹 7. Emit envelope (novo modelo)
   emitCombatEnvelopesFromContext({
@@ -1129,11 +1207,6 @@ io.on("connection", (socket) => {
   //  requestUndoActions (cancela ações pendentes do time do jogador)
   // =============================
   socket.on("requestUndoActions", () => {
-    if (!match.combat.pendingActions.length) {
-      console.warn("Pedido de undo sem ações pendentes.");
-      return;
-    }
-
     const playerSlot = match.getSlotBySocket(socket.id);
 
     if (playerSlot === undefined) return;
@@ -1143,6 +1216,11 @@ io.on("connection", (socket) => {
     // console.log("[UNDO] Player team:", playerTeam);
 
     for (let i = match.combat.pendingActions.length - 1; i >= 0; i--) {
+      // Se não tem nada no array, sair do loop
+      if (!match.combat.pendingActions.length) {
+        console.warn("Pedido de undo sem ações pendentes.");
+        break; // SAI DO LOOP, mas continua a execução da função abaixo do loop
+      }
       const action = match.combat.pendingActions[i];
       const champ = match.combat.activeChampions.get(action.userId);
 

@@ -81,14 +81,6 @@ const tharoxSkills = [
 
       const userName = formatChampionName(user);
 
-      context.effects = context.effects || [];
-
-      context.effects.push({
-        type: "tauntRedirection",
-        sourceId: user.id,
-        targetId: enemyChampions.map((c) => c.id),
-      });
-
       return {
         log: `${userName} executou <b>Provocação Primeva</b>. Todos os inimigos foram provocados e ${userName} recebeu ${this.damageReductionAmount} de Redução de Dano.`,
       };

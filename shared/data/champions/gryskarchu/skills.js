@@ -45,9 +45,11 @@ const gryskarchuSkills = [
           this.rootDuration,
           context,
         );
-        if (rooted && result?.log) {
-          result.log += `\n${enemy.name} foi Enraizado!`;
-        }
+        // if (rooted && rooted.log && result?.log) {
+        //   result.log += `\n${enemy.name} foi Enraizado!`;
+        // } else if (rooted && rooted.log) {
+        //   result.log = `${enemy.name} foi Enraizado!`;
+        // }
       }
 
       return result;
