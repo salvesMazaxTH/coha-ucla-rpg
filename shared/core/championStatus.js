@@ -54,7 +54,7 @@ export function applyStatusEffect(
   if (!validation.allowed) {
     // Only show dialog if the reason is NOT just 'already has effect and not stackable'
     // (i.e., suppress dialog spam for repeated attempts)
-    if (validation.reason !== 'already-present') {
+    if (validation.reason !== "already-present") {
       context.registerDialog({
         message:
           validation.message ??
@@ -70,7 +70,7 @@ export function applyStatusEffect(
   const isStackable = behavior.isStackable || false;
 
   if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
-    return { allowed: false, reason: 'already-present' };
+    return { allowed: false, reason: "already-present" };
   }
 
   duration = Number.isFinite(duration) ? duration : 1;

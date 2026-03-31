@@ -1,10 +1,9 @@
 # STATE.md
 
-
 ## [2026-03-31] GSD Quick Task: Suppress dialog spam for 'não pode receber congelado' (Nythera bug)
 
 - Fixed: Dialog message for 'não pode receber congelado' or similar is now suppressed if the effect is already present and not stackable (prevents spam when Nythera is present).
-- Patch: championStatus.js (applyStatusEffect/_canApplyStatusEffect)
+- Patch: championStatus.js (applyStatusEffect/\_canApplyStatusEffect)
 - Confirmed: No errors after patch
 
 ---
