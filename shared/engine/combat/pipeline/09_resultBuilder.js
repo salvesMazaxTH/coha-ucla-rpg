@@ -13,7 +13,7 @@ export function buildFinalResult(event) {
     event.attacker,
     event.defender,
     event.skill,
-    event.actualDmg,
+    event.finalDamage,
     event.crit,
     event.hpAfter,
   );
@@ -53,6 +53,7 @@ function _buildLog(user, target, skill, dmg, crit, hpAfter) {
 
   // skill pode ser objeto ou string
   const skillName = skill && typeof skill === "object" ? skill.name : skill;
+  dmg = Math.floor(dmg);
   let log = `${userName} usou <b>${skillName}</b> e causou ${dmg} de dano a ${targetName}`;
 
   if (crit.didCrit)

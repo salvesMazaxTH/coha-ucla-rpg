@@ -4,8 +4,10 @@ export default {
   key: "a_morte_não_cessa",
   name: "A Morte Não Cessa",
 
-  description() {
-    return `Quando Jeff for derrotado, ele volta ao campo de batalha com 75% de sua vida máxima e os atributos base no início do próximo turno.`;
+  description(champion) {
+    return `Quando Jeff for derrotado, ele volta ao campo de batalha com 75% de sua vida máxima e os atributos base no início do próximo turno. Sempre que um personagem morrer, Jeff ganha um buff permanente de 30% de ataque e 30% de defesa.
+    
+    <b>Contador de mortes de Jeff:</b> ${champion.runtime.deathCounter ?? 0}`;
   },
 
   hookScope: {
@@ -30,7 +32,34 @@ export default {
       payload: {
         championKey: defender.championKey,
         team: defender.team,
-        onSpawn: (champion, context) => {
+        reviveFrom: defender, // Passa referência do Jeff antigo
+        onSpawn: (champion, context, reviveFrom) => {
+          // Copia todos os dados relevantes do Jeff antigo para o novo
+          if (reviveFrom) {
+            // runtime (deep clone exceto currentContext)
+            champion.runtime = { ...reviveFrom.runtime };
+            delete champion.runtime.currentContext;
+            // statModifiers
+            champion.statModifiers = reviveFrom.statModifiers
+              ? reviveFrom.statModifiers.map((m) => ({ ...m }))
+              : [];
+            // damageModifiers
+            champion.damageModifiers = reviveFrom.damageModifiers
+              ? reviveFrom.damageModifiers.map((m) => ({ ...m }))
+              : [];
+            // damageReductionModifiers
+            champion.damageReductionModifiers =
+              reviveFrom.damageReductionModifiers
+                ? reviveFrom.damageReductionModifiers.map((m) => ({ ...m }))
+                : [];
+            // statusEffects (Map deep copy)
+            if (reviveFrom.statusEffects instanceof Map) {
+              champion.statusEffects = new Map();
+              for (const [k, v] of reviveFrom.statusEffects.entries()) {
+                champion.statusEffects.set(k, { ...v });
+              }
+            }
+          }
           champion.HP = Math.floor(champion.maxHP * 0.75);
           // buff pela própria morte, já que onChampionDeath é pulado quando Jeff morre
           const buffsPerDeath = [

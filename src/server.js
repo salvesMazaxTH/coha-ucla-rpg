@@ -618,8 +618,14 @@ function handleScheduledEffect(effect, context) {
   switch (effect.type) {
     case "spawnChampion": {
       const spawned = spawnChampion(effect.payload);
+      // Suporte para transferência de estado do Jeff antigo
       if (spawned && typeof effect.payload.onSpawn === "function") {
-        effect.payload.onSpawn(spawned, context);
+        // Se reviveFrom foi passado, injeta como 3º argumento
+        effect.payload.onSpawn(
+          spawned,
+          context,
+          effect.payload.reviveFrom || null,
+        );
       }
       break;
     }
