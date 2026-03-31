@@ -160,8 +160,9 @@ function spawnChampion({
   });
 
   function applySeasonalSkin(champion) {
-    const chance = 0.75;
+    const chance = 0.675;
     const roll = Math.random();
+    console.log(`[SKIN CHECK] Rolagem para ${champion.name}: ${roll.toFixed(3)} (chance: ${chance}). roll < chance? ${roll < chance}`);
     if (roll > chance) return;
 
     const basePath = champion.portrait;
