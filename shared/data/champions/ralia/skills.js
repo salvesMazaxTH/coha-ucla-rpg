@@ -130,7 +130,7 @@ const raliaSkills = [
     isUltimate: true,
     ultCost: 3,
 
-    priority: 1,
+    priority: 0,
     description() {
       return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos.`;
     },

@@ -190,7 +190,7 @@ const naelysSkills = [
           };
         },
 
-        onTurnEnd({ self, context }) {
+        onTurnEnd({ owner, context }) {
           const currentTurn = context.currentTurn;
 
           // console.log("[NAELYS] Hook onTurnEnd verificado.");
@@ -204,7 +204,7 @@ const naelysSkills = [
           if (currentTurn >= this.expiresAt) {
             // console.log("[NAELYS] Massa do Mar Revolto expirou.");
 
-            self.runtime.hookEffects = self.runtime.hookEffects.filter(
+            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
               (e) => e !== this,
             );
           }
