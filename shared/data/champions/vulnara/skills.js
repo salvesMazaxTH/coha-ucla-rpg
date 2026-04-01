@@ -20,7 +20,7 @@ const vulnaraSkills = [
     name: "Instinto Predatório",
 
     critBuff: 30,
-    duration: 2,
+    duration: 3,
 
     contact: false,
     priority: 0,

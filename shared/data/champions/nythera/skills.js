@@ -60,20 +60,23 @@ const nytheraSkills = [
     name: "Câmara de Estase",
     effectDuration: 2,
     contact: false,
+
     freezeDuration: 2,
+    dmgReduct: 35,
 
     priority: 3,
     element: "ice",
     description() {
-      return `Por ${this.effectDuration} turno(s), recebe -40 de redução de dano. Quem causar dano a Nythera durante esse período fica Congelado por ${this.freezeDuration} turno(s).`;
+      return `Por ${this.effectDuration} turno(s), recebe ${this.dmgReduct}% de redução de dano. Quem causar dano a Nythera durante esse período fica Congelado por ${this.freezeDuration} turno(s).`;
     },
     targetSpec: ["self"],
 
     resolve({ user, context = {} }) {
       user.applyDamageReduction({
-        amount: 40,
+        amount: this.dmgReduct,
         duration: this.effectDuration,
         source: "Câmara de Estase",
+        type: "percent",
         context,
       });
 

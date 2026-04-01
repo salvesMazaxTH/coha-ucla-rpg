@@ -9,7 +9,7 @@ const blyskartriSkills = [
     name: "Fluxo Amplificador",
     speedBuff: 5,
     evasionBuff: 5,
-    buffsDuration: 3,
+    buffsDuration: 4,
 
     contact: false,
     priority: 3,

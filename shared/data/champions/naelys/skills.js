@@ -187,7 +187,7 @@ const naelysSkills = [
 
           return {
             log: `🌊 ${formatChampionName(owner)} contra-ataca com a força do mar!`,
-          };
+          }
         },
 
         onTurnEnd({ owner, context }) {
