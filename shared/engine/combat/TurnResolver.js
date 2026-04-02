@@ -386,6 +386,8 @@ export class TurnResolver {
       resolver: this,
     });
 
+    this.processContextSideEffects(context);
+
     // 🔹 4. Limpar contexto
     this.combat.activeChampions.forEach((champion) => {
       if (champion.runtime) delete champion.runtime.currentContext;
@@ -525,6 +527,19 @@ export class TurnResolver {
     );
 
     return applied;
+  }
+
+  // ============================================================
+  //  EFEITOS COLATERAIS DE CONTEXTO
+  // ============================================================
+
+  processContextSideEffects(context) {
+    const requests = context.flags?.replaceRequests;
+    if (!requests?.length) return;
+
+    for (const req of requests) {
+      this.match.replaceChampion(req);
+    }
   }
 
   // ============================================================

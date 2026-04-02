@@ -1,3 +1,6 @@
+import { Champion } from "../../core/Champion.js";
+import { championDB } from "../../data/championDB.js";
+
 class LobbyState {
   constructor(match) {
     this.match = match;
@@ -427,6 +430,24 @@ export class GameMatch {
 
   getChampion(championId) {
     return this.combat.getChampion(championId);
+  }
+
+  replaceChampion({ targetId, newChampionKey, preserveRuntime }) {
+    const old = this.combat.getChampion(targetId);
+    if (!old) return;
+
+    const newChampion = Champion.fromBaseData(
+      championDB[newChampionKey],
+      old.id,
+      old.team,
+      { combatSlot: old.combatSlot },
+    );
+
+    if (preserveRuntime) {
+      newChampion.runtime = { ...old.runtime };
+    }
+
+    this.combat.registerChampion(newChampion, { trackSnapshot: false });
   }
 
   getAliveChampions() {

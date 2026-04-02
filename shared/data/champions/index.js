@@ -21,6 +21,7 @@ import kael_drath_vulcano from "./kael_drath_vulcano/index.js";
 import jeff_the_death from "./jeff_the_death/index.js";
 import eryon from "./eryon/index.js";
 import torren from "./torren/index.js";
+import lana from "./lana/index.js";
 
 const championDB = {
   ralia,
@@ -46,6 +47,7 @@ const championDB = {
   jeff_the_death,
   eryon,
   torren,
+  lana,
 };
 
 export default championDB;

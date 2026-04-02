@@ -681,6 +681,7 @@ function handleScheduledEffect(effect, context) {
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
   const resolver = new TurnResolver(match, editMode);
+
   const turnStartContext = resolver.createBaseContext({ sourceId: null });
 
   console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX ID:");
@@ -775,7 +776,7 @@ function handleStartTurn() {
     if (champ.runtime) delete champ.runtime.currentContext;
   });
 
-  console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ANTES DO EMIT ===", {
+/*   console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ANTES DO EMIT ===", {
     globalDialogs: turnStartContext.visual.globalDialogs,
     damageEvents: turnStartContext.visual.damageEvents,
     healEvents: turnStartContext.visual.healEvents,
@@ -786,7 +787,7 @@ function handleStartTurn() {
   console.dir(turnStartContext, { depth: 2 });
 
   console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX.VISUAL FINAL: ");
-  console.dir(turnStartContext.visual, { depth: null });
+  console.dir(turnStartContext.visual, { depth: null }); */
 
   // 🔹 7. Emit envelope (novo modelo)
   emitCombatEnvelopesFromContext({

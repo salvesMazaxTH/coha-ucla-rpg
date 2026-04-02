@@ -13,7 +13,7 @@ const torrenSkills = [
   {
     key: "espada_estrondeante",
     name: "Espada Estrondeante",
-    bf: 35,
+    bf: 50,
     contact: true,
     damageMode: "standard",
     priority: 1,
@@ -55,7 +55,7 @@ const torrenSkills = [
     key: "desprezar_os_fracos",
     name: "Desprezar os Fracos",
 
-    bf: 30,
+    bf: 40,
     contact: true,
     damageMode: "piercing",
     priority: 2,
@@ -103,7 +103,7 @@ const torrenSkills = [
     key: "juggernaut",
     name: "Juggernaut",
 
-    bf: 100,
+    bf: 115,
     contact: true,
     damageMode: "standard",
 
