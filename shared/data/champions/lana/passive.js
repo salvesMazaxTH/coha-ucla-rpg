@@ -22,15 +22,38 @@ export default {
       storedHP: null,
     };
 
-    if (owner.runtime.lana.triggered) return;
+    console.log(
+      `[replaceChampionDebug] onAfterDmgTaking disparado em ${owner.name} | HP: ${owner.HP}/${owner.maxHP} (ratio: ${(owner.HP / owner.maxHP).toFixed(3)}) | threshold: ${this.hpThreshold} | já triggerado: ${owner.runtime.lana.triggered}`,
+    );
+
+    if (owner.runtime.lana.triggered) {
+      console.log(
+        `[replaceChampionDebug] Passiva já foi ativada antes — ignorando.`,
+      );
+      return;
+    }
 
     const ratio = owner.HP / owner.maxHP;
-    if (ratio > this.hpThreshold) return;
+    if (ratio > this.hpThreshold) {
+      console.log(
+        `[replaceChampionDebug] HP ainda acima do threshold (${(ratio * 100).toFixed(1)}% > ${this.hpThreshold * 100}%) — não ativa.`,
+      );
+      return;
+    }
 
     owner.runtime.lana.triggered = true;
     owner.runtime.lana.storedHP = owner.HP;
 
-    // 👇 NÃO executa, só registra intenção
+    console.log(
+      `[replaceChampionDebug] Threshold atingido! storedHP=${owner.HP} | Registrando replaceRequest: targetId=${owner.id}, newChampionKey="lana_dino", preserveRuntime=true`,
+    );
+
+    if (!context)
+      throw new Error(
+        `[replaceChampionDebug] ERRO: context é undefined ao tentar registrar replaceRequest em ${owner.name}`,
+      );
+
+    // NÃO executa, só registra intenção
     context.flags ??= {};
     context.flags.replaceRequests ??= [];
 
@@ -40,6 +63,10 @@ export default {
       preserveRuntime: true,
     });
 
+    console.log(
+      `[replaceChampionDebug] replaceRequest registrado. Total na fila: ${context.flags.replaceRequests.length}`,
+    );
+
     return {
       log: `${owner.name} liberou seu Dinossauro de Pelúcia!`,
     };
@@ -47,7 +74,7 @@ export default {
 
   onTurnStart({ owner, context }) {
     if (owner.runtime.lana?.triggered) return;
-    
-  }
+    owner.addShield();
+    // amount, decayPerTurn = 0, context, type = "regular"
+  },
 };
-

@@ -30,8 +30,8 @@ import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js"
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
+  enabled: true,
+  autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
@@ -40,7 +40,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -116,12 +116,59 @@ function getGameState(extraChampions = []) {
 function getRandomChampionKey(excludeKeys = []) {
   const availableKeys = Object.keys(championDB).filter((key) => {
     if (excludeKeys.includes(key)) return false;
+    if ((championDB[key]?.entityType ?? "champion") !== "champion")
+      return false;
     if (championDB[key]?.unreleased === true && !editMode.unreleasedChampions)
       return false;
     return true;
   });
   if (availableKeys.length === 0) return null;
   return availableKeys[Math.floor(Math.random() * availableKeys.length)];
+}
+
+/**
+ * Substitui um campeão ativo por outro (mesmo id, time e slot), preservando runtime se solicitado.
+ * Análogo a spawnChampion — pertence ao server pois requer Champion, championDB e io.
+ */
+function replaceChampion({ targetId, newChampionKey, preserveRuntime }) {
+  console.log(
+    `[replaceChampionDebug] replaceChampion chamado | targetId=${targetId}, newChampionKey="${newChampionKey}", preserveRuntime=${preserveRuntime}`,
+  );
+
+  const old = match.combat.getChampion(targetId);
+  if (!old) {
+    console.error(
+      `[replaceChampionDebug] ERRO: nenhum campeão encontrado com id=${targetId}. Substituição cancelada.`,
+    );
+    return;
+  }
+
+  console.log(
+    `[replaceChampionDebug] Campeão encontrado: ${old.name} (team=${old.team}, slot=${old.combatSlot})`,
+  );
+
+  const baseData = championDB[newChampionKey];
+  if (!baseData)
+    throw new Error(
+      `[replaceChampionDebug] ERRO: "${newChampionKey}" não encontrado em championDB.`,
+    );
+
+  const newChampion = Champion.fromBaseData(baseData, old.id, old.team, {
+    combatSlot: old.combatSlot,
+  });
+
+  if (preserveRuntime) {
+    newChampion.runtime = { ...old.runtime };
+    console.log(
+      `[replaceChampionDebug] Runtime preservado de ${old.name} para ${newChampion.name}.`,
+    );
+  }
+
+  newChampion.championKey = newChampionKey;
+  match.combat.registerChampion(newChampion, { trackSnapshot: false });
+  console.log(
+    `[replaceChampionDebug] ${old.name} substituído por ${newChampion.name} (id=${newChampion.id}, slot=${newChampion.combatSlot}).`,
+  );
 }
 
 /**
@@ -162,7 +209,7 @@ function spawnChampion({
   function applySeasonalSkin(champion) {
     const chance = 0.675;
     const roll = Math.random();
-    console.log(`[SKIN CHECK] Rolagem para ${champion.name}: ${roll.toFixed(3)} (chance: ${chance}). roll < chance? ${roll < chance}`);
+
     if (roll > chance) return;
 
     const basePath = champion.portrait;
@@ -569,6 +616,23 @@ function handleEndTurn() {
         context: result.context,
       });
       emitCombatLogsFromResults(result.results);
+
+      // Processar efeitos colaterais do contexto (ex: substituições de campeão).
+      // Feito AQUI (após o envelope da ação que triggerou), pois a fila do cliente
+      // é sequencial: o gameStateUpdate entra logo depois do combatAction correspondente.
+      const replaceRequests = result.context?.flags?.replaceRequests;
+      if (replaceRequests?.length) {
+        console.log(
+          `[replaceChampionDebug] ${replaceRequests.length} replaceRequest(s) detectado(s) em result de ${result.user?.name ?? "desconhecido"} | skill=${result.skill?.key}`,
+        );
+        for (const req of replaceRequests) {
+          replaceChampion(req);
+        }
+        console.log(
+          `[replaceChampionDebug] Emitindo gameStateUpdate após substituições.`,
+        );
+        io.emit("gameStateUpdate", getGameState());
+      }
     } else if (result.reason === "denied" && result.denial) {
       io.emit("combatAction", {
         dialogEvents: [
@@ -776,7 +840,7 @@ function handleStartTurn() {
     if (champ.runtime) delete champ.runtime.currentContext;
   });
 
-/*   console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ANTES DO EMIT ===", {
+  /*   console.log("[DEBUG] [JEFF REVIVAL DIALOG] === ANTES DO EMIT ===", {
     globalDialogs: turnStartContext.visual.globalDialogs,
     damageEvents: turnStartContext.visual.damageEvents,
     healEvents: turnStartContext.visual.healEvents,
@@ -1141,6 +1205,26 @@ io.on("connection", (socket) => {
 
       if (player.isTeamSelected()) {
         socket.emit("actionFailed", "Você já confirmou sua equipe.");
+        return;
+      }
+
+      // Validação server-authoritative: rejeita keys inválidas
+      const invalidKey = selectedChampionKeys.find((key) => {
+        const data = championDB[key];
+        if (!data) return true;
+        if ((data.entityType ?? "champion") !== "champion") return true;
+        if (data.unreleased === true && !editMode.unreleasedChampions)
+          return true;
+        if (data.disabled === true && !editMode.unreleasedChampions)
+          return true;
+        return false;
+      });
+
+      if (invalidKey) {
+        socket.emit(
+          "actionFailed",
+          `Campeão inválido na seleção: ${invalidKey}`,
+        );
         return;
       }
 

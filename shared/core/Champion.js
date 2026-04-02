@@ -168,15 +168,28 @@ export class Champion {
     return {
       id: this.id,
       championKey:
-        typeof this.id === "string" && this.id.includes("-")
+        this.championKey ??
+        (typeof this.id === "string" && this.id.includes("-")
           ? this.id.split("-")[0]
-          : this.name,
+          : this.name),
 
       team: this.team,
       combatSlot: this.combatSlot,
 
       name: this.name,
       portrait: this.portrait,
+      entityType: this.entityType,
+
+      passive: {
+        name: this.passive?.name ?? null,
+        description: (() => {
+          const d = this.passive?.description;
+          if (!d) return "";
+          return typeof d === "function"
+            ? d.call(this.passive, this)
+            : String(d);
+        })(),
+      },
 
       HP: this.HP,
       maxHP: this.maxHP,

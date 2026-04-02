@@ -1,6 +1,3 @@
-import { Champion } from "../../core/Champion.js";
-import { championDB } from "../../data/championDB.js";
-
 class LobbyState {
   constructor(match) {
     this.match = match;
@@ -270,14 +267,35 @@ class CombatState {
     });
     this.ensureTurnEntry().championsDeadThisTurn.push(championId);
 
-    // Scoring
-    const scoringTeam = champion.team === 1 ? 2 : 1;
-    const scoringPlayerSlot = scoringTeam - 1;
+    // Atualizar placar se for campeão (tokens não pontuam)
+    let scoringTeam = null;
+    let scoringPlayerSlot = null;
     let scored = false;
+    const isToken = champion.entityType === "token";
 
-    if (!this.gameEnded) {
-      this.addPointForSlot(scoringPlayerSlot, maxScore);
-      scored = true;
+    console.log(
+      `[removeChampionFromGame] ${champion.name} morreu | entityType=${champion.entityType ?? "champion"} | isToken=${isToken}`,
+    );
+
+    if (!isToken) {
+      scoringTeam = champion.team === 1 ? 2 : 1;
+      scoringPlayerSlot = scoringTeam - 1;
+
+      if (!this.gameEnded) {
+        this.addPointForSlot(scoringPlayerSlot, maxScore);
+        scored = true;
+        console.log(
+          `[removeChampionFromGame] Ponto para time ${scoringTeam} (slot ${scoringPlayerSlot}) | placar: ${JSON.stringify(this.getScorePayload())}`,
+        );
+      } else {
+        console.log(
+          `[removeChampionFromGame] Jogo já encerrado — ponto não contabilizado.`,
+        );
+      }
+    } else {
+      console.log(
+        `[removeChampionFromGame] Token não pontua — scoring ignorado.`,
+      );
     }
 
     // Mover para deadChampions
@@ -430,24 +448,6 @@ export class GameMatch {
 
   getChampion(championId) {
     return this.combat.getChampion(championId);
-  }
-
-  replaceChampion({ targetId, newChampionKey, preserveRuntime }) {
-    const old = this.combat.getChampion(targetId);
-    if (!old) return;
-
-    const newChampion = Champion.fromBaseData(
-      championDB[newChampionKey],
-      old.id,
-      old.team,
-      { combatSlot: old.combatSlot },
-    );
-
-    if (preserveRuntime) {
-      newChampion.runtime = { ...old.runtime };
-    }
-
-    this.combat.registerChampion(newChampion, { trackSnapshot: false });
   }
 
   getAliveChampions() {

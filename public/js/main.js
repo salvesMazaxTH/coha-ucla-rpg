@@ -601,6 +601,10 @@ const combatAnimations = createCombatAnimationManager({
   onGameStateProcessed: () => {
     if (playerTeam !== null) initActionBar();
   },
+
+  onChampionReplaced: () => {
+    sortTeamContainersByCombatSlot();
+  },
 });
 
 // ============================================================
@@ -1179,6 +1183,7 @@ function createNewChampion(championData) {
     championData.team,
     { combatSlot: championData.combatSlot ?? null },
   );
+  champion.championKey = championData.championKey;
   champion.baseAttack = baseData.Attack;
   champion.baseDefense = baseData.Defense;
   champion.baseSpeed = baseData.Speed;
@@ -1234,10 +1239,11 @@ function createNewChampion(championData) {
     }
   }, 0);
 
-  return champion;
   // After creation, re-sort DOM to match logical slot order
   // (in case of respawn or debug add)
   sortTeamContainersByCombatSlot();
+
+  return champion;
 }
 
 // Ensures the DOM order of .champion elements in each .team-X container matches logical combatSlot order

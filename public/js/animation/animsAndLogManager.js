@@ -1144,6 +1144,23 @@ export function createCombatAnimationManager(deps) {
     if (snap.HP !== undefined) {
       champion.alive = snap.HP > 0;
     }
+
+    if (snap.entityType !== undefined) {
+      champion.entityType = snap.entityType;
+      if (champion.el) champion.el.dataset.entityType = snap.entityType;
+    }
+
+    if (snap.name !== undefined && snap.name !== champion.name) {
+      champion.name = snap.name;
+      if (champion.el) {
+        const nameEl = champion.el.querySelector(".champion-name");
+        if (nameEl) nameEl.textContent = snap.name;
+      }
+    }
+
+    if (snap.passive !== undefined) {
+      champion.passive = snap.passive;
+    }
   }
 
   // ============================================================
@@ -1175,6 +1192,16 @@ export function createCombatAnimationManager(deps) {
 
       if (!champion) {
         champion = deps.createNewChampion(champData);
+      } else if (
+        champData.championKey &&
+        champion.championKey &&
+        champion.championKey !== champData.championKey
+      ) {
+        // Champion was replaced (e.g. Lana → lana_dino) — destroy old and recreate
+        champion.destroy();
+        deps.activeChampions.delete(champData.id);
+        champion = deps.createNewChampion(champData);
+        deps.onChampionReplaced?.();
       }
 
       syncChampionFromSnapshot(champion, champData);

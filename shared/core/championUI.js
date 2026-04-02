@@ -12,6 +12,7 @@ function createChampionElement(champion, handlers = {}) {
   div.classList.add("champion");
   div.dataset.championId = champion.id;
   div.dataset.team = champion.team;
+  div.dataset.entityType = champion.entityType ?? "champion";
 
   div.innerHTML = buildChampionHTML(champion, { editMode: handlers.editMode });
 
