@@ -34,7 +34,7 @@ const editMode = {
   autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
@@ -130,7 +130,12 @@ function getRandomChampionKey(excludeKeys = []) {
  * Substitui um campeão ativo por outro (mesmo id, time e slot), preservando runtime se solicitado.
  * Análogo a spawnChampion — pertence ao server pois requer Champion, championDB e io.
  */
-function replaceChampion({ targetId, newChampionKey, preserveRuntime }) {
+function replaceChampion({
+  targetId,
+  newChampionKey,
+  preserveRuntime,
+  overrideHP,
+}) {
   console.log(
     `[replaceChampionDebug] replaceChampion chamado | targetId=${targetId}, newChampionKey="${newChampionKey}", preserveRuntime=${preserveRuntime}`,
   );
@@ -162,6 +167,10 @@ function replaceChampion({ targetId, newChampionKey, preserveRuntime }) {
     console.log(
       `[replaceChampionDebug] Runtime preservado de ${old.name} para ${newChampion.name}.`,
     );
+  }
+
+  if (overrideHP !== undefined) {
+    newChampion.HP = overrideHP;
   }
 
   newChampion.championKey = newChampionKey;
@@ -1213,9 +1222,9 @@ io.on("connection", (socket) => {
         const data = championDB[key];
         if (!data) return true;
         if ((data.entityType ?? "champion") !== "champion") return true;
-        if (data.unreleased === true && !editMode.unreleasedChampions)
+        if (data.unreleased === true && !editMode.unavailableChampions)
           return true;
-        if (data.disabled === true && !editMode.unreleasedChampions)
+        if (data.disabled === true && !editMode.unavailableChampions)
           return true;
         return false;
       });

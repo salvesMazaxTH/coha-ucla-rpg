@@ -16,7 +16,7 @@ const eryonSkills = [
     key: "equalizacao_convergente",
     name: "Equalização Convergente",
 
-    priority: 0,
+    priority: -1,
     description() {
       return `Ajusta o ultômetro de todos os aliados para a média atual +2 unidades.`;
     },
@@ -33,7 +33,7 @@ const eryonSkills = [
         const delta = targetValue - ally.ultMeter;
 
         if (delta !== 0) {
-          resolver.registerResourceChange({
+          resolver.applyResourceChange({
             target: ally,
             amount: delta,
             context,

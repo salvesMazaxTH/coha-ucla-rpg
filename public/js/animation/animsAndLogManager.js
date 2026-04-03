@@ -893,8 +893,8 @@ export function createCombatAnimationManager(deps) {
     if (!fill) return;
 
     // 🔹 Cap fixo do sistema
-    const MAX_UNITS = 15;
-    const UNITS_PER_BAR = 3;
+    const MAX_UNITS = 24;
+    const UNITS_PER_BAR = 4;
 
     // 🔹 Pega valor atual do dataset (fonte confiável da UI)
     let currentUnits = Number(el.dataset.ultUnits || 0);

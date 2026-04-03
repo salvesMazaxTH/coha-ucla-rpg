@@ -72,9 +72,9 @@ export default {
     };
   },
 
-  onTurnStart({ owner, context }) {
+  /* onTurnStart({ owner, context }) {
     if (owner.runtime.lana?.triggered) return;
     owner.addShield();
     // amount, decayPerTurn = 0, context, type = "regular"
-  },
+  }, */
 };

@@ -12,8 +12,8 @@ function _processResonance(owner, threshold, ultGain, context, resolver) {
 
     owner.runtime.ressonanceStacks -= threshold;
 
-    if (resolver?.registerResourceChange) {
-      resolver.registerResourceChange({
+    if (resolver?.applyResourceChange) {
+      resolver.applyResourceChange({
         target: ally,
         amount: ultGain,
         context,
@@ -39,7 +39,7 @@ export default {
 
     return `Sempre que um aliado ganha ou consome ultômetro, Eidolon acumula Ressonância.
 
-    Acúmulos atuais: ${stacks}
+    <b>Acúmulos atuais: ${stacks}</b>
 
     A cada ${this.stacksCap} unidades acumuladas, concede ${this.ultGain} de ult ao aliado com menor ultômetro.`;
   },
@@ -117,5 +117,5 @@ export default {
         owner.runtime.ressonanceStacks
       }`,
     };
-  },    
+  },
 };

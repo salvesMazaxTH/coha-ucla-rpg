@@ -448,22 +448,13 @@ export class TurnResolver {
 
   applyUltMeterFromContext({ user, context }) {
     const damageEvents = context.visual.damageEvents || [];
-    const healEvents = context.visual.healEvents || [];
-    const buffEvents = context.visual.buffEvents || [];
 
     // 🔹 GANHO DO USUÁRIO
     if (damageEvents.length) {
       const regenAmount = context.currentSkill?.isUltimate ? 1 : 3;
-      this.registerResourceChange({
+      this.applyResourceChange({
         target: user,
         amount: regenAmount,
-        context,
-        sourceId: user.id,
-      });
-    } else if (healEvents.length || buffEvents.length) {
-      this.registerResourceChange({
-        target: user,
-        amount: 1,
         context,
         sourceId: user.id,
       });
@@ -481,7 +472,7 @@ export class TurnResolver {
       const target = this.combat.activeChampions.get(targetId);
       if (!target || !target.alive) continue;
 
-      this.registerResourceChange({
+      this.applyResourceChange({
         target,
         amount: 1,
         context,
@@ -494,7 +485,7 @@ export class TurnResolver {
    * Ponto único de entrada (Backend) para mudança de recursos com emissão de hooks.
    * Orquestra: Mudança de Estado (Champion) -> Visual (Context) -> Gameplay Hooks (Emitter).
    */
-  registerResourceChange({ target, amount, context, sourceId }) {
+  applyResourceChange({ target, amount, context, sourceId }) {
     if (!target || amount === 0) return 0;
 
     // 1. Backend State Change (Champion)
