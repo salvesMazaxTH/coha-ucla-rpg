@@ -197,17 +197,20 @@ function getElementCenter(el) {
 // ============================================================
 
 class MeleePunchEffect {
-  constructor(scene, x, y, direction) {
-    this.sceneGroup = new THREE.Group();
-    this.sceneGroup.position.set(x, y, 0);
-    scene.add(this.sceneGroup);
-
-    this.direction = direction.normalize();
+  constructor(scene, userPos, targetPos) {
+    this.scene = scene;
     this.age = 0;
 
-    const angle = Math.atan2(this.direction.y, this.direction.x);
+    // Positions
+    this.userPos = userPos.clone();
+    this.targetPos = targetPos.clone();
+    const dx = targetPos.x - userPos.x;
+    const dy = targetPos.y - userPos.y;
+    this.distance = Math.sqrt(dx * dx + dy * dy);
+    this.direction = new THREE.Vector3(dx, dy, 0).normalize();
+    const angle = Math.atan2(dy, dx);
 
-    // --- Swipe (arm trail) ---
+    // --- Phase 1: Swipe trail (travels from user → target) ---
     const swipeGeo = new THREE.PlaneGeometry(8, 2.5);
     this.swipeMat = new THREE.ShaderMaterial({
       vertexShader: basicVertexShader,
@@ -219,11 +222,11 @@ class MeleePunchEffect {
     });
     this.swipe = new THREE.Mesh(swipeGeo, this.swipeMat);
     this.swipe.rotation.z = angle;
-    this.swipe.position.x = -Math.cos(angle) * 2;
-    this.swipe.position.y = -Math.sin(angle) * 2;
-    this.sceneGroup.add(this.swipe);
+    // Starts at user position
+    this.swipe.position.set(userPos.x, userPos.y, 0);
+    scene.add(this.swipe);
 
-    // --- Fist print (impact mark) ---
+    // --- Phase 2: Fist print (impact mark at target) ---
     const printGeo = new THREE.PlaneGeometry(5, 5);
     this.printMat = new THREE.ShaderMaterial({
       vertexShader: basicVertexShader,
@@ -238,10 +241,11 @@ class MeleePunchEffect {
     });
     this.fistPrint = new THREE.Mesh(printGeo, this.printMat);
     this.fistPrint.rotation.z = angle;
+    this.fistPrint.position.set(targetPos.x, targetPos.y, 0);
     this.fistPrint.visible = false;
-    this.sceneGroup.add(this.fistPrint);
+    scene.add(this.fistPrint);
 
-    // --- Smoke particles ---
+    // --- Phase 3: Smoke particles (at target) ---
     const particleCount = 30;
     const pGeo = new THREE.BufferGeometry();
     const pPos = new Float32Array(particleCount * 3);
@@ -249,10 +253,12 @@ class MeleePunchEffect {
     const pSize = new Float32Array(particleCount);
 
     for (let i = 0; i < particleCount; i++) {
-      pPos[i * 3] = 0;
-      pPos[i * 3 + 1] = 0;
+      // All particles originate at target position
+      pPos[i * 3] = targetPos.x;
+      pPos[i * 3 + 1] = targetPos.y;
       pPos[i * 3 + 2] = 0;
 
+      // Smoke pushed in direction of punch + radial expansion
       const theta = Math.random() * Math.PI * 2;
       const speed = Math.random() * 2 + 1;
       pVel[i * 3] = (Math.cos(theta) * 0.5 + this.direction.x) * speed;
@@ -275,10 +281,10 @@ class MeleePunchEffect {
     });
     this.particles = new THREE.Points(pGeo, this.smokeMat);
     this.particles.visible = false;
-    this.sceneGroup.add(this.particles);
+    scene.add(this.particles);
 
     // Timings
-    this.SWIPE_DUR = 0.1;
+    this.TRAVEL_DUR = 0.15; // swipe travels from user to target
     this.PRINT_DUR = 2.0;
     this.LIFETIME = 2.0;
   }
@@ -286,17 +292,26 @@ class MeleePunchEffect {
   update(dt) {
     this.age += dt;
 
-    // Phase 1: Swipe
-    if (this.age <= this.SWIPE_DUR) {
-      this.swipeMat.uniforms.uProgress.value = this.age / this.SWIPE_DUR;
-      this.swipe.scale.x = 1.0 + (this.age / this.SWIPE_DUR) * 2.0;
+    // Phase 1: Swipe travels from user → target
+    if (this.age <= this.TRAVEL_DUR) {
+      const t = this.age / this.TRAVEL_DUR;
+      this.swipeMat.uniforms.uProgress.value = t;
+
+      // Lerp position from user to target
+      this.swipe.position.x =
+        this.userPos.x + (this.targetPos.x - this.userPos.x) * t;
+      this.swipe.position.y =
+        this.userPos.y + (this.targetPos.y - this.userPos.y) * t;
+
+      // Stretch as it travels
+      this.swipe.scale.x = 1.0 + t * 2.0;
     } else {
       this.swipe.visible = false;
     }
 
-    // Phase 2 & 3: Fist print + smoke
-    if (this.age > this.SWIPE_DUR) {
-      const postImpactAge = this.age - this.SWIPE_DUR;
+    // Phase 2 & 3: Impact mark + smoke (at target)
+    if (this.age > this.TRAVEL_DUR) {
+      const postImpactAge = this.age - this.TRAVEL_DUR;
 
       this.fistPrint.visible = true;
       this.printMat.uniforms.uAge.value = postImpactAge;
@@ -309,7 +324,9 @@ class MeleePunchEffect {
   }
 
   dispose(scene) {
-    scene.remove(this.sceneGroup);
+    scene.remove(this.swipe);
+    scene.remove(this.fistPrint);
+    scene.remove(this.particles);
     this.swipeMat.dispose();
     this.printMat.dispose();
     this.smokeMat.dispose();
@@ -362,26 +379,21 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  // --- Compute world position of target ---
+  // --- Compute world positions ---
   const targetCenter = getElementCenter(targetEl);
   const worldTarget = screenToWorld(targetCenter.x, targetCenter.y, camera);
 
-  // --- Direction: user → target (or default) ---
-  let dir;
+  let worldUser;
   if (userEl) {
     const userCenter = getElementCenter(userEl);
-    const worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
-    dir = new THREE.Vector3(
-      worldTarget.x - worldUser.x,
-      worldTarget.y - worldUser.y,
-      0,
-    ).normalize();
+    worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
   } else {
-    dir = new THREE.Vector3(1, 0, 0);
+    // Fallback: punch comes from the left side of target
+    worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
   }
 
-  // --- Create effect ---
-  const effect = new MeleePunchEffect(scene, worldTarget.x, worldTarget.y, dir);
+  // --- Create effect (travels from user → target) ---
+  const effect = new MeleePunchEffect(scene, worldUser, worldTarget);
 
   // --- Render loop (promise-based) ---
   const clock = new THREE.Clock();
