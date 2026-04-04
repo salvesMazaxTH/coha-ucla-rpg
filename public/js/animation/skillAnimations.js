@@ -344,6 +344,14 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   const container = document.getElementById("webgl-container");
   if (!container || !targetEl) return;
 
+  // --- Load post-processing addons ---
+  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
+    await Promise.all([
+      import("three/addons/postprocessing/EffectComposer.js"),
+      import("three/addons/postprocessing/RenderPass.js"),
+      import("three/addons/postprocessing/UnrealBloomPass.js"),
+    ]);
+
   // --- Setup scene ---
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
@@ -354,11 +362,25 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   );
   camera.position.z = 15;
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setClearColor(0x000000, 0);
+  // Opaque black background — screen blend mode turns black → transparent
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setClearColor(0x000000, 1);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.domElement.style.mixBlendMode = "screen";
   container.appendChild(renderer.domElement);
+
+  // --- Post-processing (bloom) ---
+  const renderScene = new RenderPass(scene, camera);
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    2.5,
+    0.5,
+    0.1,
+  );
+  const composer = new EffectComposer(renderer);
+  composer.addPass(renderScene);
+  composer.addPass(bloomPass);
 
   // --- Compute world positions ---
   const targetCenter = getElementCenter(targetEl);
@@ -384,6 +406,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
 
       if (!effect.update(dt)) {
         effect.dispose(scene);
+        composer.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode) {
           renderer.domElement.remove();
@@ -392,7 +415,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
         return;
       }
 
-      renderer.render(scene, camera);
+      composer.render();
       requestAnimationFrame(animate);
     }
 
