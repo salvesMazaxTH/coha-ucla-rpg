@@ -95,7 +95,7 @@ const swipeFragmentShader = `
     float fire = mask * width * (noise * 0.5 + 0.5);
     float alpha = fire * (1.0 - uProgress);
 
-    vec3 color = vec3(1.0, 0.6, 0.1);
+    vec3 color = vec3(1.0, 0.4, 0.0) * 5.0;
     gl_FragColor = vec4(color, alpha);
   }
 `;
@@ -117,8 +117,8 @@ const fistPrintFragmentShader = `
     float heatFade = max(0.0, 1.0 - (uAge / 2.0));
     float glow = shape * 0.5;
 
-    vec3 coreColor = vec3(1.0, 0.9, 0.4);
-    vec3 edgeColor = vec3(0.9, 0.2, 0.0);
+    vec3 coreColor = vec3(1.0, 0.8, 0.2) * 3.0;
+    vec3 edgeColor = vec3(1.0, 0.1, 0.0) * 1.5;
     vec3 finalColor = mix(edgeColor, coreColor, shape);
 
     float alpha = (shape + glow) * heatFade;
@@ -159,41 +159,11 @@ const smokeFragmentShader = `
 `;
 
 // ============================================================
-//  Procedural Fist Silhouette Texture (fallback)
+//  Punch Silhouette Texture (loaded from assets)
 // ============================================================
 
-function createFistTexture() {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-
-  const cx = size / 2;
-  const cy = size / 2;
-
-  // Impact burst shape
-  ctx.fillStyle = "white";
-  ctx.beginPath();
-  ctx.arc(cx, cy, size * 0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Impact rays
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 10; i++) {
-    const angle = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
-    const innerR = size * 0.32;
-    const outerR = size * 0.42 + Math.random() * size * 0.06;
-    ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(angle) * innerR, cy + Math.sin(angle) * innerR);
-    ctx.lineTo(cx + Math.cos(angle) * outerR, cy + Math.sin(angle) * outerR);
-    ctx.stroke();
-  }
-
-  return new THREE.CanvasTexture(canvas);
-}
+const textureLoader = new THREE.TextureLoader();
+const punchTexture = textureLoader.load("/assets/punch_silouete.png");
 
 // ============================================================
 //  Screen → World coordinate conversion
@@ -238,7 +208,7 @@ class MeleePunchEffect {
     const angle = Math.atan2(this.direction.y, this.direction.x);
 
     // --- Swipe (arm trail) ---
-    const swipeGeo = new THREE.PlaneGeometry(5, 1.5);
+    const swipeGeo = new THREE.PlaneGeometry(8, 2.5);
     this.swipeMat = new THREE.ShaderMaterial({
       vertexShader: basicVertexShader,
       fragmentShader: swipeFragmentShader,
@@ -249,13 +219,12 @@ class MeleePunchEffect {
     });
     this.swipe = new THREE.Mesh(swipeGeo, this.swipeMat);
     this.swipe.rotation.z = angle;
-    this.swipe.position.x = -Math.cos(angle) * 1.5;
-    this.swipe.position.y = -Math.sin(angle) * 1.5;
+    this.swipe.position.x = -Math.cos(angle) * 2;
+    this.swipe.position.y = -Math.sin(angle) * 2;
     this.sceneGroup.add(this.swipe);
 
     // --- Fist print (impact mark) ---
-    const punchTexture = createFistTexture();
-    const printGeo = new THREE.PlaneGeometry(3, 3);
+    const printGeo = new THREE.PlaneGeometry(5, 5);
     this.printMat = new THREE.ShaderMaterial({
       vertexShader: basicVertexShader,
       fragmentShader: fistPrintFragmentShader,
@@ -310,6 +279,7 @@ class MeleePunchEffect {
 
     // Timings
     this.SWIPE_DUR = 0.1;
+    this.PRINT_DUR = 2.0;
     this.LIFETIME = 2.0;
   }
 
@@ -357,6 +327,14 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   const container = document.getElementById("webgl-container");
   if (!container || !targetEl) return;
 
+  // --- Load post-processing addons ---
+  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
+    await Promise.all([
+      import("three/addons/postprocessing/EffectComposer.js"),
+      import("three/addons/postprocessing/RenderPass.js"),
+      import("three/addons/postprocessing/UnrealBloomPass.js"),
+    ]);
+
   // --- Setup scene ---
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
@@ -371,6 +349,18 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.appendChild(renderer.domElement);
+
+  // --- Post-processing (bloom) ---
+  const renderScene = new RenderPass(scene, camera);
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    2.5,
+    0.5,
+    0.1,
+  );
+  const composer = new EffectComposer(renderer);
+  composer.addPass(renderScene);
+  composer.addPass(bloomPass);
 
   // --- Compute world position of target ---
   const targetCenter = getElementCenter(targetEl);
@@ -404,6 +394,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
 
       if (!effect.update(dt)) {
         effect.dispose(scene);
+        composer.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode) {
           renderer.domElement.remove();
@@ -412,7 +403,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
         return;
       }
 
-      renderer.render(scene, camera);
+      composer.render();
       animFrameId = requestAnimationFrame(animate);
     }
 

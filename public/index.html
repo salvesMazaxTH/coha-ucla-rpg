@@ -137,8 +137,27 @@
       </div>
     </div>
 
-    <div id="webgl-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
+    <div
+      id="webgl-container"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+      "
+    ></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
     <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="/js/main.js"></script>
     <!--  <script type="module" src="../exportChampionsToJson.js"></script> -->
@@ -173,7 +192,9 @@
       <div class="settings-dialog">
         <div class="settings-header">
           <h3>Configurações de Áudio</h3>
-          <button id="settings-close" class="settings-close-btn">&times;</button>
+          <button id="settings-close" class="settings-close-btn">
+            &times;
+          </button>
         </div>
         <div class="settings-content">
           <div class="settings-group">
@@ -184,7 +205,14 @@
                 <span class="slider round"></span>
               </label>
             </div>
-            <input type="range" id="music-volume" min="0" max="1" step="0.05" value="0.5" />
+            <input
+              type="range"
+              id="music-volume"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.5"
+            />
           </div>
           <div class="settings-group">
             <div class="settings-label">
@@ -194,7 +222,14 @@
                 <span class="slider round"></span>
               </label>
             </div>
-            <input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.5" />
+            <input
+              type="range"
+              id="sfx-volume"
+              min="0"
+              max="1"
+              step="0.05"
+              value="0.5"
+            />
           </div>
         </div>
       </div>
