@@ -363,8 +363,10 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   camera.position.z = 15;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.domElement.style.mixBlendMode = "screen";
   container.appendChild(renderer.domElement);
 
   // --- Post-processing (bloom) ---
