@@ -421,3 +421,72 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
     animate();
   });
 });
+
+registerSkillAnimation("relampagos_gemeos", async ({ userEl, targetEl }) => {
+  if (!userEl || !targetEl) return;
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.position = "fixed";
+  canvas.style.top = "0";
+  canvas.style.left = "0";
+  canvas.style.pointerEvents = "none";
+  canvas.style.zIndex = "999";
+
+  document.body.appendChild(canvas);
+
+  const getCenter = (el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+  };
+
+  const start = getCenter(userEl);
+  const end = getCenter(targetEl);
+
+  function drawLightning() {
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+
+    const segments = 12;
+
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+
+      const x =
+        start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 30;
+
+      const y =
+        start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 30;
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(end.x, end.y);
+
+    ctx.strokeStyle = "#7df9ff";
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#7df9ff";
+
+    ctx.stroke();
+  }
+
+  // animação curtinha (3 frames)
+  for (let i = 0; i < 3; i++) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawLightning();
+    await new Promise((r) => setTimeout(r, 40));
+  }
+
+  // impacto visual no alvo
+  targetEl.classList.add("lightning-hit");
+  setTimeout(() => targetEl.classList.remove("lightning-hit"), 200);
+
+  canvas.remove();
+});

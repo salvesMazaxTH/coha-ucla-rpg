@@ -324,6 +324,11 @@ export function createCombatAnimationManager(deps) {
         ? getChampionElement(action.targetId)
         : null;
       const userEl = action.userId ? getChampionElement(action.userId) : null;
+
+      scrollIfNeeded(userEl, { threshold: 0.85 });
+
+      scrollIfNeeded(targetEl, { threshold: 0.85 });
+      
       await animateSkill(action.skillKey, { targetEl, userEl });
     }
 

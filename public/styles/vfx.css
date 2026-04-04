@@ -89,6 +89,20 @@
   z-index: 6;
 }
 
+/* Lightning hit effect (applied to champion portrait on hit) */
+
+.lightning-hit {
+  animation: lightningFlash 0.2s;
+}
+
+@keyframes lightningFlash {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(2.5) saturate(2); }
+  100% { filter: brightness(1); }
+}
+
+
+
 /* ========================= */
 /* SHIELD CONTAINER STYLES   */
 /* ========================= */
