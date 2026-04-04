@@ -1713,6 +1713,79 @@ body.perspective-team2 .combat-dialog-bubble .team-2 {
 }
 
 /* ============================================
+   PORTRAIT OVERLAY — ENEMY SKILLS BAR
+   ============================================ */
+
+.portrait-overlay-enemy-skills {
+  border-top: 1px solid rgba(255, 80, 80, 0.3);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portrait-overlay-enemy-skills-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.portrait-overlay-enemy-skill-btn {
+  flex: 1 1 auto;
+  min-width: 70px;
+  max-width: 48%;
+  padding: 6px 10px;
+
+  background: linear-gradient(180deg, #2a1a1a, #180a0a);
+  border: 1.65px solid rgba(255, 80, 80, 0.35);
+  border-radius: 7px;
+
+  box-shadow:
+    0 0 8px rgba(255, 60, 60, 0.3),
+    0 2px 5px rgba(0, 0, 0, 0.6);
+
+  color: #ffb8b8;
+  font-size: 0.72em;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  cursor: default;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+}
+
+.portrait-overlay-enemy-skill-btn.ultimate {
+  border: 1.65px solid rgba(255, 215, 0, 0.5);
+  box-shadow:
+    0 0 8px rgba(255, 215, 0, 0.4),
+    0 2px 5px rgba(0, 0, 0, 0.7);
+  background: linear-gradient(180deg, #3a2a00, #1e1400);
+  color: #ffe9a6;
+}
+
+.portrait-overlay-enemy-skill-btn:hover {
+  transform: scale(1.04);
+  box-shadow:
+    0 0 12px rgba(255, 80, 80, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+}
+
+.portrait-overlay-enemy-skill-btn.ultimate:hover {
+  transform: scale(1.04);
+  box-shadow:
+    0 0 14px rgba(255, 230, 120, 0.8),
+    0 0 28px rgba(255, 200, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.9);
+}
+
+/* ============================================
    CHAMPION DETAIL OVERLAY
    ============================================ */
 

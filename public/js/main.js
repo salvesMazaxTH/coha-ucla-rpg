@@ -405,6 +405,45 @@ function createChampionOverlay(champion) {
     });
   }
 
+  // Habilidades do campeão inimigo (fake action bar)
+  if (
+    playerTeam !== null &&
+    champion.team !== playerTeam &&
+    Array.isArray(champion.skills) &&
+    champion.skills.length
+  ) {
+    const skillsSection = document.createElement("div");
+    skillsSection.classList.add("portrait-overlay-enemy-skills");
+
+    const skillsTitle = document.createElement("h3");
+    skillsTitle.classList.add("portrait-overlay-details-title");
+    skillsTitle.textContent = "Habilidades";
+    skillsSection.appendChild(skillsTitle);
+
+    const skillsBar = document.createElement("div");
+    skillsBar.classList.add("portrait-overlay-enemy-skills-bar");
+
+    champion.skills.forEach((skill) => {
+      const isUlt = skill.isUltimate === true;
+      const label = isUlt ? `ULT — ${skill.name}` : skill.name;
+
+      const btn = document.createElement("button");
+      btn.className =
+        "portrait-overlay-enemy-skill-btn" + (isUlt ? " ultimate" : "");
+      btn.textContent = label;
+
+      btn.addEventListener("mouseenter", () =>
+        showSkillOverlay(btn, skill, champion),
+      );
+      btn.addEventListener("mouseleave", () => removeSkillOverlay());
+
+      skillsBar.appendChild(btn);
+    });
+
+    skillsSection.appendChild(skillsBar);
+    details.appendChild(skillsSection);
+  }
+
   // Fechar ao clicar no backdrop
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeChampionOverlay();
@@ -423,6 +462,7 @@ function createChampionOverlay(champion) {
 function closeChampionOverlay() {
   if (!portraitOverlay) return;
 
+  removeSkillOverlay();
   portraitOverlay.classList.remove("active");
   if (portraitOverlay._escHandler) {
     document.removeEventListener("keydown", portraitOverlay._escHandler);
