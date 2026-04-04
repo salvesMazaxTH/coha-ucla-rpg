@@ -344,14 +344,6 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   const container = document.getElementById("webgl-container");
   if (!container || !targetEl) return;
 
-  // --- Load post-processing addons ---
-  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
-    await Promise.all([
-      import("three/addons/postprocessing/EffectComposer.js"),
-      import("three/addons/postprocessing/RenderPass.js"),
-      import("three/addons/postprocessing/UnrealBloomPass.js"),
-    ]);
-
   // --- Setup scene ---
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
@@ -366,20 +358,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.domElement.style.mixBlendMode = "screen";
   container.appendChild(renderer.domElement);
-
-  // --- Post-processing (bloom) ---
-  const renderScene = new RenderPass(scene, camera);
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    2.5,
-    0.5,
-    0.1,
-  );
-  const composer = new EffectComposer(renderer);
-  composer.addPass(renderScene);
-  composer.addPass(bloomPass);
 
   // --- Compute world positions ---
   const targetCenter = getElementCenter(targetEl);
@@ -390,7 +369,6 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
     const userCenter = getElementCenter(userEl);
     worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
   } else {
-    // Fallback: punch comes from the left side of target
     worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
   }
 
@@ -401,14 +379,11 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   const clock = new THREE.Clock();
 
   await new Promise((resolve) => {
-    let animFrameId;
-
     function animate() {
       const dt = clock.getDelta();
 
       if (!effect.update(dt)) {
         effect.dispose(scene);
-        composer.dispose();
         renderer.dispose();
         if (renderer.domElement.parentNode) {
           renderer.domElement.remove();
@@ -417,8 +392,8 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
         return;
       }
 
-      composer.render();
-      animFrameId = requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     }
 
     animate();
