@@ -5,6 +5,7 @@ import { playObliterateEffect } from "../../../shared/vfx/obliterate.js";
 import { StatusIndicator } from "../../../shared/ui/statusIndicator.js";
 import { playDeathClaimEffect } from "../../../shared/vfx/deathClaim.js";
 import { audioManager } from "../utils/AudioManager.js";
+import { animateSkill } from "./skillAnimations.js";
 
 // ============================================================
 //  AnimsAndLogManager.js — Combat Animation & Log System (v2)
@@ -315,6 +316,15 @@ export function createCombatAnimationManager(deps) {
     if (action && typeof handleActionDialog === "function") {
       currentPhase = "combat";
       await handleActionDialog(action);
+    }
+
+    // Skill animation (only skills that have a registered animation)
+    if (action?.skillKey) {
+      const targetEl = action.targetId
+        ? getChampionElement(action.targetId)
+        : null;
+      const userEl = action.userId ? getChampionElement(action.userId) : null;
+      await animateSkill(action.skillKey, { targetEl, userEl });
     }
 
     /* console.log("[DEBUG] [JEFF REVIVAL DIALOG] CLIENT RECEIVED ENVELOPE:", envelope); */

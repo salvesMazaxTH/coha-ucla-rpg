@@ -1,5 +1,15 @@
 # STATE.md
 
+## [2026-04-04] Skill Animation System + Gancho Rápido (Kai)
+
+- Created `public/js/animation/skillAnimations.js`: registry-based system for one-shot skill animations using Three.js WebGL
+- `animateSkill(skillKey, { targetEl, userEl })` — plays animation if registered, no-op otherwise
+- Registered `gancho_rapido` animation: melee punch effect with swipe trail, fist impact mark (procedural texture), and directional smoke particles
+- Renders in `#webgl-container` overlay, computes direction from user→target champion positions, auto-cleans up after 2s lifetime
+- Wired into `animsAndLogManager.js` → `processCombatAction()` after action dialog, using `action.skillKey`
+
+---
+
 ## [2026-03-31] GSD Quick Task: Suppress dialog spam for 'não pode receber congelado' (Nythera bug)
 
 - Fixed: Dialog message for 'não pode receber congelado' or similar is now suppressed if the effect is already present and not stackable (prevents spam when Nythera is present).
