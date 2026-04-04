@@ -367,7 +367,6 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   renderer.setClearColor(0x000000, 1);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.domElement.style.mixBlendMode = "screen";
   container.appendChild(renderer.domElement);
 
   // --- Post-processing (bloom) ---
