@@ -111,13 +111,15 @@ export const StatusIndicator = {
     )
       hasBuff = true;
     if (
-      (Array.isArray(champion.damageModifiers) && champion.damageModifiers.length > 0) ||
-      (champion.damageModifiersCount > 0)
+      (Array.isArray(champion.damageModifiers) &&
+        champion.damageModifiers.length > 0) ||
+      champion.damageModifiersCount > 0
     )
       hasBuff = true;
     if (
-      (Array.isArray(champion.damageReductionModifiers) && champion.damageReductionModifiers.length > 0) ||
-      (champion.damageReductionModifiersCount > 0)
+      (Array.isArray(champion.damageReductionModifiers) &&
+        champion.damageReductionModifiers.length > 0) ||
+      champion.damageReductionModifiersCount > 0
     )
       hasBuff = true;
     // Debuff: statModifiers negativos
@@ -150,6 +152,11 @@ export const StatusIndicator = {
 
     // remove indicadores que não existem mais
     portrait.querySelectorAll(".status-indicator").forEach((el) => {
+      if (
+        el.classList.contains("status-indicator-buff") ||
+        el.classList.contains("status-indicator-debuff")
+      )
+        return; // buff/debuff arrows managed above
       const name = el.dataset.statusEffect?.toLowerCase();
       if (!activeStatuses.has(name) && !el.classList.contains("visual-delay")) {
         el.remove();
