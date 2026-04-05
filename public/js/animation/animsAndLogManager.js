@@ -325,10 +325,8 @@ export function createCombatAnimationManager(deps) {
         : null;
       const userEl = action.userId ? getChampionElement(action.userId) : null;
 
-      scrollIfNeeded(userEl, { threshold: 0.85 });
-
       scrollIfNeeded(targetEl, { threshold: 0.85 });
-      
+
       await animateSkill(action.skillKey, { targetEl, userEl });
     }
 
@@ -1175,6 +1173,17 @@ export function createCombatAnimationManager(deps) {
 
     if (snap.passive !== undefined) {
       champion.passive = snap.passive;
+    }
+
+    // Modifier data for UI indicators (buff/debuff arrows)
+    if (snap.statModifiers !== undefined) {
+      champion.statModifiers = snap.statModifiers;
+    }
+    if (snap.damageModifiersCount !== undefined) {
+      champion.damageModifiersCount = snap.damageModifiersCount;
+    }
+    if (snap.damageReductionModifiersCount !== undefined) {
+      champion.damageReductionModifiersCount = snap.damageReductionModifiersCount;
     }
   }
 

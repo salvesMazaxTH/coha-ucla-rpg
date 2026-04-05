@@ -111,13 +111,13 @@ export const StatusIndicator = {
     )
       hasBuff = true;
     if (
-      Array.isArray(champion.damageModifiers) &&
-      champion.damageModifiers.length > 0
+      (Array.isArray(champion.damageModifiers) && champion.damageModifiers.length > 0) ||
+      (champion.damageModifiersCount > 0)
     )
       hasBuff = true;
     if (
-      Array.isArray(champion.damageReductionModifiers) &&
-      champion.damageReductionModifiers.length > 0
+      (Array.isArray(champion.damageReductionModifiers) && champion.damageReductionModifiers.length > 0) ||
+      (champion.damageReductionModifiersCount > 0)
     )
       hasBuff = true;
     // Debuff: statModifiers negativos

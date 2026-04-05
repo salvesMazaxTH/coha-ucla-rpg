@@ -225,6 +225,15 @@ export class Champion {
           return [key, safeValue];
         },
       ),
+
+      // Modifier counts for UI indicators (buff/debuff arrows)
+      statModifiers: (this.statModifiers || []).map((m) => ({
+        amount: m.amount,
+        statName: m.statName,
+        isPermanent: m.isPermanent,
+      })),
+      damageModifiersCount: (this.damageModifiers || []).length,
+      damageReductionModifiersCount: (this.damageReductionModifiers || []).length,
     };
   }
 
