@@ -2,12 +2,13 @@
 
 ## [2026-04-05] Fix buff/debuff indicator detection (damageMod/statMod)
 
-- Fixed: buff/debuff arrow indicators never appeared because code checked `m.value` but modifiers use `m.amount` (statModifiers, damageReductionModifiers) or `apply()` functions (damageModifiers)
-- statModifiers: now checks `m.amount > 0` (buff) / `m.amount < 0` (debuff)
-- damageModifiers: presence = buff (all use `apply()` pattern, no simple value)
-- damageReductionModifiers: presence = buff (reduces incoming damage)
-- Removed dead check for negative damageModifiers (none exist in codebase)
-- Patch: shared/ui/statusIndicator.js
+- Root cause: `serialize()` did not include modifier arrays → client champion objects always had empty `statModifiers`/`damageModifiers`/`damageReductionModifiers` → indicators never appeared
+- Champion.serialize() now sends `statModifiers` (amount/statName/isPermanent), `damageModifiersCount`, `damageReductionModifiersCount`
+- `syncChampionFromSnapshot()` in animsAndLogManager.js now syncs these fields to client champion objects
+- StatusIndicator checks both full arrays (server-side) and count fields (client-side)
+- Also fixed: code was checking `m.value` instead of `m.amount` on statModifiers
+- Removed dead check for negative damageModifiers (all are buff-type with `apply()` pattern)
+- Patch: shared/core/Champion.js, shared/ui/statusIndicator.js, public/js/animation/animsAndLogManager.js
 
 ---
 
