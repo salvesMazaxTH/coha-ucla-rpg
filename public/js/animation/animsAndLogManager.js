@@ -325,7 +325,7 @@ export function createCombatAnimationManager(deps) {
         : null;
       const userEl = action.userId ? getChampionElement(action.userId) : null;
 
-      scrollIfNeeded(targetEl, { threshold: 0.85 });
+      if (targetEl) scrollIfNeeded(targetEl, { threshold: 0.85 });
 
       await animateSkill(action.skillKey, { targetEl, userEl });
     }
@@ -1183,7 +1183,8 @@ export function createCombatAnimationManager(deps) {
       champion.damageModifiersCount = snap.damageModifiersCount;
     }
     if (snap.damageReductionModifiersCount !== undefined) {
-      champion.damageReductionModifiersCount = snap.damageReductionModifiersCount;
+      champion.damageReductionModifiersCount =
+        snap.damageReductionModifiersCount;
     }
   }
 
