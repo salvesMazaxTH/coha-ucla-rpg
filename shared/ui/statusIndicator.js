@@ -104,31 +104,26 @@ export const StatusIndicator = {
     // Detecta buffs/debuffs ativos
     let hasBuff = false;
     let hasDebuff = false;
-    // Buff: statModifiers positivos, damageModifiers positivos, damageReduction positivo
+    // Buff: statModifiers positivos, damageModifiers (presença = buff), damageReduction positivo
     if (
       Array.isArray(champion.statModifiers) &&
-      champion.statModifiers.some((m) => m.value > 0)
+      champion.statModifiers.some((m) => m.amount > 0)
     )
       hasBuff = true;
     if (
       Array.isArray(champion.damageModifiers) &&
-      champion.damageModifiers.some((m) => m.value > 0)
+      champion.damageModifiers.length > 0
     )
       hasBuff = true;
     if (
       Array.isArray(champion.damageReductionModifiers) &&
-      champion.damageReductionModifiers.some((m) => m.value > 0)
+      champion.damageReductionModifiers.length > 0
     )
       hasBuff = true;
-    // Debuff: statModifiers negativos, damageModifiers negativos
+    // Debuff: statModifiers negativos
     if (
       Array.isArray(champion.statModifiers) &&
-      champion.statModifiers.some((m) => m.value < 0)
-    )
-      hasDebuff = true;
-    if (
-      Array.isArray(champion.damageModifiers) &&
-      champion.damageModifiers.some((m) => m.value < 0)
+      champion.statModifiers.some((m) => m.amount < 0)
     )
       hasDebuff = true;
 
