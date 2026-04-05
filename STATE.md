@@ -1,5 +1,16 @@
 # STATE.md
 
+## [2026-04-05] Fix buff/debuff indicator detection (damageMod/statMod)
+
+- Fixed: buff/debuff arrow indicators never appeared because code checked `m.value` but modifiers use `m.amount` (statModifiers, damageReductionModifiers) or `apply()` functions (damageModifiers)
+- statModifiers: now checks `m.amount > 0` (buff) / `m.amount < 0` (debuff)
+- damageModifiers: presence = buff (all use `apply()` pattern, no simple value)
+- damageReductionModifiers: presence = buff (reduces incoming damage)
+- Removed dead check for negative damageModifiers (none exist in codebase)
+- Patch: shared/ui/statusIndicator.js
+
+---
+
 ## [2026-04-04] Skill Animation System + Gancho Rápido (Kai)
 
 - Created `public/js/animation/skillAnimations.js`: registry-based system for one-shot skill animations using Three.js WebGL
