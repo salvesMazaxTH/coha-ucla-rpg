@@ -1,11 +1,11 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicStrike from "../basicStrike.js";
+import basicBlock from "../basicBlock.js";
 
 const brunoSkills = [
   // ========================
-  // Golpe Básico (global)
+  // Bloqueio Básico (global)
   // ========================
-  basicStrike,
+  basicBlock,
 
   // ========================
   // Habilidades Especiais
@@ -17,16 +17,15 @@ const brunoSkills = [
   {
     key: "toque_congelante",
     name: "Toque Congelante",
-    bf: 70,
+    bf: 55,
     geladoDuration: 2,
-    congeladoDuration: 1,
     contact: true,
     damageMode: "standard",
     priority: 0,
     element: "ice",
 
     description() {
-      return `Causa dano ao inimigo e o deixa Gelado por ${this.geladoDuration} turno(s). Se já estiver Gelado, torna-o Congelado por ${this.congeladoDuration} turno(s).`;
+      return `Causa dano ao inimigo e o deixa Gelado por ${this.geladoDuration} turno(s).`;
     },
 
     targetSpec: ["enemy"],
@@ -47,12 +46,7 @@ const brunoSkills = [
       }).execute();
 
       if (!result?.evaded && !result?.immune) {
-        const alreadyGelado = target.hasStatusEffect("gelado");
-        if (alreadyGelado) {
-          target.applyStatusEffect("congelado", this.congeladoDuration, context);
-        } else {
-          target.applyStatusEffect("gelado", this.geladoDuration, context);
-        }
+        target.applyStatusEffect("gelado", this.geladoDuration, context);
       }
 
       return result;
@@ -100,8 +94,8 @@ const brunoSkills = [
   {
     key: "tempestade_de_gelo",
     name: "Tempestade de Gelo",
-    bf: 165,
-    congeladoDuration: 2,
+    bf: 120,
+    geladoDuration: 2,
     contact: false,
     damageMode: "standard",
     priority: 0,
@@ -110,7 +104,7 @@ const brunoSkills = [
     element: "ice",
 
     description() {
-      return `Desencadeia uma tempestade de gelo sobre o inimigo, causando dano devastador e o Congelando por ${this.congeladoDuration} turno(s).`;
+      return `Desencadeia uma tempestade de gelo sobre o inimigo, causando dano devastador e o Gelando por ${this.geladoDuration} turno(s).`;
     },
 
     targetSpec: ["enemy"],
@@ -131,7 +125,7 @@ const brunoSkills = [
       }).execute();
 
       if (!result?.evaded && !result?.immune) {
-        target.applyStatusEffect("congelado", this.congeladoDuration, context);
+        target.applyStatusEffect("gelado", this.geladoDuration, context);
       }
 
       return result;

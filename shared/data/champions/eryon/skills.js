@@ -47,17 +47,98 @@ const eryonSkills = [
       };
     },
   },
+
+  // =========================
+  // Canalização Absoluta
+  // =========================
+  {
+    key: "canalizacao_absoluta",
+    name: "Canalização Absoluta",
+    priority: 0,
+    contact: false,
+    description() {
+      return `Drena todo o ultômetro dos aliados e transfere para um alvo aliado, concedendo +2 unidades bônus.`;
+    },
+    targetSpec: ["select:ally"],
+    resolve({ user, targets, context }) {
+      const [target] = targets;
+      const allies = context.aliveChampions.filter((c) => c.team === user.team);
+      let total = 0;
+      console.log("[ERYON][canalizacao_absoluta] Início da skill");
+      console.log(
+        "[ERYON][canalizacao_absoluta] Alvo da canalização:",
+        target?.name,
+        "(ID:",
+        target?.id,
+        ")",
+      );
+      for (const ally of allies) {
+        if (ally.id === target.id) {
+          console.log(
+            "[ERYON][canalizacao_absoluta] Pulando alvo principal:",
+            ally.name,
+          );
+          continue;
+        }
+        const amount = ally.ultMeter;
+        console.log(
+          "[ERYON][canalizacao_absoluta] Drenando de:",
+          ally.name,
+          "ultMeter:",
+          amount,
+        );
+        if (amount <= 0) {
+          console.log(
+            "[ERYON][canalizacao_absoluta] Nada a drenar de:",
+            ally.name,
+          );
+          continue;
+        }
+        ally.spendUlt(amount);
+        total += amount;
+        console.log(
+          "[ERYON][canalizacao_absoluta] Drenado:",
+          amount,
+          "de",
+          ally.name,
+          "Total acumulado:",
+          total,
+        );
+      }
+      const finalGain = total + 2;
+      console.log(
+        "[ERYON][canalizacao_absoluta] Total drenado:",
+        total,
+        "+ bônus: 2 =",
+        finalGain,
+      );
+      target.addUlt({ amount: finalGain, context });
+      console.log(
+        "[ERYON][canalizacao_absoluta] Ult final do alvo após transferência:",
+        target.ultMeter,
+      );
+      return {
+        log: `${user.name} canalizou energia para ${target.name}.`,
+      };
+    },
+  },
+
   // =========================
   // Colapso Eidólico (ULT)
   // =========================
   {
-    key: "colapso_eidolico",
-    name: "Colapso Eidólico",
+    key: "colapso_eryonico",
+    name: "Colapso Eryônico",
     isUltimate: true,
     ultCost: 1,
     priority: -1,
     contact: false,
     targetSpec: ["all"],
+    damagePerUnit: 25,
+    maxConsume: 12,
+    description() {
+      return `Consome todo o ultômetro do time (máx. ${this.maxConsume} unidades) e converte cada unidade em ${this.damagePerUnit} de dano, distribuído aleatoriamente entre um inimigo e seus adjacentes.`;
+    },
     resolve({ user, context }) {
       console.log("[ERYON][colapso_eidolico] Início da skill");
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
@@ -134,80 +215,6 @@ const eryonSkills = [
       }
       return {
         log: `${user.name} colapsou o fluxo eidólico (${consumed} unidades).`,
-      };
-    },
-  },
-  // =========================
-  // Canalização Absoluta
-  // =========================
-  {
-    key: "canalizacao_absoluta",
-    name: "Canalização Absoluta",
-    priority: 0,
-    contact: false,
-    description() {
-      return `Drena todo o ultômetro dos aliados e transfere para um alvo aliado, concedendo +2 unidades bônus.`;
-    },
-    targetSpec: ["select:ally"],
-    resolve({ user, targets, context }) {
-      const [target] = targets;
-      const allies = context.aliveChampions.filter((c) => c.team === user.team);
-      let total = 0;
-      console.log("[ERYON][canalizacao_absoluta] Início da skill");
-      console.log(
-        "[ERYON][canalizacao_absoluta] Alvo da canalização:",
-        target?.name,
-        "(ID:",
-        target?.id,
-        ")",
-      );
-      for (const ally of allies) {
-        if (ally.id === target.id) {
-          console.log(
-            "[ERYON][canalizacao_absoluta] Pulando alvo principal:",
-            ally.name,
-          );
-          continue;
-        }
-        const amount = ally.ultMeter;
-        console.log(
-          "[ERYON][canalizacao_absoluta] Drenando de:",
-          ally.name,
-          "ultMeter:",
-          amount,
-        );
-        if (amount <= 0) {
-          console.log(
-            "[ERYON][canalizacao_absoluta] Nada a drenar de:",
-            ally.name,
-          );
-          continue;
-        }
-        ally.spendUlt(amount);
-        total += amount;
-        console.log(
-          "[ERYON][canalizacao_absoluta] Drenado:",
-          amount,
-          "de",
-          ally.name,
-          "Total acumulado:",
-          total,
-        );
-      }
-      const finalGain = total + 2;
-      console.log(
-        "[ERYON][canalizacao_absoluta] Total drenado:",
-        total,
-        "+ bônus: 2 =",
-        finalGain,
-      );
-      target.addUlt({ amount: finalGain, context });
-      console.log(
-        "[ERYON][canalizacao_absoluta] Ult final do alvo após transferência:",
-        target.ultMeter,
-      );
-      return {
-        log: `${user.name} canalizou energia para ${target.name}.`,
       };
     },
   },

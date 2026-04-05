@@ -233,7 +233,8 @@ export class Champion {
         isPermanent: m.isPermanent,
       })),
       damageModifiersCount: (this.damageModifiers || []).length,
-      damageReductionModifiersCount: (this.damageReductionModifiers || []).length,
+      damageReductionModifiersCount: (this.damageReductionModifiers || [])
+        .length,
     };
   }
 

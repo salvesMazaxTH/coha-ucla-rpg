@@ -3,7 +3,7 @@ export default {
   portrait: "/assets/portraits/bruno.webp",
 
   HP: 315,
-  Attack: 340,
+  Attack: 320,
   Defense: 55,
   Speed: 85,
 
