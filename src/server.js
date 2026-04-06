@@ -398,15 +398,19 @@ function validateActionIntent(user, skill, socket) {
 /**
  * Aplica regeneração global de ultMeter (+3 unidades por turno)
  */
-function applyGlobalTurnRegen(champion, context) {
+function applyGlobalTurnRegen(champion, context, resolver) {
   if (!champion || !champion.alive) return 0;
 
   const GLOBAL_ULT_REGEN = 3; // +3 unidades por turno (conforme spec)
 
-  const applied = champion.addUlt({
-    amount: GLOBAL_ULT_REGEN,
-    context,
-  });
+  const applied = resolver
+    ? resolver.applyResourceChange({
+        target: champion,
+        amount: GLOBAL_ULT_REGEN,
+        context,
+        sourceId: champion.id,
+      })
+    : champion.addUlt(GLOBAL_ULT_REGEN);
 
   /*   console.log(
     ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
@@ -831,7 +835,7 @@ function handleStartTurn() {
 
   // 5. Regen global
   match.combat.activeChampions.forEach((champion) => {
-    const applied = applyGlobalTurnRegen(champion, turnStartContext);
+    const applied = applyGlobalTurnRegen(champion, turnStartContext, resolver);
 
     /* console.log(
       "[ULT REGEN]",
