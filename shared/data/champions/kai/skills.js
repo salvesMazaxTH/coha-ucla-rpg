@@ -18,7 +18,7 @@ const kaiSkills = [
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      return new DamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         attacker: user,
         defender: enemy,
@@ -26,6 +26,8 @@ const kaiSkills = [
         context,
         allChampions: context?.allChampions,
       }).execute();
+      // Ensure targetId is set for animation targeting
+      return { ...result, targetId: enemy.id };
     },
   },
 

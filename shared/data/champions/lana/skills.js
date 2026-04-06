@@ -85,11 +85,9 @@ const lanaSkills = [
       // Aplicar dano em cada inimigo
       for (const enemy of enemies) {
         // ...
-  }
-},
+      }
+    },
   },
 ];
 
 export default lanaSkills;
-
-// ACIMA ESTÁ SÓ O MODELO COPIADO DO NAELTHOS, MAS NÃO TEM NADA A VER AS SKILLS DELA COM AS SKILLS DO NAELTHOS, É SÓ PARA TER UM MODELO DE COMO FAZER UMA SKILL, PRA NÃO ERRAR CERTOS PARAMS, A ASSINATURA PADRÃO DO SISTEMA DE SKILLS É ESSA, MAS O QUE VAI TER DENTRO DO OBJETO É OUTRA COISA, DEPENDENDO DO QUE A SKILL DEVE FAZER

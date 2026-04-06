@@ -60,7 +60,7 @@ const eryonSkills = [
       return `Drena todo o ultômetro dos aliados e transfere para um alvo aliado, concedendo +2 unidades bônus.`;
     },
     targetSpec: ["select:ally"],
-    resolve({ user, targets, context, resolver }) {
+    resolve({ user, targets, context }) {
       const [target] = targets;
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
       let total = 0;
@@ -112,11 +112,7 @@ const eryonSkills = [
         "+ bônus: 2 =",
         finalGain,
       );
-      if (resolver) {
-        resolver.applyResourceChange({ target, amount: finalGain, context, sourceId: user.id });
-      } else {
-        target.addUlt(finalGain);
-      }
+      target.addUlt({ amount: finalGain, context });
       console.log(
         "[ERYON][canalizacao_absoluta] Ult final do alvo após transferência:",
         target.ultMeter,

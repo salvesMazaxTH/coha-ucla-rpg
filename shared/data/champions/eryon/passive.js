@@ -51,6 +51,7 @@ export default {
 
   onResourceGain({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
+    if (target.id === owner.id) return;
     if (amount <= 0) return;
 
     owner.runtime.ressonanceStacks ??= 0;
@@ -85,6 +86,7 @@ export default {
 
   onResourceSpend({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
+    if (target.id === owner.id) return;
     if (amount <= 0) return;
 
     owner.runtime.ressonanceStacks ??= 0;

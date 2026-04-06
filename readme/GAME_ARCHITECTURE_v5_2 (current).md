@@ -1,7 +1,7 @@
 # GAME_ARCHITECTURE.md — Champion Arena (UCLA RPG)
 
 > Documentação mestre da arquitetura do sistema. Referência técnica completa para desenvolvimento, manutenção e extensão do jogo.
-> **v5.1 (estado operacional atual)** — O modo jogável atual voltou a ser **3v3 fixo**: cada jogador seleciona **3 campeões**, com **3 slots simultâneos em campo** (inicial e máximo). O sistema de **Switch/troca/reserva está temporariamente desabilitado por tempo indeterminado**.
+> **v5.2 (estado operacional atual)** — O modo jogável atual voltou a ser **3v3 fixo**: cada jogador seleciona **3 campeões**, com **3 slots simultâneos em campo** (inicial e máximo). O sistema de **Switch/troca/reserva está temporariamente desabilitado por tempo indeterminado**.
 
 ---
 
@@ -26,12 +26,13 @@
 17. [Sistema de Modificadores de Dano](#17-sistema-de-modificadores-de-dano)
 18. [Status do Sistema de Switch (Temporariamente Desabilitado)](#18-status-do-sistema-de-switch-temporariamente-desabilitado)
 19. [Gerenciador de Animações — AnimsAndLogManager](#19-gerenciador-de-animações--animsandlogmanager)
-20. [Sistema de VFX — vfxManager](#20-sistema-de-vfx--vfxmanager)
-21. [Indicadores de Status — StatusIndicator](#21-indicadores-de-status--statusindicator)
-22. [Histórico de Turnos](#22-histórico-de-turnos)
-23. [Modo de Edição / Debug](#23-modo-de-edição--debug)
-24. [Como Criar um Novo Campeão](#24-como-criar-um-novo-campeão)
-25. [Decisões de Design e Convenções](#25-decisões-de-design-e-convenções)
+20. [Sistema de Áudio — AudioManager](#26-sistema-de-áudio--audiomanager)
+21. [Sistema de VFX — vfxManager](#20-sistema-de-vfx--vfxmanager)
+22. [Indicadores de Status — StatusIndicator](#21-indicadores-de-status--statusindicator)
+23. [Histórico de Turnos](#22-histórico-de-turnos)
+24. [Modo de Edição / Debug](#23-modo-de-edição--debug)
+25. [Como Criar um Novo Campeão](#24-como-criar-um-novo-campeão)
+26. [Decisões de Design e Convenções](#25-decisões-de-design-e-convenções)
 
 ---
 
@@ -79,7 +80,10 @@ Cada jogador seleciona **3 campeões**. Os **3 ficam em campo simultaneamente** 
 │   │   ├── main.js                 # Entrada do cliente; UI e socket
 │   │   ├── gameGlossary.js         # Glossário interativo de termos de jogo
 │   │   └── animation/
-│   │       └── animsAndLogManager.js  # Sistema de fila de animações
+│   │       ├── animsAndLogManager.js  # Sistema de fila de animações
+│   │       └── skillAnimations.js     # Animações WebGL one-shot de skills (Three.js)
+│   ├── utils/
+│   │   └── AudioManager.js            # SFX + música (singleton, client-only)
 │   ├── styles/
 │   │   ├── base.css                # Resets e defaults globais
 │   │   ├── layout.css              # Grid e containers
@@ -782,7 +786,7 @@ champion.ultCap = 24; // padrão
 | Buffar aliado              | +1 unidade      |
 | **Regen global por turno** | **+3 unidades** |
 
-A regen de ultômetro é aplicada no `handleStartTurn()`, executado **após as animações no cliente**.
+A regen global é aplicada no `handleStartTurn()` via `applyGlobalTurnRegen(champion, context, resolver)`, que **roteia através de `resolver.applyResourceChange()`** — garantindo que hooks como `onResourceGain` disparem normalmente (ex: passiva do Eryon acumula Ressonância a cada regen). Fallback para `champion.addUlt()` direto se sem resolver.
 
 ### Custo de Ultimates
 
@@ -1562,7 +1566,9 @@ Quando a fila esvazia **durante a fase "combat"**, o manager chama `onQueueEmpty
 
 ---
 
-## 20. Sistema de VFX — vfxManager
+## 20. Sistema de VFX — vfxManager e Skill Animations
+
+### 20.1 vfxManager — VFX Contínuos
 
 **Arquivo**: `shared/vfx/vfxManager.js`
 
@@ -1576,6 +1582,34 @@ VFX contínuos renderizados via canvas HTML5 sobre o retrato do campeão. `syncC
 | `congelado`        | `statusEffects.has("congelado")`                 |
 | `waterBubble`      | `runtime.form === "bola_agua"`                   |
 | `obliterate`       | `playObliterateEffect(el)` — chamado diretamente |
+
+### 20.2 Skill Animations — One-Shot WebGL
+
+**Arquivo**: `public/js/animation/skillAnimations.js`
+
+Sistema registry-based para animações one-shot de skills, renderizadas em `#webgl-container` overlay via Three.js (global).
+
+```js
+// Registrar nova animação:
+registerSkillAnimation("skill_key", async ({ targetEl, userEl }) => { ... });
+
+// Disparar (no-op se não registrada):
+await animateSkill(skillKey, { targetEl, userEl });
+```
+
+**Integração**: chamado em `animsAndLogManager.js → processCombatAction()` logo após o dialog de ação, usando `action.skillKey`.
+
+**Animação registrada atualmente:**
+
+| Skill           | Campeão | Efeito                                                                                                                      |
+| --------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `gancho_rapido` | Kai     | Swipe trail + fist impact (procedural texture) + smoke particles. Direção calculada de `userEl` → `targetEl`. Lifetime: 2s. |
+
+### 20.3 VFX WebGL One-Shot — deathClaim (Jeff)
+
+**Arquivo**: `shared/vfx/deathClaim.js`
+
+Efeito cinematográfico especial **"A Morte O Reclama"** disparado na Ultimate do Jeff the Death. WebGL com canvas full-screen, independente do sistema de skill animations.
 
 ---
 
@@ -1843,15 +1877,76 @@ Flags que afetam combate (`damageOutput`, `alwaysCrit`, `alwaysEvade`, `executio
 | Ult regen global          | +3/turn | Regen para todos os vivos      |
 | Switches por jogador      | 0       | Sistema desativado atualmente  |
 
-### Campeões Registrados (v5.1)
+### Por que AudioManager como singleton?
 
-17 campeões ativos:
+Centraliza preload, volume e estado (enabled/disabled, playlist index) num único lugar. O cliente importa `audioManager` de qualquer módulo sem risco de múltiplas instâncias com estado inconsistente.
 
+### Campeões Registrados (v5.2)
+
+**22 campeões no DB** — ativos (sem `unreleased: true`) vs inativos:
+
+| Key                  | Nome                                     | Status         |
+| -------------------- | ---------------------------------------- | -------------- |
+| `ralia`              | Ralia                                    | ativo          |
+| `naelthos`           | Naelthos                                 | ativo          |
+| `naelys`             | Naelys                                   | ativo          |
+| `tharox`             | Tharox                                   | ativo          |
+| `vael`               | Vael                                     | ativo          |
+| `voltexz`            | Voltexz                                  | ativo          |
+| `serene`             | Serene                                   | ativo          |
+| `reyskarone`         | Reyskarone                               | ativo          |
+| `gryskarchu`         | Gryskarchu                               | ativo          |
+| `node_sparckina_07`  | Node Sparckina 07                        | ativo          |
+| `kai`                | Kai                                      | ativo          |
+| `barao_estrondoso`   | Barão Estrondoso                         | ativo          |
+| `blyskartri`         | Blyskartri                               | ativo          |
+| `elias_cross`        | Elias Cross                              | ativo          |
+| `nythera`            | Nythera                                  | ativo          |
+| `vulnara`            | Vulnara                                  | ativo          |
+| `kael_drath_vulcano` | Kael Drath Vulcano                       | ativo          |
+| `jeff_the_death`     | Jeff the Death                           | ativo          |
+| `eryon`              | Eryon (Eidolon)                          | ativo          |
+| `torren`             | Torren                                   | ativo          |
+| `lana`               | Lana                                     | ativo          |
+| `lana_dino`          | Tutu (**token** — `entityType: "token"`) | ativo          |
+| `bruno`              | Bruno                                    | **unreleased** |
+
+3 campeões comentados no índice (sem arquivo removido): `laisaelis`, `laiserisa`, `laisaelis_laiserisa`.
+
+**Tokens**: Campeões com `entityType: "token"` entram em campo via efeito de skill (ex: Tutu invocada por Lana), não por seleção de equipe.
+
+---
+
+## 26. Sistema de Áudio — AudioManager
+
+**Arquivo**: `public/js/utils/AudioManager.js`  
+**Escopo**: client-only (não existe no servidor).
+
+Singleton exportado como `audioManager`. Centraliza preload, registro, volume e playback de SFX e música de fundo.
+
+### Categorias de som
+
+| Categoria  | Registro                              | Controles                     |
+| ---------- | ------------------------------------- | ----------------------------- |
+| **SFX**    | `heal`, `damage`, `victory`, `defeat` | `sfxEnabled`, `sfxVolume`     |
+| **Música** | `main`, `main2`                       | `musicEnabled`, `musicVolume` |
+
+Ambas multiplicadas por `globalVolume` (master).
+
+### API pública
+
+```js
+audioManager.preloadAll(); // chamado ao iniciar o cliente
+audioManager.play("damage"); // dispara SFX
+audioManager.playMusic(["main", "main2"]); // playlist em loop
+audioManager.toggleMusic(bool);
+audioManager.setMusicVolume(float);
+audioManager.toggleSFX(bool);
+audioManager.setSFXVolume(float);
+audioManager.stopMusic();
 ```
-ralia, naelthos, naelys, tharox, vael, voltexz,
-serene, reyskarone, gryskarchu, node_sparckina_07,
-kai, barao_estrondoso, blyskartri, elias_cross,
-nythera, vulnara, kael_drath_vulcano, jeff_the_death
-```
 
-3 campeões inativos (comentados): `laisaelis`, `laiserisa`, `laisaelis_laiserisa`.
+### Integração
+
+- **`main.js`**: chama `preloadAll()` no init; liga controles de UI (checkboxes/sliders de volume) via `toggleMusic`, `setMusicVolume`, `toggleSFX`, `setSFXVolume`.
+- **`animsAndLogManager.js`**: importa `audioManager` e dispara SFX nos eventos de combate (dano, cura, etc.).
