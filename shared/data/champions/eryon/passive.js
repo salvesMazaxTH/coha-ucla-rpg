@@ -31,7 +31,7 @@ function _processResonance(owner, threshold, ultGain, context, resolver) {
 export default {
   key: "ressonancia_eryonica",
   name: "Ressonância Eryônica",
-  stacksCap: 4,
+  stacksCap: 5,
   ultGain: 1,
 
   description(champion) {
@@ -41,7 +41,7 @@ export default {
 
     <b>Acúmulos atuais: ${stacks}</b>
 
-    A cada ${this.stacksCap} unidades acumuladas, concede ${this.ultGain} de ult ao aliado com menor ultômetro.`;
+    A cada ${this.stacksCap} unidades acumuladas, concede um quarto de barra de ultômetro ao aliado com menor ultômetro.`;
   },
 
   hookScope: {
@@ -51,7 +51,6 @@ export default {
 
   onResourceGain({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
-    if (target.id === owner.id) return;
     if (amount <= 0) return;
 
     owner.runtime.ressonanceStacks ??= 0;
@@ -86,7 +85,6 @@ export default {
 
   onResourceSpend({ owner, target, amount, context, resolver }) {
     if (owner.team !== target.team) return;
-    if (target.id === owner.id) return;
     if (amount <= 0) return;
 
     owner.runtime.ressonanceStacks ??= 0;

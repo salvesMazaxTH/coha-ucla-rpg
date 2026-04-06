@@ -60,7 +60,7 @@ const eryonSkills = [
       return `Drena todo o ultômetro dos aliados e transfere para um alvo aliado, concedendo +2 unidades bônus.`;
     },
     targetSpec: ["select:ally"],
-    resolve({ user, targets, context }) {
+    resolve({ user, targets, context, resolver }) {
       const [target] = targets;
       const allies = context.aliveChampions.filter((c) => c.team === user.team);
       let total = 0;
@@ -112,7 +112,11 @@ const eryonSkills = [
         "+ bônus: 2 =",
         finalGain,
       );
-      target.addUlt({ amount: finalGain, context });
+      if (resolver) {
+        resolver.applyResourceChange({ target, amount: finalGain, context, sourceId: user.id });
+      } else {
+        target.addUlt(finalGain);
+      }
       console.log(
         "[ERYON][canalizacao_absoluta] Ult final do alvo após transferência:",
         target.ultMeter,
@@ -135,7 +139,7 @@ const eryonSkills = [
     contact: false,
     targetSpec: ["all"],
     damagePerUnit: 25,
-    maxConsume: 12,
+    maxConsume: 16,
     description() {
       return `Consome todo o ultômetro do time (máx. ${this.maxConsume} unidades) e converte cada unidade em ${this.damagePerUnit} de dano, distribuído aleatoriamente entre um inimigo e seus adjacentes.`;
     },
@@ -154,7 +158,7 @@ const eryonSkills = [
         pool.map((a) => a.id),
       );
       let consumed = 0;
-      const maxConsume = 12;
+      const maxConsume = this.maxConsume;
       while (pool.length > 0 && consumed < maxConsume) {
         const index = Math.floor(Math.random() * pool.length);
         const chosen = pool[index];

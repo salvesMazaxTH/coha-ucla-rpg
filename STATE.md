@@ -1,5 +1,15 @@
 # STATE.md
 
+## [2026-04-06] Fix Eryon passive (Ressonância Eryônica) not triggering on ult gain
+
+- Root cause 1: `if (target.id === owner.id) return` guard in both `onResourceGain` and `onResourceSpend` blocked Eryon himself from triggering his own passive — e.g. when `equalizacao_convergente` gave Eryon positive delta (only Eryon below avg+2), the gain event fired but was blocked by self-guard. `onResourceSpend` worked because it fired for OTHER allies being drained (not Eryon).
+- Root cause 2: `canalizacao_absoluta` called `target.addUlt({amount, context})` directly, bypassing `applyResourceChange` entirely — no `onResourceGain` event fired, passive never saw this ult grant.
+- Fix 1: Removed `if (target.id === owner.id) return` from both `onResourceGain` and `onResourceSpend` handlers in passive.js — Eryon's own ult changes now also accumulate Resonance.
+- Fix 2: Added `resolver` to `canalizacao_absoluta.resolve()` params, replaced direct `addUlt` with `resolver.applyResourceChange({target, amount: finalGain, ...})` with `addUlt` fallback for contexts without resolver.
+- Patch: shared/data/champions/eryon/passive.js, shared/data/champions/eryon/skills.js
+
+---
+
 ## [2026-04-05] Fix buff/debuff indicator detection (damageMod/statMod)
 
 - Root cause: `serialize()` did not include modifier arrays → client champion objects always had empty `statModifiers`/`damageModifiers`/`damageReductionModifiers` → indicators never appeared
