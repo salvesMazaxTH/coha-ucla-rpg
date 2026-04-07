@@ -424,7 +424,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
 });
 
 registerSkillAnimation("relampagos_gemeos", async ({ userEl, targetEl }) => {
-  if (!userEl || !targetEl) return;
+  if (!targetEl) return;
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -447,37 +447,83 @@ registerSkillAnimation("relampagos_gemeos", async ({ userEl, targetEl }) => {
     };
   };
 
-  const start = getCenter(userEl);
+  const start = userEl
+    ? getCenter(userEl)
+    : { x: getCenter(targetEl).x - 120, y: getCenter(targetEl).y - 200 };
   const end = getCenter(targetEl);
 
-  function drawLightning() {
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-
-    const segments = 12;
-
+  // Gera array de pontos em zigzag para um segmento de relâmpago
+  function buildBoltPoints(from, to, segments, variance) {
+    const pts = [from];
     for (let i = 1; i < segments; i++) {
       const t = i / segments;
-
-      const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 30;
-
-      const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 30;
-
-      ctx.lineTo(x, y);
+      pts.push({
+        x: from.x + (to.x - from.x) * t + (Math.random() - 0.5) * variance,
+        y: from.y + (to.y - from.y) * t + (Math.random() - 0.5) * variance,
+      });
     }
-
-    ctx.lineTo(end.x, end.y);
-
-    ctx.strokeStyle = "#7df9ff";
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#7df9ff";
-
-    ctx.stroke();
+    pts.push(to);
+    return pts;
   }
 
-  // animação curtinha (3 frames)
-  for (let i = 0; i < 3; i++) {
+  // Desenha um traço de relâmpago a partir de pontos já gerados
+  function strokeBolt(pts, width, color, alpha) {
+    if (pts.length < 2) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = color;
+
+    const grad = ctx.createLinearGradient(
+      pts[0].x,
+      pts[0].y,
+      pts[pts.length - 1].x,
+      pts[pts.length - 1].y,
+    );
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.15, color);
+    grad.addColorStop(1, "#00ffff");
+    ctx.strokeStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Desenha relâmpago principal + camada de brilho + ramificações
+  function drawLightning() {
+    const mainPts = buildBoltPoints(start, end, 18, 45);
+
+    // Brilho externo (halo difuso)
+    strokeBolt(mainPts, 28, "#7df9ff", 0.15);
+    // Corpo principal
+    strokeBolt(mainPts, 10, "#7df9ff", 0.9);
+    // Núcleo branco
+    strokeBolt(mainPts, 3, "#ffffff", 1.0);
+
+    // Ramificações em pontos aleatórios do bolt principal
+    const branchCount = 2 + Math.floor(Math.random() * 2);
+    for (let b = 0; b < branchCount; b++) {
+      const idx = 3 + Math.floor(Math.random() * (mainPts.length - 6));
+      const origin = mainPts[idx];
+      const branchEnd = {
+        x: origin.x + (Math.random() - 0.5) * 90,
+        y:
+          origin.y + (Math.random() * 60 + 20) * (Math.random() < 0.5 ? 1 : -1),
+      };
+      const branchPts = buildBoltPoints(origin, branchEnd, 6, 15);
+      strokeBolt(branchPts, 4, "#b2f7ff", 0.55);
+      strokeBolt(branchPts, 1.5, "#ffffff", 0.7);
+    }
+  }
+
+  // 5 quadros para dar mais presença visual
+  for (let i = 0; i < 5; i++) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawLightning();
     await new Promise((r) => setTimeout(r, 40));

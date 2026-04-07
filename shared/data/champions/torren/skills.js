@@ -16,7 +16,7 @@ const torrenSkills = [
     bf: 50,
     contact: true,
     damageMode: "standard",
-    priority: 1,
+    priority: 0,
     description() {
       return `Causa dano ao inimigo escolhido e atordoa os adjacentes.`;
     },

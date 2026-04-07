@@ -718,6 +718,12 @@ joinArenaBtn.addEventListener("click", () => {
   }
 });
 
+usernameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    joinArenaBtn.click();
+  }
+});
+
 socket.on("playerAssigned", (data) => {
   playerId = data.playerId;
   playerTeam = data.team;

@@ -72,6 +72,7 @@ const lanaSkills = [
     description() {
       return `Lana libera um surto psíquico, causando dano massivo a todos os inimigos, o dano aumenta baseado em quanto de HP Lana perdeu.`;
     },
+    targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
       // Pegar todos os inimigos (time diferente do usuário)
       const enemies = targets.filter(
