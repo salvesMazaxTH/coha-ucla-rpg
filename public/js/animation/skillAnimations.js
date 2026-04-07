@@ -361,6 +361,7 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
     1000,
   );
   camera.position.z = 15;
+  camera.updateMatrixWorld();
 
   // --- Compute world positions BEFORE inserting the canvas (avoids layout reflow) ---
   const targetCenter = getElementCenter(targetEl);

@@ -1,8 +1,8 @@
 ## [2026-04-06] Fix: Kai gancho_rapido animation always targets middle champion
 
-- Root cause: The `gancho_rapido` skill did not set `targetId` in its result, so the animation system defaulted to the middle champion.
-- Fix: `gancho_rapido` now returns `{ ...result, targetId: enemy.id }` in its resolve method, ensuring the animation always targets the correct champion.
-- Patch: shared/data/champions/kai/skills.js
+- Root cause: `camera.updateMatrixWorld()` was never called after setting `camera.position.z = 15` — `Raycaster.setFromCamera()` used a stale identity matrix, so `screenToWorld()` always returned `(0,0,0)` (world center) regardless of the target element's actual screen position
+- Fix: Added `camera.updateMatrixWorld()` immediately after positioning the camera, before computing world coordinates
+- Patch: public/js/animation/skillAnimations.js
 
 # STATE.md
 
