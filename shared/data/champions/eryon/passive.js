@@ -37,7 +37,7 @@ export default {
   description(champion) {
     const stacks = champion.runtime.ressonanceStacks || 0;
 
-    return `Sempre que um aliado ganha ou consome ultômetro, Eidolon acumula Ressonância.
+    return `Sempre que um aliado ganha ou consome ultômetro, Eryon acumula Ressonância.
 
     <b>Acúmulos atuais: ${stacks}</b>
 

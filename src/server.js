@@ -556,18 +556,22 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
 
   const { targetId, targetName } = buildEmitTargetInfo(realTargetIds);
 
+  // Garante que cada damageEvent tenha skillKey para animação por hit
+  const skillKey = skill?.key;
+  const patchedDamage = mainDamage.map((ev) => ({ ...ev, skillKey }));
+
   return {
     action: user
       ? {
           userId,
           userName,
-          skillKey: skill.key,
-          skillName: skill.name,
+          skillKey: skillKey,
+          skillName: skill?.name,
           targetId,
           targetName,
         }
       : null,
-    damageEvents: mainDamage,
+    damageEvents: patchedDamage,
     healEvents: mainHeal,
     shieldEvents: mainShield,
     buffEvents: mainBuff,

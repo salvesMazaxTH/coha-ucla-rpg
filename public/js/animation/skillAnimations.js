@@ -362,6 +362,18 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   );
   camera.position.z = 15;
 
+  // --- Compute world positions BEFORE inserting the canvas (avoids layout reflow) ---
+  const targetCenter = getElementCenter(targetEl);
+  const worldTarget = screenToWorld(targetCenter.x, targetCenter.y, camera);
+
+  let worldUser;
+  if (userEl) {
+    const userCenter = getElementCenter(userEl);
+    worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
+  } else {
+    worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
+  }
+
   // Opaque black background — screen blend mode turns black → transparent
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setClearColor(0x000000, 1);
@@ -380,18 +392,6 @@ registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
   const composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
-
-  // --- Compute world positions ---
-  const targetCenter = getElementCenter(targetEl);
-  const worldTarget = screenToWorld(targetCenter.x, targetCenter.y, camera);
-
-  let worldUser;
-  if (userEl) {
-    const userCenter = getElementCenter(userEl);
-    worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
-  } else {
-    worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
-  }
 
   // --- Create effect (travels from user → target) ---
   const effect = new MeleePunchEffect(scene, worldUser, worldTarget);
@@ -458,11 +458,9 @@ registerSkillAnimation("relampagos_gemeos", async ({ userEl, targetEl }) => {
     for (let i = 1; i < segments; i++) {
       const t = i / segments;
 
-      const x =
-        start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 30;
+      const x = start.x + (end.x - start.x) * t + (Math.random() - 0.5) * 30;
 
-      const y =
-        start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 30;
+      const y = start.y + (end.y - start.y) * t + (Math.random() - 0.5) * 30;
 
       ctx.lineTo(x, y);
     }

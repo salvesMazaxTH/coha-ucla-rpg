@@ -88,7 +88,7 @@
 
 ---
 
-## [2026-03-27] feat: Eryon (Eidolon) adicionado
+## [2026-03-27] feat: Eryon adicionado
 
 - New champion: Eryon — HP 330, Atk 95, Def 130, Spd 75. Support/utility role.
 - Passive: Ressonância Eryônica — acumula stacks ao longo da partida via hooks `onResourceGain`/`onResourceSpend` de aliados e inimigos.

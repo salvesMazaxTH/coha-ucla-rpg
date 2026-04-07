@@ -318,17 +318,7 @@ export function createCombatAnimationManager(deps) {
       await handleActionDialog(action);
     }
 
-    // Skill animation (only skills that have a registered animation)
-    if (action?.skillKey) {
-      const targetEl = action.targetId
-        ? getChampionElement(action.targetId)
-        : null;
-      const userEl = action.userId ? getChampionElement(action.userId) : null;
-
-      if (targetEl) scrollIfNeeded(targetEl, { threshold: 0.85 });
-
-      await animateSkill(action.skillKey, { targetEl, userEl });
-    }
+    // (Skill animation now handled per DamageEvent in animateDamage)
 
     /* console.log("[DEBUG] [JEFF REVIVAL DIALOG] CLIENT RECEIVED ENVELOPE:", envelope); */
 
@@ -363,10 +353,19 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
-    const { targetId, amount, isCritical, isDot, obliterate } = effect;
+    const {
+      targetId,
+      userId,
+      amount,
+      isCritical,
+      isDot,
+      obliterate,
+      skillKey,
+    } = effect;
 
     const champion = deps.activeChampions.get(targetId);
     const championEl = getChampionElement(targetId);
+    const userEl = userId ? getChampionElement(userId) : null;
 
     if (!championEl) return Promise.resolve();
 
@@ -375,6 +374,11 @@ export function createCombatAnimationManager(deps) {
 
     if (actualPortrait) {
       scrollIfNeeded(actualPortrait, { threshold: 0.85 });
+    }
+
+    // 🔥 Skill animation (if registered) — now per DamageEvent
+    if (skillKey) {
+      await animateSkill(skillKey, { targetEl: championEl, userEl });
     }
 
     // ========================
