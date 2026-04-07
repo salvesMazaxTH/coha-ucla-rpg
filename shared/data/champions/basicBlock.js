@@ -12,6 +12,20 @@ const basicBlock = {
   targetSpec: ["self"],
   resolve({ user, context = {} }) {
     user.runtime.hookEffects ??= [];
+    user.runtime.basicBlockStreak ??= 0;
+
+    // Progressão geométrica base 2: 100%, 50%, 25%, 12.5%, ...
+    const chance = 1 / Math.pow(2, user.runtime.basicBlockStreak);
+    const success = Math.random() < chance;
+
+    if (!success) {
+      user.runtime.basicBlockStreak = 0;
+      return {
+        message: `${formatChampionName(user)} tentou usar Bloqueio Básico, mas falhou! (chance: ${(chance * 100).toFixed(1)}%)`,
+      };
+    }
+
+    user.runtime.basicBlockStreak += 1;
 
     const effect = {
       key: "bloqueio_basico_effect",
@@ -30,7 +44,8 @@ const basicBlock = {
         user.runtime.hookEffects = user.runtime.hookEffects.filter(
           (e) => e.key !== "bloqueio_basico_effect",
         );
-
+        // Reset streak ao tomar dano (ou seja, ao usar outra ação)
+        user.runtime.basicBlockStreak = 0;
         return {
           cancel: true,
           immune: true,
@@ -40,7 +55,6 @@ const basicBlock = {
 
       onStatusEffectIncoming({ target, statusEffect }) {
         if (statusEffect.type !== "debuff") return;
-
         return {
           cancel: true,
           message: `${formatChampionName(target)} bloqueou um efeito negativo com Bloqueio Básico!`,
@@ -59,7 +73,7 @@ const basicBlock = {
     user.runtime.hookEffects.push(effect);
 
     return {
-      message: `${formatChampionName(user)} usou Bloqueio Básico e está protegido contra o próximo ataque!`,
+      message: `${formatChampionName(user)} usou Bloqueio Básico e está protegido contra o próximo ataque! (chance: ${(chance * 100).toFixed(1)}%)`,
     };
   },
 };
