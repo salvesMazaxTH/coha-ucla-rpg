@@ -45,7 +45,7 @@ const editMode = {
 
 const TEAM_SIZE = 3;
 const ACTIVE_PER_TEAM = 3; // máximo de campeões simultâneos em campo por time
-const MAX_SCORE = 3; // primeiro a derrotar 3 campeões inimigos
+// const MAX_SCORE = 3; // score system disabled — win condition is now champion-presence-based
 const CHAMPION_SELECTION_TIME = 120; // Segundos para seleção de campeões
 const DISCONNECT_TIMEOUT = 30 * 1000; // 30 s para reconexão
 
@@ -343,14 +343,14 @@ function emitChampionDeath(deathResult) {
   });
 
   if (deathResult.scored) {
-    io.emit("scoreUpdate", match.getScorePayload());
-    io.emit(
-      "combatLog",
-      `${formatPlayerName(
-        match.players[deathResult.scoringPlayerSlot]?.username,
-        deathResult.scoringTeam,
-      )} marcou um ponto!`,
-    );
+    // io.emit("scoreUpdate", match.getScorePayload()); // score system disabled
+    // io.emit(
+    //   "combatLog",
+    //   `${formatPlayerName(
+    //     match.players[deathResult.scoringPlayerSlot]?.username,
+    //     deathResult.scoringTeam,
+    //   )} marcou um ponto!`,
+    // );
   }
 
   // Garantimos que o estado do campeão morto (com runtime atualizado) seja enviado
@@ -669,7 +669,8 @@ function handleEndTurn() {
   }
 
   if (match.isGameEnded()) {
-    const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
+    // const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1; // score system disabled
+    const winnerSlot = match.combat.computeWinnerSlot(); // team that still has real champions wins
     const winnerTeam = winnerSlot + 1;
     const winnerName = match.players[winnerSlot]?.username;
     io.emit("gameOver", { winnerTeam, winnerName });
@@ -1121,7 +1122,7 @@ io.on("connection", (socket) => {
     // initReserveQueue(match.players[0]);
     // initReserveQueue(match.players[1]);
 
-    io.emit("scoreUpdate", match.getScorePayload());
+    // io.emit("scoreUpdate", match.getScorePayload()); // score system disabled
     io.emit("gameStateUpdate", getGameState());
 
     // emitBackChampionUpdate(match.players[0].team);
@@ -1276,13 +1277,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const deathResult = match.removeChampionFromGame(championId, MAX_SCORE);
+    const deathResult = match.removeChampionFromGame(championId);
     emitChampionDeath(deathResult);
 
     // Sistema de reserva/switch desativado.
 
     if (match.isGameEnded()) {
-      const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1;
+      // const winnerSlot = match.combat.playerScores[0] >= MAX_SCORE ? 0 : 1; // score system disabled
+      const winnerSlot = match.combat.computeWinnerSlot(); // team that still has real champions wins
       const winnerTeam = winnerSlot + 1;
       const winnerName = match.players[winnerSlot]?.username;
       io.emit("gameOver", { winnerTeam, winnerName });
@@ -1440,8 +1442,9 @@ io.on("connection", (socket) => {
     const winnerSlot = winnerTeam - 1;
     const winnerName = match.players[winnerSlot]?.username;
 
-    match.setWinnerScore(winnerSlot, MAX_SCORE);
-    io.emit("scoreUpdate", match.getScorePayload());
+    // match.setWinnerScore(winnerSlot, MAX_SCORE); // score system disabled
+    match.combat.gameEnded = true; // mark game as ended on surrender
+    // io.emit("scoreUpdate", match.getScorePayload()); // score system disabled
 
     io.emit("gameOver", {
       winnerTeam,

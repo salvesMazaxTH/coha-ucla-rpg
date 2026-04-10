@@ -81,7 +81,7 @@ class CombatState {
     this.pendingActions = [];
     this.activeChampions = new Map();
     this.deadChampions = new Map();
-    this.playerScores = [0, 0];
+    // this.playerScores = [0, 0]; // score system disabled — win condition is champion-presence-based
     this.gameEnded = false;
     this.started = false;
     this.playersReadyToEndTurn = new Set();
@@ -100,7 +100,7 @@ class CombatState {
     this.finishedAnimationSockets.clear();
     this.turnHistory.clear();
     this.scheduledEffects = [];
-    this.playerScores = [0, 0];
+    // this.playerScores = [0, 0]; // score system disabled — win condition is champion-presence-based
     this.gameEnded = false;
     // this.reserveQueues = new Map();
     // this.benchedChampions = new Map();
@@ -267,47 +267,41 @@ class CombatState {
     });
     this.ensureTurnEntry().championsDeadThisTurn.push(championId);
 
-    // Atualizar placar se for campeão (tokens não pontuam)
-    let scoringTeam = null;
-    let scoringPlayerSlot = null;
-    let scored = false;
-    const isToken = champion.entityType === "token";
-
-    console.log(
-      `[removeChampionFromGame] ${champion.name} morreu | entityType=${champion.entityType ?? "champion"} | isToken=${isToken}`,
-    );
-
-    if (!isToken) {
-      scoringTeam = champion.team === 1 ? 2 : 1;
-      scoringPlayerSlot = scoringTeam - 1;
-
-      if (!this.gameEnded) {
-        this.addPointForSlot(scoringPlayerSlot, maxScore);
-        scored = true;
-        console.log(
-          `[removeChampionFromGame] Ponto para time ${scoringTeam} (slot ${scoringPlayerSlot}) | placar: ${JSON.stringify(this.getScorePayload())}`,
-        );
-      } else {
-        console.log(
-          `[removeChampionFromGame] Jogo já encerrado — ponto não contabilizado.`,
-        );
-      }
-    } else {
-      console.log(
-        `[removeChampionFromGame] Token não pontua — scoring ignorado.`,
-      );
-    }
+    // Score system disabled — win condition is now champion-presence-based.
+    // const isToken = champion.entityType === "token";
+    // let scoringTeam = null;
+    // let scoringPlayerSlot = null;
+    // let scored = false;
+    // if (!isToken) {
+    //   scoringTeam = champion.team === 1 ? 2 : 1;
+    //   scoringPlayerSlot = scoringTeam - 1;
+    //   if (!this.gameEnded) {
+    //     this.addPointForSlot(scoringPlayerSlot, maxScore);
+    //     scored = true;
+    //   }
+    // }
 
     // Mover para deadChampions
     this.removeChampion(championId);
+
+    // Nova condição de vitória: um jogador perde quando não restar nenhum campeão
+    // "real" (entityType ausente ou === "champion") em seu time.
+    // Tokens e demais entityTypes não contam para manter o jogador em campo.
+    const isRealChampion = (c) => !c.entityType || c.entityType === "champion";
+    if (!this.gameEnded && !this.getAliveChampionsForTeam(champion.team).some(isRealChampion)) {
+      this.gameEnded = true;
+      console.log(
+        `[removeChampionFromGame] Time ${champion.team} não tem mais campeões reais — jogo encerrado.`,
+      );
+    }
 
     return {
       championId,
       championName: champion.name,
       team: champion.team,
-      scoringTeam,
-      scoringPlayerSlot,
-      scored,
+      // scoringTeam, // score system disabled
+      // scoringPlayerSlot, // score system disabled
+      // scored, // score system disabled
       gameEnded: this.gameEnded,
     };
   }
@@ -329,23 +323,39 @@ class CombatState {
     this.playersReadyToEndTurn.clear();
   }
 
-  addPointForSlot(slot, maxScore = 3) {
-    this.playerScores[slot] += 1;
-    if (this.playerScores[slot] >= maxScore) {
-      this.gameEnded = true;
+  // addPointForSlot(slot, maxScore = 3) { // score system disabled
+  //   this.playerScores[slot] += 1;
+  //   if (this.playerScores[slot] >= maxScore) {
+  //     this.gameEnded = true;
+  //   }
+  // }
+
+  // setWinnerScore(slot, maxScore = 3) { // score system disabled
+  //   this.playerScores[slot] = maxScore;
+  //   this.gameEnded = true;
+  // }
+
+  // getScorePayload() { // score system disabled
+  //   return {
+  //     player1: this.playerScores[0],
+  //     player2: this.playerScores[1],
+  //   };
+  // }
+
+  /**
+   * Returns the slot (0 or 1) of the team that still has real champions
+   * (entityType absent or === "champion"). Tokens/other entity types don't count.
+   * Used after gameEnded = true to identify the winner.
+   * Returns null if neither team qualifies (shouldn't happen in normal play).
+   */
+  computeWinnerSlot() {
+    const isRealChampion = (c) => !c.entityType || c.entityType === "champion";
+    for (let team = 1; team <= 2; team++) {
+      if (this.getAliveChampionsForTeam(team).some(isRealChampion)) {
+        return team - 1;
+      }
     }
-  }
-
-  setWinnerScore(slot, maxScore = 3) {
-    this.playerScores[slot] = maxScore;
-    this.gameEnded = true;
-  }
-
-  getScorePayload() {
-    return {
-      player1: this.playerScores[0],
-      player2: this.playerScores[1],
-    };
+    return null;
   }
 }
 
@@ -478,16 +488,20 @@ export class GameMatch {
     return this.combat.gameEnded;
   }
 
-  addPointForSlot(slot, maxScore = 3) {
-    this.combat.addPointForSlot(slot, maxScore);
-  }
+  // addPointForSlot(slot, maxScore = 3) { // score system disabled
+  //   this.combat.addPointForSlot(slot, maxScore);
+  // }
 
-  setWinnerScore(slot, maxScore = 3) {
-    this.combat.setWinnerScore(slot, maxScore);
-  }
+  // setWinnerScore(slot, maxScore = 3) { // score system disabled
+  //   this.combat.setWinnerScore(slot, maxScore);
+  // }
 
-  getScorePayload() {
-    return this.combat.getScorePayload();
+  // getScorePayload() { // score system disabled
+  //   return this.combat.getScorePayload();
+  // }
+
+  computeWinnerSlot() {
+    return this.combat.computeWinnerSlot();
   }
 
   clearActions() {

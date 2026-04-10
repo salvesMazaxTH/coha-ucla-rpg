@@ -1,3 +1,14 @@
+## [2026-04-10] Refactor: Score system disabled; win condition now champion-presence-based
+
+- `playerScores` array commented out (`CombatState.reset/resetProgress`); score methods (`addPointForSlot`, `setWinnerScore`, `getScorePayload`) commented out
+- New win condition: game ends when a team's `activeChampions` has no entity where `!entityType || entityType === "champion"` — tokens and custom entityTypes do not count toward keeping a player alive
+- `computeWinnerSlot()` added to `CombatState` (and delegated in `GameMatch`): uses existing `getAliveChampionsForTeam()`, returns slot of surviving team
+- server.js: `MAX_SCORE` commented out; `scoreUpdate` emits, `setWinnerScore` calls, and score-based winner determination replaced with `computeWinnerSlot()`; surrender handler sets `gameEnded = true` directly
+- Frontend untouched — `scoreUpdate` events simply no longer fire
+- Patch: shared/engine/match/GameMatch.js, src/server.js
+
+---
+
 ## [2026-04-06] Fix: Kai gancho_rapido animation always targets middle champion
 
 - Root cause: `camera.updateMatrixWorld()` was never called after setting `camera.position.z = 15` — `Raycaster.setFromCamera()` used a stale identity matrix, so `screenToWorld()` always returned `(0,0,0)` (world center) regardless of the target element's actual screen position
