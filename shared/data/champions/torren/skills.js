@@ -18,7 +18,7 @@ const torrenSkills = [
     damageMode: "standard",
     priority: 0,
     description() {
-      return `Causa dano ao inimigo escolhido e atordoa os adjacentes.`;
+      return `Causa dano ao inimigo escolhido e atordoa um inimigo adjacente aleatório.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
@@ -38,19 +38,21 @@ const torrenSkills = [
 
       if (!adjacentEnemies.length) return damageEvent;
 
-      // 🎯 Para cada adjacente, cria um resultado
-      for (const adjEnemy of adjacentEnemies) {
-        adjEnemy.applyStatusEffect("atordoado", 1, context, {
-          source: {
-            type: "skill",
-            skill: this,
-            champion: user,
-          },
-        });
-      }
+      // 🎯 Seleciona um inimigo adjacente aleatório
+      const randomAdjEnemy =
+        adjacentEnemies[Math.floor(Math.random() * adjacentEnemies.length)];
+      randomAdjEnemy.applyStatusEffect("atordoado", 1, context, {
+        source: {
+          type: "skill",
+          skill: this,
+          champion: user,
+        },
+      });
+
       return damageEvent;
     },
   },
+
   {
     key: "desprezar_os_fracos",
     name: "Desprezar os Fracos",
