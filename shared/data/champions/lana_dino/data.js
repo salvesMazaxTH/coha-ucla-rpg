@@ -6,6 +6,6 @@ export default {
   Defense: 95,
   Speed: 45,
 
-  // Token: entra no jogo via efeito, não por seleção.
-  entityType: "token",
+  // Minion: entra no jogo via efeito, não por seleção.
+  entityType: "minion",
 };

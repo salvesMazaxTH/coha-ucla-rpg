@@ -294,11 +294,11 @@ class CombatState {
     this.ensureTurnEntry().championsDeadThisTurn.push(championId);
 
     // Score system disabled — win condition is now champion-presence-based.
-    // const isToken = champion.entityType === "token";
+    // const isMinion = champion.entityType === "minion";
     // let scoringTeam = null;
     // let scoringPlayerSlot = null;
     // let scored = false;
-    // if (!isToken) {
+    // if (!isMinion) {
     //   scoringTeam = champion.team === 1 ? 2 : 1;
     //   scoringPlayerSlot = scoringTeam - 1;
     //   if (!this.gameEnded) {
@@ -312,7 +312,7 @@ class CombatState {
 
     // Nova condição de vitória: um jogador perde quando não restar nenhum campeão
     // "real" (entityType ausente ou === "champion") em seu time.
-    // Tokens e demais entityTypes não contam para manter o jogador em campo.
+    // Minions e demais entityTypes não contam para manter o jogador em campo.
     const isRealChampion = (c) => !c.entityType || c.entityType === "champion";
     if (
       !this.gameEnded &&
@@ -373,7 +373,7 @@ class CombatState {
 
   /**
    * Returns the slot (0 or 1) of the team that still has real champions
-   * (entityType absent or === "champion"). Tokens/other entity types don't count.
+   * (entityType absent or === "champion"). Minions/other entity types don't count.
    * Used after gameEnded = true to identify the winner.
    * Returns null if neither team qualifies (shouldn't happen in normal play).
    */

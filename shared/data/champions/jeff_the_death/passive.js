@@ -1,11 +1,52 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
+function restoreRevivedState(champion, reviveFrom) {
+  if (!reviveFrom) return;
+
+  champion.runtime = { ...reviveFrom.runtime };
+  delete champion.runtime.currentContext;
+
+  champion.maxHP = reviveFrom.maxHP;
+  champion.Attack = reviveFrom.Attack;
+  champion.Defense = reviveFrom.Defense;
+  champion.Speed = reviveFrom.Speed;
+  champion.Evasion = reviveFrom.Evasion;
+  champion.Critical = reviveFrom.Critical;
+  champion.LifeSteal = reviveFrom.LifeSteal;
+  champion.ultMeter = reviveFrom.ultMeter;
+
+  champion.statModifiers = Array.isArray(reviveFrom.statModifiers)
+    ? reviveFrom.statModifiers.map((modifier) => ({ ...modifier }))
+    : [];
+
+  champion.damageModifiers = Array.isArray(reviveFrom.damageModifiers)
+    ? reviveFrom.damageModifiers.map((modifier) => ({ ...modifier }))
+    : [];
+
+  champion.damageReductionModifiers = Array.isArray(
+    reviveFrom.damageReductionModifiers,
+  )
+    ? reviveFrom.damageReductionModifiers.map((modifier) => ({ ...modifier }))
+    : [];
+
+  champion.tauntEffects = Array.isArray(reviveFrom.tauntEffects)
+    ? reviveFrom.tauntEffects.map((effect) => ({ ...effect }))
+    : [];
+
+  if (reviveFrom.statusEffects instanceof Map) {
+    champion.statusEffects = new Map();
+    for (const [key, value] of reviveFrom.statusEffects.entries()) {
+      champion.statusEffects.set(key, { ...value });
+    }
+  }
+}
+
 export default {
   key: "a_morte_não_cessa",
   name: "A Morte Não Cessa",
 
   description(champion) {
-    return `Quando Jeff for derrotado, ele volta ao campo de batalha com 75% de sua vida máxima e os atributos base no início do próximo turno. Sempre que um personagem morrer, Jeff ganha um buff permanente de 30% de ataque e 30% de defesa.
+    return `Quando Jeff for derrotado, ele volta ao campo de batalha no início do próximo turno com 75% de sua vida máxima e mantendo os buffs e stacks que já acumulou. Sempre que um personagem morrer, Jeff ganha um buff permanente de 30% de ataque e 30% de defesa.
     
     <b>Contador de mortes de Jeff:</b> ${champion.runtime.deathCounter ?? 0}`;
   },
@@ -35,33 +76,10 @@ export default {
         combatSlot: defender.combatSlot, // Garante o mesmo slot
         reviveFrom: defender, // Passa referência do Jeff antigo
         onSpawn: (champion, context, reviveFrom) => {
-          // Copia todos os dados relevantes do Jeff antigo para o novo
-          if (reviveFrom) {
-            // runtime (deep clone exceto currentContext)
-            champion.runtime = { ...reviveFrom.runtime };
-            delete champion.runtime.currentContext;
-            // statModifiers
-            champion.statModifiers = reviveFrom.statModifiers
-              ? reviveFrom.statModifiers.map((m) => ({ ...m }))
-              : [];
-            // damageModifiers
-            champion.damageModifiers = reviveFrom.damageModifiers
-              ? reviveFrom.damageModifiers.map((m) => ({ ...m }))
-              : [];
-            // damageReductionModifiers
-            champion.damageReductionModifiers =
-              reviveFrom.damageReductionModifiers
-                ? reviveFrom.damageReductionModifiers.map((m) => ({ ...m }))
-                : [];
-            // statusEffects (Map deep copy)
-            if (reviveFrom.statusEffects instanceof Map) {
-              champion.statusEffects = new Map();
-              for (const [k, v] of reviveFrom.statusEffects.entries()) {
-                champion.statusEffects.set(k, { ...v });
-              }
-            }
-          }
+          restoreRevivedState(champion, reviveFrom);
+
           champion.HP = Math.floor(champion.maxHP * 0.75);
+
           // buff pela própria morte, já que onChampionDeath é pulado quando Jeff morre
           const buffsPerDeath = [
             { stat: "Attack", amount: 30, isPercent: true },

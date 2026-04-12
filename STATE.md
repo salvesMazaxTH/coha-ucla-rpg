@@ -1,3 +1,12 @@
+## [2026-04-12] Fix: Jeff revive agora preserva buffs/stacks acumulados
+
+- Root cause: a passiva copiava `runtime` e arrays de modifiers do Jeff antigo, mas o novo Jeff nascia com `Attack`, `Defense`, `maxHP` e demais stats recriados a partir do baseData. Isso deixava os `statModifiers` preservados, porém desacoplados dos atributos efetivos.
+- Fix: o revive agora restaura também os stats materializados (`maxHP`, `Attack`, `Defense`, `Speed`, `Evasion`, `Critical`, `LifeSteal`, `ultMeter`) junto com os modifiers e efeitos já copiados.
+- Ajuste adicional: descrição de `A Morte Não Cessa` atualizada para refletir que Jeff retorna mantendo buffs e stacks acumulados.
+- Patches: `shared/data/champions/jeff_the_death/passive.js`, `.planning/quick/260412-kcw-qnd-o-jeff-morre-e-revive-ele-perde-todo/`
+
+---
+
 ## [2026-04-12] Fix/Refactor: Lana <-> Tutu swap/restore via inactiveChampions
 
 - Arquitetura de substituição reestruturada para não reutilizar a mesma instância:
