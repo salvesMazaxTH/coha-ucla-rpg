@@ -62,7 +62,7 @@ const lanaSkills = [
     key: "surto_psiquico",
     name: "Surto Psíquico",
 
-    bf: 120,
+    bf: 110,
     damageMode: "standard",
     contact: false,
     isUltimate: true,
@@ -79,14 +79,25 @@ const lanaSkills = [
         (champion) => champion.team !== user.team && champion.alive,
       );
 
-      const baseDamage = (user.Attack * this.bf) / 100;
+      const missingHP = user.maxHP - user.HP;
+      const baseDamage =
+        ((user.Attack * this.bf) / 100) * (1.5 + missingHP / 1000); // +1.5% de dano para cada 10% de HP perdido
 
       const results = [];
 
       // Aplicar dano em cada inimigo
       for (const enemy of enemies) {
-        // ...
+        const damageResult = new DamageEvent({
+          baseDamage,
+          attacker: user,
+          defender: enemy,
+          skill: this,
+          context,
+          allChampions: context?.allChampions,
+        }).execute();
+        results.push(damageResult);
       }
+      return results;
     },
   },
 ];

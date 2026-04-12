@@ -15,13 +15,30 @@ const basicBlock = {
     user.runtime.basicBlockStreak ??= 0;
 
     // Progressão geométrica base 2: 100%, 50%, 25%, 12.5%, ...
-    const chance = 1 / Math.pow(2, user.runtime.basicBlockStreak);
-    const success = Math.random() < chance;
+    console.log(
+      `[basicBlock debug] ${formatChampionName(user)} tem uma streak atual de ${user.runtime.basicBlockStreak}.`,
+    );
+    const streak = user.runtime.basicBlockStreak;
+    const chance = 1 / Math.pow(2, streak);
+    const roll = Math.random();
+    console.log(
+      `[basicBlock debug] streak: ${streak}, chance: ${(chance * 100).toFixed(1)}%, roll: ${roll}`,
+    );
+    const success = roll < chance;
 
     if (!success) {
       user.runtime.basicBlockStreak = 0;
+
+      const failMessage = `${formatChampionName(user)} tentou usar <b>Bloqueio Básico</b>, mas falhou.`;
+
+      context.registerDialog?.({
+        message: failMessage,
+        sourceId: user.id,
+        targetId: user.id,
+      });
+
       return {
-        message: `${formatChampionName(user)} tentou usar Bloqueio Básico, mas falhou! (chance: ${(chance * 100).toFixed(1)}%)`,
+        log: failMessage,
       };
     }
 
@@ -44,8 +61,6 @@ const basicBlock = {
         user.runtime.hookEffects = user.runtime.hookEffects.filter(
           (e) => e.key !== "bloqueio_basico_effect",
         );
-        // Reset streak ao tomar dano (ou seja, ao usar outra ação)
-        user.runtime.basicBlockStreak = 0;
         return {
           cancel: true,
           immune: true,
@@ -57,7 +72,7 @@ const basicBlock = {
         if (statusEffect.type !== "debuff") return;
         return {
           cancel: true,
-          message: `${formatChampionName(target)} bloqueou um efeito negativo com Bloqueio Básico!`,
+          message: `${formatChampionName(target)} bloqueou um efeito negativo com <b>Bloqueio Básico</b>!`,
         };
       },
 
@@ -68,12 +83,22 @@ const basicBlock = {
           );
         }
       },
+
+      onTurnEnd({ owner, context }) {
+        if (context.currentTurn !== owner.runtime.lastBasicBlockTurn) {
+          owner.runtime.basicBlockStreak = 0;
+          console.log(
+            `[basicBlock debug] ${owner.name} não usou Bloqueio Básico neste turno. Basic Block Streak resetada.`,
+          );
+        }
+      },
     };
 
     user.runtime.hookEffects.push(effect);
+    user.runtime.lastBasicBlockTurn = context.currentTurn;
 
     return {
-      message: `${formatChampionName(user)} usou Bloqueio Básico e está protegido contra o próximo ataque! (chance: ${(chance * 100).toFixed(1)}%)`,
+      message: `${formatChampionName(user)} usou <b>Bloqueio Básico</b> e está protegido contra o próximo ataque!`,
     };
   },
 };

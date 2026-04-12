@@ -38,7 +38,7 @@
 
 ## 1. Visão Geral
 
-**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de **3 campeões** cada, e alternam turnos usando habilidades até que um time tenha **3 campeões eliminados** (primeiro a 3 pontos vence).
+**Champion Arena** é um jogo de arena turn-based multiplayer 1v1, jogado no browser. Dois jogadores se conectam via Socket.IO, selecionam equipes de **3 campeões** cada, e alternam turnos usando habilidades até que um time não tenha mais nenhum campeão real em campo (tokens e entidades especiais não contam).
 
 ### Formato de Equipe (estado operacional atual)
 
@@ -267,9 +267,9 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 
 - Se HP chega a 0 dentro de `applyDamage`, `target.alive = false`.
 - Mortes são processadas pelo `TurnResolver.processChampionDeaths()` apenas **após todas as ações do turno** serem resolvidas.
-- Para cada morte: `match.removeChampionFromGame(championId, MAX_SCORE)`, que registra no histórico, pontua para o adversário, move para `deadChampions`.
+- Para cada morte: `match.removeChampionFromGame(championId)`, que registra no histórico e move para `deadChampions`.
 - Não há substituição automática por reserva no modo atual.
-- Se algum time atingiu `MAX_SCORE = 3`, emite `gameOver`. Caso contrário, o jogo continua.
+- Se um time ficar **sem nenhum campeão real** (`!entityType` ou `entityType === "champion"`) em `activeChampions`, o jogo termina imediatamente com vitória do adversário. Tokens e entidades especiais não contam para manter o jogador vivo.
 
 ### 4.6 Fim de Jogo
 
@@ -500,7 +500,7 @@ combat.pendingActions; // Action[] — ações enfileiradas no turno corrente
 combat.activeChampions; // Map<id, Champion> — campeões ativos em campo
 combat.deadChampions; // Map<id, Champion> — campeões eliminados
 // combat.benchedChampions; // desativado no modo atual
-combat.playerScores; // [number, number] — pontos por slot
+// combat.playerScores; // removido — sistema de pontos desativado
 combat.gameEnded; // boolean
 combat.started; // boolean
 combat.playersReadyToEndTurn; // Set<slot>
@@ -527,6 +527,7 @@ combat.getAliveChampionsForTeam(team) // → Champion[]
 combat.registerChampion(champion, { trackSnapshot? })
 combat.removeChampion(championId)     // → Champion | null
 combat.removeChampionFromGame(championId, maxScore) // Morte com scoring + histórico
+combat.removeChampionFromGame(championId) // Morte com checagem de fim de jogo baseada em campeões reais
 combat.getChampion(championId)        // Busca em active + dead
 combat.getAliveChampions()            // → Champion[] vivos
 
@@ -586,9 +587,7 @@ match.getFinishedAnimationCount();
 **Placar**
 
 ```js
-match.addPointForSlot(slot, (maxScore = 3));
-match.setWinnerScore(slot, (maxScore = 3));
-match.getScorePayload(); // → { player1, player2 }
+// Sistema de pontos removido: não há mais addPointForSlot, setWinnerScore ou getScorePayload
 match.isGameEnded();
 ```
 

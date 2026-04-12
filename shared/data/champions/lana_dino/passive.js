@@ -14,7 +14,7 @@ export default {
     // se ainda estiver vivo, não faz nada
     if (owner.HP > 0) return;
 
-    const lanaOriginalId = owner.runtime.lana?.originalId;
+    const lanaOriginalId = owner.runtime.swappedFrom;
 
     if (!lanaOriginalId) {
       // Sem ID original armazenado (situação anormal — Lana nunca foi swapped out)

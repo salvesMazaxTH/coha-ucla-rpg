@@ -1,3 +1,23 @@
+## [2026-04-12] Fix/Refactor: Lana <-> Tutu swap/restore via inactiveChampions
+
+- Arquitetura de substituição reestruturada para não reutilizar a mesma instância:
+  - `swap`: campeão original sai de `activeChampions` e vai para `inactiveChampions` com estado completo preservado
+  - `restore`: campeão original volta de `inactiveChampions` para `activeChampions`
+- `replaceChampion` no backend passou a operar em dois modos explícitos (`swap`/`restore`) e ganhou logs de depuração padronizados com prefixo `[REPLACE DEBUG]`
+- Correção crítica: no `swap`, o novo campeão criado (ex: Tutu) agora é registrado em `match.combat.activeChampions`; antes era criado mas não entrava no estado autoritativo, causando "slot vazio" no frontend
+- Frontend (`processGameStateUpdate`) atualizado para o novo modelo de IDs distintos:
+  - sincroniza/cria campeões por snapshot
+  - remove do DOM campeões que não existem mais no `gameState` (swapped out)
+  - mantém bloco de mismatch de `championKey` para futuras transformações de mesmo ID
+- Runtime de vínculo entre substituto e substituído generalizado:
+  - removido acoplamento específico `runtime.lana.originalId`
+  - novo campo genérico `runtime.swappedFrom` (ID do campeão substituído)
+  - passiva do `lana_dino` usa `runtime.swappedFrom` para solicitar `restore`
+- Resultado: fluxo Lana -> Tutu -> Lana passa a usar objetos independentes, com restauração limpa do original e sem lógica hardcoded de personagem no servidor
+- Patches: `src/server.js`, `shared/engine/match/GameMatch.js`, `shared/data/champions/lana/passive.js`, `shared/data/champions/lana_dino/passive.js`, `public/js/animation/animsAndLogManager.js`
+
+---
+
 ## [2026-04-10] Refactor: Score system disabled; win condition now champion-presence-based
 
 - `playerScores` array commented out (`CombatState.reset/resetProgress`); score methods (`addPointForSlot`, `setWinnerScore`, `getScorePayload`) commented out

@@ -1,4 +1,4 @@
-// ============================================================
+//============================================================
 //  OVERLAYS (DE SKILL, HOVER/TOUCH NOS BOTÕES DE SKILL, E DE CLIQUE NO PORTRAIT)
 // ============================================================
 
@@ -489,11 +489,36 @@ import { audioManager } from "./utils/AudioManager.js";
 //  SOCKET
 // ============================================================
 
+
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
 });
+
+// Restore player name display logic (without score)
+socket.on("playerNamesUpdate", (namesArray) => {
+  playerNames.clear();
+  namesArray.forEach(([slot, name]) => playerNames.set(parseInt(slot), name));
+  updatePlayerNamesUI();
+});
+
+function updatePlayerNamesUI() {
+  const player1NameDisplayEl = document.getElementById("player1-name-display");
+  const player2NameDisplayEl = document.getElementById("player2-name-display");
+
+  const player1Name = playerNames.get(0);
+  const player2Name = playerNames.get(1);
+
+  if (player1NameDisplayEl) {
+    player1NameDisplayEl.textContent =
+      playerTeam === 1 ? "Você" : `Oponente (${player1Name || "Desconhecido"})`;
+  }
+  if (player2NameDisplayEl) {
+    player2NameDisplayEl.textContent =
+      playerTeam === 2 ? "Você" : `Oponente (${player2Name || "Desconhecido"})`;
+  }
+}
 
 // ============================================================
 //  CONFIGURAÇÃO (sobrescrita pelo servidor via "editModeUpdate")
@@ -906,41 +931,6 @@ window.addEventListener("beforeunload", function (e) {
 // ============================================================
 //  NOMES DOS JOGADORES & PLACAR
 // ============================================================
-
-socket.on("playerNamesUpdate", (namesArray) => {
-  playerNames.clear();
-  namesArray.forEach(([slot, name]) => playerNames.set(parseInt(slot), name));
-  updatePlayerNamesUI();
-});
-
-function updatePlayerNamesUI() {
-  const player1NameDisplayEl = document.getElementById("player1-name-display");
-  const player2NameDisplayEl = document.getElementById("player2-name-display");
-  const scoreTeam1El = document.getElementById("score-team-1");
-  const scoreTeam2El = document.getElementById("score-team-2");
-
-  const player1Name = playerNames.get(0);
-  const player2Name = playerNames.get(1);
-
-  if (player1NameDisplayEl) {
-    player1NameDisplayEl.textContent =
-      playerTeam === 1 ? "Você" : `Oponente (${player1Name || "Desconhecido"})`;
-  }
-  if (player2NameDisplayEl) {
-    player2NameDisplayEl.textContent =
-      playerTeam === 2 ? "Você" : `Oponente (${player2Name || "Desconhecido"})`;
-  }
-
-  if (scoreTeam1El) scoreTeam1El.textContent = "0";
-  if (scoreTeam2El) scoreTeam2El.textContent = "0";
-}
-
-socket.on("scoreUpdate", ({ player1, player2 }) => {
-  const scoreTeam1El = document.getElementById("score-team-1");
-  const scoreTeam2El = document.getElementById("score-team-2");
-  if (scoreTeam1El) scoreTeam1El.textContent = player1;
-  if (scoreTeam2El) scoreTeam2El.textContent = player2;
-});
 
 // ============================================================
 //  SELEÇÃO DE CAMPEÕES

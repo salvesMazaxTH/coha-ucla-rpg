@@ -238,8 +238,6 @@ export function createCombatAnimationManager(deps) {
       normalized.includes("aguardando por você") ||
       normalized.includes("esperando pelo oponente") ||
       normalized.includes("confirmou o fim do turno") ||
-      normalized.includes("marcou um ponto") ||
-      normalized.includes("pontuou") ||
       normalized.includes("tentou agir") ||
       normalized.includes("ação pendente")
     );
@@ -1214,19 +1212,34 @@ export function createCombatAnimationManager(deps) {
 
     if (!Array.isArray(champions)) return;
 
+    // Track which champion IDs are in the new gameState
+    const newChampionIds = new Set(
+      champions.map((c) => c?.id).filter((id) => id),
+    );
+
+    // 1. SYNC EXISTING CHAMPIONS E CRIAR NOVOS
+    // Com o novo sistema de swap (inactiveChampions), Lana e Tutu têm IDs diferentes,
+    // então nunca ocorre um "championKey mismatch" em um mesmo ID.
+    // O bloco else-if abaixo é reservado para FUTURAS TRANSFORMAÇÕES (e.g., Lana → Lana_Evolved)
+    // onde o MESMO objeto muda de tipo mas mantém o mesmo ID.
     for (const champData of champions) {
       if (!champData?.id) continue;
 
       let champion = deps.activeChampions.get(champData.id);
 
       if (!champion) {
+        // NOVO CAMPEÃO: criar a partir do snapshot do servidor
         champion = deps.createNewChampion(champData);
       } else if (
         champData.championKey &&
         champion.championKey &&
         champion.championKey !== champData.championKey
       ) {
-        // Champion was replaced (e.g. Lana → lana_dino) — destroy old and recreate
+        // TRANSFORMAÇÃO (futuro): mesmo ID, tipo mudou — destruir e recriar
+        // Ex: Lana (id=X) → Lana_Evolved (id=X)
+        console.log(
+          `[REPLACE DEBUG] Transformação detectada: ${champion.name} (id=${champData.id}) mudou de tipo ${champion.championKey} → ${champData.championKey}`,
+        );
         champion.destroy();
         deps.activeChampions.delete(champData.id);
         champion = deps.createNewChampion(champData);
@@ -1240,6 +1253,20 @@ export function createCombatAnimationManager(deps) {
       });
 
       syncChampionVFX(champion);
+    }
+
+    // 2. REMOVER CAMPEÕES QUE FORAM SWAPPED OUT
+    // Com o novo sistema (swap via inactiveChampions), campeões swapped-out desaparecem do gameState.
+    // Os seus objetos antigos no DOM devem ser destruídos.
+    // Ex: Lana swap para inactiveChampions → seu ID já não está no gameState → remover do frontend.
+    for (const [champId, champion] of deps.activeChampions) {
+      if (!newChampionIds.has(champId)) {
+        console.log(
+          `[REPLACE DEBUG] Removendo ${champion.name} (id=${champId}) da renderização — foi swapped out para inactiveChampions no servidor.`,
+        );
+        champion.destroy();
+        deps.activeChampions.delete(champId);
+      }
     }
 
     // Keep status indicator loop on only when needed
