@@ -14,11 +14,10 @@ export default {
     // se ainda estiver vivo, não faz nada
     if (owner.HP > 0) return;
 
-    const storedHP = owner.runtime.lana?.storedHP;
     const lanaOriginalId = owner.runtime.lana?.originalId;
 
-    if (!storedHP || !lanaOriginalId) {
-      // Lana não teve HP armazenado ou ID original (situação anormal)
+    if (!lanaOriginalId) {
+      // Sem ID original armazenado (situação anormal — Lana nunca foi swapped out)
       return;
     }
 
@@ -28,14 +27,13 @@ export default {
       );
 
     // Registra intenção de restore (Tutu → Lana)
+    // Estado completo de Lana (incluindo HP original) será restaurado automaticamente
     context.flags ??= {};
     context.flags.replaceRequests ??= [];
 
     context.flags.replaceRequests.push({
       mode: "restore",
       targetId: lanaOriginalId,
-      preserveOriginalId: lanaOriginalId,
-      overrideHP: storedHP,
     });
 
     return {
@@ -43,4 +41,3 @@ export default {
     };
   },
 };
-

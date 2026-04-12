@@ -132,60 +132,43 @@ function getRandomChampionKey(excludeKeys = []) {
  */
 /**
  * Substitui um campeão por outro mantendo o slot mas sem reusar IDs.
- * 
- * Modo "swap": targetId sai do jogo temporariamente (vai para inactiveChampions)
+ *
+ * Modo "swap": targetId sai do jogo temporariamente (vai para inactiveChampions com estado completo)
  *             newChampionKey é criado com ID novo em activeChampions
  * 
- * Modo "restore": targetId era o personagem "swapped out" (em preserveOriginalId)
- *                 e retorna de inactiveChampions de volta para activeChampions
- *                 newChampionKey é descartado neste modo (targetId é o ID original)
+ * Modo "restore": targetId era o personagem "swapped out" e retorna de inactiveChampions
+ *                 para activeChampions com estado completamente preservado (incluindo HP)
+ *                 newChampionKey é ignorado neste modo
  * 
- * @param {string}  targetId            – ID do champeão a substituir (ou a restaurar)
- * @param {string}  newChampionKey      – chave do novo campeão (ignorado em modo restore)
- * @param {boolean} preserveRuntime      – se preserva runtime do antigo para o novo
- * @param {number}  overrideHP           – HP específico para o novo campeão
- * @param {string}  mode                 – "swap" ou "restore"
- * @param {string}  [preserveOriginalId] – ID original a restaurar (usado em modo restore)
+ * @param {string}  targetId       – ID do campeão a substituir (ou a restaurar)
+ * @param {string}  newChampionKey – chave do novo campeão (ignorado em modo restore)
+ * @param {string}  mode           – "swap" ou "restore"
  */
-function replaceChampion({
-  targetId,
-  newChampionKey,
-  preserveRuntime,
-  overrideHP,
-  mode = "swap",
-  preserveOriginalId,
-}) {
+function replaceChampion({ targetId, newChampionKey, mode = "swap" }) {
   if (mode === "restore") {
     // Modo restore: trazer de volta um campeão que foi swapped out
-    const originalId = preserveOriginalId || targetId;
+    // Estado completo (HP, runtime, etc) é preservado automaticamente
     console.log(
-      `[replaceChampionDebug] RESTORE: trazendo ${originalId} de inactiveChampions...`,
+      `[replaceChampionDebug] RESTORE: trazendo ${targetId} de inactiveChampions...`,
     );
 
-    const restored = match.combat.restoreInactive(originalId);
+    const restored = match.combat.restoreInactive(targetId);
     if (!restored) {
       console.error(
-        `[replaceChampionDebug] ERRO: campeão ${originalId} não encontrado em inactiveChampions.`,
+        `[replaceChampionDebug] ERRO: campeão ${targetId} não encontrado em inactiveChampions.`,
       );
       return;
     }
 
-    if (overrideHP !== undefined) {
-      restored.HP = overrideHP;
-      console.log(
-        `[replaceChampionDebug] HP restaurado para ${restored.name}: ${restored.HP}`,
-      );
-    }
-
     console.log(
-      `[replaceChampionDebug] ${restored.name} restaurado de inactiveChampions (id=${restored.id}, slot=${restored.combatSlot}).`,
+      `[replaceChampionDebug] ${restored.name} restaurado de inactiveChampions (id=${restored.id}, slot=${restored.combatSlot}, HP=${restored.HP}).`,
     );
     return;
   }
 
   // Modo swap: trocar de campeão (padrão)
   console.log(
-    `[replaceChampionDebug] SWAP: targetId=${targetId}, newChampionKey="${newChampionKey}", preserveRuntime=${preserveRuntime}`,
+    `[replaceChampionDebug] SWAP: targetId=${targetId}, newChampionKey="${newChampionKey}"`,
   );
 
   const old = match.combat.getChampion(targetId);
@@ -200,10 +183,10 @@ function replaceChampion({
     `[replaceChampionDebug] Campeão encontrado: ${old.name} (team=${old.team}, slot=${old.combatSlot})`,
   );
 
-  // Guardar o campeão antigo em inactiveChampions
+  // Guardar o campeão antigo em inactiveChampions (estado completo preservado automaticamente)
   const swappedOut = match.combat.swapOut(targetId);
   console.log(
-    `[replaceChampionDebug] ${old.name} movido para inactiveChampions.`,
+    `[replaceChampionDebug] ${old.name} (HP=${old.HP}) movido para inactiveChampions.`,
   );
 
   const baseData = championDB[newChampionKey];
@@ -212,25 +195,11 @@ function replaceChampion({
       `[replaceChampionDebug] ERRO: "${newChampionKey}" não encontrado em championDB.`,
     );
 
-  // Criar novo campeão com ID novo (não reusar targetId)
+  // Criar novo campeão com ID novo (nunca reusar targetId)
   const newId = generateId(newChampionKey);
   const newChampion = Champion.fromBaseData(baseData, newId, old.team, {
     combatSlot: old.combatSlot,
   });
-
-  if (preserveRuntime) {
-    newChampion.runtime = { ...old.runtime };
-    console.log(
-      `[replaceChampionDebug] Runtime preservado de ${old.name} para ${newChampion.name}.`,
-    );
-  }
-
-  if (overrideHP !== undefined) {
-    newChampion.HP = overrideHP;
-  }
-
-  newChampion.championKey = newChampionKey;
-  match.combat.registerChampion(newChampion, { trackSnapshot: false });
   console.log(
     `[replaceChampionDebug] ${old.name} (id=${targetId}) substituído por ${newChampion.name} (id=${newId}, slot=${newChampion.combatSlot}).`,
   );

@@ -19,7 +19,6 @@ export default {
   onAfterDmgTaking({ owner, defender, context }) {
     owner.runtime.lana ??= {
       triggered: false,
-      storedHP: null,
       originalId: owner.id, // Guardar ID original de Lana antes de qualquer swap
     };
 
@@ -43,10 +42,9 @@ export default {
     }
 
     owner.runtime.lana.triggered = true;
-    owner.runtime.lana.storedHP = owner.HP;
 
     console.log(
-      `[replaceChampionDebug] Threshold atingido! storedHP=${owner.HP} | Registrando replaceRequest: targetId=${owner.id}, newChampionKey="lana_dino", mode="swap"`,
+      `[replaceChampionDebug] Threshold atingido! Registrando replaceRequest: targetId=${owner.id}, newChampionKey="lana_dino", mode="swap"`,
     );
 
     if (!context)
@@ -55,13 +53,13 @@ export default {
       );
 
     // Registra intenção de swap (Lana → Tutu)
+    // Estado completo de Lana será preservado em inactiveChampions
     context.flags ??= {};
     context.flags.replaceRequests ??= [];
 
     context.flags.replaceRequests.push({
       targetId: owner.id,
       newChampionKey: "lana_dino",
-      preserveRuntime: true,
       mode: "swap",
     });
 
