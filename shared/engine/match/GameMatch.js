@@ -81,6 +81,7 @@ class CombatState {
     this.pendingActions = [];
     this.activeChampions = new Map();
     this.deadChampions = new Map();
+    this.inactiveChampions = new Map(); // Champions swapped out but can return (e.g., Lana when Tutu enters field)
     // this.playerScores = [0, 0]; // score system disabled — win condition is champion-presence-based
     this.gameEnded = false;
     this.started = false;
@@ -90,7 +91,6 @@ class CombatState {
     this.turnHistory = new Map();
     this.scheduledEffects = [];
     // this.reserveQueues = new Map();
-    // this.benchedChampions = new Map();
   }
 
   resetProgress() {
@@ -103,7 +103,6 @@ class CombatState {
     // this.playerScores = [0, 0]; // score system disabled — win condition is champion-presence-based
     this.gameEnded = false;
     // this.reserveQueues = new Map();
-    // this.benchedChampions = new Map();
   }
 
   start() {
@@ -139,9 +138,36 @@ class CombatState {
   getChampion(championId) {
     return (
       this.activeChampions.get(championId) ||
+      this.inactiveChampions.get(championId) ||
       this.deadChampions.get(championId) ||
       null
     );
+  }
+
+  /**
+   * Move a champion from active to inactive (e.g., Lana swapping out for Tutu).
+   * Used when a player swaps out one champion for another while both remain "alive" in the match.
+   */
+  swapOut(championId) {
+    const champion = this.activeChampions.get(championId);
+    if (!champion) return null;
+
+    this.activeChampions.delete(championId);
+    this.inactiveChampions.set(championId, champion);
+    return champion;
+  }
+
+  /**
+   * Move a champion from inactive back to active (e.g., Lana returning when Tutu dies).
+   * Used to restore a previously swapped-out champion.
+   */
+  restoreInactive(championId) {
+    const champion = this.inactiveChampions.get(championId);
+    if (!champion) return null;
+
+    this.inactiveChampions.delete(championId);
+    this.activeChampions.set(championId, champion);
+    return champion;
   }
 
   getAliveChampions() {
@@ -288,7 +314,10 @@ class CombatState {
     // "real" (entityType ausente ou === "champion") em seu time.
     // Tokens e demais entityTypes não contam para manter o jogador em campo.
     const isRealChampion = (c) => !c.entityType || c.entityType === "champion";
-    if (!this.gameEnded && !this.getAliveChampionsForTeam(champion.team).some(isRealChampion)) {
+    if (
+      !this.gameEnded &&
+      !this.getAliveChampionsForTeam(champion.team).some(isRealChampion)
+    ) {
       this.gameEnded = true;
       console.log(
         `[removeChampionFromGame] Time ${champion.team} não tem mais campeões reais — jogo encerrado.`,

@@ -15,21 +15,26 @@ export default {
     if (owner.HP > 0) return;
 
     const storedHP = owner.runtime.lana?.storedHP;
-    if (!storedHP) return; // Lana não teve HP armazenado (morreu antes da substituição)
+    const lanaOriginalId = owner.runtime.lana?.originalId;
+
+    if (!storedHP || !lanaOriginalId) {
+      // Lana não teve HP armazenado ou ID original (situação anormal)
+      return;
+    }
 
     if (!context)
       throw new Error(
         `[instinto_selvagem] ERRO: context é undefined ao tentar registrar replaceRequest em ${owner.name}`,
       );
 
-    // NÃO executa, só registra intenção
+    // Registra intenção de restore (Tutu → Lana)
     context.flags ??= {};
     context.flags.replaceRequests ??= [];
 
     context.flags.replaceRequests.push({
-      targetId: owner.id,
-      newChampionKey: "lana",
-      preserveRuntime: true,
+      mode: "restore",
+      targetId: lanaOriginalId,
+      preserveOriginalId: lanaOriginalId,
       overrideHP: storedHP,
     });
 
@@ -38,3 +43,4 @@ export default {
     };
   },
 };
+

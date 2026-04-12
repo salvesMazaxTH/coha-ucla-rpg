@@ -20,6 +20,7 @@ export default {
     owner.runtime.lana ??= {
       triggered: false,
       storedHP: null,
+      originalId: owner.id, // Guardar ID original de Lana antes de qualquer swap
     };
 
     console.log(
@@ -45,7 +46,7 @@ export default {
     owner.runtime.lana.storedHP = owner.HP;
 
     console.log(
-      `[replaceChampionDebug] Threshold atingido! storedHP=${owner.HP} | Registrando replaceRequest: targetId=${owner.id}, newChampionKey="lana_dino", preserveRuntime=true`,
+      `[replaceChampionDebug] Threshold atingido! storedHP=${owner.HP} | Registrando replaceRequest: targetId=${owner.id}, newChampionKey="lana_dino", mode="swap"`,
     );
 
     if (!context)
@@ -53,7 +54,7 @@ export default {
         `[replaceChampionDebug] ERRO: context é undefined ao tentar registrar replaceRequest em ${owner.name}`,
       );
 
-    // NÃO executa, só registra intenção
+    // Registra intenção de swap (Lana → Tutu)
     context.flags ??= {};
     context.flags.replaceRequests ??= [];
 
@@ -61,10 +62,11 @@ export default {
       targetId: owner.id,
       newChampionKey: "lana_dino",
       preserveRuntime: true,
+      mode: "swap",
     });
 
     console.log(
-      `[replaceChampionDebug] replaceRequest registrado. Total na fila: ${context.flags.replaceRequests.length}`,
+      `[replaceChampionDebug] replaceRequest registrado (swap Lana→Tutu). Total na fila: ${context.flags.replaceRequests.length}`,
     );
 
     return {
