@@ -33,10 +33,6 @@ export default {
     // cura
     const healed = owner.heal(this.healPerHit, context);
 
-    /* console.log(
-      `[NAELYS] ${formatChampionName(owner)} foi curado em ${healed} HP e ganhou 1 stack de Maré (${owner.runtime.mareStacks}/${this.maxStacks}).`,
-    );
-    */
     if (healed <= 0) return;
 
     return {
@@ -45,26 +41,33 @@ export default {
   },
 
   onAfterHealing({ healTarget, healSrc, owner, amount, context }) {
-    // stack
     if (healSrc.id !== owner?.id) return;
-    // console.log("[NAELYS] Tentando aplicar stack de Maré...");
 
-    if (owner.runtime.mareStacks < this.maxStacks) {
-      owner.runtime.mareStacks++;
-      /* console.log(
-        `[NAELYS] ${owner} agora tem ${owner.runtime.mareStacks} stack(s) de Maré.`,
-      );
-      */
+    owner.runtime = owner.runtime || {};
+    owner.runtime.mareStacks = owner.runtime.mareStacks || 0;
+
+    if (owner.runtime.mareStacks >= this.maxStacks) return;
+
+    owner.runtime.mareStacks++;
+
+    // Adiciona o modifier UMA vez, no primeiro stack (igual Naelthos faz na ult)
+    const alreadyHas = owner
+      .getDamageModifiers()
+      .some((m) => m.id === "mare-stacks");
+
+    if (!alreadyHas) {
       owner.addDamageModifier({
-        id: `mare-stack-${owner.runtime.mareStacks}`,
+        id: "mare-stacks",
         name: "Maré",
         permanent: true,
-
-        apply: ({ baseDamage }) => {
-          return baseDamage + this.dmgPerStack;
+        apply: ({ baseDamage, attacker }) => {
+          const stacks = Math.min(
+            attacker.runtime?.mareStacks || 0,
+            this.maxStacks,
+          );
+          return baseDamage + stacks * this.dmgPerStack;
         },
       });
-      // console.log(`[NAELYS] damageMods: ${owner.getDamageModifiers()}`);
     }
   },
 };

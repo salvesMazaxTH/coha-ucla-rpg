@@ -1,4 +1,5 @@
 import { Champion } from "../shared/core/Champion.js";
+import { emitCombatEvent } from "../shared/engine/combat/combatEvents.js";
 import { championDB } from "../shared/data/championDB.js";
 
 function parseValue(raw) {
@@ -240,6 +241,20 @@ function createContext({ allChampions, turn }) {
     },
     registerHeal(entry) {
       this.heals.push(entry);
+
+      const sourceChamp =
+        this.activeChampions.get(entry?.sourceId) || entry?.target || null;
+
+      emitCombatEvent(
+        "onAfterHealing",
+        {
+          healSrc: sourceChamp,
+          healTarget: entry?.target || null,
+          amount: Number(entry?.amount) || 0,
+          context: this,
+        },
+        this.allChampions,
+      );
     },
     registerBuff(entry) {
       this.buffs.push(entry);
@@ -303,6 +318,33 @@ function runScenario(options, tag) {
 
   applyAssignments(attacker, options.attackerSet || []);
   applyAssignments(defender, options.defenderSet || []);
+
+  // Se for Naelys e mareStacks > 0, adiciona o damageModifier de Maré igual à passiva
+  if (
+    attacker.name === "Naelys" &&
+    attacker.runtime &&
+    typeof attacker.runtime.mareStacks === "number" &&
+    attacker.runtime.mareStacks > 0
+  ) {
+    const alreadyHas = attacker
+      .getDamageModifiers()
+      .some((m) => m.id === "mare-stacks");
+    if (!alreadyHas) {
+      const passive = attacker.passive;
+      attacker.addDamageModifier({
+        id: "mare-stacks",
+        name: "Maré",
+        permanent: true,
+        apply: ({ baseDamage, attacker: atk }) => {
+          const stacks = Math.min(
+            atk?.runtime?.mareStacks || 0,
+            passive?.maxStacks || 4,
+          );
+          return baseDamage + stacks * (passive?.dmgPerStack || 10);
+        },
+      });
+    }
+  }
 
   if (options.stacks != null) {
     attacker.runtime = attacker.runtime || {};
