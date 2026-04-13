@@ -33,9 +33,6 @@ const brunoSkills = [
     resolve({ user, targets, context = {} }) {
       const [target] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      // Garante que 30% exato do HP seja considerado low life (ex: 95/315)
-      const lowLifeThreshold = Math.ceil(target.maxHP * 0.3);
-      const isLowHP = target.HP <= lowLifeThreshold;
 
       const result = new DamageEvent({
         baseDamage,
@@ -44,7 +41,6 @@ const brunoSkills = [
         skill: this,
         context,
         allChampions: context?.allChampions,
-        ...(isLowHP ? { critOptions: { force: true } } : {}),
       }).execute();
 
       if (!result?.evaded && !result?.immune) {
@@ -76,8 +72,6 @@ const brunoSkills = [
     resolve({ user, targets, context = {} }) {
       const [target] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      const lowLifeThreshold = Math.ceil(target.maxHP * 0.3);
-      const isLowHP = target.HP <= lowLifeThreshold;
 
       return new DamageEvent({
         baseDamage,
@@ -86,7 +80,6 @@ const brunoSkills = [
         skill: this,
         context,
         allChampions: context?.allChampions,
-        ...(isLowHP ? { critOptions: { force: true } } : {}),
       }).execute();
     },
   },
@@ -115,8 +108,6 @@ const brunoSkills = [
     resolve({ user, targets, context = {} }) {
       const [target] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
-      const lowLifeThreshold = Math.ceil(target.maxHP * 0.3);
-      const isLowHP = target.HP <= lowLifeThreshold;
 
       const result = new DamageEvent({
         baseDamage,
@@ -125,7 +116,6 @@ const brunoSkills = [
         skill: this,
         context,
         allChampions: context?.allChampions,
-        ...(isLowHP ? { critOptions: { force: true } } : {}),
       }).execute();
 
       if (!result?.evaded && !result?.immune) {

@@ -3,8 +3,6 @@ export default {
   portrait: "/assets/portraits/sengoku_transformed.webp",
   selectable: false,
 
-  unreleased: true,
-
   HP: 420,
   Attack: 470,
   Defense: 230,

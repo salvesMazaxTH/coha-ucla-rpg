@@ -5,15 +5,43 @@ export default {
   key: "frio_absoluto",
   name: "Frio Absoluto",
   passiveDamage: 45,
-
-  description() {
-    return `Se o alvo tiver 30% do HP máximo ou menos, os ataques de Bruno sempre são um Acerto Crítico.
-
-    Quando um campeão inimigo for Congelado, Bruno causa ${this.passiveDamage} de dano absoluto a ele.`;
-  },
+  lowLifeThresholdRatio: 0.3,
+  forcedCritBonus: 55,
 
   hookScope: {
+    onBeforeDmgDealing: "attacker",
     onStatusEffectIncoming: undefined,
+  },
+
+  onBeforeDmgDealing({ attacker, owner, defender, crit, damage }) {
+    if (attacker !== owner) return;
+    if (!defender?.maxHP) return;
+
+    const lowLifeThreshold = Math.ceil(
+      defender.maxHP * this.lowLifeThresholdRatio,
+    );
+    const isLowHP = defender.HP <= lowLifeThreshold;
+
+    if (!isLowHP) return;
+
+    const bonus = Number(crit?.bonus || this.forcedCritBonus);
+    const critBonusFactor = bonus / 100;
+
+    return {
+      crit: {
+        ...(crit || {}),
+        didCrit: true,
+        forced: true,
+        disabled: false,
+        bonus,
+        critBonusFactor,
+        critExtra: damage * critBonusFactor,
+      },
+    };
+  },
+
+  description() {
+    return `Se o alvo tiver 30% do HP máximo ou menos, os ataques de Bruno sempre são um Acerto Crítico.\n\nQuando um campeão inimigo for Congelado, Bruno causa ${this.passiveDamage} de dano absoluto a ele.`;
   },
 
   onStatusEffectIncoming({ target, statusEffect, context, owner }) {

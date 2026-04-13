@@ -1,10 +1,26 @@
 import { emitCombatEvent } from "../combatEvents.js";
+import { composeDamage } from "./03_composeDamage.js";
 
 export function runBeforeHooks(event) {
   if (event.mode === event.constructor.Modes.ABSOLUTE) return;
 
+  const preHookCrit = _snapshotCrit(event.crit);
+  const basePreMitigationDamage = event.preMitigationDamage ?? event.damage;
+
   const deal = _applyBeforeDealingPassive(event);
   const take = _applyBeforeTakingPassive(event);
+
+  const critWasChanged =
+    deal.critChanged ||
+    take.critChanged ||
+    !_isSameCrit(preHookCrit, _snapshotCrit(event.crit));
+
+  if (critWasChanged) {
+    // Recompõe usando dano pré-mitigação para que mudança de crítico
+    // impacte defesa, mitigação e dano final da mesma forma do step 3.
+    event.damage = basePreMitigationDamage;
+    composeDamage(event);
+  }
 
   // Consolida logs e efeitos no estado da classe/contexto
   if (deal.logs.length) event.beforeLogs.push(...deal.logs);
@@ -57,7 +73,7 @@ function _processHook(event, eventName, payload) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
   }
   const results = emitCombatEvent(eventName, payload, event.allChampions) || [];
-  const summary = { logs: [] };
+  const summary = { logs: [], critChanged: false };
 
   for (const r of results) {
     if (!r) continue;
@@ -73,7 +89,10 @@ function _processHook(event, eventName, payload) {
       event.damage = r.damage;
       event.finalDamage = event.damage;
     }
-    if (r.crit !== undefined) event.crit = r.crit;
+    if (r.crit !== undefined) {
+      summary.critChanged = true;
+      event.crit = r.crit;
+    }
 
     // Consolidação de Logs e Effects (Uso de set de chaves para enxugar)
     ["log", "logs"].forEach((key) => {
@@ -84,4 +103,27 @@ function _processHook(event, eventName, payload) {
     });
   }
   return summary;
+}
+
+function _snapshotCrit(crit) {
+  if (!crit) return null;
+  return {
+    didCrit: !!crit.didCrit,
+    bonus: Number(crit.bonus ?? 0),
+    critExtra: Number(crit.critExtra ?? 0),
+    forced: !!crit.forced,
+    disabled: !!crit.disabled,
+  };
+}
+
+function _isSameCrit(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.didCrit === b.didCrit &&
+    a.bonus === b.bonus &&
+    a.critExtra === b.critExtra &&
+    a.forced === b.forced &&
+    a.disabled === b.disabled
+  );
 }

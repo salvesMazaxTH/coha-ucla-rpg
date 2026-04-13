@@ -10,14 +10,15 @@ export default {
     onBeforeDmgTaking: "defender",
   },
 
-  onBeforeDmgTaking({ attacker, defender, owner, crit, context, damage }) {
+  onBeforeDmgTaking({ crit }) {
     if (!crit.didCrit) return;
 
     return {
-      damage: damage / (1 + (crit.critBonusFactor ?? 0)),
       crit: {
         ...crit,
         didCrit: false,
+        bonus: 0,
+        forced: false,
         critExtra: 0,
       },
     };
