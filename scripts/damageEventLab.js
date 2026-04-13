@@ -1,18 +1,121 @@
 import { Champion } from "../shared/core/Champion.js";
 import { championDB } from "../shared/data/championDB.js";
 
+function parseValue(raw) {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  if (raw === "null") return null;
+
+  const asNumber = Number(raw);
+  if (!Number.isNaN(asNumber) && raw.trim() !== "") return asNumber;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function parseAssignment(raw) {
+  const eqIndex = raw.indexOf("=");
+  if (eqIndex <= 0) {
+    throw new Error(
+      `Invalid assignment '${raw}'. Use format path=value (ex: runtime.foo=3).`,
+    );
+  }
+
+  const path = raw.slice(0, eqIndex).trim();
+  const value = parseValue(raw.slice(eqIndex + 1).trim());
+
+  if (!path) {
+    throw new Error(`Invalid assignment '${raw}': path cannot be empty.`);
+  }
+
+  return { path, value };
+}
+
+function setPath(target, path, value) {
+  const parts = path.split(".").filter(Boolean);
+  if (!parts.length) throw new Error(`Invalid path '${path}'.`);
+
+  let cursor = target;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const key = parts[i];
+    if (cursor[key] == null || typeof cursor[key] !== "object") {
+      cursor[key] = {};
+    }
+    cursor = cursor[key];
+  }
+
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function getPath(target, path) {
+  const parts = path.split(".").filter(Boolean);
+  let cursor = target;
+
+  for (const key of parts) {
+    if (cursor == null) return undefined;
+    cursor = cursor[key];
+  }
+
+  return cursor;
+}
+
+function applyAssignments(target, assignments) {
+  for (const assignment of assignments) {
+    setPath(target, assignment.path, assignment.value);
+  }
+}
+
+function resolveRootByPath(path, scope) {
+  if (path.startsWith("attacker.")) {
+    return {
+      root: scope.attacker,
+      localPath: path.slice("attacker.".length),
+    };
+  }
+
+  if (path.startsWith("defender.")) {
+    return {
+      root: scope.defender,
+      localPath: path.slice("defender.".length),
+    };
+  }
+
+  if (path.startsWith("context.")) {
+    return {
+      root: scope.context,
+      localPath: path.slice("context.".length),
+    };
+  }
+
+  throw new Error(
+    `Path '${path}' must start with attacker., defender. or context.`,
+  );
+}
+
 function parseArgs(argv) {
   const out = {
-    attacker: "theopetra",
+    attacker: "tharox",
     defender: "bruno",
-    skill: "golpe_petreo",
+    skill: "impacto_da_couraça",
     turn: 1,
     stacks: null,
     comparePassive: false,
+    comparePath: null,
+    compareMin: 0,
+    compareMax: null,
     showJson: false,
     attackerAttack: null,
     defenderDefense: null,
     noPassive: false,
+    // Defaults hardcoded for quick local repro: Tharox ultado -> Impacto da Couraca.
+    preSkills: ["apoteose_do_monolito", "apoteose_do_monolito"],
+    attackerSet: [],
+    defenderSet: [],
+    contextSet: [],
+    track: ["attacker.Defense", "attacker.maxHP", "attacker.HP", "defender.HP"],
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -24,6 +127,51 @@ function parseArgs(argv) {
 
     if (key === "compare-passive") {
       out.comparePassive = true;
+      continue;
+    }
+
+    if (key === "track") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --track");
+      }
+      out.track.push(next);
+      i += 1;
+      continue;
+    }
+
+    if (key === "pre-skill") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --pre-skill");
+      }
+      out.preSkills.push(next);
+      i += 1;
+      continue;
+    }
+
+    if (key === "attacker-set") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --attacker-set");
+      }
+      out.attackerSet.push(parseAssignment(next));
+      i += 1;
+      continue;
+    }
+
+    if (key === "defender-set") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --defender-set");
+      }
+      out.defenderSet.push(parseAssignment(next));
+      i += 1;
+      continue;
+    }
+
+    if (key === "context-set") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --context-set");
+      }
+      out.contextSet.push(parseAssignment(next));
+      i += 1;
       continue;
     }
 
@@ -46,6 +194,9 @@ function parseArgs(argv) {
     else if (key === "skill") out.skill = next;
     else if (key === "turn") out.turn = Number(next);
     else if (key === "stacks") out.stacks = Number(next);
+    else if (key === "compare-path") out.comparePath = next;
+    else if (key === "compare-min") out.compareMin = Number(next);
+    else if (key === "compare-max") out.compareMax = Number(next);
     else if (key === "attacker-attack") out.attackerAttack = Number(next);
     else if (key === "defender-defense") out.defenderDefense = Number(next);
     else throw new Error(`Unknown option: --${key}`);
@@ -115,6 +266,25 @@ function estimateSkillBaseDamage(attacker, skill) {
   return (attacker.Attack * skill.bf) / 100;
 }
 
+function resolveTargets({ user, defender, skill }) {
+  const first = skill?.targetSpec?.[0];
+
+  if (first === "self") return [user];
+  if (first === "enemy") return [defender];
+  if (first === "all:enemy") return [defender];
+
+  return [defender];
+}
+
+function executeSkill({ user, defender, skill, context }) {
+  const targets = resolveTargets({ user, defender, skill });
+  return skill.resolve({
+    user,
+    targets,
+    context,
+  });
+}
+
 function runScenario(options, tag) {
   const attacker = pickChampion(options.attacker, "p1-a", "player1", 0);
   const defender = pickChampion(options.defender, "p2-b", "player2", 0);
@@ -131,6 +301,9 @@ function runScenario(options, tag) {
 
   if (options.noPassive) attacker.passive = null;
 
+  applyAssignments(attacker, options.attackerSet || []);
+  applyAssignments(defender, options.defenderSet || []);
+
   if (options.stacks != null) {
     attacker.runtime = attacker.runtime || {};
     attacker.runtime.theopetraStacks = options.stacks;
@@ -140,18 +313,74 @@ function runScenario(options, tag) {
     allChampions: [attacker, defender],
     turn: options.turn,
   });
+
+  applyAssignments(context, options.contextSet || []);
+
+  const trackedBefore = [];
+  for (const path of options.track || []) {
+    const { root, localPath } = resolveRootByPath(path, {
+      attacker,
+      defender,
+      context,
+    });
+    trackedBefore.push({ path, value: getPath(root, localPath) });
+  }
+
   const skill = getSkill(attacker, options.skill);
 
-  const initialStacks = attacker.runtime?.theopetraStacks ?? 0;
+  const preSkillQueue = Array.isArray(options.preSkills)
+    ? options.preSkills
+    : options.preSkills
+      ? [options.preSkills]
+      : [];
+
+  const preSkillResults = [];
+  for (const preSkillKey of preSkillQueue) {
+    if (!preSkillKey || preSkillKey === "none") continue;
+    // Só executa se a skill existir para o atacante
+    const skillExists = (attacker.skills || []).some(
+      (s) => s.key === preSkillKey,
+    );
+    if (!skillExists) continue;
+    const preSkill = getSkill(attacker, preSkillKey);
+    const preResult = executeSkill({
+      user: attacker,
+      defender,
+      skill: preSkill,
+      context,
+    });
+    preSkillResults.push({
+      key: preSkillKey,
+      result: preResult,
+    });
+  }
+
   const baseDamage = estimateSkillBaseDamage(attacker, skill);
 
-  const result = skill.resolve({
+  const result = executeSkill({
     user: attacker,
-    targets: [defender],
+    defender,
+    skill,
     context,
   });
 
   const mainResult = Array.isArray(result) ? result[0] : result;
+
+  const trackedAfter = [];
+  for (const path of options.track || []) {
+    const { root, localPath } = resolveRootByPath(path, {
+      attacker,
+      defender,
+      context,
+    });
+    trackedAfter.push({ path, value: getPath(root, localPath) });
+  }
+
+  const tracked = trackedBefore.map((entry, idx) => ({
+    path: entry.path,
+    before: entry.value,
+    after: trackedAfter[idx]?.value,
+  }));
 
   const summary = {
     tag,
@@ -159,8 +388,8 @@ function runScenario(options, tag) {
     defender: defender.name,
     skill: skill.key,
     baseDamage,
-    stacksBefore: initialStacks,
-    stacksAfter: attacker.runtime?.theopetraStacks ?? 0,
+    tracked,
+    preSkills: preSkillResults,
     totalDamage: mainResult?.totalDamage ?? null,
     mitigatedDamage: mainResult?.journey?.mitigated ?? null,
     hpAfter: `${defender.HP}/${defender.maxHP}`,
@@ -182,7 +411,21 @@ function printSummary(summary) {
       `Estimated baseDamage (bf x Attack): ${summary.baseDamage.toFixed(2)}`,
     );
   }
-  console.log(`Stacks: ${summary.stacksBefore} -> ${summary.stacksAfter}`);
+
+  if (summary.tracked.length) {
+    console.log("Tracked fields:");
+    for (const field of summary.tracked) {
+      console.log(`- ${field.path}: ${field.before} -> ${field.after}`);
+    }
+  }
+
+  if (summary.preSkills.length) {
+    console.log("Pre-skills executed:");
+    for (const step of summary.preSkills) {
+      console.log(`- ${step.key}`);
+    }
+  }
+
   console.log(`Mitigated damage in pipeline: ${summary.mitigatedDamage}`);
   console.log(`Applied damage (HP delta): ${summary.totalDamage}`);
   console.log(`Defender HP after: ${summary.hpAfter}`);
@@ -203,17 +446,76 @@ function printSummary(summary) {
 function main() {
   const options = parseArgs(process.argv.slice(2));
 
+  if (options.stacks != null && !options.track.length) {
+    options.track.push("attacker.runtime.theopetraStacks");
+  }
+
   if (options.comparePassive) {
     const probe = pickChampion(options.attacker, "probe", "player1", 0);
-    const maxStacks = probe.passive?.maxStacks ?? 0;
+    const comparePath =
+      options.comparePath || "attacker.runtime.theopetraStacks";
+    const compareMax =
+      options.compareMax != null
+        ? options.compareMax
+        : (probe.passive?.maxStacks ?? 0);
+
+    if (!Number.isFinite(compareMax)) {
+      throw new Error(
+        "Could not infer compare max value. Use --compare-max explicitly.",
+      );
+    }
+
+    if (!options.track.includes(comparePath)) {
+      options.track.push(comparePath);
+    }
+
+    const compareScenarioA = structuredClone(options);
+    const compareScenarioB = structuredClone(options);
+
+    const targetPathA = comparePath.replace(/^attacker\./, "");
+    const targetPathD = comparePath.replace(/^defender\./, "");
+    const targetPathC = comparePath.replace(/^context\./, "");
+
+    if (comparePath.startsWith("attacker.")) {
+      compareScenarioA.attackerSet.push({
+        path: targetPathA,
+        value: options.compareMin,
+      });
+      compareScenarioB.attackerSet.push({
+        path: targetPathA,
+        value: compareMax,
+      });
+    } else if (comparePath.startsWith("defender.")) {
+      compareScenarioA.defenderSet.push({
+        path: targetPathD,
+        value: options.compareMin,
+      });
+      compareScenarioB.defenderSet.push({
+        path: targetPathD,
+        value: compareMax,
+      });
+    } else if (comparePath.startsWith("context.")) {
+      compareScenarioA.contextSet.push({
+        path: targetPathC,
+        value: options.compareMin,
+      });
+      compareScenarioB.contextSet.push({
+        path: targetPathC,
+        value: compareMax,
+      });
+    } else {
+      throw new Error(
+        "--compare-path must start with attacker., defender. or context.",
+      );
+    }
 
     const noStackSummary = runScenario(
-      { ...options, stacks: 0 },
-      "No passive stacks",
+      compareScenarioA,
+      `${comparePath} = ${options.compareMin}`,
     );
     const fullStackSummary = runScenario(
-      { ...options, stacks: maxStacks },
-      `Passive ready (${maxStacks} stacks)`,
+      compareScenarioB,
+      `${comparePath} = ${compareMax}`,
     );
 
     printSummary(noStackSummary);

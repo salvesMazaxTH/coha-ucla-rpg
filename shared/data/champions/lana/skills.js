@@ -23,7 +23,7 @@ const lanaSkills = [
 
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
-      
+
       const lastUsed = user.runtime.lastUsedNaoFazIsso ?? -Infinity; // Valor inicial para garantir que a habilidade possa ser usada no primeiro turno
 
       if (context.currentTurn - lastUsed <= 1) {
@@ -60,7 +60,6 @@ const lanaSkills = [
           };
         },
       });
-
 
       return {
         message: `${formatChampionName(enemy)} teve sua próxima ação bloqueada!`,
@@ -108,22 +107,25 @@ const lanaSkills = [
 
     priority: 0,
     description() {
-      return `Lana libera um surto psíquico, causando dano massivo a todos os inimigos, o dano aumenta baseado em quanto de HP Lana perdeu.`;
+      return `Lana libera um surto psíquico, causando dano massivo a todos os inimigos. O dano aumenta baseado em quanto de HP Lana perdeu. Se Tutu já morreu, o dano é aumentado em 15%.`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
-      // Pegar todos os inimigos (time diferente do usuário)
       const enemies = targets.filter(
         (champion) => champion.team !== user.team && champion.alive,
       );
 
-      const missingHP = user.maxHP - user.HP;
-      const baseDamage =
-        ((user.Attack * this.bf) / 100) * (1.5 + missingHP / 1000); // +1.5% de dano para cada 10% de HP perdido
+      const percentLost = (user.maxHP - user.HP) / user.maxHP;
+      let baseDamage =
+        ((user.Attack * this.bf) / 100) * (1 + percentLost * 0.6);
+
+      // Se Tutu já morreu (Lana.runtime.lana.triggered === true e Lana está em campo), aumenta dano em 15%
+      if (user.runtime?.lana?.triggered) {
+        baseDamage *= 1.15;
+      }
 
       const results = [];
 
-      // Aplicar dano em cada inimigo
       for (const enemy of enemies) {
         const damageResult = new DamageEvent({
           baseDamage,
@@ -135,6 +137,7 @@ const lanaSkills = [
         }).execute();
         results.push(damageResult);
       }
+
       return results;
     },
   },

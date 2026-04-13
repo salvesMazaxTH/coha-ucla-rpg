@@ -7,7 +7,7 @@ export default {
   passiveDamage: 45,
 
   description() {
-    return `Se o alvo tiver menos de 30% do HP máximo, os ataques de Bruno sempre são um Acerto Crítico.
+    return `Se o alvo tiver 30% do HP máximo ou menos, os ataques de Bruno sempre são um Acerto Crítico.
 
     Quando um campeão inimigo for Congelado, Bruno causa ${this.passiveDamage} de dano absoluto a ele.`;
   },

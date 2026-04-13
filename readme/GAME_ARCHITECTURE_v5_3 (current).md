@@ -173,7 +173,8 @@ Esses campos permitem controlar a ordem e o momento exato em que mensagens apare
 │       └── obliterate.js
 │
 ├── scripts/
-│   └── test.js
+│   ├── test.js
+│   └── damageEventLab.js          # Laboratorio CLI isolado da pipeline de dano (DamageEvent)
 ├── exportChampionsToJson.js
 └── package.json
 ```
@@ -1661,6 +1662,14 @@ const editMode = {
 ```
 
 **Separação server/client**: `damageOutput`, `alwaysCrit`, `alwaysEvade` e `executionOverride` **não são enviados ao cliente**. O server emite `editModeUpdate` apenas com as propriedades de UI.
+
+### 23.1 Damage Lab (harness CLI para agentes)
+
+- Script: `scripts/damageEventLab.js`
+- Atalho: `npm run damage-lab`
+- Objetivo: executar cenarios de dano em isolamento (sem subir match completa), com rastreio de campos (`--track`), pre-skills (`--pre-skill`) e comparacao de passiva (`--compare-passive`).
+- Uso no GSD/Copilot: funciona como "MCP" local de verificacao tecnica para agents, reduzindo custo de reproducao e permitindo validacao deterministica de hipoteses (critico, mitigacao, afinidade, hooks e thresholds de HP).
+- Recomendacao operacional: rodar `damage-lab` antes/depois de mudancas em `DamageEvent`, steps da pipeline e `skills.js` para provar comportamento esperado.
 
 ---
 

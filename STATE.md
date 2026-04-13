@@ -2,6 +2,8 @@
 
 - Adicionado `scripts/damageEventLab.js` para rodar simulacoes de dano sem subir partida completa (sem 2 clientes/abas/dispositivos).
 - Novo script de atalho: `npm run damage-lab`.
+- `damage-lab` passa a ser o harness oficial para validacao tecnica do pipeline de dano por agentes Copilot no fluxo GSD ("MCP" local de teste deterministico via CLI).
+- Uso recomendado em automacao/agent loops: confirmar passivas, crit, mitigacao, thresholds de HP e comparativos de cenario antes de alterar pipeline ou skills.
 - Modo de comparacao implementado (`--compare-passive`) para medir o impacto da passiva com e sem stacks no mesmo cenario.
 - Validacao local com `Theopetra x Bruno` e `golpe_petreo` mostrou razao observada de dano final `1.800x` quando a passiva esta pronta, confirmando o bonus numerico no pipeline isolado.
 - Patches: `scripts/damageEventLab.js`, `package.json`, `.planning/quick/260412-w50-pq-q-o-b-nus-dela-t-t-o-fraco-the-petra-/`
