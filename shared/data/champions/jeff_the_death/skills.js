@@ -213,25 +213,48 @@ const jeffTheDeathSkills = [
       }).execute();
 
       const threshold = this.threshold;
+      const triggerTurn = (context.currentTurn ?? 0) + 1;
+      enemy.runtime.markedByInevitabilidadeDaMorte = true;
 
       // Hook interno da lógica de "execução inevitável"
       const hook = {
         key: "death_claim_execution",
         group: "deathClaim",
+        triggerTurn,
 
         priority: -999, // se implementar
 
         onTurnStart({ owner, context }) {
-          if (!owner.alive) return;
+          if (!owner.alive) {
+            owner.runtime.markedByInevitabilidadeDaMorte = false;
+            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+              (he) => he.key !== "death_claim_execution",
+            );
+            return;
+          }
+
+          // Checa uma única vez: no início do turno seguinte ao da aplicação (X+1)
+          if (context.currentTurn !== this.triggerTurn) return;
 
           if (owner.HP / owner.maxHP <= threshold) {
             owner.runtime.deathClaimTriggered = true;
 
             owner.HP = 0;
             owner.alive = false;
-          }
 
-          // remove a si mesmo
+            // Caso execute, limpa imediatamente (alvo será removido no processamento de mortes)
+            owner.runtime.markedByInevitabilidadeDaMorte = false;
+            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
+              (he) => he.key !== "death_claim_execution",
+            );
+          }
+        },
+
+        onTurnEnd({ owner, context }) {
+          // Se não executou no check, expira visual/backend no fim do mesmo turno (X+1)
+          if (context.currentTurn !== this.triggerTurn) return;
+
+          owner.runtime.markedByInevitabilidadeDaMorte = false;
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
             (he) => he.key !== "death_claim_execution",
           );
