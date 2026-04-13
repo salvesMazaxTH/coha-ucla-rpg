@@ -1,25 +1,48 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
 export default {
-  key: "coracao_primordial",
-  name: "Coração Primordial",
-  attackGain: 25,
-  defenseGain: 15,
-  description() {
-    return `No início de cada turno, Sengoku Primordial ganha +${this.attackGain} de Ataque e +${this.defenseGain} de Defesa enquanto a transformação durar.`;
+  key: "intimidacao_colossal",
+  name: "Intimidação Colossal",
+  hookScope: {
+    onValidateAction: "target",
   },
-  onTurnStart({ owner, context }) {
-    owner.Attack += this.attackGain;
-    owner.Defense += this.defenseGain;
+  threshold: 0.4, // 40% do Ataque de Sengoku
+  description() {
+    return `Personagens inimigos com menos de ${this.threshold * 100}% do Ataque de Sengoku não conseguem mirá-lo como alvo: a ação falha.`;
+  },
+  /**
+   * Bloqueia ações de inimigos com menos de 40% do Ataque de Sengoku Primordial.
+   * @param {object} params - Parâmetros do hook
+   * @param {object} params.action - Objeto da ação
+   * @param {object} params.actionSource - Campeão que está tentando agir
+   * @param {object} params.target - Alvo da ação (sempre o Sengoku aqui)
+   * @param {object} params.context - Contexto do combate
+   * @param {object} params.owner - O próprio Sengoku
+   */
+  onValidateAction({ action, actionSource, target, context, owner }) {
+    // Não bloqueia auto-target (ele mesmo)
+    if (!actionSource || actionSource.id === owner.id) return;
 
-    context.registerDialog({
-      message: `[PASSIVA — Coração Primordial] ${formatChampionName(owner)} fortaleceu seu corpo dracônico.`,
-      sourceId: owner.id,
-      targetId: owner.id,
-    });
+    // Se o atacante tem menos de 40% do ataque do Sengoku, bloqueia
+    const threshold = owner.Attack * this.threshold;
+    if (
+      typeof actionSource.Attack !== "number" ||
+      actionSource.Attack >= threshold
+    )
+      return;
 
+    // Mensagem de bloqueio
+    const message = `${formatChampionName(actionSource)} sente uma pressão colossal e falha ao tentar agir contra ${formatChampionName(owner)}!`;
+    if (context?.registerDialog) {
+      context.registerDialog({
+        message,
+        sourceId: actionSource.id,
+        targetId: owner.id,
+      });
+    }
     return {
-      log: `[PASSIVA — Coração Primordial] ${formatChampionName(owner)} ganhou +${this.attackGain} de Ataque e +${this.defenseGain} de Defesa.`,
+      deny: true,
+      message,
     };
   },
 };

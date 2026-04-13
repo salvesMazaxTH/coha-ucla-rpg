@@ -38,13 +38,13 @@ const sengokuSkills = [
   {
     key: "bola_de_fogo",
     name: "Bola de Fogo",
-    bf: 95,
+    bf: 55,
     contact: false,
-    damageMode: "standard",
+    damageMode: "hybrid",
     priority: 0,
 
     description() {
-      return `Sengoku lança uma bola de fogo, causando dano ao inimigo.`;
+      return `Sengoku lança uma bola de fogo, causando dano ao inimigo. Metade do dano é perfurante.`;
     },
 
     targetSpec: ["enemy"],
@@ -53,6 +53,8 @@ const sengokuSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       return new DamageEvent({
         baseDamage,
+        mode: DamageEvent.Modes.HYBRID,
+        piercingPortion: baseDamage * 0.5,
         attacker: user,
         defender: enemy,
         skill: this,

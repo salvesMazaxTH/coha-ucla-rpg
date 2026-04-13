@@ -1,54 +1,50 @@
 export const GAME_GLOSSARY = {
-  condutor: {
-    title: "Condutor",
-    description: "Amplifica habilidades de raio.",
-  },
-
-  paralisado: {
-    title: "Paralisado",
+  absoluto: {
+    title: "Dano Absoluto",
     description:
-      "O campeão tem sua VEL zerada e fica com 40% de chance de não agir.",
+      "Ignora Defesa, escudos e reduções. Não pode critar nem ser modificado.",
   },
-
-  inerte: {
-    title: "Inerte",
-    description: "O campeão fica impedido de agir (geralmente auto-provocado).",
-  },
-
   atordoado: {
     title: "Atordoado",
     description: "O campeão fica temporariamente incapacitado de agir.",
   },
-
-  imunidade_absoluta: {
-    title: "Imunidade Absoluta",
-    description:
-      "O campeão é imune a todos os tipos de efeitos negativos (dano inclusive).",
+  condutor: {
+    title: "Condutor",
+    description: "Amplifica habilidades de raio.",
   },
-
-  enraizado: {
-    title: "Enraizado",
-    description:
-      "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
-  },
-
-  gelado: {
-    title: "Gelado",
-    description: "O campeão tem sua velocidade e ataque reduzidos.",
-  },
-
   congelado: {
     title: "Congelado",
     description:
       "O campeão fica temporariamente incapacitado de agir. Velocidade e Ataque são zerados.",
   },
-
-  queimando: {
-    title: "Queimando",
+  enraizado: {
+    title: "Enraizado",
     description:
-      "O campeão sofre dano contínuo (geralmente 20) por um certo número de turnos (geralmente 1).",
+      "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
   },
-
+  gelado: {
+    title: "Gelado",
+    description: "O campeão tem sua velocidade e ataque reduzidos.",
+  },
+  híbrido: {
+    title: "Dano Híbrido",
+    description:
+      "Dano que é parte perfurante (ignora Defesa) e parte padrão (considera Defesa).",
+  },
+  imunidade_absoluta: {
+    title: "Imunidade Absoluta",
+    description:
+      "O campeão é imune a todos os tipos de efeitos negativos (dano inclusive).",
+  },
+  inerte: {
+    title: "Inerte",
+    description: "O campeão fica impedido de agir (geralmente auto-provocado).",
+  },
+  invisivel: {
+    title: "Invisível",
+    description:
+      "O campeão não pode ser alvo direto de inimigos, só é afetada indiretamente e por efeitos em área.",
+  },
   obliterar: {
     title: "Obliterar",
     aliases: [
@@ -61,22 +57,19 @@ export const GAME_GLOSSARY = {
     description:
       "O campeão é instantaneamente derrotado ao chegar abaixo de certa quantidade de HP e/ou ao cumprir alguma outra condição.",
   },
-
+  paralisado: {
+    title: "Paralisado",
+    description:
+      "O campeão tem sua VEL zerada e fica com 40% de chance de não agir.",
+  },
   perfurante: {
     title: "Dano Perfurante",
     description:
       "Ignora Defesa, mas ainda pode critar e sofrer bônus ou reduções.",
   },
-
-  híbrido: {
-    title: "Dano Híbrido",
+  queimando: {
+    title: "Queimando",
     description:
-      "Dano que é parte perfurante (ignora Defesa) e parte padrão (considera Defesa).",
-  },
-
-  absoluto: {
-    title: "Dano Absoluto",
-    description:
-      "Ignora Defesa, escudos e reduções. Não pode critar nem ser modificado.",
+      "O campeão sofre dano contínuo (geralmente 20) por um certo número de turnos (geralmente 1).",
   },
 };

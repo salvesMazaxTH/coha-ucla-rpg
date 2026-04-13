@@ -354,11 +354,24 @@ export class TurnResolver {
       user.runtime?.hookEffects?.map((e) => e.key),
     );
 
+    // Descobrir o alvo principal da ação (primeiro alvo válido)
+    let mainTarget = null;
+    if (action?.targetIds) {
+      for (const targetId of Object.values(action.targetIds)) {
+        const target = this.combat.activeChampions.get(targetId);
+        if (target && target.alive) {
+          mainTarget = target;
+          break;
+        }
+      }
+    }
+
     const results = emitCombatEvent(
       "onValidateAction",
       {
         actionSource: user,
         skill: action?.skill,
+        target: mainTarget,
       },
       this.combat.activeChampions,
     );

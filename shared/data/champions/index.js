@@ -27,6 +27,7 @@ import bruno from "./bruno/index.js";
 import sengoku from "./sengoku/index.js";
 import sengoku_primordial from "./sengoku_primordial/index.js";
 import theopetra from "./theopetra/index.js";
+import isarelis from "./isarelis/index.js";
 
 const championDB = {
   ralia,
@@ -58,6 +59,7 @@ const championDB = {
   sengoku,
   sengoku_primordial,
   theopetra,
+  isarelis,
 };
 
 export default championDB;

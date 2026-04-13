@@ -6,7 +6,7 @@ const sengokuPrimordialSkills = [
   {
     key: "garra_primordial",
     name: "Garra Primordial",
-    bf: 110,
+    bf: 95,
     damageMode: "standard",
     contact: true,
     priority: 0,
@@ -30,7 +30,7 @@ const sengokuPrimordialSkills = [
   {
     key: "sopro_cataclismico",
     name: "Sopro Cataclísmico",
-    bf: 150,
+    bf: 130,
     damageMode: "standard",
     contact: false,
     isUltimate: true,

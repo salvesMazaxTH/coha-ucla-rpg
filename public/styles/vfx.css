@@ -40,7 +40,6 @@
   z-index: 1000;
 } */
 
-
 .obliterate-flash {
   animation: execFlash 120ms ease-out;
 }
@@ -89,6 +88,24 @@
   z-index: 6;
 }
 
+/* Invisivel status VFX (canvas + subtle portrait phasing) */
+
+.vfx-invisivel {
+  mix-blend-mode: screen;
+  filter: saturate(0.9) brightness(1.06);
+  z-index: 7;
+}
+
+.champion.is-invisible .portrait img {
+  opacity: 0.48;
+  filter: grayscale(0.25) contrast(0.88) saturate(0.82);
+  transform: scale(0.986);
+  transition:
+    opacity 220ms ease,
+    filter 220ms ease,
+    transform 220ms ease;
+}
+
 /* Lightning hit effect (applied to champion portrait on hit) */
 
 .lightning-hit {
@@ -96,12 +113,16 @@
 }
 
 @keyframes lightningFlash {
-  0% { filter: brightness(1); }
-  50% { filter: brightness(2.5) saturate(2); }
-  100% { filter: brightness(1); }
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(2.5) saturate(2);
+  }
+  100% {
+    filter: brightness(1);
+  }
 }
-
-
 
 /* ========================= */
 /* SHIELD CONTAINER STYLES   */

@@ -26,6 +26,7 @@ import { startFrozenCanvas } from "./frozenCanvas.js";
 import { startWaterBubble } from "./waterBubbleCanvas.js";
 import { startAbraçoDaMorteMark } from "./abracoDaMorteMarkCanvas.js";
 import { startInevitabilidadeDaMorte } from "./inevitabilidadeDaMorteCanvas.js";
+import { startInvisibilityCanvas } from "./invisibilityCanvas.js";
 
 // no futuro:
 // import { startBurn } from "./burnCanvas.js";
@@ -34,6 +35,7 @@ import { startInevitabilidadeDaMorte } from "./inevitabilidadeDaMorteCanvas.js";
 // Triggers automáticos para status effects genéricos (nome do status effect === nome do VFX)
 const StatusEffectVFX = [
   "congelado",
+  "invisivel",
   // Adicione outros status effects que tenham VFX próprios aqui
 ];
 
@@ -72,6 +74,10 @@ export function syncChampionVFX(champion) {
   for (const type of StatusEffectVFX) {
     const shouldExist = champion.statusEffects?.has(type);
     const exists = champion._vfxState[type];
+
+    if (type === "invisivel") {
+      champion.el.classList.toggle("is-invisible", !!shouldExist);
+    }
 
     if (shouldExist && !exists) {
       const canvas = createVFXCanvas(type, champion);
@@ -146,6 +152,10 @@ export function playVFX(type, canvas, data = {}) {
       controller = startFrozenCanvas(canvas, data);
       break;
 
+    case "invisivel":
+      controller = startInvisibilityCanvas(canvas, data);
+      break;
+
     // case "burn":
     //   controller = startBurn(canvas, data);
     //   break;
@@ -182,6 +192,10 @@ function removeVFXCanvas(champion, key) {
   if (key === "waterBubble") {
     const imgEl = champion.el?.querySelector(".portrait img");
     if (imgEl) imgEl.style.visibility = "";
+  }
+
+  if (key === "invisivel") {
+    champion.el?.classList.remove("is-invisible");
   }
 
   stopVFX(canvas);
