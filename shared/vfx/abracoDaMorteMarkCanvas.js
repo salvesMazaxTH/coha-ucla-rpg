@@ -17,54 +17,30 @@ export function startAbraçoDaMorteMark(canvas) {
   resize();
   window.addEventListener("resize", resize);
 
-  // Ícone central: caveira simples
-  function drawSkullIcon(cx, cy, size) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(size / 48, size / 48); // base 48x48
+  // Ícone central: caveira usando deathspecter.png na cor original
+  const deathspecterImg = new window.Image();
+  let deathspecterReady = false;
 
-    // Cabeça
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
-    ctx.globalAlpha = 0.92;
-    ctx.shadowColor = "#000";
-    ctx.shadowBlur = 4;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
+  deathspecterImg.onload = () => {
+    deathspecterReady = true;
+  };
 
-    // Mandíbula
-    ctx.beginPath();
-    ctx.ellipse(0, 14, 12, 7, 0, 0, Math.PI * 2);
-    ctx.fillStyle = "#fff";
-    ctx.fill();
+  deathspecterImg.onerror = () => {
+    deathspecterReady = false;
+  };
 
-    // Olhos
-    ctx.beginPath();
-    ctx.arc(-7, -5, 3.5, 0, Math.PI * 2);
-    ctx.arc(7, -5, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#222";
-    ctx.fill();
+  deathspecterImg.src = "/assets/the_death_specter.png";
 
-    // Nariz
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-2, 4);
-    ctx.lineTo(2, 4);
-    ctx.closePath();
-    ctx.fillStyle = "#222";
-    ctx.fill();
-
-    // Dentes
-    ctx.strokeStyle = "#bbb";
-    ctx.lineWidth = 1.1;
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * 2.8, 18);
-      ctx.lineTo(i * 2.8, 25);
-      ctx.stroke();
+  function drawDeathSpecterIcon(cx, cy, size) {
+    if (!deathspecterReady) {
+      return;
     }
+
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.shadowColor = "#000";
+    ctx.shadowBlur = 6;
+    ctx.drawImage(deathspecterImg, cx - size / 2, cy - size / 2, size, size);
     ctx.restore();
   }
 
@@ -105,7 +81,7 @@ export function startAbraçoDaMorteMark(canvas) {
       this.alpha = 0.18 + Math.random() * 0.22;
       this.tw = Math.random() * Math.PI * 2;
       this.twSpeed = 0.012 + Math.random() * 0.018;
-      this.type = Math.random() < 0.5 ? "skull" : "wisp";
+      this.type = Math.random() < 0.5 ? "deathspecter" : "wisp";
     }
     update(time) {
       if (!running) return;
@@ -118,7 +94,7 @@ export function startAbraçoDaMorteMark(canvas) {
       ctx.save();
       ctx.globalAlpha =
         this.alpha * (0.7 + 0.3 * Math.sin(time * 0.01 + this.tw));
-      if (this.type === "skull") {
+      if (this.type === "deathspecter") {
         // Mini caveira
         ctx.translate(this.x, this.y);
         ctx.scale(this.r / 12, this.r / 12);
@@ -185,7 +161,7 @@ export function startAbraçoDaMorteMark(canvas) {
     });
 
     drawAura(cx, cy, size, time);
-    drawSkullIcon(cx, cy, size * 0.62);
+    drawDeathSpecterIcon(cx, cy, size * 0.62);
 
     // Pequeno "brilho" animado
     const shineAlpha = 0.18 + 0.12 * Math.abs(Math.sin(time * 0.09));
