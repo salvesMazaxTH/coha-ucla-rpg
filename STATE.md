@@ -1,3 +1,18 @@
+## [2026-04-13] Quick: sistema genérico de transformações + Sengoku Primordial
+
+- Nova infraestrutura em `shared/engine/match/championTransformation.js` para transformação same-ID com troca real de `championKey`, stats, skills e passiva.
+- `TurnResolver.createBaseContext()` agora expõe `requestChampionMutation(...)`, desacoplando skills/passivas do detalhe interno `flags.replaceRequests`.
+- `transform` passou a ser aplicado imediatamente no `TurnResolver`, logo após o `resolve` da skill, em vez de esperar o fim do turno inteiro.
+- `src/server.js` passou a processar uma camada única de mutações de campeão (`swap`, `restore`, `transform`, `revertTransform`) e a agendar reversões automáticas como `scheduledEffects`.
+- `handleStartTurn()` agora aplica mutações agendadas do turno antes dos hooks de `onTurnStart`, evitando que a forma expirada ainda ative a passiva antiga por um turno extra.
+- `Lana` e `lana_dino` foram migrados para a nova API sem perder o fluxo de swap/restore já existente.
+- Novo campeão de forma: `shared/data/champions/sengoku_primordial/`.
+- `sengoku/skills.js` agora implementa `Forma Primordial` de verdade e também corrige `bola_de_fogo`, que estava sem `bf`.
+- Validação local por snippet Node confirmou: troca e reversão de `championKey`, `passive` e `skills`, além da preservação de deltas de stats/HP durante a transformação.
+- Patches: `shared/engine/match/championTransformation.js`, `shared/engine/match/GameMatch.js`, `shared/engine/combat/TurnResolver.js`, `src/server.js`, `shared/data/champions/index.js`, `shared/data/champions/lana/passive.js`, `shared/data/champions/lana_dino/passive.js`, `shared/data/champions/sengoku/skills.js`, `shared/data/champions/sengoku_primordial/`, `.planning/quick/260413-h9x-implemente-transforma-es-no-jogo-deixand/`
+
+---
+
 ## [2026-04-13] Quick: laboratorio isolado para DamageEvent (Theopetra)
 
 - Adicionado `scripts/damageEventLab.js` para rodar simulacoes de dano sem subir partida completa (sem 2 clientes/abas/dispositivos).

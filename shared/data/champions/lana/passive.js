@@ -21,6 +21,10 @@ export default {
       triggered: false,
     };
 
+    if (owner.HP <= 0) {
+      return;
+    }
+
     if (owner.runtime.lana.triggered) {
       return;
     }
@@ -39,10 +43,7 @@ export default {
 
     // Registra intenção de swap (Lana → Tutu)
     // Estado completo de Lana será preservado em inactiveChampions
-    context.flags ??= {};
-    context.flags.replaceRequests ??= [];
-
-    context.flags.replaceRequests.push({
+    context.requestChampionMutation?.({
       targetId: owner.id,
       newChampionKey: "lana_dino",
       mode: "swap",

@@ -38,6 +38,7 @@ const sengokuSkills = [
   {
     key: "bola_de_fogo",
     name: "Bola de Fogo",
+    bf: 95,
     contact: false,
     damageMode: "standard",
     priority: 0,
@@ -64,15 +65,28 @@ const sengokuSkills = [
   {
     key: "forma_primordial",
     name: "Forma Primordial",
+    duration: 3,
+    transformInto: "sengoku_primordial",
     isUltimate: true,
     ultCost: 2,
     priority: 0,
     description() {
-      return `Sengoku se transforma em sua forma primordial dracônica por 3 turnos.`;
+      return `Sengoku assume sua forma primordial dracônica por ${this.duration} turnos, alterando suas skills, passiva e atributos.`;
     },
     targetSpec: ["self"],
     resolve({ user, targets, context = {} }) {
-      // implementação da transformação
+      context.requestChampionMutation?.({
+        mode: "transform",
+        targetId: user.id,
+        newChampionKey: this.transformInto,
+        duration: this.duration,
+        hpMode: "preserveRatio",
+        statMode: "deltaFromBase",
+      });
+
+      return {
+        log: `${formatChampionName(user)} despertou sua <b>Forma Primordial</b> por ${this.duration} turnos!`,
+      };
     },
   },
 ];

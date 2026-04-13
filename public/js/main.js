@@ -489,7 +489,6 @@ import { audioManager } from "./utils/AudioManager.js";
 //  SOCKET
 // ============================================================
 
-
 const socket = io({
   reconnection: true,
   reconnectionAttempts: Infinity,
@@ -1021,8 +1020,10 @@ function renderAvailableChampions() {
   let allAvailableChampionKeys = Object.keys(championDB).filter((key) => {
     const champion = championDB[key];
     const isChampion = (champion.entityType ?? "champion") === "champion";
+    const isSelectable = champion.selectable !== false;
     const isunavailable = champion.unreleased || champion.disabled;
     if (!isChampion) return false;
+    if (!isSelectable) return false;
     if (isunavailable && !editMode.unavailableChampions) return false;
     return true;
   });

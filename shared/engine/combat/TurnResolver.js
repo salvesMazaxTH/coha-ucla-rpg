@@ -3,10 +3,14 @@ import { emitCombatEvent } from "./combatEvents.js";
 import { snapshotChampions } from "./snapshotChampions.js";
 
 export class TurnResolver {
-  constructor(match, editMode) {
+  constructor(match, editMode, options = {}) {
     this.match = match;
     this.combat = match.combat;
     this.editMode = editMode ?? {};
+    this.mutationHandler =
+      typeof options?.mutationHandler === "function"
+        ? options.mutationHandler
+        : null;
   }
 
   // ============================================================
@@ -276,6 +280,8 @@ export class TurnResolver {
       action,
     );
 
+    this.processImmediateChampionMutations(context);
+
     // Captura snapshot intermediário AGORA, antes da próxima ação mutar os champions
 
     context._intermediateSnapshot = snapshotChampions(
@@ -291,6 +297,39 @@ export class TurnResolver {
       results: skillResults,
       repeatActionRequest: context.repeatActionRequest || null,
     };
+  }
+
+  // ============================================================
+  //  MUTAÇÕES IMEDIATAS DE CAMPEÃO
+  // ============================================================
+
+  processImmediateChampionMutations(context) {
+    const requests = context?.flags?.championMutationRequests;
+    if (!Array.isArray(requests) || requests.length === 0) return;
+
+    const deferredRequests = [];
+
+    for (const request of requests) {
+      if (!request || typeof request !== "object") continue;
+
+      const shouldApplyImmediately =
+        request.timing !== "postTurn" &&
+        ["transform", "swap", "restore"].includes(request.mode);
+
+      if (!shouldApplyImmediately) {
+        deferredRequests.push(request);
+        continue;
+      }
+
+      if (!this.mutationHandler) {
+        deferredRequests.push(request);
+        continue;
+      }
+
+      this.mutationHandler(request, { context, timing: "immediate" });
+    }
+
+    context.flags.championMutationRequests = deferredRequests;
   }
 
   // ============================================================
@@ -687,9 +726,19 @@ export class TurnResolver {
       _lastEventRef: null, // referência para o último evento registrado, útil para diálogos que precisam se referir a ele
 
       repeatActionRequest: null,
+      flags: {},
 
       healSourceId: sourceId,
       statModifierSrcId: sourceId,
+
+      requestChampionMutation(request) {
+        if (!request || typeof request !== "object") return null;
+
+        this.flags.championMutationRequests ??= [];
+        this.flags.championMutationRequests.push(request);
+
+        return request;
+      },
 
       schedule(scheduledEffect) {
         combat.scheduledEffects.push(scheduledEffect);

@@ -24,6 +24,10 @@ import { Action } from "../shared/engine/combat/Action.js";
 import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 import { DamageEvent } from "../shared/engine/combat/DamageEvent.js";
 import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js";
+import {
+  applyChampionTransformation,
+  revertChampionTransformation,
+} from "../shared/engine/match/championTransformation.js";
 
 // ============================================================
 //  CONFIGURAÇÃO
@@ -113,60 +117,102 @@ function getGameState(extraChampions = []) {
 // ============================================================
 
 /** Retorna uma chave aleatória de campeão, excluindo as fornecidas. */
+function isChampionSelectableInDraft(championData) {
+  if (!championData) return false;
+  if ((championData.entityType ?? "champion") !== "champion") return false;
+  if (championData.selectable === false) return false;
+  if (championData.unreleased === true && !editMode.unavailableChampions)
+    return false;
+  if (championData.disabled === true && !editMode.unavailableChampions)
+    return false;
+
+  return true;
+}
+
 function getRandomChampionKey(excludeKeys = []) {
   const availableKeys = Object.keys(championDB).filter((key) => {
     if (excludeKeys.includes(key)) return false;
-    if ((championDB[key]?.entityType ?? "champion") !== "champion")
-      return false;
-    if (championDB[key]?.unreleased === true && !editMode.unreleasedChampions)
-      return false;
-    return true;
+    return isChampionSelectableInDraft(championDB[key]);
   });
   if (availableKeys.length === 0) return null;
   return availableKeys[Math.floor(Math.random() * availableKeys.length)];
 }
 
-/**
- * Substitui um campeão ativo por outro (mesmo id, time e slot), preservando runtime se solicitado.
- * Análogo a spawnChampion — pertence ao server pois requer Champion, championDB e io.
- */
-/**
- * Substitui um campeão por outro mantendo o slot mas sem reusar IDs.
- *
- * Modo "swap": targetId sai do jogo temporariamente (vai para inactiveChampions com estado completo)
- *             newChampionKey é criado com ID novo em activeChampions
- *
- * Modo "restore": targetId era o personagem "swapped out" e retorna de inactiveChampions
- *                 para activeChampions com estado completamente preservado (incluindo HP)
- *                 newChampionKey é ignorado neste modo
- *
- * @param {string}  targetId       – ID do campeão a substituir (ou a restaurar)
- * @param {string}  newChampionKey – chave do novo campeão (ignorado em modo restore)
- * @param {string}  mode           – "swap" ou "restore"
- */
-function replaceChampion({ targetId, newChampionKey, mode = "swap" }) {
-  if (mode === "restore") {
-    // Modo restore: trazer de volta um campeão que foi swapped out
-    // Estado completo (HP, runtime, etc) é preservado automaticamente
+function processChampionMutationRequest(
+  {
+    targetId,
+    newChampionKey,
+    mode = "swap",
+    duration = 0,
+    hpMode = "preserveRatio",
+    statMode = "deltaFromBase",
+    expectedToken = null,
+  } = {},
+  options = {},
+) {
+  const mutationContext = options?.context ?? null;
 
+  if (mode === "restore") {
     const restored = match.combat.restoreInactive(targetId);
-    if (!restored) {
-      return;
+    return restored ? { champion: restored } : null;
+  }
+
+  if (mode === "transform") {
+    const transformed = applyChampionTransformation({
+      combat: match.combat,
+      targetId,
+      newChampionKey,
+      currentTurn: match.combat.currentTurn,
+      duration,
+      hpMode,
+      statMode,
+    });
+
+    if (!transformed) return null;
+
+    const transformation = transformed.runtime?.transformation;
+    if (transformation?.revertAtTurn && transformation?.token) {
+      const scheduleFn = mutationContext?.schedule;
+      const scheduledEffect = {
+        type: "championMutation",
+        turnToHappen: transformation.revertAtTurn,
+        payload: {
+          mode: "revertTransform",
+          targetId: transformed.id,
+          expectedToken: transformation.token,
+        },
+      };
+
+      if (typeof scheduleFn === "function") {
+        scheduleFn.call(mutationContext, scheduledEffect);
+      } else {
+        match.combat.scheduledEffects.push(scheduledEffect);
+      }
     }
 
-    return;
+    return { champion: transformed };
   }
 
-  // Modo swap: trocar de campeão (padrão)
+  if (mode === "revertTransform") {
+    const reverted = revertChampionTransformation({
+      combat: match.combat,
+      targetId,
+      expectedToken,
+    });
+
+    if (!reverted) return null;
+
+    return {
+      champion: reverted,
+      log: `${formatChampionName(reverted)} retornou à sua forma original.`,
+    };
+  }
 
   const old = match.combat.getChampion(targetId);
-  if (!old) {
-    return;
-  }
+  if (!old) return null;
 
-  // Guardar o campeão antigo em inactiveChampions (estado completo preservado automaticamente)
   const swappedOut = match.combat.swapOut(targetId);
-  // [replaceChampionDebug] log removido
+  if (!swappedOut) return null;
 
   const baseData = championDB[newChampionKey];
   if (!baseData)
@@ -182,8 +228,9 @@ function replaceChampion({ targetId, newChampionKey, mode = "swap" }) {
   // Indica qual campeão este substituiu — lido pela passiva do substituto ao morrer
   newChampion.runtime.swappedFrom = targetId;
 
-  // Registrar no jogo
   match.combat.activeChampions.set(newId, newChampion);
+
+  return { champion: newChampion };
 }
 
 /**
@@ -625,13 +672,18 @@ function handleEndTurn() {
   io.emit("turnLocked");
 
   // 1. Resolver todas as ações via TurnResolver (switches têm prioridade 6 — saem primeiro)
-  const resolver = new TurnResolver(match, editMode);
+  const resolver = new TurnResolver(match, editMode, {
+    mutationHandler: (request, meta = {}) =>
+      processChampionMutationRequest(request, {
+        context: meta.context ?? null,
+      }),
+  });
   const { actionResults, deathResults } = resolver.resolveTurn();
 
   // 2. Processamento de switch/substituição desativado (modo 3x3 fixo).
 
-  // 3. Coletar todos os replaceRequests ANTES de emitir envelopes
-  const allReplaceRequests = [];
+  // 3. Coletar todos os championMutationRequests ANTES de emitir envelopes
+  const allChampionMutationRequests = [];
 
   // 4. Emitir envelopes para cada resultado
   for (const result of actionResults) {
@@ -643,11 +695,12 @@ function handleEndTurn() {
       });
       emitCombatLogsFromResults(result.results);
 
-      // Coletar replaceRequests mas NÃO processar ainda
+      // Coletar championMutationRequests mas NÃO processar ainda
       // (será feito após deathResults para evitar que a nova criatura seja marcada como morta)
-      const replaceRequests = result.context?.flags?.replaceRequests;
-      if (replaceRequests?.length) {
-        allReplaceRequests.push(...replaceRequests);
+      const championMutationRequests =
+        result.context?.flags?.championMutationRequests;
+      if (championMutationRequests?.length) {
+        allChampionMutationRequests.push(...championMutationRequests);
       }
     } else if (result.reason === "denied" && result.denial) {
       const globalDialogs = result.context?.visual?.globalDialogs || [];
@@ -669,11 +722,11 @@ function handleEndTurn() {
     emitChampionDeath(death);
   }
 
-  // 6. AGORA processar replaceRequests (após deathResults)
+  // 6. AGORA processar championMutationRequests (após deathResults)
   // Assim evitamos que a nova criatura seja registrada como morta
-  if (allReplaceRequests.length > 0) {
-    for (const req of allReplaceRequests) {
-      replaceChampion(req);
+  if (allChampionMutationRequests.length > 0) {
+    for (const req of allChampionMutationRequests) {
+      processChampionMutationRequest(req);
     }
 
     io.emit("gameStateUpdate", getGameState());
@@ -763,6 +816,18 @@ function handleScheduledEffect(effect, context) {
       break;
     }
 
+    case "championMutation": {
+      const result = processChampionMutationRequest(effect.payload);
+      if (result?.log && context?.registerDialog) {
+        context.registerDialog({
+          message: result.log,
+          sourceId: result.champion?.id ?? null,
+          targetId: result.champion?.id ?? null,
+        });
+      }
+      return result;
+    }
+
     default:
       if (typeof effect.execute === "function") {
         effect.execute();
@@ -773,9 +838,46 @@ function handleScheduledEffect(effect, context) {
 
 /** Aplica regeneração global de HP/MP/Energy no início do turno. */
 function handleStartTurn() {
+  const currentTurn = match.combat.currentTurn;
+  const currentTurnEffects = [];
+  const futureEffects = [];
+  const preTurnMutationResults = [];
+
+  for (const effect of match.combat.scheduledEffects) {
+    if (effect.turnToHappen === currentTurn) {
+      currentTurnEffects.push(effect);
+    } else {
+      futureEffects.push(effect);
+    }
+  }
+
+  const preTurnMutationEffects = currentTurnEffects.filter(
+    (effect) => effect.type === "championMutation",
+  );
+  const deferredTurnEffects = currentTurnEffects.filter(
+    (effect) => effect.type !== "championMutation",
+  );
+
+  match.combat.scheduledEffects = [...deferredTurnEffects, ...futureEffects];
+
+  for (const effect of preTurnMutationEffects) {
+    const result = handleScheduledEffect(effect, null);
+    if (result?.log) {
+      preTurnMutationResults.push(result);
+    }
+  }
+
   const resolver = new TurnResolver(match, editMode);
 
   const turnStartContext = resolver.createBaseContext({ sourceId: null });
+
+  for (const result of preTurnMutationResults) {
+    turnStartContext.registerDialog({
+      message: result.log,
+      sourceId: result.champion?.id ?? null,
+      targetId: result.champion?.id ?? null,
+    });
+  }
 
   console.log("[DEBUG] [JEFF REVIVAL DIALOG] CTX ID:");
   console.dir(turnStartContext, { depth: 2 });
@@ -798,7 +900,6 @@ function handleStartTurn() {
   );
 
   // 4. Executar scheduled effects deste turno (inclusive os agendados durante onTurnStart)
-  const currentTurn = match.combat.currentTurn;
   const remaining = [];
 
   for (const effect of match.combat.scheduledEffects) {
@@ -1240,13 +1341,7 @@ io.on("connection", (socket) => {
       // Validação server-authoritative: rejeita keys inválidas
       const invalidKey = selectedChampionKeys.find((key) => {
         const data = championDB[key];
-        if (!data) return true;
-        if ((data.entityType ?? "champion") !== "champion") return true;
-        if (data.unreleased === true && !editMode.unavailableChampions)
-          return true;
-        if (data.disabled === true && !editMode.unavailableChampions)
-          return true;
-        return false;
+        return !isChampionSelectableInDraft(data);
       });
 
       if (invalidKey) {

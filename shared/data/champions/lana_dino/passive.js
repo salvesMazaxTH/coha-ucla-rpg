@@ -28,10 +28,7 @@ export default {
 
     // Registra intenção de restore (Tutu → Lana)
     // Estado completo de Lana (incluindo HP original) será restaurado automaticamente
-    context.flags ??= {};
-    context.flags.replaceRequests ??= [];
-
-    context.flags.replaceRequests.push({
+    context.requestChampionMutation?.({
       mode: "restore",
       targetId: lanaOriginalId,
     });

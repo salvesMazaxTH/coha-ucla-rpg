@@ -268,6 +268,16 @@ class CombatState {
     }
   }
 
+  replaceActiveChampion(champion) {
+    if (!champion?.id) return null;
+
+    this.deadChampions.delete(champion.id);
+    this.inactiveChampions.delete(champion.id);
+    this.activeChampions.set(champion.id, champion);
+
+    return champion;
+  }
+
   removeChampion(championId) {
     const champion = this.activeChampions.get(championId);
     if (!champion) return null;
