@@ -11,7 +11,8 @@
   "scripts": {
     "start": "node src/server.js",
     "export-champions": "node exportChampionsToJson.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "damage-lab": "node scripts/damageEventLab.js"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",

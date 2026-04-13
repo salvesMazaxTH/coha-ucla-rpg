@@ -1,3 +1,13 @@
+## [2026-04-13] Quick: laboratorio isolado para DamageEvent (Theopetra)
+
+- Adicionado `scripts/damageEventLab.js` para rodar simulacoes de dano sem subir partida completa (sem 2 clientes/abas/dispositivos).
+- Novo script de atalho: `npm run damage-lab`.
+- Modo de comparacao implementado (`--compare-passive`) para medir o impacto da passiva com e sem stacks no mesmo cenario.
+- Validacao local com `Theopetra x Bruno` e `golpe_petreo` mostrou razao observada de dano final `1.800x` quando a passiva esta pronta, confirmando o bonus numerico no pipeline isolado.
+- Patches: `scripts/damageEventLab.js`, `package.json`, `.planning/quick/260412-w50-pq-q-o-b-nus-dela-t-t-o-fraco-the-petra-/`
+
+---
+
 ## [2026-04-12] Fix: Jeff revive agora preserva buffs/stacks acumulados
 
 - Root cause: a passiva copiava `runtime` e arrays de modifiers do Jeff antigo, mas o novo Jeff nascia com `Attack`, `Defense`, `maxHP` e demais stats recriados a partir do baseData. Isso deixava os `statModifiers` preservados, porém desacoplados dos atributos efetivos.
