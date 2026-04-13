@@ -111,8 +111,9 @@ export function composeDamage(event) {
     return;
   }
 
-  // aplica crítico
+  // aplica crítico — recalcula critExtra a partir do bonus atual (pode ter mudado via hook)
   if (event.crit.didCrit) {
+    event.crit.critExtra = event.damage * (event.crit.bonus / 100);
     event.damage += event.crit.critExtra;
   }
 
@@ -213,10 +214,8 @@ export function composeDamage(event) {
     if (event.constructor.debugMode) console.groupEnd();
   }
 
-  event.finalDamage = event.damage;
-
   if (event.constructor.debugMode) {
-    console.log(`[DAMAGE COMPOSITION] 📈 Final: ${event.finalDamage.toFixed(2)}`);
+    console.log(`[DAMAGE COMPOSITION] 📈 Final: ${event.damage.toFixed(2)}`);
     console.groupEnd();
   }
 }

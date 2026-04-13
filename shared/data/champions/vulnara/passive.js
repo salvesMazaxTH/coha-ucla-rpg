@@ -9,22 +9,25 @@ export default {
   },
 
   hookScope: {
+    onBeforeDmgDealing: "attacker",
     onCriticalHit: "attacker",
   },
 
-  onCriticalHit({ defender, context, owner }) {
+  onBeforeDmgDealing({ owner, context, crit }) {
+    // bônus de crítico dela é sempre 1,70x
+    owner.critBonusOverride = this.enhancedCritBonus;
+    // retorna crit atualizado para a pipeline detectar a mudança e recompor
+    if (crit?.didCrit) {
+      return { crit: { ...crit, bonus: this.enhancedCritBonus } };
+    }
+  },
+
+  onCriticalHit({ owner, context }) {
     owner.modifyStat({
       statName: "Attack",
       amount: this.atkBuff,
       context,
       isPermanent: true,
     });
-    // bônus de crítico dela é sempre 1,70x
-    owner.critBonusOverride = this.enhancedCritBonus;
-
-    /* console.log(
-      `[PASSIVA — Chama Ascendente] ${owner.name} ganhou +${this.atkBuff} de Ataque. Ataque atual: ${owner.Attack}`,
-    );
-    */
   },
 };

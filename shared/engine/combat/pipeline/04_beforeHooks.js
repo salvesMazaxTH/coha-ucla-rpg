@@ -119,7 +119,6 @@ function _processHook(event, eventName, payload) {
     // Mutação de estado do evento
     if (r.damage !== undefined) {
       event.damage = r.damage;
-      event.finalDamage = event.damage;
     }
     if (r.baseDamage !== undefined) {
       event.baseDamage = Number(r.baseDamage);

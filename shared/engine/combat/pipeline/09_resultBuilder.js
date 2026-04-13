@@ -13,7 +13,7 @@ export function buildFinalResult(event) {
     event.attacker,
     event.defender,
     event.skill,
-    event.finalDamage,
+    event.damage,
     event.crit,
     event.hpAfter,
   );
@@ -35,8 +35,8 @@ export function buildFinalResult(event) {
     skill: event.skill,
     // Incluímos a jornada do dano para debug/painéis se necessário
     journey: {
-      base: event.originalBaseDamage,
-      mitigated: event.finalDamage,
+      base: event.baseDamage,
+      mitigated: event.damage,
       actual: event.actualDmg,
     },
   };
@@ -56,8 +56,7 @@ function _buildLog(user, target, skill, dmg, crit, hpAfter) {
   dmg = Math.floor(dmg);
   let log = `${userName} usou <b>${skillName}</b> e causou ${dmg} de dano a ${targetName}`;
 
-  if (crit.didCrit)
-    log += ` (CRÍTICO)`;
+  if (crit.didCrit) log += ` (CRÍTICO)`;
 
   log += `\nHP final de ${targetName}: ${hpAfter}/${target.maxHP}`;
 

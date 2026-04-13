@@ -6,7 +6,7 @@ const isarelisSkills = [
     key: "eviscerar",
     name: "Eviscerar",
 
-    bf: 80,
+    bf: 55,
     damageMode: "standard",
     contact: true,
     priority: 0,
@@ -112,7 +112,7 @@ const isarelisSkills = [
     key: "golpe_de_misericordia",
     name: "Golpe de Misericórdia",
 
-    bf: 120,
+    bf: 85,
     damageMode: "standard",
     contact: true,
     isUltimate: true,

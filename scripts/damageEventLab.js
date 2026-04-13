@@ -218,11 +218,13 @@ function pickChampion(key, id, team, slot) {
   return Champion.fromBaseData(baseData, id, team, { combatSlot: slot });
 }
 
-function createContext({ allChampions, turn }) {
+function createContext({ allChampions, turn, sourceId }) {
   const activeChampions = new Map(allChampions.map((c) => [c.id, c]));
 
   return {
     currentTurn: turn,
+    statModifierSrcId: sourceId ?? null,
+    healSourceId: sourceId ?? null,
     isDot: false,
     logs: [],
     dialogs: [],
@@ -354,6 +356,7 @@ function runScenario(options, tag) {
   const context = createContext({
     allChampions: [attacker, defender],
     turn: options.turn,
+    sourceId: attacker.id,
   });
 
   applyAssignments(context, options.contextSet || []);

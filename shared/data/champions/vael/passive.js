@@ -10,25 +10,29 @@ export default {
   },
 
   hookScope: {
+    onBeforeDmgDealing: "attacker",
     onCriticalHit: "attacker",
   },
 
-  onCriticalHit({ defender, context, owner }) {
+  onBeforeDmgDealing({ owner, context, crit }) {
+    if (owner.Critical > this.critThreshold) {
+      owner.critBonusOverride = this.enhancedCritBonus;
+      // retorna crit atualizado para a pipeline detectar a mudança e recompor
+      if (crit?.didCrit) {
+        return { crit: { ...crit, bonus: this.enhancedCritBonus } };
+      }
+    } else {
+      owner.critBonusOverride = undefined;
+    }
+  },
+
+  onCriticalHit({ owner, context }) {
+    // Buffa a chance de crítico ao acertar crítico
     owner.modifyStat({
       statName: "Critical",
       amount: this.critBuff,
       context,
       isPermanent: true,
     });
-    if (owner.Critical > this.critThreshold) {
-      owner.critBonusOverride = this.enhancedCritBonus;
-    }
-    /* console.log(
-      `${owner.name} ganhou +${this.critBuff}% Critical por causa de Sede de Sangue! Critical atual: ${owner.Critical}%` +
-        (owner.critBonusOverride === this.enhancedCritBonus
-          ? ` | Bônus de crítico: 1.${this.enhancedCritBonus}x`
-          : ``),
-    );
-    */
   },
 };
