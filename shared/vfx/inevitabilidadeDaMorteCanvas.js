@@ -30,27 +30,42 @@ export function startInevitabilidadeDaMorte(canvas) {
 
   skullImg.src = "/assets/skull.png";
 
-  // Movimento da caveira: troca alvo de deslocamento a cada ~2s (120 frames @60fps)
-  const MOVE_INTERVAL_FRAMES = 120;
+  // Movimento da caveira em ciclos: gira por um curto período e depois fica reta/parada
+  const ROTATE_FRAMES = 48;
+  const IDLE_FRAMES = 132;
+  const CYCLE_FRAMES = ROTATE_FRAMES + IDLE_FRAMES;
   let driftX = 0;
   let driftY = 0;
   let targetDriftX = 0;
   let targetDriftY = 0;
   let rotation = 0;
-  let rotationSpeed = 0.015;
+  let rotationAmplitude = 0.2;
+  let rotationDirection = 1;
+  let motionFrame = ROTATE_FRAMES;
 
   function updateSkullMotion(iconSize) {
-    if (time % MOVE_INTERVAL_FRAMES === 0) {
+    const phase = motionFrame % CYCLE_FRAMES;
+
+    if (phase === 0) {
       const maxOffset = iconSize * 0.12;
       targetDriftX = (Math.random() - 0.5) * maxOffset * 2;
       targetDriftY = (Math.random() - 0.5) * maxOffset * 2;
-      rotationSpeed =
-        (Math.random() < 0.5 ? -1 : 1) * (0.01 + Math.random() * 0.02);
+      rotationAmplitude = 0.14 + Math.random() * 0.18;
+      rotationDirection = Math.random() < 0.5 ? -1 : 1;
     }
 
-    driftX += (targetDriftX - driftX) * 0.06;
-    driftY += (targetDriftY - driftY) * 0.06;
-    rotation += rotationSpeed;
+    // Durante a rotação, desloca suavemente; no repouso, fica estática e reta.
+    if (phase < ROTATE_FRAMES) {
+      driftX += (targetDriftX - driftX) * 0.08;
+      driftY += (targetDriftY - driftY) * 0.08;
+
+      const t = phase / ROTATE_FRAMES;
+      rotation = Math.sin(t * Math.PI) * rotationAmplitude * rotationDirection;
+    } else {
+      rotation = 0;
+    }
+
+    motionFrame += 1;
   }
 
   function drawSkullIcon(cx, cy, size) {
