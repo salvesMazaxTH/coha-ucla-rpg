@@ -4,14 +4,17 @@ export default {
   key: "rocha_eternizada",
   name: "Rocha Eternizada",
   maxStacks: 3,
-  bonusPercent: 80, // bônus de dano na próxima habilidade
+  bonusPercent: 95, // bônus de dano na próxima habilidade
   description() {
-    return `Ganha 1 stack ao tomar dano (máx ${this.maxStacks}). Ao atingir ${this.maxStacks} stacks, a próxima habilidade causa +${this.bonusPercent}% de dano e os stacks são zerados.`;
+    return `Ganha 1 stack ao tomar dano (máx ${this.maxStacks}). Ao atingir ${this.maxStacks} stacks, a próxima habilidade causa +${this.bonusPercent}% de dano e os stacks são zerados.\nTheópetra é imune a efeitos de Controle (softCC e hardCC).`;
   },
+
   hookScope: {
     onAfterDmgTaking: "defender",
     onBeforeDmgDealing: "attacker",
+    onStatusEffectIncoming: "target",
   },
+
   onAfterDmgTaking({ owner, context }) {
     owner.runtime = owner.runtime || {};
     owner.runtime.theopetraStacks = Math.min(
@@ -33,6 +36,7 @@ export default {
       };
     }
   },
+
   onBeforeDmgDealing({ attacker, owner, skill, damage, context }) {
     if (attacker !== owner) return;
     if (
@@ -46,5 +50,18 @@ export default {
       damage: damage + bonus,
       log: `[PASSIVA — Rocha Eternizada] ${formatChampionName(owner)} consome os stacks e recebe +${this.bonusPercent}% de dano nesta habilidade!`,
     };
+  },
+
+  onStatusEffectIncoming({ target, statusEffect }) {
+    if (!statusEffect?.subtypes) return;
+    if (
+      statusEffect.subtypes.includes("hardCC") ||
+      statusEffect.subtypes.includes("softCC")
+    ) {
+      return {
+        cancel: true,
+        message: `${formatChampionName(target)} é imune a efeitos de Controle!`,
+      };
+    }
   },
 };
