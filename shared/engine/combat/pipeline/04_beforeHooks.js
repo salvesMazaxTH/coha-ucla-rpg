@@ -6,6 +6,7 @@ export function runBeforeHooks(event) {
 
   const preHookCrit = _snapshotCrit(event.crit);
   const basePreMitigationDamage = event.preMitigationDamage ?? event.damage;
+  const preHookBaseDamage = Number(event.baseDamage ?? 0);
 
   const deal = _applyBeforeDealingPassive(event);
   const take = _applyBeforeTakingPassive(event);
@@ -15,10 +16,30 @@ export function runBeforeHooks(event) {
     take.critChanged ||
     !_isSameCrit(preHookCrit, _snapshotCrit(event.crit));
 
-  if (critWasChanged) {
+  const damageModelWasChanged =
+    deal.damageModelChanged || take.damageModelChanged;
+
+  if (critWasChanged || damageModelWasChanged) {
     // Recompõe usando dano pré-mitigação para que mudança de crítico
     // impacte defesa, mitigação e dano final da mesma forma do step 3.
-    event.damage = basePreMitigationDamage;
+    const preMitigationFromHooks =
+      take.preMitigationDamage ?? deal.preMitigationDamage;
+
+    if (typeof preMitigationFromHooks === "number") {
+      event.damage = preMitigationFromHooks;
+    } else if (
+      damageModelWasChanged &&
+      preHookBaseDamage > 0 &&
+      Number(event.baseDamage ?? 0) > 0
+    ) {
+      // Mantém proporção de quaisquer ajustes feitos no step 2
+      // quando o hook altera o baseDamage no step 4.
+      const ratio = Number(event.baseDamage) / preHookBaseDamage;
+      event.damage = basePreMitigationDamage * ratio;
+    } else {
+      event.damage = basePreMitigationDamage;
+    }
+
     composeDamage(event);
   }
 
@@ -44,6 +65,9 @@ function _applyBeforeDealingPassive(event) {
   return _processHook(event, "onBeforeDmgDealing", {
     mode: event.mode,
     damage: event.damage,
+    baseDamage: event.baseDamage,
+    preMitigationDamage: event.preMitigationDamage,
+    piercingPortion: event.piercingPortion,
     crit: event.crit,
     skill: event.skill,
     attacker: event.attacker,
@@ -56,6 +80,9 @@ function _applyBeforeTakingPassive(event) {
   return _processHook(event, "onBeforeDmgTaking", {
     mode: event.mode,
     damage: event.damage,
+    baseDamage: event.baseDamage,
+    preMitigationDamage: event.preMitigationDamage,
+    piercingPortion: event.piercingPortion,
     crit: event.crit,
     skill: event.skill,
     attacker: event.attacker,
@@ -73,7 +100,12 @@ function _processHook(event, eventName, payload) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
   }
   const results = emitCombatEvent(eventName, payload, event.allChampions) || [];
-  const summary = { logs: [], critChanged: false };
+  const summary = {
+    logs: [],
+    critChanged: false,
+    damageModelChanged: false,
+    preMitigationDamage: undefined,
+  };
 
   for (const r of results) {
     if (!r) continue;
@@ -88,6 +120,22 @@ function _processHook(event, eventName, payload) {
     if (r.damage !== undefined) {
       event.damage = r.damage;
       event.finalDamage = event.damage;
+    }
+    if (r.baseDamage !== undefined) {
+      event.baseDamage = Number(r.baseDamage);
+      summary.damageModelChanged = true;
+    }
+    if (r.mode !== undefined) {
+      event.mode = r.mode;
+      summary.damageModelChanged = true;
+    }
+    if (r.piercingPortion !== undefined) {
+      event.piercingPortion = Number(r.piercingPortion);
+      summary.damageModelChanged = true;
+    }
+    if (r.preMitigationDamage !== undefined) {
+      summary.preMitigationDamage = Number(r.preMitigationDamage);
+      summary.damageModelChanged = true;
     }
     if (r.crit !== undefined) {
       summary.critChanged = true;

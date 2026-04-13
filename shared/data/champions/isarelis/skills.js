@@ -12,7 +12,7 @@ const isarelisSkills = [
     priority: 0,
 
     description() {
-      return "Ataca o alvo. Se agir antes dele no turno, causa dano perfurante adicional (+20%).";
+      return "Causa dano físico de contato ao alvo.";
     },
 
     targetSpec: ["enemy"],
@@ -27,49 +27,13 @@ const isarelisSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
 
       // ================================
-      // 🔴 CHECAGEM DE ORDEM DE TURNO
-      // ================================
-      const execIdx = context.executionIndex;
-
-      const turnMap = context.turnExecutionMap;
-      const targetIdx = turnMap?.get(enemy?.id);
-
-      const actedBeforeTarget =
-        execIdx !== undefined &&
-        (targetIdx === undefined || execIdx < targetIdx);
-
-      // ================================
-      // 🔴 CÁLCULO FINAL
-      // ================================
-      let finalBaseDamage = baseDamage;
-      let mode = this.damageMode;
-      let piercingPortion = 0;
-
-      if (actedBeforeTarget) {
-        finalBaseDamage = baseDamage * (1 + this.damageBonusRatio);
-
-        // Apenas parte do dano final vira perfurante
-        mode = "hybrid";
-        piercingPortion = finalBaseDamage * this.piercingRatio;
-
-        context.registerDialog({
-          message: `${user.name} dilacera antes da reação! (+perfuração)`,
-          sourceId: user.id,
-          targetId: enemy.id,
-        });
-      }
-
-      // ================================
-      // 🔴 DAMAGE EVENT (HYBRID)
-      // ================================
+      // Agora a passiva cuida do bônus de dano/perfuração via hook
       return new DamageEvent({
-        baseDamage: finalBaseDamage,
+        baseDamage,
         attacker: user,
         defender: enemy,
         skill: this,
         context,
-        mode,
-        piercingPortion,
         allChampions: context.allChampions,
       }).execute();
     },
@@ -208,34 +172,13 @@ const isarelisSkills = [
       }
 
       // ================================
-      // 🔴 BÔNUS DE INICIATIVA (PARCIALMENTE PERFURANTE)
-      // ================================
-      let finalBaseDamage = baseDamage;
-      let mode = this.damageMode;
-      let piercingPortion = 0;
-
-      if (actedBeforeTarget) {
-        finalBaseDamage = baseDamage * (1 + this.damageBonusRatio);
-        mode = "hybrid";
-        piercingPortion = finalBaseDamage * this.piercingRatio;
-
-        context.registerDialog({
-          message: `${user.name} finaliza antes da reação! (+perfuração)`,
-          sourceId: user.id,
-          targetId: enemy.id,
-        });
-      }
-
+      // Agora a passiva cuida do bônus de dano/perfuração via hook
       return new DamageEvent({
-        baseDamage: finalBaseDamage,
-
+        baseDamage,
         attacker: user,
         defender: enemy,
         skill: this,
         context,
-        mode,
-        piercingPortion,
-
         allChampions: context.allChampions,
       }).execute();
     },
