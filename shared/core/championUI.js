@@ -39,8 +39,6 @@ function buildChampionHTML(champion, { editMode } = {}) {
     
   </div> 
 
-    <h3 class="champion-name">${champion.name}</h3>
-
     <p>HP: <span class="hp">${champion.HP}/${champion.maxHP}</span></p>
 
     <div class="hp-bar">

@@ -8,7 +8,8 @@
 
 ## Validation
 
-- Validação pendente de execução após os edits.
+- `get_errors` em `shared/data/champions/jeff_the_death/passive.js`: sem erros.
+- Simulação runtime do revive não foi executada porque a chamada de terminal foi pulada.
 
 ## Notes
 

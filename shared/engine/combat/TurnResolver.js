@@ -201,6 +201,12 @@ export class TurnResolver {
     const denial = this.canExecuteAction(user, action);
 
     if (denial?.denied) {
+      context.registerDialog({
+        message: denial.message || `${formatChampionName(user)} não pode agir.`,
+        sourceId: user.id,
+        damageDepth: context.damageDepth ?? 0,
+      });
+
       this.refundActionResource(user, action);
       return {
         executed: false,

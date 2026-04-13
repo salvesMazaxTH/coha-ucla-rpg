@@ -24,6 +24,7 @@ import torren from "./torren/index.js";
 import lana from "./lana/index.js";
 import lana_dino from "./lana_dino/index.js";
 import bruno from "./bruno/index.js";
+import sengoku from "./sengoku/index.js";
 
 const championDB = {
   ralia,
@@ -52,6 +53,7 @@ const championDB = {
   lana,
   lana_dino,
   bruno,
+  sengoku,
 };
 
 export default championDB;

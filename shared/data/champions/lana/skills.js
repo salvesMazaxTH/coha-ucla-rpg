@@ -17,16 +17,54 @@ const lanaSkills = [
     priority: 3,
 
     description() {
-      return `Lana bloqueia a próxima habilidade ativa do alvo. A ação falha, se for uma ultimate, o alvo perde o recurso normalmente.`;
+      return `Lana bloqueia a próxima habilidade ativa do alvo. Falha se já foi usada no turno anterior.`;
     },
     targetSpec: ["enemy"],
 
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
+      
+      const lastUsed = user.runtime.lastUsedNaoFazIsso ?? -Infinity; // Valor inicial para garantir que a habilidade possa ser usada no primeiro turno
 
-      const baseDamage = (user.Attack * this.bf) / 100;
+      if (context.currentTurn - lastUsed <= 1) {
+        return {
+          message: `${formatChampionName(user)} tentou usar "Não Faz Isso!" novamente, mas falhou por ter sido usado no turno anterior!`,
+        };
+      }
 
-      //return results;
+      user.runtime.lastUsedNaoFazIsso = context.currentTurn;
+
+      // Inicializar hookEffects se não existir
+      enemy.runtime.hookEffects ??= [];
+
+      const hookKey = `nao_faz_isso_${user.id}`;
+
+      // Adicionar hook que bloqueia a próxima ação
+      enemy.runtime.hookEffects.push({
+        key: hookKey,
+        group: "skill_effect",
+        duration: 1,
+
+        hookScope: {
+          onValidateAction: "actionSource",
+        },
+
+        onValidateAction({ actionSource }) {
+          // Remove o hook após bloquear a ação
+          actionSource.runtime.hookEffects =
+            actionSource.runtime.hookEffects.filter((h) => h.key !== hookKey);
+
+          return {
+            deny: true,
+            message: `${formatChampionName(actionSource)} não consegue agir! Sua ação foi bloqueada!`,
+          };
+        },
+      });
+
+
+      return {
+        message: `${formatChampionName(enemy)} teve sua próxima ação bloqueada!`,
+      };
     },
   },
 

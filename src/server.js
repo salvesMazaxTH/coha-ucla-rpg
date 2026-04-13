@@ -40,7 +40,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -650,12 +650,14 @@ function handleEndTurn() {
         allReplaceRequests.push(...replaceRequests);
       }
     } else if (result.reason === "denied" && result.denial) {
+      const globalDialogs = result.context?.visual?.globalDialogs || [];
+      if (!globalDialogs.length) {
+        globalDialogs.push({ message: result.denial.message });
+      }
+
       io.emit("combatAction", {
-        dialogEvents: [
-          {
-            message: result.denial.message,
-          },
-        ],
+        globalDialogs,
+        state: result.context?._intermediateSnapshot ?? null,
       });
     } else if (result.logMessage) {
       io.emit("combatLog", result.logMessage);
