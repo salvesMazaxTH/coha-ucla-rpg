@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const naelthosSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
   // ========================
@@ -220,4 +220,4 @@ const naelthosSkills = [
   },
 ];
 
-export default naelthosSkills;  
+export default naelthosSkills;

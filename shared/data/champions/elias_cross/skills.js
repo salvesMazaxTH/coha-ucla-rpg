@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const eliasCrossSkills = [
   // =========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // =========================
   basicBlock,
   // =========================
@@ -130,7 +130,9 @@ const eliasCrossSkills = [
       return `Causa dano a TODOS os personagens, não afeta o próprio Elias. Personagens com 'Afinidade: Raio' ou 'Terra' sofrem apenas ${this.reductedDamagePercent}% do dano. No entanto, Elias sofre ${this.recoilDamage}% de sua vida máxima como dano absoluto de recuo. Quaisquer dos alvos que estiverem abaixo de 17% do HP são obliterados, e caso tenham "Condutor", o percentual necessário é apenas 25%. Esse ataque não pode ser esquivado.`;
     },
 
-    obliterateRule(ctx) {
+    finishingType: "obliterate",
+
+    finishingRule(ctx) {
       const target = ctx.defender;
       const hasOverload = target.hasStatusEffect("condutor");
       return hasOverload ? 0.25 : 0.17;

@@ -59,6 +59,7 @@ export class DamageEvent {
     //   this.allChampions,
     // );
     this.critOptions = params.critOptions ?? [];
+    this.flags = params.flags ?? {};
 
     this.damageDepth = this.context.damageDepth ?? 0;
 

@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const kaeldrathVulcanoSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
 
@@ -84,7 +84,11 @@ const kaeldrathVulcanoSkills = [
 
       results.push(primaryResult);
 
-      if (!primaryResult?.evaded && !primaryResult?.immune && primaryResult.totalDamage > 0)
+      if (
+        !primaryResult?.evaded &&
+        !primaryResult?.immune &&
+        primaryResult.totalDamage > 0
+      )
         enemy.applyStatusEffect("queimando", this.burnDuration, context);
 
       const [secondaryTarget] = context.getAdjacentChampions(enemy, {

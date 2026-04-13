@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const theopetraSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
   // ========================

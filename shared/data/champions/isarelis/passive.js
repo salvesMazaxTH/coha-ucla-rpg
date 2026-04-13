@@ -8,6 +8,6 @@ export default {
   },
  
   description() {
-    return `Sempre que Isarelis agir antes do alvo direto, ela causa dano perfurante com um bônus de 20%.`;
+    return `Sempre que Isarelis agir antes do alvo direto, o dano base é aumentado em 20% e 60% dele se torna Perfurante.`;
   },
 };

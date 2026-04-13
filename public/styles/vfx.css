@@ -26,7 +26,8 @@
   z-index: 20;
 }
 
-.obliterate-canvas {
+.obliterate-canvas,
+.finishing-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -40,7 +41,8 @@
   z-index: 1000;
 } */
 
-.obliterate-flash {
+.obliterate-flash,
+.finishing-flash {
   animation: execFlash 120ms ease-out;
 }
 
@@ -54,7 +56,8 @@
 }
 
 /* Obliterate: overlay de crack — div injetado via JS com SVG inline */
-.obliterate-crack {
+.obliterate-crack,
+.finishing-crack {
   position: absolute;
   inset: 0;
   pointer-events: none;

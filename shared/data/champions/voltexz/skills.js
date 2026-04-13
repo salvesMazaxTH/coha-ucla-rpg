@@ -5,7 +5,7 @@ import basicBlock from "../basicBlock.js";
 
 const voltexzSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
   // ========================
@@ -108,7 +108,11 @@ const voltexzSkills = [
       );
 
       // Aplica o efeito de paralisia (só se o golpe chegou)
-      if (!mainDamage?.evaded && !mainDamage?.immune && mainDamage?.totalDamage > 0) {
+      if (
+        !mainDamage?.evaded &&
+        !mainDamage?.immune &&
+        mainDamage?.totalDamage > 0
+      ) {
         paralyzed = enemy.applyStatusEffect(
           "paralisado",
           this.paralyzeDuration,

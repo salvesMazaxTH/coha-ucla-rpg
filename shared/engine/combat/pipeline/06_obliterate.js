@@ -4,21 +4,28 @@ export function processObliterate(event) {
     hp: event.defender.HP,
     maxHP: event.defender.maxHP,
   });
-  const rule = event.skill?.obliterateRule;
+  const rule = event.skill?.finishingRule ?? event.skill?.obliterateRule;
   if (!rule) return;
 
-  // caso já esteja morto
-  if (event.defender.alive === false) return;
+  const finishingType = resolveFinishingType(event.skill);
+  const finishingFlags = buildFinishingFlags(finishingType);
 
   // aliados não se executam
   if (event.defender.team === event.attacker.team) return;
 
-  if (event.defender.runtime?.preventObliterate) {
+  // finishing só faz sentido se o hit realmente conectou e causou dano
+  if (!event.actualDmg || event.actualDmg <= 0) return;
+
+  if (
+    finishingType === "obliterate" &&
+    event.defender.runtime?.preventObliterate
+  ) {
     console.log("[OBLITERATE] Cancelado por efeito de sobrevivência");
     return;
   }
 
-  let threshold = rule(event);
+  let threshold =
+    typeof rule === "function" ? rule.call(event.skill, event) : rule;
 
   const override = event.context?.editMode?.executionOverride;
 
@@ -26,19 +33,68 @@ export function processObliterate(event) {
     threshold = override;
   }
 
-  const hpPercent = event.defender.HP / event.defender.maxHP;
+  const hpAfter = Number.isFinite(event.hpAfter)
+    ? event.hpAfter
+    : event.defender.HP;
+  const hpPercent = hpAfter / event.defender.maxHP;
 
-  if (hpPercent <= threshold && event.defender.HP > 0) {
-    const dmg = event.defender.HP;
+  if (hpPercent <= threshold) {
+    const remainingHp = Math.max(0, hpAfter);
+
+    registerFinishingDialog(event, finishingType);
 
     event.defender.HP = 0;
     event.defender.alive = false;
+    event.hpAfter = 0;
 
     event.context.registerDamage({
       target: event.defender,
-      amount: dmg,
+      amount: remainingHp,
       sourceId: event.attacker?.id,
-      flags: { isObliterate: true },
+      flags: finishingFlags,
     });
   }
+}
+
+function resolveFinishingType(skill) {
+  const skillType =
+    typeof skill?.finishingType === "function"
+      ? skill.finishingType()
+      : skill?.finishingType;
+
+  return skillType || (skill?.obliterateRule ? "obliterate" : "generic");
+}
+
+function buildFinishingFlags(finishingType) {
+  if (finishingType === "obliterate") {
+    return {
+      isObliterate: true,
+      finishingType,
+    };
+  }
+
+  return {
+    isFinishing: true,
+    finishingType,
+  };
+}
+
+function registerFinishingDialog(event, finishingType) {
+  const dialogFactory = event.skill?.finishingDialog;
+  if (typeof dialogFactory !== "function") return;
+
+  const message = dialogFactory({
+    attacker: event.attacker,
+    defender: event.defender,
+    event,
+    finishingType,
+  });
+
+  if (!message) return;
+
+  event.context.registerDialog({
+    message,
+    sourceId: event.attacker?.id,
+    targetId: event.defender?.id,
+  });
 }

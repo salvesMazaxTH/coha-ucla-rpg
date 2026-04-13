@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const gryskarchuSkills = [
   // =========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // =========================
 
   basicBlock,

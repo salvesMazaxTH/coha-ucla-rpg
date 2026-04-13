@@ -1,13 +1,13 @@
-// Centralização do Bloqueio Básico (ranged global)
+// Centralização do Bloqueio Total (ranged global)
 import { formatChampionName } from "../../ui/formatters.js";
 
 const basicBlock = {
   key: "bloqueio_basico",
-  name: "Bloqueio Básico",
+  name: "Bloqueio Total",
   priority: 5,
   effectDuration: 1,
   description() {
-    return `\n Bloqueio básico genérico, físico e à distância. Anula totalmente o próximo dano recebido e todos os efeitos de status neste turno.`;
+    return `\n Bloqueio Total genérico, físico e à distância. Anula totalmente o próximo dano recebido e todos os efeitos de status neste turno.`;
   },
   targetSpec: ["self"],
   resolve({ user, context = {} }) {
@@ -29,7 +29,7 @@ const basicBlock = {
     if (!success) {
       user.runtime.basicBlockStreak = 0;
 
-      const failMessage = `${formatChampionName(user)} tentou usar <b>Bloqueio Básico</b>, mas falhou.`;
+      const failMessage = `${formatChampionName(user)} tentou usar <b>Bloqueio Total</b>, mas falhou.`;
 
       context.registerDialog?.({
         message: failMessage,
@@ -64,7 +64,7 @@ const basicBlock = {
         return {
           cancel: true,
           immune: true,
-          message: `${formatChampionName(defender)} bloqueou o ataque com Bloqueio Básico!`,
+          message: `${formatChampionName(defender)} bloqueou o ataque com Bloqueio Total!`,
         };
       },
 
@@ -72,7 +72,7 @@ const basicBlock = {
         if (statusEffect.type !== "debuff") return;
         return {
           cancel: true,
-          message: `${formatChampionName(target)} bloqueou um efeito negativo com <b>Bloqueio Básico</b>!`,
+          message: `${formatChampionName(target)} bloqueou um efeito negativo com <b>Bloqueio Total</b>!`,
         };
       },
 
@@ -88,7 +88,7 @@ const basicBlock = {
         if (context.currentTurn !== owner.runtime.lastBasicBlockTurn) {
           owner.runtime.basicBlockStreak = 0;
           console.log(
-            `[basicBlock debug] ${owner.name} não usou Bloqueio Básico neste turno. Basic Block Streak resetada.`,
+            `[basicBlock debug] ${owner.name} não usou Bloqueio Total neste turno. Basic Block Streak resetada.`,
           );
         }
       },
@@ -98,7 +98,7 @@ const basicBlock = {
     user.runtime.lastBasicBlockTurn = context.currentTurn;
 
     return {
-      message: `${formatChampionName(user)} usou <b>Bloqueio Básico</b> e está protegido contra o próximo ataque!`,
+      message: `${formatChampionName(user)} usou <b>Bloqueio Total</b> e está protegido contra o próximo ataque!`,
     };
   },
 };

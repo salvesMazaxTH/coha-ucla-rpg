@@ -786,6 +786,17 @@ export class TurnResolver {
 
         this._lastEventRef = null;
 
+        const finishingType =
+          flags?.finishingType ??
+          (flags?.isObliterate
+            ? "obliterate"
+            : flags?.isFinishing
+              ? "generic"
+              : null);
+
+        const isFinishing = !!finishingType;
+        const isObliterate = finishingType === "obliterate";
+
         const event = {
           // eventIndex: this.nextEventIndex(),
           type: "damage",
@@ -799,7 +810,9 @@ export class TurnResolver {
           immune: !!flags?.immune,
           immuneMessage: flags?.immuneMessage ?? null,
           shieldBlocked: !!flags?.shieldBlocked,
-          obliterate: !!flags?.isObliterate,
+          obliterate: isObliterate,
+          finishing: isFinishing,
+          finishingType,
           preDialogs: [],
           postDialogs: [],
         };

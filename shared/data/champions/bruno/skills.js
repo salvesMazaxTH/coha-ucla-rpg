@@ -3,7 +3,7 @@ import basicBlock from "../basicBlock.js";
 
 const brunoSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
 

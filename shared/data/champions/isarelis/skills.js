@@ -19,6 +19,7 @@ const isarelisSkills = [
 
     // 👇 configurável
     damageBonusRatio: 0.2,
+    piercingRatio: 0.6,
 
     resolve({ user, targets, context }) {
       const [enemy] = targets;
@@ -47,9 +48,9 @@ const isarelisSkills = [
       if (actedBeforeTarget) {
         finalBaseDamage = baseDamage * (1 + this.damageBonusRatio);
 
-        // O DANO INTEIRO VIRA PERFURANTE
+        // Apenas parte do dano final vira perfurante
         mode = "hybrid";
-        piercingPortion = finalBaseDamage;
+        piercingPortion = finalBaseDamage * this.piercingRatio;
 
         context.registerDialog({
           message: `${user.name} dilacera antes da reação! (+perfuração)`,
@@ -146,6 +147,98 @@ const isarelisSkills = [
   {
     key: "golpe_de_misericordia",
     name: "Golpe de Misericórdia",
+
+    bf: 120,
+    damageMode: "standard",
+    contact: true,
+    isUltimate: true,
+    priority: 0,
+
+    executeThreshold: 0.2, // 20%
+    // 0.9, // 90% PARA TESTES
+    stealthBonus: 0.5, // +50% dano se invisível
+    damageBonusRatio: 0.2,
+    piercingRatio: 0.6,
+    finishingType: "isarelis_finishing",
+
+    description() {
+      return `Desfere um golpe letal. Se o alvo estiver abaixo de ${this.executeThreshold * 100}% de Vida, é executado. Causa mais dano se usado enquanto Invisível.`;
+    },
+
+    finishingRule() {
+      return this.executeThreshold;
+    },
+
+    finishingDialog({ attacker, defender }) {
+      return `${attacker.name} executa ${defender.name}!`;
+    },
+
+    targetSpec: ["enemy"],
+
+    resolve({ user, targets, context }) {
+      const [enemy] = targets;
+
+      let baseDamage = (user.Attack * this.bf) / 100;
+
+      // ================================
+      // 🔴 CHECAGEM DE ORDEM DE TURNO
+      // ================================
+      const execIdx = context.executionIndex;
+
+      const turnMap = context.turnExecutionMap;
+      const targetIdx = turnMap?.get(enemy?.id);
+
+      const actedBeforeTarget =
+        execIdx !== undefined &&
+        (targetIdx === undefined || execIdx < targetIdx);
+
+      // ============================
+      // 🔥 BONUS DE STEALTH
+      // ============================
+      const isInvisible = user.hasStatusEffect("invisivel");
+
+      if (isInvisible) {
+        baseDamage *= 1 + this.stealthBonus;
+
+        context.registerDialog({
+          message: `${user.name} ataca das sombras!`,
+          sourceId: user.id,
+          targetId: enemy.id,
+        });
+      }
+
+      // ================================
+      // 🔴 BÔNUS DE INICIATIVA (PARCIALMENTE PERFURANTE)
+      // ================================
+      let finalBaseDamage = baseDamage;
+      let mode = this.damageMode;
+      let piercingPortion = 0;
+
+      if (actedBeforeTarget) {
+        finalBaseDamage = baseDamage * (1 + this.damageBonusRatio);
+        mode = "hybrid";
+        piercingPortion = finalBaseDamage * this.piercingRatio;
+
+        context.registerDialog({
+          message: `${user.name} finaliza antes da reação! (+perfuração)`,
+          sourceId: user.id,
+          targetId: enemy.id,
+        });
+      }
+
+      return new DamageEvent({
+        baseDamage: finalBaseDamage,
+
+        attacker: user,
+        defender: enemy,
+        skill: this,
+        context,
+        mode,
+        piercingPortion,
+
+        allChampions: context.allChampions,
+      }).execute();
+    },
   },
 ];
 

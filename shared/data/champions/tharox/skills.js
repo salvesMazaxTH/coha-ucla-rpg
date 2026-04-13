@@ -4,7 +4,7 @@ import basicBlock from "../basicBlock.js";
 
 const tharoxSkills = [
   // ========================
-  // Bloqueio Básico (global)
+  // Bloqueio Total (global)
   // ========================
   basicBlock,
   // ========================
@@ -80,7 +80,6 @@ const tharoxSkills = [
 
       enemyChampions.forEach((enemy) => {
         tauntLogs.push(enemy.applyTaunt(user.id, this.tauntDuration, context));
-        
       });
 
       const userName = formatChampionName(user);
