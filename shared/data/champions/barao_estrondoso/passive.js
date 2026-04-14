@@ -2,11 +2,13 @@
 
 import { formatChampionName } from "../../../ui/formatters.js";
 
+//Com Blindagem Reforçada, armazena ${this.storageShieldPercent}% em vez disso.
+
 export default {
   key: "reator_cataclismico",
   name: "Reator Cataclísmico",
-  storageBasePercent: 30,
-  storageShieldPercent: 40,
+  storageBasePercent: 75,
+  storageShieldPercent: 110,
   damageTakenBonusPercent: 10,
   damageTakenBonusFlatMin: 10,
   storageCap: 250,
@@ -18,7 +20,7 @@ export default {
 
     Recebe +${this.damageTakenBonusPercent}% de dano adicional (não vale para dano absoluto e DoT).
 
-    Armazena ${this.storageBasePercent}% do dano sofrido (máx. ${this.storageCap}). Com Blindagem Reforçada, armazena ${this.storageShieldPercent}% em vez disso.
+    Armazena ${this.storageBasePercent}% do dano sofrido (máx. ${this.storageCap}).
 
    Dano armazenado: <b>${stored > 0 ? stored : 0}</b>
 

@@ -47,11 +47,11 @@ const baraoEstrondosoSkills = [
     contact: false,
 
     priority: -999,
-    defenseBuff: 5,
+    defenseBuff: 20,
     defBuffDuration: 2,
 
     description() {
-      return `Aumenta a Defesa em 15 por 2 turnos e aplica o efeito "blindagem_reforcada", que aumenta sua Defesa em ${this.defenseBuff} por ${this.defBuffDuration} turnos e passa a armazenar 40% do dano na Passiva em vez de 30%.`;
+      return `Aumenta a Defesa em ${this.defenseBuff} por 2 turnos`;
     },
     targetSpec: ["self"],
     resolve({ user, context }) {
@@ -73,7 +73,7 @@ const baraoEstrondosoSkills = [
   {
     key: "super_hiper_ultra_mega_barrigada_atomico",
     name: "Super Hiper Ultra Mega Barrigada Atômico",
-    bf: 600,
+    bf: 730,
     contact: false,
     damageMode: "standard",
     priority: -999,
