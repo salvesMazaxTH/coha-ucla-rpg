@@ -83,7 +83,7 @@ const torrenSkills = [
       const damageEvent = new DamageEvent({
         baseDamage,
         mode: this.damageMode,
-        piercingPercentage: this.piercingPercentage, // o dano inteiro é perfurante
+        piercingPercentage: this.piercingPercentage,
         attacker: user,
         defender: weakestEnemy,
         skill: this,

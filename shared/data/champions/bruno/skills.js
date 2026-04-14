@@ -12,14 +12,14 @@ const brunoSkills = [
   // ========================
 
   // ========================
-  // H1 - Toque Congelante
+  // H1 - Míssil de Gelo
   // ========================
   {
-    key: "toque_congelante",
-    name: "Toque Congelante",
+    key: "missil_de_gelo",
+    name: "Míssil de Gelo",
     bf: 55,
     geladoDuration: 2,
-    contact: true,
+    contact: false,
     damageMode: "standard",
     priority: 0,
     element: "ice",
