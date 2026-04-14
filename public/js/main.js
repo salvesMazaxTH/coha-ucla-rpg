@@ -1705,6 +1705,8 @@ async function selectTargetForRole(
 // --- Overlay de seleção de alvo ---
 
 function createTargetSelectionOverlay(candidates, title) {
+  // Remove overlay de skill se estiver aberto (corrige bug mobile)
+  removeSkillOverlay && removeSkillOverlay();
   return new Promise((resolve) => {
     // se não houver candidatos, evitar abrir a UI de seleção vazia
     if (!Array.isArray(candidates) || candidates.length === 0) {

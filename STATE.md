@@ -1,23 +1,13 @@
 ## [2026-04-13] Quick: finishing VFX fisico para execute da Isarelis
 
-- Novo modulo `shared/vfx/finishing.js` com pipeline de finalizacao em canvas e variantes:
-  - `obliterate` (legado)
-  - `isarelis_finishing` (corte fisico, sangue e estilhaco sem flash azul magico)
-- `animsAndLogManager` passou a tratar `finishing` e `finishingType` no `damageEvents`, nao apenas `obliterate`.
-- `processChampionRemoved` agora respeita marcador de finalizacao para pular animacao de morte padrao quando a kill ja teve finishing cinematico.
-- Pipeline de dano atualizado para transportar flags customizadas do `DamageEvent`:
-  - `DamageEvent` agora armazena `flags`
-  - `applyDamage` propaga `flags` no `registerDamage`
-  - `TurnResolver.registerDamage` serializa `finishing` e `finishingType`
-- Ultimate `golpe_de_misericordia` da Isarelis atualizada para flags genericas de finishing (`isFinishing`, `finishingType: "isarelis_finishing"`).
-- Patches: `shared/vfx/finishing.js`, `public/js/animation/animsAndLogManager.js`, `public/styles/vfx.css`, `public/styles/animations.css`, `shared/engine/combat/DamageEvent.js`, `shared/engine/combat/pipeline/05_applyDamage.js`, `shared/engine/combat/TurnResolver.js`, `shared/data/champions/isarelis/skills.js`, `.planning/quick/260413-l1i-favor-criar-um-finishing-vfx-animation-c/`
-
----
+- `obliterate` (legado)
+- `isarelis_finishing` (corte fisico, sangue e estilhaco sem flash azul magico)
+- `DamageEvent` agora armazena `flags`
+- `applyDamage` propaga `flags` no `registerDamage`
+- `TurnResolver.registerDamage` serializa `finishing` e `finishingType`
 
 ## [2026-04-13] Quick: sistema genérico de transformações + Sengoku Primordial
 
-- Nova infraestrutura em `shared/engine/match/championTransformation.js` para transformação same-ID com troca real de `championKey`, stats, skills e passiva.
-- `TurnResolver.createBaseContext()` agora expõe `requestChampionMutation(...)`, desacoplando skills/passivas do detalhe interno `flags.replaceRequests`.
 - `transform` passou a ser aplicado imediatamente no `TurnResolver`, logo após o `resolve` da skill, em vez de esperar o fim do turno inteiro.
 - `src/server.js` passou a processar uma camada única de mutações de campeão (`swap`, `restore`, `transform`, `revertTransform`) e a agendar reversões automáticas como `scheduledEffects`.
 - `handleStartTurn()` agora aplica mutações agendadas do turno antes dos hooks de `onTurnStart`, evitando que a forma expirada ainda ative a passiva antiga por um turno extra.
