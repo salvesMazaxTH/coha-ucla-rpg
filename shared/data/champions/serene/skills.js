@@ -54,9 +54,10 @@ const sereneSkills = [
     stunDuration: 1,
     contact: false,
     damageMode: "piercing",
+    piercingPercentage: 100,
     priority: 1,
     description() {
-      return `Causa dano ({perfurante}) igual a ${this.hpDamagePercent}% do HP máximo do alvo e deixa o alvo {atordoado} por ${this.stunDuration} turno(s).`;
+      return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) igual a ${this.hpDamagePercent}% do HP máximo do alvo e deixa o alvo {atordoado} por ${this.stunDuration} turno(s).`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
@@ -67,7 +68,7 @@ const sereneSkills = [
       // resolve dano
       const result = new DamageEvent({
         baseDamage,
-        piercingPortion: baseDamage,
+        piercingPercentage: this.piercingPercentage,
         mode: "piercing",
         attacker: user,
         defender: enemy,

@@ -124,6 +124,7 @@ const raliaSkills = [
     name: "Decreto do Bastião",
     bf: 55,
     damageMode: "piercing",
+    piercingPercentage: 90,
     atkDebuff: 20,
     debuffDuration: 2,
     contact: false,
@@ -132,7 +133,7 @@ const raliaSkills = [
 
     priority: 0,
     description() {
-      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia executa um ataque automático contra todos os inimigos vivos.`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos.`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
@@ -149,8 +150,8 @@ const raliaSkills = [
       for (const enemy of enemies) {
         const damageResult = new DamageEvent({
           baseDamage,
-          mode: "hybrid",
-          piercingPortion: baseDamage, // todo: talvez queira ser uma porção diferente do dano total
+          mode: "piercing",
+          piercingPercentage: this.piercingPercentage,
           attacker: user,
           defender: enemy,
           skill: this,

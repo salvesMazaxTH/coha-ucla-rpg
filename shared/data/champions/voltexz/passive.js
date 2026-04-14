@@ -34,7 +34,6 @@ export default {
         type: "recuo_dano",
         mode: "absolute",
         baseDamage: recoilDamage,
-        piercingPortion: recoilDamage,
         attacker: owner,
         source: owner,
         defender: owner,

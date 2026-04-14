@@ -168,8 +168,8 @@ const blyskartriSkills = [
 
           new DamageEvent({
             baseDamage: counterDamage,
-            mode: "hybrid",
-            piercingPortion: counterDamage,
+            mode: "piercing",
+            piercingPercentage: 100,
             attacker: user,
             defender: attacker,
             skill: {

@@ -47,8 +47,6 @@ export default {
     // Aplica bônus e perfuração
     const hookBaseDamage = Number(baseDamage ?? damage ?? 0);
     const finalBaseDamage = hookBaseDamage * (1 + this.damageBonusRatio);
-    const piercingPortion = finalBaseDamage * this.piercingRatio;
-
     context?.registerDialog?.({
       message: `<b>[Passiva — ${this.name}]</b> ${formatChampionName(attacker)} dilacera antes da reação! (+perfuração)`,
       sourceId: attacker.id,
@@ -58,8 +56,8 @@ export default {
     return {
       baseDamage: finalBaseDamage,
       preMitigationDamage: finalBaseDamage,
-      mode: "hybrid",
-      piercingPortion,
+      mode: "piercing",
+      piercingPercentage: this.piercingRatio * 100,
     };
   },
 };

@@ -67,7 +67,7 @@ function _applyBeforeDealingPassive(event) {
     damage: event.damage,
     baseDamage: event.baseDamage,
     preMitigationDamage: event.preMitigationDamage,
-    piercingPortion: event.piercingPortion,
+    piercingPercentage: event.piercingPercentage,
     crit: event.crit,
     skill: event.skill,
     attacker: event.attacker,
@@ -82,7 +82,7 @@ function _applyBeforeTakingPassive(event) {
     damage: event.damage,
     baseDamage: event.baseDamage,
     preMitigationDamage: event.preMitigationDamage,
-    piercingPortion: event.piercingPortion,
+    piercingPercentage: event.piercingPercentage,
     crit: event.crit,
     skill: event.skill,
     attacker: event.attacker,
@@ -128,8 +128,8 @@ function _processHook(event, eventName, payload) {
       event.mode = r.mode;
       summary.damageModelChanged = true;
     }
-    if (r.piercingPortion !== undefined) {
-      event.piercingPortion = Number(r.piercingPortion);
+    if (r.piercingPercentage !== undefined) {
+      event.piercingPercentage = Number(r.piercingPercentage);
       summary.damageModelChanged = true;
     }
     if (r.preMitigationDamage !== undefined) {

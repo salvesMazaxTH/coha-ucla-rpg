@@ -11,7 +11,7 @@ import { buildFinalResult } from "./pipeline/09_resultBuilder.js";
 export class DamageEvent {
   static Modes = {
     STANDARD: "standard",
-    HYBRID: "hybrid",
+    PIERCING: "piercing",
     ABSOLUTE: "absolute",
   };
 
@@ -35,7 +35,17 @@ export class DamageEvent {
     this.baseDamage = Number(baseDamage ?? 0);
     this.damage = this.baseDamage;
 
-    this.piercingPortion = params.piercingPortion || 0;
+    // piercingPercentage: % of the defender's defense to ignore (0-100).
+    // Only used when mode === PIERCING. Defaults to 100 (full pierce).
+    if (this.mode === DamageEvent.Modes.PIERCING) {
+      this.piercingPercentage =
+        params.piercingPercentage ??
+        params.defenseIgnorePercent ??
+        params.piercingPortion ??
+        100;
+    } else {
+      this.piercingPercentage = 0;
+    }
 
     this.attacker = attacker;
     console.log(

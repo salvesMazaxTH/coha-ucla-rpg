@@ -14,13 +14,14 @@ const jeffTheDeathSkills = [
     key: "golpe_funebre",
     name: "Golpe Fúnebre",
 
-    bf: 35,
+    bf: 55,
     contact: true,
     damageMode: "piercing",
+    piercingPercentage: 70, // 70% de perfuração (ignora 70% da Defesa do inimigo)
     priority: 0,
 
     description() {
-      return `Jeff causa dano perfurante no alvo inimigo escolhido. Se Jeff já morreu, esta habilidade também causa dano aos campeões adjacentes.`;
+      return `Jeff causa dano perfurante (${this.piercingPercentage}% de perfuração) no alvo inimigo escolhido. Se Jeff já morreu, esta habilidade também causa dano aos campeões adjacentes.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
@@ -35,7 +36,7 @@ const jeffTheDeathSkills = [
       const primaryResult = new DamageEvent({
         baseDamage,
         mode: this.damageMode,
-        piercingPortion: baseDamage,
+        piercingPercentage: this.piercingPercentage,
         attacker: user,
         defender: enemy,
         skill: this,
@@ -55,7 +56,7 @@ const jeffTheDeathSkills = [
         const result = new DamageEvent({
           baseDamage,
           mode: this.damageMode,
-          piercingPortion: baseDamage,
+          piercingPercentage: this.piercingPercentage,
           attacker: user,
           defender: adjEnemy,
           skill: this,
@@ -74,7 +75,7 @@ const jeffTheDeathSkills = [
     key: "abraço_da_morte",
     name: "Abraço da Morte",
 
-    bf: 30,
+    bf: 40,
     damageMode: "standard",
 
     markDuration: 2,

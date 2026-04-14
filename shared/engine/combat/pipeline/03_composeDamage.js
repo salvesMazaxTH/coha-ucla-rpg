@@ -2,7 +2,7 @@
 // DEFENSE SYSTEM
 // ============================================================================
 
-function defenseToPercent(defense, debugMode) {
+function defToMitPct(defense, debugMode) {
   if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
   if (!defense) {
@@ -124,21 +124,13 @@ export function composeDamage(event) {
     ? Math.min(baseDefense, currentDefense)
     : currentDefense;
 
-  const defensePercent = defenseToPercent(
-    defenseUsed,
-    event.constructor.debugMode,
-  );
-
   const { flat, percent } = event.defender.getTotalDamageReduction?.() || {
     flat: 0,
     percent: 0,
   };
 
   // ---------------- STANDARD ----------------
-  if (
-    event.mode === event.constructor.Modes.STANDARD ||
-    event.piercingPortion <= 0
-  ) {
+  if (event.mode === event.constructor.Modes.STANDARD) {
     const debug = event.constructor.debugMode;
 
     if (debug) {
@@ -146,6 +138,10 @@ export function composeDamage(event) {
     }
 
     // Defesa
+    const defensePercent = defToMitPct(
+      defenseUsed,
+      event.constructor.debugMode,
+    );
     const defenseMitigation = event.damage * defensePercent;
     event.damage = event.damage - defenseMitigation;
 
@@ -176,20 +172,54 @@ export function composeDamage(event) {
     }
   }
 
-  // ------------ PIERCING / HYBRID ------------
-  else if (event.piercingPortion > 0) {
-    const piercing = Math.min(event.piercingPortion, event.damage);
-    const standard = event.damage - piercing;
+  // ------------ PIERCING ------------
+  else if (event.mode === event.constructor.Modes.PIERCING) {
+    // piercingPercentage: % da defesa do alvo a ignorar (0-100). Default 100.
+    let piercePct = Number(event.piercingPercentage ?? 100);
+    if (isNaN(piercePct) || piercePct < 0) piercePct = 0;
+    if (piercePct > 100) piercePct = 100;
 
-    let standardAfter =
-      (standard - standard * defensePercent - flat) * (1 - percent / 100);
+    // Reduz a defesa efetiva ANTES de calcular mitigation
+    const effectiveDefense = defenseUsed * (1 - piercePct / 100);
+    const defensePercent = defToMitPct(
+      effectiveDefense,
+      event.constructor.debugMode,
+    );
 
-    let piercingAfter = piercing - flat; // redução flat afeta o dano perfurante, mas não a redução percentual
+    const debug = event.constructor.debugMode;
+    if (debug) {
+      console.log(`[DAMAGE COMPOSITION] 📸 Base damage: ${event.damage}`);
+      console.log(
+        `[DAMAGE COMPOSITION] 🗡️ PIERCING ${piercePct}%: defesa ${defenseUsed} → ${effectiveDefense.toFixed(2)} (mitigation ${(defensePercent * 100).toFixed(2)}%)`,
+      );
+    }
 
-    standardAfter = standardAfter < 0 ? 0 : standardAfter;
-    piercingAfter = piercingAfter < 0 ? 0 : piercingAfter;
+    const defenseMitigation = event.damage * defensePercent;
+    event.damage = event.damage - defenseMitigation;
 
-    event.damage = standardAfter + piercingAfter;
+    if (debug) {
+      console.log(
+        `[DAMAGE COMPOSITION] 🛡️ Após defesa (${(defensePercent * 100).toFixed(1)}%): ${event.damage.toFixed(2)}`,
+      );
+    }
+
+    // Redução percentual
+    event.damage *= 1 - percent / 100;
+
+    if (debug) {
+      console.log(
+        `[DAMAGE COMPOSITION] 📉 Após redução percentual (${percent}%): ${event.damage.toFixed(2)}`,
+      );
+    }
+
+    // Redução flat
+    event.damage = event.damage - flat;
+
+    if (debug) {
+      console.log(
+        `[DAMAGE COMPOSITION] 🧱 Após redução flat (${flat}): ${event.damage.toFixed(2)}`,
+      );
+    }
   }
 
   // -------- FLOOR --------

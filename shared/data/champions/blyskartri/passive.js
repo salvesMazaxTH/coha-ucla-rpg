@@ -117,8 +117,8 @@ export default {
       baseDamage: damageAmount,
       attacker: owner,
       defender: lowestHealthEnemy,
-      mode: DamageEvent.Modes.HYBRID,
-      piercingPortion: damageAmount / 2, // Dano perfurante (50% do total)
+      mode: DamageEvent.Modes.PIERCING,
+      piercingPercentage: 50, // Ignora 50% da defesa do alvo
       skill: {
         key: "progressao_irrefreavel_explosion",
         contact: false,

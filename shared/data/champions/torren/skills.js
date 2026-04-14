@@ -60,12 +60,13 @@ const torrenSkills = [
     bf: 40,
     contact: true,
     damageMode: "piercing",
+    piercingPercentage: 100,
     priority: 2,
 
     tauntDuration: 2,
 
     description() {
-      return `Causa dano perfurante ao inimigo com menor ataque e aplica provocação nele por ${this.tauntDuration} turno(s).`;
+      return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) ao inimigo com menor ataque e aplica provocação nele por ${this.tauntDuration} turno(s).`;
     },
     targetSpec: ["all:enemy"],
 
@@ -81,8 +82,8 @@ const torrenSkills = [
 
       const damageEvent = new DamageEvent({
         baseDamage,
-        damageMode: this.damageMode,
-        piercingPortion: baseDamage, // o dano inteiro é perfurante
+        mode: this.damageMode,
+        piercingPercentage: this.piercingPercentage, // o dano inteiro é perfurante
         attacker: user,
         defender: weakestEnemy,
         skill: this,
