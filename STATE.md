@@ -1,3 +1,12 @@
+## [2026-04-15] Refactor: New Class StatusEffect
+
+- Introduzida a classe `StatusEffect` em `shared/core/StatusEffect.js` para representar cada efeito como instância real.
+- `StatusEffectsRegistry` migrou para factories `createInstance(...)`, preservando os mesmos hooks e assinaturas.
+- `applyStatusEffect` passou a instanciar via `createInstance` e manter `Map<string, StatusEffect>` em `champion.statusEffects`.
+- Compatibilidade preservada: hooks continuam diretos na instância, `expiresAtTurn` mantido, sem mudanças em `emitCombatEvent`, `DamageEvent` e `TurnResolver`.
+
+---
+
 ## [2026-04-15] Refactor: expiração unificada de efeitos temporários
 
 - Unificado o modelo temporal em `expiresAtTurn` para efeitos temporários (status, modifiers e hookEffects de runtime).

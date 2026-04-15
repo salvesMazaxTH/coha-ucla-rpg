@@ -1,3 +1,5 @@
+import { StatusEffect } from "../../core/StatusEffect.js";
+
 const condutor = {
   key: "condutor",
   name: "Condutor",
@@ -14,6 +16,23 @@ const condutor = {
     damage = Math.round(damage * 1.2);
 
     return { damage };
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        hookScope: this.hookScope,
+        onBeforeDmgTaking: this.onBeforeDmgTaking,
+      },
+    });
   },
 };
 

@@ -1,4 +1,5 @@
 import { DamageEvent } from "../../engine/combat/DamageEvent.js";
+import { StatusEffect } from "../../core/StatusEffect.js";
 
 const queimando = {
   key: "queimando",
@@ -31,6 +32,22 @@ const queimando = {
     return {
       log: `${owner.name} sofre ${result?.totalDamage ?? damage} de dano de Queimadura.`,
     };
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        onTurnStart: this.onTurnStart,
+      },
+    });
   },
 };
 

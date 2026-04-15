@@ -30,8 +30,8 @@ export function applyStatusEffect(
 ) {
   if (!statusEffectKey) return false;
 
-  const behavior = StatusEffectsRegistry[statusEffectKey];
-  if (!behavior) {
+  const definition = StatusEffectsRegistry[statusEffectKey];
+  if (!definition) {
     throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
     );
@@ -61,7 +61,7 @@ export function applyStatusEffect(
   }
 
   const { currentTurn } = context || {};
-  const isStackable = behavior.isStackable || false;
+  const isStackable = definition.isStackable || false;
 
   if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
     return { allowed: false, reason: "already-present" };
@@ -70,16 +70,18 @@ export function applyStatusEffect(
   duration = Number.isFinite(duration) ? duration : 1;
   if (metadata?.persistent) duration = Infinity;
 
-  // Build the full status effect instance with hooks
-  const effectInstance = {
-    key: statusEffectKey,
-    expiresAtTurn: Number.isFinite(currentTurn) ? currentTurn + duration : NaN,
+  if (!definition?.createInstance) return false;
+
+  const instanceContext = Number.isFinite(currentTurn)
+    ? context
+    : { ...(context || {}), currentTurn: NaN };
+
+  const effectInstance = definition.createInstance({
+    owner: champion,
     duration,
-    appliedAtTurn: currentTurn,
-    hookScope: behavior.hookScope || {},
-    ...behavior,
-    ...metadata,
-  };
+    context: instanceContext,
+    metadata,
+  });
 
   champion.statusEffects.set(statusEffectKey, effectInstance);
 

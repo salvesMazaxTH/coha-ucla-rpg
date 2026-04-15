@@ -1,4 +1,5 @@
 import { formatChampionName } from "../../ui/formatters.js";
+import { StatusEffect } from "../../core/StatusEffect.js";
 
 const paralisado = {
   key: "paralisado",
@@ -36,6 +37,24 @@ const paralisado = {
         message: `${formatChampionName(actionSource)} está Paralisado e não pode agir!`,
       };
     }
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        hookScope: this.hookScope,
+        onStatusEffectAdded: this.onStatusEffectAdded,
+        onValidateAction: this.onValidateAction,
+      },
+    });
   },
 };
 

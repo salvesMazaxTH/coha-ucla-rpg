@@ -733,8 +733,8 @@ Gerenciamento de status-effects com validação de imunidade e armazenamento ún
 applyStatusEffect(champ, key, duration, context, metadata);
 // 1. Valida registry
 // 2. emitCombatEvent("onStatusEffectIncoming") — imunidades podem cancelar
-// 3. Registra em champion.statusEffects Map com expiresAtTurn
-// 4. Copia hookScope/handlers do behavior para a instância do status
+// 3. Instancia via definition.createInstance(...) → new StatusEffect(...)
+// 4. Registra em champion.statusEffects Map<string, StatusEffect>
 // 5. Executa onStatusEffectAdded (quando existir)
 
 removeStatusEffect(champ, name);
@@ -1335,7 +1335,7 @@ Scopes disponíveis: `"source"`, `"target"`, `"sourceOrTarget"`, `"allies"`, ou 
 ```js
 champion.runtime.hookEffects.push({
   key: "efeito_especial",
-  group: "statusEffect", // ou "system", "passive", etc.
+  group: "system", // runtime.hookEffects agora é para efeitos temporários não-status
   expiresAtTurn: context.currentTurn + 2,
   hookScope: { onBeforeDmgTaking: "target" },
   onBeforeDmgTaking({ damage }) {
@@ -1398,16 +1398,28 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
 1. APLICAÇÃO: champion.applyStatusEffect(key, duration, context, metadata)
    ├── Valida no StatusEffectsRegistry
    ├── emitCombatEvent("onStatusEffectIncoming") — pode cancelar
-  ├── Monta instância com hooks do behavior + metadata
-  └── Registra em champion.statusEffects Map.set(key, { expiresAtTurn, ... })
+   ├── definition.createInstance(...) constrói `new StatusEffect(...)`
+   └── Registra em champion.statusEffects Map.set(key, statusEffectInstance)
 
 2. DISPARO: emitCombatEvent itera passivas + statusEffects ativos + runtime.hookEffects
 
 3. EXPIRAÇÃO: champion.purgeExpiredStatusEffects(currentTurn)
-  → statusEffects.delete(key)
+   → statusEffects.delete(key)
 
 4. LIMPEZA DE RUNTIME (se houver): champion.purgeExpiredHookEffects(currentTurn)
-  → remove apenas hookEffects de runtime com expiresAtTurn vencido
+   → remove apenas hookEffects de runtime com expiresAtTurn vencido
+```
+
+### Contrato da Instancia
+
+Cada item do `champion.statusEffects` deve atender ao contrato abaixo:
+
+```js
+const effect = champion.statusEffects.get("queimando");
+
+effect instanceof StatusEffect; // true
+typeof effect.onTurnStart === "function"; // hook direto na instância
+effect.expiresAtTurn; // controle de expiração
 ```
 
 ### Serialização

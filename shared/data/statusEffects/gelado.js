@@ -1,3 +1,5 @@
+import { StatusEffect } from "../../core/StatusEffect.js";
+
 const gelado = {
   key: "gelado",
   name: "Gelado",
@@ -21,6 +23,22 @@ const gelado = {
       context,
       isPercent: true,
       ignoreMinimum: true,
+    });
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        onStatusEffectAdded: this.onStatusEffectAdded,
+      },
     });
   },
 };

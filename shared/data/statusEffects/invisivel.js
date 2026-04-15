@@ -1,4 +1,5 @@
 import { formatChampionName } from "../../ui/formatters.js";
+import { StatusEffect } from "../../core/StatusEffect.js";
 
 const invisivel = {
   key: "invisivel",
@@ -28,6 +29,24 @@ const invisivel = {
       deny: true,
       message,
     };
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        description: this.description,
+        hookScope: this.hookScope,
+        onValidateAction: this.onValidateAction,
+      },
+    });
   },
 };
 

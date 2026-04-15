@@ -1,4 +1,5 @@
 import { formatChampionName } from "../../ui/formatters.js";
+import { StatusEffect } from "../../core/StatusEffect.js";
 
 // Reduz velocidade e ataque a 0 e impede de agir por X turno(s) (X geralmente 1)
 const congelado = {
@@ -48,6 +49,25 @@ const congelado = {
     return {
       log: `${formatChampionName(defender)} foi descongelado após receber dano!`,
     };
+  },
+
+  createInstance({ owner, duration, context, metadata }) {
+    return new StatusEffect({
+      key: this.key,
+      duration,
+      owner,
+      context,
+      metadata,
+      hooks: {
+        name: this.name,
+        type: this.type,
+        subtypes: this.subtypes,
+        hookScope: this.hookScope,
+        onStatusEffectAdded: this.onStatusEffectAdded,
+        onValidateAction: this.onValidateAction,
+        onAfterDmgTaking: this.onAfterDmgTaking,
+      },
+    });
   },
 };
 

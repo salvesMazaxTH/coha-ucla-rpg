@@ -36,7 +36,10 @@ function restoreRevivedState(champion, reviveFrom) {
   if (reviveFrom.statusEffects instanceof Map) {
     champion.statusEffects = new Map();
     for (const [key, value] of reviveFrom.statusEffects.entries()) {
-      champion.statusEffects.set(key, { ...value });
+      champion.statusEffects.set(
+        key,
+        Object.assign(Object.create(Object.getPrototypeOf(value)), value),
+      );
     }
   }
 }
