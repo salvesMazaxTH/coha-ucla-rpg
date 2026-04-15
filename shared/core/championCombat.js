@@ -578,9 +578,17 @@ export function takeDamage(champion, amount, context) {
  * @param {object} champion - The champion instance
  * @param {number} amount - Heal amount
  * @param {object} context - Combat context
+ * @param {object} source - Heal source champion
+ * @param {object} options - Heal options
  * @returns {number} Amount healed
  */
-export function heal(champion, amount, context, source = champion) {
+export function heal(
+  champion,
+  amount,
+  context,
+  source = champion,
+  options = {},
+) {
   if (!champion.alive) return 0;
 
   if (amount > 0) amount = Math.max(Math.floor(amount), 1);
@@ -592,12 +600,23 @@ export function heal(champion, amount, context, source = champion) {
   if (healed <= 0) return 0;
 
   const ctx = context || champion.runtime?.currentContext;
-  if (healed > 0 && ctx?.registerHeal && !ctx?.suppressHealEvents) {
-    ctx.registerHeal({
-      target: champion,
-      amount: healed,
-      sourceId: source?.id,
-    });
+  const isLifesteal = options?.type === "lifesteal";
+
+  if (healed > 0 && !ctx?.suppressHealEvents) {
+    if (isLifesteal && ctx?.registerLifesteal) {
+      ctx.registerLifesteal({
+        target: champion,
+        amount: healed,
+        sourceId: source?.id,
+        fromTargetId: options?.fromTargetId ?? null,
+      });
+    } else if (ctx?.registerHeal) {
+      ctx.registerHeal({
+        target: champion,
+        amount: healed,
+        sourceId: source?.id,
+      });
+    }
   }
 
   return healed;

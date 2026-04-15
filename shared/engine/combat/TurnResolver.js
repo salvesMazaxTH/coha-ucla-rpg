@@ -728,6 +728,7 @@ export class TurnResolver {
       visual: {
         damageEvents: [],
         healEvents: [],
+        lifestealEvents: [],
         buffEvents: [],
         resourceEvents: [],
         shieldEvents: [],
@@ -856,6 +857,36 @@ export class TurnResolver {
           },
           this.allChampions,
         );
+      },
+
+      registerLifesteal({
+        target,
+        amount,
+        sourceId,
+        fromTargetId = null,
+      } = {}) {
+        const value = Number(amount) || 0;
+        if (!target?.id || value <= 0) return;
+
+        const sourceChamp =
+          combat.activeChampions.get(sourceId) ||
+          combat.activeChampions.get(this.healSourceId) ||
+          target;
+
+        this._lastEventRef = null;
+
+        const event = {
+          type: "lifesteal",
+          targetId: target.id,
+          sourceId: sourceChamp?.id || target.id,
+          fromTargetId,
+          amount: value,
+          preDialogs: [],
+          postDialogs: [],
+        };
+
+        this.visual.lifestealEvents.push(event);
+        this._lastEventRef = event;
       },
 
       // -- BUFF REGISTRY -- //

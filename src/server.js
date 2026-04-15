@@ -533,6 +533,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     const {
       damageEvents = [],
       healEvents = [],
+      lifestealEvents = [],
       shieldEvents = [],
       buffEvents = [],
       resourceEvents = [],
@@ -542,6 +543,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
     const hasVisualChanges =
       damageEvents.length ||
       healEvents.length ||
+      lifestealEvents.length ||
       shieldEvents.length ||
       buffEvents.length ||
       resourceEvents.length ||
@@ -566,6 +568,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
   const {
     damageEvents = [],
     healEvents = [],
+    lifestealEvents = [],
     shieldEvents = [],
     buffEvents = [],
     resourceEvents = [],
@@ -577,6 +580,9 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
 
   const mainDamage = damageEvents.filter((d) => (d.damageDepth ?? 0) === 0);
   const mainHeal = healEvents.filter((h) => (h.damageDepth ?? 0) === 0);
+  const mainLifesteal = lifestealEvents.filter(
+    (ls) => (ls.damageDepth ?? 0) === 0,
+  );
   const mainShield = shieldEvents.filter((s) => (s.damageDepth ?? 0) === 0);
   const mainBuff = buffEvents.filter((b) => (b.damageDepth ?? 0) === 0);
   const mainResource = resourceEvents.filter((r) => (r.damageDepth ?? 0) === 0);
@@ -626,6 +632,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
       : null,
     damageEvents: patchedDamage,
     healEvents: mainHeal,
+    lifestealEvents: mainLifesteal,
     shieldEvents: mainShield,
     buffEvents: mainBuff,
     resourceEvents: mainResource,

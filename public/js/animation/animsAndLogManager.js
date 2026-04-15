@@ -2,6 +2,7 @@ import { formatChampionName } from "../../../shared/ui/formatters.js";
 
 import { syncChampionVFX } from "../../../shared/vfx/vfxManager.js";
 import { playFinishingEffect } from "../../../shared/vfx/finishing.js";
+import { playLifestealTransferVFX } from "../../../shared/vfx/lifestealTransferCanvas.js";
 import { StatusIndicator } from "../../../shared/ui/statusIndicator.js";
 import { playDeathClaimEffect } from "../../../shared/vfx/deathClaim.js";
 import { audioManager } from "../utils/AudioManager.js";
@@ -256,6 +257,7 @@ export function createCombatAnimationManager(deps) {
     const handlers = {
       damageEvents: { handler: animateDamage },
       healEvents: { handler: animateHeal },
+      lifestealEvents: { handler: animateLifesteal },
       shieldEvents: { handler: animateShield },
       buffEvents: { handler: animateBuff, single: true },
       resourceEvents: { handler: animateResourceChange },
@@ -539,6 +541,59 @@ export function createCombatAnimationManager(deps) {
     championEl.classList.remove("heal");
   }
 
+  async function animateLifesteal(effect) {
+    const { targetId, amount, fromTargetId } = effect;
+
+    const championEl = getChampionElement(targetId);
+    if (!championEl) return;
+
+    const portraitWrapper = championEl.querySelector(".portrait-wrapper");
+    const actualPortrait = portraitWrapper?.querySelector(".portrait");
+    if (actualPortrait) {
+      scrollIfNeeded(actualPortrait, { threshold: 0.85 });
+    }
+
+    const champion = deps.activeChampions.get(targetId);
+    const targetName = champion ? formatChampionName(champion) : "Alvo";
+    const drainedEl = fromTargetId ? getChampionElement(fromTargetId) : null;
+
+    await showDialog(`${targetName} drenou vida do alvo.`);
+
+    // Reutiliza o SFX de cura com assinatura visual própria para lifesteal.
+    audioManager.play("heal");
+
+    if (drainedEl) {
+      drainedEl.classList.add("lifesteal-drained");
+    }
+
+    championEl.classList.add("lifesteal");
+
+    await playLifestealTransferVFX({
+      fromEl: drainedEl,
+      toEl: championEl,
+      duration: 780,
+    });
+
+    if (portraitWrapper) {
+      createFloatElement(
+        portraitWrapper,
+        `+${amount}`,
+        "heal-float",
+        "lifesteal-float",
+      );
+    }
+
+    updateVisualHP(targetId, amount);
+
+    await waitForAnimation(championEl, 760);
+
+    championEl.classList.remove("lifesteal");
+
+    if (drainedEl) {
+      drainedEl.classList.remove("lifesteal-drained");
+    }
+  }
+
   // ============================================================
   //  EVASION ANIMATION
   //
@@ -570,7 +625,7 @@ export function createCombatAnimationManager(deps) {
       championEl.classList.remove("evasion");
       await showDialog(`${name} CONSEGUIU esquivar o ataque!!`);
       // meme/trollagem
-      await showDialog(`e conseguiu!`);
+      /* await showDialog(`e conseguiu!`);
       const randomTrollMessage = Math.random();
       if (randomTrollMessage < 0.5) {
         await showDialog(`e conseguiu!!`);
@@ -578,13 +633,13 @@ export function createCombatAnimationManager(deps) {
         await showDialog(`e conseguiu!!! 🥳`);
       } else {
         await showDialog(`...mas foi tão ruim que tropeçou e caiu no chão.`);
-      }
+      } */
     } else {
       await showDialog(`...mas falhou em esquivar.`);
     }
   }
 
-  // ============================================================
+  //  ============================================================
   //  SHIELD ANIMATION
   //
   //  CSS mapping:

@@ -28,12 +28,43 @@ export function applyStatusEffect(
   context,
   metadata = {},
 ) {
-  if (!statusEffectKey) return false;
+  if (!(champion?.statusEffects instanceof Map)) {
+    throw new TypeError(
+      `[STATUS ERROR] Champion inválido ao aplicar status "${statusEffectKey}".`,
+    );
+  }
+
+  if (typeof statusEffectKey !== "string" || statusEffectKey.length === 0) {
+    throw new TypeError(
+      `[STATUS ERROR] statusEffectKey inválido: ${statusEffectKey}`,
+    );
+  }
+
+  if (!context || typeof context !== "object") {
+    throw new TypeError(
+      `[STATUS ERROR] Context inválido ao aplicar status "${statusEffectKey}".`,
+    );
+  }
+
+  if (!Number.isFinite(context.currentTurn)) {
+    throw new Error(
+      `[STATUS ERROR] context.currentTurn inválido ao aplicar status "${statusEffectKey}".`,
+    );
+  }
 
   const definition = StatusEffectsRegistry[statusEffectKey];
   if (!definition) {
     throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
+    );
+  }
+
+  if (
+    typeof definition.key !== "string" ||
+    definition.key !== statusEffectKey
+  ) {
+    throw new Error(
+      `[STATUS ERROR] Registry inconsistente: key "${statusEffectKey}" não corresponde ao definition.key.`,
     );
   }
 
@@ -60,28 +91,39 @@ export function applyStatusEffect(
     return false;
   }
 
-  const { currentTurn } = context || {};
   const isStackable = definition.isStackable || false;
 
   if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
-    return { allowed: false, reason: "already-present" };
+    return false;
   }
 
   duration = Number.isFinite(duration) ? duration : 1;
   if (metadata?.persistent) duration = Infinity;
 
-  if (!definition?.createInstance) return false;
-
-  const instanceContext = Number.isFinite(currentTurn)
-    ? context
-    : { ...(context || {}), currentTurn: NaN };
+  if (typeof definition.createInstance !== "function") {
+    throw new Error(
+      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não implementa createInstance().`,
+    );
+  }
 
   const effectInstance = definition.createInstance({
     owner: champion,
     duration,
-    context: instanceContext,
+    context,
     metadata,
   });
+
+  if (!effectInstance || typeof effectInstance !== "object") {
+    throw new Error(
+      `[STATUS ERROR] createInstance() de "${statusEffectKey}" retornou instância inválida.`,
+    );
+  }
+
+  if (effectInstance.key !== statusEffectKey) {
+    throw new Error(
+      `[STATUS ERROR] Instância de status inválida: key "${effectInstance.key}" difere de "${statusEffectKey}".`,
+    );
+  }
 
   champion.statusEffects.set(statusEffectKey, effectInstance);
 
@@ -117,23 +159,16 @@ function _canApplyStatusEffect(
       `[STATUS BLOCKED] ${champion.name}: statusEffect "${statusEffectKey}" bloqueado por escudo.`,
     );
     */
-    return false;
+    return { allowed: false, reason: "shield-blocked" };
   }
 
-  const behavior = StatusEffectsRegistry[statusEffectKey];
-
-  if (!behavior) {
-    console.warn(
-      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não encontrado no registry.`,
-    );
-    return false;
-  }
+  const definition = StatusEffectsRegistry[statusEffectKey];
 
   const eventResults = emitCombatEvent(
     "onStatusEffectIncoming",
     {
       target: champion,
-      statusEffect: behavior,
+      statusEffect: definition,
       duration,
       metadata,
       context,
@@ -148,7 +183,7 @@ function _canApplyStatusEffect(
       allowed: false,
       message:
         cancelled.message ??
-        `${formatChampionName(champion)} é imune a ${behavior.name}.`,
+        `${formatChampionName(champion)} é imune a ${definition.name}.`,
     };
   }
 

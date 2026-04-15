@@ -43,7 +43,10 @@ function _applyLifeSteal(event) {
   const rawHeal = (event.actualDmg * lsRate) / 100;
 
   // 3. Aplica a cura (heal() garante floor e mínimo de 1)
-  const effectiveHeal = event.attacker.heal(rawHeal, event.context);
+  const effectiveHeal = event.attacker.heal(rawHeal, event.context, {
+    type: "lifesteal",
+    fromTargetId: event.defender?.id ?? null,
+  });
 
   if (effectiveHeal <= 0) {
     if (event.constructor.debugMode) console.groupEnd();

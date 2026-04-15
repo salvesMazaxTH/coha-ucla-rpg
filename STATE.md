@@ -1,3 +1,16 @@
+## [2026-04-15] Quick: lifesteal separado de heal comum no visual
+
+- `Champion.heal` agora aceita opção de tipo de cura e mantém o fluxo de HP centralizado para cura normal e lifesteal.
+- Quando `type: "lifesteal"`, o backend registra em `registerLifesteal` (`lifestealEvents`) em vez de `registerHeal`.
+- `_applyLifeSteal` em `07_afterHooks.js` continua curando via `heal`, mas agora marca explicitamente como lifesteal.
+- `src/server.js` passou a incluir `lifestealEvents` no envelope emitido para o cliente.
+- `animsAndLogManager.js` ganhou handler `lifestealEvents` com `animateLifesteal` dedicado.
+- Lifesteal agora carrega `fromTargetId` desde o backend para permitir VFX de transferência origem->destino.
+- Novo VFX one-shot em `shared/vfx/lifestealTransferCanvas.js`: feixe curvo energético + partículas viajando + burst em origem/destino.
+- `animations.css` ganhou trilha visual reforçada de lifesteal e drenagem (`.lifesteal`, `.lifesteal-float`, `.lifesteal-drained`, `lifestealPulse`, `lifestealFloat`, `lifestealDrained`).
+
+---
+
 ## [2026-04-15] Refactor: New Class StatusEffect
 
 - Introduzida a classe `StatusEffect` em `shared/core/StatusEffect.js` para representar cada efeito como instância real.

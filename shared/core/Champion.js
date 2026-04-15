@@ -449,8 +449,8 @@ export class Champion {
     return takeDamage(this, amount, context);
   }
 
-  heal(amount, context) {
-    return heal(this, amount, context);
+  heal(amount, context, options = {}) {
+    return heal(this, amount, context, this, options);
   }
 
   addDamageModifier(mod) {
