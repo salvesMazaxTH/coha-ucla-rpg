@@ -1,45 +1,75 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
 export default {
-    key: "primeiro_sutra_coracao_adamantino",
-    name: "Primeiro Sutra: Coração Adamantino",
+  key: "primeiro_sutra_coracao_adamantino",
+  name: "Primeiro Sutra: Coração Adamantino",
 
-    description() {
-        return `Reduz o dano sofrido em 10% (exceto absoluto), se for um ataque de contato, também recebe 25 de redução adicional. Além disso, Morakhan ganha um acúmulo de Estabilidade (máx. 3) a cada vez que sofre dano de contato, cada acúmulo reduz o próximo dano recebido em 10%. Após ser atingido, consome todos os acúmulos.`;
-    },
+  flatReductionVSContact: 25,
+  stabilityStacksCap: 4,
 
-    hookScope: {
-        onBeforeDmgTaking: "defender"
-    },
+  description(champion) {
+    const stacks = champion.runtime?.stabilityStacks || 0;
 
-    onBeforeDmgTaking({ defender, damage, skill, context, owner }) {
-        const isContact = skill?.contact;
+    return `Morakhan reduz o dano sofrido em 10% (exceto dano absoluto). Contra ataques de contato, também reduz ${this.flatReductionVSContact} de dano adicional.
+    Sempre que sofre dano de contato, ganha 1 acúmulo de <b>Estabilidade</b> (máx. ${this.stabilityStacksCap}).
 
-        let finalDamage = damage;
-        let log = "";
+    Ao sofrer dano, se estiver com acúmulos ou for atingido por um golpe significativo, consome todos os acúmulos, reduzindo o dano em 10% por acúmulo.
 
-        if (isContact) {
-            finalDamage = Math.max(0, damage - 25); // Redução fixa de 25 para ataques de contato
-        }
+    <b>Acúmulos atuais: ${stacks}</b>`;
+  },
 
-        finalDamage = finalDamage * 0.9; // Redução de 10% para todos os ataques
+  hookScope: {
+    onBeforeDmgTaking: "defender",
+    onAfterDmgTaking: "defender",
+  },
 
-        // Aplica redução adicional por acúmulos de Estabilidade
-        const stabilityStacks = owner.runtime?.stabilityStacks || 0;
-        if (stabilityStacks > 0) {
-            finalDamage = finalDamage * (1 - 0.1 * stabilityStacks); // Reduz 10% por acúmulo
-            owner.runtime.stabilityStacks = 0; // Consome todos os acúmulos após ser atingido
+  onBeforeDmgTaking({ damage, skill, context, owner, defender }) {
+    const isContact = skill?.contact;
+    const stacks = owner.runtime?.stabilityStacks || 0;
 
-            context.registerDialog?.({
-                message: `<b>[Passiva — ${this.name}]</b> ${formatChampionName(owner)} consumiu ${stabilityStacks} acúmulo(s) de Estabilidade para reduzir o dano!`,
-                sourceId: owner.id,
-                targetId: defender.id,
-            });
+    let finalDamage = damage;
 
-            log = `[Passiva - <b>${this.name}</b>] ${formatChampionName(owner)} consumiu ${stabilityStacks} acúmulo(s) de Estabilidade para reduzir o dano.`;
-        }
+    if (isContact)
+      finalDamage = Math.max(0, finalDamage - this.flatReductionVSContact);
 
-        return {damage: finalDamage, log};
-    },
-    
-}
+    finalDamage *= 0.9;
+
+    // 🔹 avaliação de golpe significativo
+    const hp = owner.HP;
+    const nextHp = hp - damage;
+    const halfHp = owner.maxHP * 0.5;
+
+    const isSignificantHit =
+      (hp > halfHp && nextHp < halfHp) || (hp <= halfHp && nextHp <= 0);
+
+    if (!stacks || !isSignificantHit) return { damage: finalDamage };
+
+    finalDamage *= 1 - 0.1 * stacks;
+    owner.runtime.stabilityStacks = 0;
+
+    const msg = `<b>[Passiva — ${this.name}]</b> ${formatChampionName(owner)} consumiu ${stacks} acúmulo(s) de Estabilidade!`;
+
+    context.registerDialog?.({
+      message: msg,
+      sourceId: owner.id,
+      targetId: defender.id,
+    });
+
+    return { damage: finalDamage, log: msg };
+  },
+
+  onAfterDmgTaking({ damage, skill, owner }) {
+    if (damage <= 0 || !skill?.contact) return;
+
+    const runtime = (owner.runtime ??= {});
+    const stacks = runtime.stabilityStacks || 0;
+
+    if (stacks >= this.stabilityStacksCap) return;
+
+    runtime.stabilityStacks = stacks + 1;
+
+    return {
+      log: `<b>[Passiva — ${this.name}]</b> ${formatChampionName(owner)} ganha 1 acúmulo de Estabilidade (${runtime.stabilityStacks}/${this.stabilityStacksCap}).`,
+    };
+  },
+};

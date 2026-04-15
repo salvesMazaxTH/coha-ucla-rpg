@@ -37,7 +37,7 @@ const editMode = {
   enabled: true,
   autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
-  actMultipleTimesPerTurn: false,
+  actMultipleTimesPerTurn: true,
   unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
@@ -948,6 +948,7 @@ function handleStartTurn() {
   match.combat.activeChampions.forEach((champion) => {
     champion.purgeExpiredStatModifiers(match.combat.currentTurn);
     champion.purgeExpiredStatusEffects(match.combat.currentTurn);
+    champion.purgeExpiredHookEffects(match.combat.currentTurn);
   });
 
   // 5. Regen global

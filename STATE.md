@@ -1,3 +1,27 @@
+## [2026-04-15] Refactor: expiração unificada de efeitos temporários
+
+- Unificado o modelo temporal em `expiresAtTurn` para efeitos temporários (status, modifiers e hookEffects de runtime).
+- Adicionado purge global de `runtime.hookEffects` por turno (`purgeExpiredHookEffects`) no ciclo de início de turno.
+- Removidas limpezas manuais redundantes (`hookEffects.filter` puramente temporal) em skills/passivas, preservando lógica de gameplay e flags de runtime.
+- Removida normalização redundante de nomes de status (`normalizeStatusEffectName`); consultas/remoções agora usam key canônica diretamente.
+- `emitCombatEvent` passou a iterar também `statusEffects` ativos (Map), deixando hooks de status no próprio status e simplificando o runtime.
+
+---
+
+## [2026-04-14] Refactor: sistema de dano Piercing
+
+- Removido modo `"hybrid"`. Agora existem apenas 3 modos: `"standard"`, `"piercing"` e `"absolute"`.
+- `piercingPortion` (flat de dano perfurante) substituído por `piercingPercentage` (% da defesa do alvo a ignorar, 0-100).
+- No modo `"piercing"`, todo o `baseDamage` é considerado perfurante. O `piercingPercentage` define quanto da defesa do alvo é ignorado antes de calcular a mitigação (ex: 60% ignora 60% da defesa, não 60% da mitigação).
+- Se `piercingPercentage` não for passado no modo piercing, assume 100% (ignora toda a defesa).
+- `defenseToPercent` renomeado para `defToMitPct` (nome mais preciso: converte defesa em % de mitigação).
+- Hooks (`04_beforeHooks.js`) atualizados: payload e handler usam `piercingPercentage` em vez de `piercingPortion`.
+- Campeões atualizados: blyskartri, kai, jeff_the_death, ralia, sengoku, serene, torren, voltexz, isarelis.
+- Validado via `damageEventLab.js`: Isarelis (passiva on/off) e Ralia (ult piercing 90%).
+- Patches: `DamageEvent.js`, `03_composeDamage.js`, `04_beforeHooks.js`, skills/passives de 9 campeões.
+
+---
+
 ## [2026-04-13] Quick: finishing VFX fisico para execute da Isarelis
 
 - `obliterate` (legado)

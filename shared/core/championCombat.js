@@ -90,7 +90,9 @@ export function applyTaunt(champion, taunterId, duration, context) {
   // Engine-level log and dialog
   const tauntSource = context?.allChampions?.get?.(taunterId);
 
-  const tauntSourceName = tauntSource ? formatChampionName(tauntSource) : taunterId;
+  const tauntSourceName = tauntSource
+    ? formatChampionName(tauntSource)
+    : taunterId;
 
   const logMsg = `${formatChampionName(champion)} foi provocado por <b>${tauntSourceName}</b>.`;
 
@@ -709,6 +711,20 @@ export function purgeExpiredModifiers(champion, currentTurn) {
     if (m.permanent) return true;
     return m.expiresAtTurn > currentTurn;
   });
+}
+
+/**
+ * Purge expired runtime hook effects
+ * @param {object} champion - The champion instance
+ * @param {number} currentTurn - Current turn number
+ */
+export function purgeExpiredHookEffects(champion, currentTurn) {
+  if (!Array.isArray(champion.runtime?.hookEffects)) return;
+
+  champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
+    (effect) =>
+      effect?.expiresAtTurn === undefined || effect.expiresAtTurn > currentTurn,
+  );
 }
 
 /**

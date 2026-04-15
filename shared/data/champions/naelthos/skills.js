@@ -102,9 +102,6 @@ const naelthosSkills = [
         },
         onTurnStart({ owner, context }) {
           if (context.currentTurn < this.expiresAtTurn) return;
-          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-            (e) => e.key !== "forma_aquatica_hook",
-          );
           owner.runtime.form = null;
         },
         onActionResolved({ actionSource, owner, skill }) {

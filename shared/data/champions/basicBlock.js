@@ -76,14 +76,6 @@ const basicBlock = {
         };
       },
 
-      onTurnStart({ owner, context }) {
-        if (context.currentTurn > this.expiresAtTurn) {
-          user.runtime.hookEffects = user.runtime.hookEffects.filter(
-            (e) => e.key !== "bloqueio_basico_effect",
-          );
-        }
-      },
-
       onTurnEnd({ owner, context }) {
         if (context.currentTurn !== owner.runtime.lastBasicBlockTurn) {
           owner.runtime.basicBlockStreak = 0;

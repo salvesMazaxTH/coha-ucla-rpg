@@ -114,7 +114,7 @@ const naelysSkills = [
 
       const effect = {
         key: "massa_do_mar_revolto",
-        expiresAt: context.currentTurn + 2,
+        expiresAtTurn: context.currentTurn + 2,
         lastTriggerTurn: null,
 
         onAfterDmgTaking({
@@ -187,27 +187,7 @@ const naelysSkills = [
 
           return {
             log: `🌊 ${formatChampionName(owner)} contra-ataca com a força do mar!`,
-          }
-        },
-
-        onTurnEnd({ owner, context }) {
-          const currentTurn = context.currentTurn;
-
-          // console.log("[NAELYS] Hook onTurnEnd verificado.");
-          /* console.log(
-            "[NAELYS] currentTurn:",
-            currentTurn,
-            "expiresAt:",
-            this.expiresAt,
-          );
-          */
-          if (currentTurn >= this.expiresAt) {
-            // console.log("[NAELYS] Massa do Mar Revolto expirou.");
-
-            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-              (e) => e !== this,
-            );
-          }
+          };
         },
       };
 

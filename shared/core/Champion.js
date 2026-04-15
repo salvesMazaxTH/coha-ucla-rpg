@@ -1,6 +1,5 @@
 // Import status effect methods
 import {
-  normalizeStatusEffectName,
   applyStatusEffect,
   hasStatusEffect,
   getStatusEffect,
@@ -26,6 +25,7 @@ import {
   takeDamage,
   heal,
   purgeExpiredStatModifiers,
+  purgeExpiredHookEffects,
   addDamageModifier,
   purgeExpiredModifiers,
   getDamageModifiers,
@@ -339,10 +339,6 @@ export class Champion {
   // ======== STATUS EFFECTS (Delegated) ========
   // ===============================
 
-  normalizeStatusEffectName(statusEffectName) {
-    return normalizeStatusEffectName(this, statusEffectName);
-  }
-
   applyStatusEffect(statusEffectKey, duration, context, metadata = {}) {
     return applyStatusEffect(
       this,
@@ -443,6 +439,10 @@ export class Champion {
 
   purgeExpiredStatModifiers(currentTurn) {
     return purgeExpiredStatModifiers(this, currentTurn);
+  }
+
+  purgeExpiredHookEffects(currentTurn) {
+    return purgeExpiredHookEffects(this, currentTurn);
   }
 
   takeDamage(amount, context) {

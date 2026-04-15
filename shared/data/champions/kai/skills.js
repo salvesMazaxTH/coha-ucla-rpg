@@ -59,7 +59,7 @@ const kaiSkills = [
       const effect = {
         key: "postura_da_brasa_viva",
         state: "postura", // "postura" → "brasa_viva"
-        expiresAt: context.currentTurn + 2,
+        expiresAtTurn: context.currentTurn + 2,
 
         // 🔥 CONTRA-ATAQUE
         onAfterDmgTaking({
@@ -116,7 +116,7 @@ const kaiSkills = [
           ) {
             this.state = "brasa_viva";
             owner.runtime.fireStance = "brasa_viva";
-            this.expiresAt = context.currentTurn + 2;
+            this.expiresAtTurn = context.currentTurn + 2;
 
             return {
               log: "🔥 Brasa Viva é ativada!",
@@ -139,10 +139,7 @@ const kaiSkills = [
 
         // 🔥 REMOÇÃO AUTOMÁTICA
         onTurnStart({ owner, context }) {
-          if (context.currentTurn >= this.expiresAt) {
-            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-              (e) => e !== this,
-            );
+          if (context.currentTurn >= this.expiresAtTurn) {
             owner.runtime.fireStance = null; // Sinaliza para o sistema de VFX que a postura foi removida
           }
         },

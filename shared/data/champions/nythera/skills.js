@@ -89,7 +89,7 @@ const nytheraSkills = [
 
       const effect = {
         key: "camara_de_estase",
-        expiresAt: context?.currentTurn + this.effectDuration,
+        expiresAtTurn: context?.currentTurn + this.effectDuration,
 
         hookScope: {
           onAfterDmgTaking: "defender",

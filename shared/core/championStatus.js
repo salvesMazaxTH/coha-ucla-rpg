@@ -1,12 +1,6 @@
-import { StatusIndicator } from "../ui/statusIndicator.js";
 import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js";
 import { emitCombatEvent } from "../engine/combat/combatEvents.js";
 import { formatChampionName } from "../ui/formatters.js";
-
-export function normalizeStatusEffectName(champion, statusEffectName) {
-  if (typeof statusEffectName !== "string") return "";
-  return statusEffectName.trim().toLowerCase();
-}
 
 /**
  * Auxiliary function for logs and interface
@@ -76,16 +70,29 @@ export function applyStatusEffect(
   duration = Number.isFinite(duration) ? duration : 1;
   if (metadata?.persistent) duration = Infinity;
 
-  champion.statusEffects.set(statusEffectKey, {
+  // Build the full status effect instance with hooks
+  const effectInstance = {
+    key: statusEffectKey,
     expiresAtTurn: Number.isFinite(currentTurn) ? currentTurn + duration : NaN,
     duration,
     appliedAtTurn: currentTurn,
+    hookScope: behavior.hookScope || {},
+    ...behavior,
     ...metadata,
-  });
+  };
 
-  _attachStatusEffectBehavior(champion, statusEffectKey, duration, context);
+  champion.statusEffects.set(statusEffectKey, effectInstance);
 
-  // Uso da nova função de display
+  // Call onStatusEffectAdded if present
+  if (typeof effectInstance.onStatusEffectAdded === "function") {
+    effectInstance.onStatusEffectAdded({
+      owner: champion,
+      duration,
+      context,
+    });
+  }
+
+  // Display name for logs
   const statusDisplayName = formatStatusDisplayName(statusEffectKey);
 
   return {
@@ -143,65 +150,7 @@ function _canApplyStatusEffect(
     };
   }
 
-  if (behavior?.subtypes?.includes("hardCC")) {
-    for (const [existingStatusEffect] of champion.statusEffects) {
-      const existingBehavior = StatusEffectsRegistry[existingStatusEffect];
-      // Capitaliza a primeira letra e substitui underscores por espaço
-      const statusDisplayName = statusEffectKey
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-    }
-  }
-
   return { allowed: true };
-}
-
-function _attachStatusEffectBehavior(
-  champion,
-  statusEffectKey,
-  duration,
-  context,
-) {
-  /* console.log(
-    `[STATUS HOOK] Instalando hooks de "${statusEffectKey}" em ${champion.name}`,
-  );
-  */
-  const behavior = StatusEffectsRegistry[statusEffectKey];
-  if (!behavior) return;
-
-  const isStackable = statusEffectKey === "poison";
-
-  const effectInstance = {
-    key: statusEffectKey,
-    group: "statusEffect",
-    source: statusEffectKey,
-    ownerId: champion.id,
-    ...behavior,
-  };
-
-  champion.runtime ??= {};
-  champion.runtime.hookEffects ??= [];
-
-  if (!isStackable) {
-    champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
-      (e) => e.key !== statusEffectKey,
-    );
-  }
-
-  champion.runtime.hookEffects.push(effectInstance);
-
-  /* console.log(
-    `[STATUS HOOK] Hooks ativos de ${champion.name}:`,
-    champion.runtime.hookEffects.map((e) => e.key),
-  );
-  */
-  if (behavior.onStatusEffectAdded) {
-    behavior.onStatusEffectAdded({
-      owner: champion,
-      duration,
-      context,
-    });
-  }
 }
 
 /**
@@ -211,9 +160,7 @@ function _attachStatusEffectBehavior(
  * @returns {boolean}
  */
 export function hasStatusEffect(champion, statusEffectName) {
-  return champion.statusEffects.has(
-    normalizeStatusEffectName(champion, statusEffectName),
-  );
+  return champion.statusEffects.has(statusEffectName);
 }
 
 /**
@@ -223,8 +170,7 @@ export function hasStatusEffect(champion, statusEffectName) {
  * @returns {object|null}
  */
 export function getStatusEffectData(champion, name) {
-  const normalized = normalizeStatusEffectName(champion, name);
-  return champion.statusEffects.get(normalized) || null;
+  return champion.statusEffects.get(name) || null;
 }
 
 /**
@@ -234,11 +180,7 @@ export function getStatusEffectData(champion, name) {
  * @returns {object|null}
  */
 export function getStatusEffect(champion, statusEffectName) {
-  return (
-    champion.statusEffects.get(
-      normalizeStatusEffectName(champion, statusEffectName),
-    ) || null
-  );
+  return champion.statusEffects.get(statusEffectName) || null;
 }
 
 /**
@@ -247,20 +189,15 @@ export function getStatusEffect(champion, statusEffectName) {
  * @param {string} statusEffectName - Name of the statusEffect to remove
  */
 export function removeStatusEffect(champion, statusEffectName) {
-  const normalizedName = normalizeStatusEffectName(champion, statusEffectName);
-  if (champion.statusEffects.has(normalizedName)) {
-    champion.statusEffects.delete(normalizedName);
-
-    champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
-      (e) => !(e.group === "statusEffect" && e.key === statusEffectName),
-    );
-
+  if (champion.statusEffects.has(statusEffectName)) {
+    champion.statusEffects.delete(statusEffectName);
+    // No longer remove from runtime.hookEffects; status effect hooks are only in statusEffects Map now
     /* console.log(
-      `[STATUS REMOVE] ${champion.name}: StatusEffect "${normalizedName}" removido.`,
+      `[STATUS REMOVE] ${champion.name}: StatusEffect "${statusEffectName}" removido.`,
     );
     */
     // 🎨 Anima a remoção do indicador
-    /*     StatusIndicator.animateIndicatorRemove(champion, normalizedName); */
+    /*     StatusIndicator.animateIndicatorRemove(champion, statusEffectName); */
   }
 }
 
@@ -283,10 +220,7 @@ export function purgeExpiredStatusEffects(champion, currentTurn) {
         `[STATUS EXPIRE] ${champion.name}: StatusEffect "${statusEffectName}" expirou.`,
       );
       */
-      champion.runtime.hookEffects = champion.runtime.hookEffects.filter(
-        (e) => !(e.group === "statusEffect" && e.key === statusEffectName),
-      );
-
+      // No longer remove from runtime.hookEffects; status effect hooks are only in statusEffects Map now
       // 🎨 Anima a remoção do indicador com delay visual
       /*       StatusIndicator.animateIndicatorRemove(champion, statusEffectName); */
     }

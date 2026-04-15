@@ -49,6 +49,13 @@ export function emitCombatEvent(eventName, payload, champions) {
       hookSources.push(champ.passive);
     }
 
+    // 🔹 StatusEffects (Map)
+    if (champ.statusEffects && champ.statusEffects.size > 0) {
+      for (const effectInstance of champ.statusEffects.values()) {
+        hookSources.push(effectInstance);
+      }
+    }
+
     // 🔹 Hook effects temporários
     if (champ.runtime?.hookEffects?.length) {
       hookSources.push(...champ.runtime.hookEffects);

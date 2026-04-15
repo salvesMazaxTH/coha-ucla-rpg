@@ -120,9 +120,6 @@ const jeffTheDeathSkills = [
           if (!owner.runtime.markedByAbraçoDaMorte) return;
           if (this.expiresAtTurn < context.currentTurn) {
             owner.runtime.markedByAbraçoDaMorte = false;
-            owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-              (he) => he.key !== "abraco_da_morte_mark",
-            );
             return;
           }
 
@@ -165,14 +162,6 @@ const jeffTheDeathSkills = [
           user.runtime.hookEffects = user.runtime.hookEffects.filter(
             (he) => he.key !== "abraco_da_morte_buff",
           );
-        },
-
-        onTurnStart({ owner, context }) {
-          if (this.expiresAtTurn < context.currentTurn) {
-            user.runtime.hookEffects = user.runtime.hookEffects.filter(
-              (he) => he.key !== "abraco_da_morte_buff",
-            );
-          }
         },
       });
 
@@ -256,9 +245,6 @@ const jeffTheDeathSkills = [
           if (context.currentTurn !== this.triggerTurn) return;
 
           owner.runtime.markedByInevitabilidadeDaMorte = false;
-          owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
-            (he) => he.key !== "death_claim_execution",
-          );
         },
       };
       console.log(

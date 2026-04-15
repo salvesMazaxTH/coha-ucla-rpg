@@ -12,38 +12,110 @@ const morakhanSkills = [
   // ========================
 
   {
-    key: "morakhan_1st_skill",
-    name: "Morakhan 1st skill",
+    key: "segundo_sutra_mantra_do_ferro_vivo",
+    name: "Segundo sutra: Mantra do Ferro Vivo",
+    shieldPercent: 45,
     contact: false,
-    bf: 80,
-    damageMode: "standard",
-    priority: 0,
+    priority: 3,
 
     description() {
-      return `morakhan 1st skill description`;
+      return `Durante este turno, após receber dano:
+      Ganha um escudo equivalente a ${this.shieldPercent}% do dano sofrido.`;
     },
 
-    targetSpec: [""],
+    targetSpec: ["self"],
 
     resolve({ user, targets, context = {} }) {
-      // morakhan 1st skill
+      const shieldPercent = this.shieldPercent;
+
+      user.runtime.hookEffects ??= [];
+      user.runtime.hookEffects.push({
+        key: "mantra_do_ferro_vivo_shield",
+        name: "Mantra do Ferro Vivo (Proteção)",
+        onAfterDmgTaking({ defender, damage, context }) {
+          const shieldAmount = Math.floor(damage * (shieldPercent / 100));
+          defender.addShield(shieldAmount, 0, context);
+
+          return {
+            log: `<b>[${this.name}]</b> ${formatChampionName(defender)} ganhou um escudo de ${shieldAmount} (${shieldPercent}% do dano sofrido)!`,
+          };
+        },
+      });
     },
   },
 
   {
-    key: "morakhan_2nd_skill",
-    name: "Morakhan 2nd skill",
+    key: "terceiro_sutra_bencao_do_deus_da_montanha",
+    name: "Terceiro Sutra: Bênção do Deus da Montanha",
+
     contact: false,
-    priority: 0,
+    priority: 2,
+
+    duration: 1,
+    dmgReduct: 20,
 
     description() {
-      return `morakhan 2nd skill description`;
+      return `Durante este turno, Morakhan e todos os aliados ficam imunes a controle e recebem ${this.dmgReduct}% de redução de dano.`;
     },
 
-    targetSpec: [""],
+    targetSpec: ["self"],
 
     resolve({ user, context }) {
-      // morakhan 2nd skill
+      const allies = context.aliveChampions.filter((c) => c.team === user.team);
+
+      for (const ally of allies) {
+        // 🛡️ Redução de dano via sistema nativo
+        ally.applyDamageReduction({
+          amount: this.dmgReduct,
+          duration: this.duration,
+          source: this.name,
+          type: "percent",
+          context,
+        });
+
+        // 🚫 Imunidade a CC (hook ainda necessário)
+        ally.runtime ??= {};
+        ally.runtime.hookEffects ??= [];
+
+        // evita duplicação
+        ally.runtime.hookEffects = ally.runtime.hookEffects.filter(
+          (e) => e.key !== "bencao_deus_montanha_cc",
+        );
+
+        ally.runtime.hookEffects.push({
+          key: "bencao_deus_montanha_cc",
+          expiresAtTurn: context.currentTurn + this.duration,
+
+          hookScope: {
+            onStatusEffectIncoming: "target",
+          },
+
+          onStatusEffectIncoming({ target, statusEffect }) {
+            if (!statusEffect?.subtypes) return;
+
+            if (
+              statusEffect.subtypes.includes("hardCC") ||
+              statusEffect.subtypes.includes("softCC")
+            ) {
+              return {
+                cancel: true,
+                message: `${formatChampionName(target)} está sob a Bênção do Deus da Montanha e é imune a controle!`,
+              };
+            }
+          },
+        });
+      }
+
+      context.registerDialog({
+        message: `${formatChampionName(user)} invoca a Bênção do Deus da Montanha, protegendo seus aliados!`,
+        sourceId: user.id,
+      });
+
+      return [
+        {
+          log: `<b>${formatChampionName(user)}</b> concede <b>${this.name}</b> a todos os aliados!`,
+        },
+      ];
     },
   },
 
@@ -51,7 +123,6 @@ const morakhanSkills = [
     key: "quarto_sutra_postura_da_montanha",
     name: "Quarto sutra: Postura da Montanha",
     contact: false,
-    damageMode: "standard",
 
     isUltimate: true,
     ultCost: 2,
@@ -63,7 +134,7 @@ const morakhanSkills = [
       Recebe 60% de redução de dano a mais.`;
     },
 
-    targetSpec: [""],
+    targetSpec: ["self"],
 
     resolve({ user, context }) {
       const effect = {

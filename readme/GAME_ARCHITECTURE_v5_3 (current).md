@@ -650,7 +650,7 @@ champion.ultCap              // máximo de unidades (padrão: 24 = 6 barras × 4
 // Combate
 champion.skills              // Skill[]
 champion.passive             // { key, hooks... } | null
-champion.statusEffects       // Map<string, { expiresAtTurn, ... }>
+champion.statusEffects       // Map<string, StatusEffectInstance>
 champion.alive               // boolean
 champion.hasActedThisTurn    // boolean
 
@@ -666,6 +666,23 @@ champion.runtime = {
   hookEffects: HookEffect[],
   currentContext: object,
   // Pode conter campos customizados por campeão (ex: fireStance, form, etc.)
+}
+```
+
+Onde `StatusEffectInstance` representa o objeto completo do efeito ativo (não só duração), incluindo dados e handlers de hook:
+
+```js
+{
+  key: "queimando",
+  expiresAtTurn: 12,
+  duration: 2,
+  appliedAtTurn: 10,
+  hookScope: { onTurnStart: "owner" },
+  subtypes: ["dot", "fire"],
+  onTurnStart({ owner, context }) {
+    // hook function do status-effect
+  },
+  // ...metadata adicional (source, flags, etc.)
 }
 ```
 
@@ -710,21 +727,23 @@ Funções puras para mecânicas de dano, stats e escudos:
 
 ### 7.3 championStatus.js
 
-Gerenciamento de status-effects com validação de imunidade e injeção de hooks:
+Gerenciamento de status-effects com validação de imunidade e armazenamento único em `statusEffects` (Map):
 
 ```js
 applyStatusEffect(champ, key, duration, context, metadata);
 // 1. Valida registry
 // 2. emitCombatEvent("onStatusEffectIncoming") — imunidades podem cancelar
-// 3. Valida hard CC (não permite 2 hard CCs simultâneos)
-// 4. Registra em champion.statusEffects Map
-// 5. Instala hookEffect em runtime.hookEffects (com group: "statusEffect")
+// 3. Registra em champion.statusEffects Map com expiresAtTurn
+// 4. Copia hookScope/handlers do behavior para a instância do status
+// 5. Executa onStatusEffectAdded (quando existir)
 
 removeStatusEffect(champ, name);
 hasStatusEffect(champ, name);
 getStatusEffect(champ, name);
 purgeExpiredStatusEffects(champ, currentTurn);
 ```
+
+As operações acima usam a key canônica do efeito diretamente (ex.: `"queimando"`, `"congelado"`, `"imunidadeAbsoluta"`). Não há normalização adicional de string nessa camada.
 
 ### 7.4 championUI.js
 
@@ -827,8 +846,8 @@ const result = new DamageEvent({
   defender: target,
   skill,
   context,
-  mode, // "standard" | "hybrid" | "absolute" (padrão: "standard")
-  piercingPortion, // porção que ignora defesa (modo hybrid)
+  mode, // "standard" | "piercing" | "absolute" (padrão: "standard")
+  piercingPercentage, // % da defesa do alvo a ignorar (0-100, modo piercing, default 100)
   critOptions, // { force?, disable? }
   allChampions, // Map — necessário para hooks
 }).execute();
@@ -909,11 +928,11 @@ skill.resolve({ user, targets, context })
 │
 ├── Aplica crítico: damage += critExtra (se didCrit)
 │
-├── Defesa: defensePercent = defenseToPercent(defenseUsed)  ← curva não-linear
+├── Defesa: mitPct = defToMitPct(defenseUsed)  ← curva não-linear
 │   (crítico ignora buffs de defesa: usa Math.min(baseDefense, currentDefense))
 │
-├── STANDARD: damage -= damage * defensePercent → redução % → redução flat
-├── HYBRID: standard + piercing portions
+├── STANDARD: damage -= damage * mitPct → redução % → redução flat
+├── PIERCING: defenseUsed *= (1 - piercingPercentage/100) → mitPct(effectiveDef) → redução % → flat
 │
 ├── Floor: Math.max(damage, 5)       ← exceto se ignoreMinimumFloor
 ├── Cap:   Math.min(damage, 999)     ← GLOBAL_DMG_CAP
@@ -971,11 +990,11 @@ Para cada extra em context.extraDamageQueue:
 
 ### Damage Modes
 
-| Mode         | Comportamento                                                      |
-| ------------ | ------------------------------------------------------------------ |
-| `"standard"` | Pipeline completa com defesa, crit, hooks                          |
-| `"absolute"` | Bypassa prepareDamage, beforeHooks, evasão — dano direto ao HP     |
-| `"hybrid"`   | `piercingPortion` ignora defesa%; restante passa pela curva normal |
+| Mode         | Comportamento                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `"standard"` | Pipeline completa com defesa, crit, hooks                                                                                                        |
+| `"absolute"` | Bypassa prepareDamage, beforeHooks, evasão — dano direto ao HP                                                                                   |
+| `"piercing"` | Ignora `piercingPercentage`% da defesa do alvo antes de calcular mitigação. Default 100% (ignora toda a defesa). Todo o baseDamage é perfurante. |
 
 ### `damageDepth` e Reações
 
@@ -1258,7 +1277,8 @@ fire: "🔥", water: "🌊", lightning: "⚡", earth: "🌱", ice: "❄️"
 `emitCombatEvent(eventName, payload, champions)` itera sobre todos os campeões e dispara o hook em:
 
 1. `champ.passive` — passiva permanente.
-2. `champ.runtime.hookEffects` — efeitos temporários (inclui status-effects instalados).
+2. `champ.statusEffects` — instâncias ativas de status no Map.
+3. `champ.runtime.hookEffects` — efeitos temporários de runtime (não-status).
 
 ### Tabela de Hooks
 
@@ -1330,7 +1350,11 @@ champion.runtime.hookEffects.push({
 
 **Pasta**: `shared/data/statusEffects/`
 
-StatusEffects são objetos de comportamento registrados em `effectsRegistry.js`. Quando aplicados, são instalados como `hookEffects` em `champion.runtime.hookEffects`.
+StatusEffects são objetos de comportamento registrados em `effectsRegistry.js`. Quando aplicados, viram instâncias no `champion.statusEffects` (Map), com ciclo de vida autoritativo por `expiresAtTurn`.
+
+Em termos práticos, o status é a própria fonte de hook. Ou seja: o motor de eventos lê os handlers diretamente da instância do status ativo, sem precisar espelhar esse status em `runtime.hookEffects`.
+
+Importante: o valor armazenado no Map é a instância completa do status-effect (incluindo funções de hook como `onTurnStart`, `onBeforeDmgTaking`, etc.), não apenas `{ expiresAtTurn }`.
 
 ### Registry
 
@@ -1374,15 +1398,16 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
 1. APLICAÇÃO: champion.applyStatusEffect(key, duration, context, metadata)
    ├── Valida no StatusEffectsRegistry
    ├── emitCombatEvent("onStatusEffectIncoming") — pode cancelar
-   ├── Valida hard CC único
-   ├── Registra em champion.statusEffects Map.set(key, { expiresAtTurn, ...metadata })
-   └── Instala hookEffect em runtime.hookEffects (com group: "statusEffect")
+  ├── Monta instância com hooks do behavior + metadata
+  └── Registra em champion.statusEffects Map.set(key, { expiresAtTurn, ... })
 
-2. DISPARO: emitCombatEvent itera hookEffects normalmente
+2. DISPARO: emitCombatEvent itera passivas + statusEffects ativos + runtime.hookEffects
 
 3. EXPIRAÇÃO: champion.purgeExpiredStatusEffects(currentTurn)
-   → statusEffects.delete(key)
-   → hookEffects.filter(e => !(e.group==="statusEffect" && e.key===key))
+  → statusEffects.delete(key)
+
+4. LIMPEZA DE RUNTIME (se houver): champion.purgeExpiredHookEffects(currentTurn)
+  → remove apenas hookEffects de runtime com expiresAtTurn vencido
 ```
 
 ### Serialização
@@ -1391,6 +1416,8 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
 statusEffects: [["queimando", { expiresAtTurn: 5 }], ...]
 // cliente reconstrói: new Map(snap.statusEffects)
 ```
+
+No snapshot de rede/serialização, funções não trafegam. Ou seja, o cliente recebe uma versão data-only para UI/indicadores; os hooks funcionais permanecem no estado autoritativo do servidor.
 
 ---
 
@@ -1839,9 +1866,9 @@ Separar stats puros, habilidades com lógica de combate, e passivas com hooks pe
 
 O reset de uma partida é um único `match.resetCombat()`. LobbyState e CombatState têm responsabilidades claras e separadas. A interface pública de `GameMatch` é o único ponto de acesso.
 
-### Por que status-effects como hookEffects?
+### Por que status-effects como instâncias no Map?
 
-Todo comportamento de um status-effect fica no próprio arquivo do efeito. O efeito responde a qualquer hook sem código especial no servidor ou no `DamageEvent`.
+Porque isso elimina duplicidade de estado. O status vive em uma única fonte de verdade (`champion.statusEffects`) e a expiração é centralizada por turno. O runtime continua para efeitos temporários que não são status, mantendo responsabilidades separadas.
 
 ### Por que Server Authoritative?
 
