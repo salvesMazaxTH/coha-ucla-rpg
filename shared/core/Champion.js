@@ -208,6 +208,22 @@ export class Champion {
         delete clone.hookEffects;
         delete clone.currentContext;
 
+        // Strip functions and object references that could cause circular refs
+        for (const k of Object.keys(clone)) {
+          const v = clone[k];
+          if (typeof v === "function") {
+            delete clone[k];
+          } else if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+            // Allow only plain-data objects (shields array is fine via Array.isArray above)
+            // Deep-clone to sever any live references
+            try {
+              clone[k] = JSON.parse(JSON.stringify(v));
+            } catch {
+              delete clone[k];
+            }
+          }
+        }
+
         return clone;
       })(),
 
@@ -215,11 +231,21 @@ export class Champion {
         ([key, value]) => {
           const safeValue = { ...value };
 
+          // Strip raw metadata (may contain live champion/context references)
+          delete safeValue.metadata;
+
           if (safeValue.source && typeof safeValue.source === "object") {
             safeValue.source = {
               id: safeValue.source.id,
               name: safeValue.source.name,
             };
+          }
+
+          // Strip functions (hooks not needed by client)
+          for (const k of Object.keys(safeValue)) {
+            if (typeof safeValue[k] === "function") {
+              delete safeValue[k];
+            }
           }
 
           return [key, safeValue];

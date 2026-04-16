@@ -407,6 +407,9 @@ function emitChampionDeath(deathResult) {
   }
 
   // Garantimos que o estado do campeão morto (com runtime atualizado) seja enviado
+  // Limpar currentContext do campeão morto antes de serializar (evita referências circulares)
+  if (champ?.runtime) delete champ.runtime.currentContext;
+
   const state = getGameState(champ ? [champ] : []);
 
   const deadChampInState = state.champions.find(
