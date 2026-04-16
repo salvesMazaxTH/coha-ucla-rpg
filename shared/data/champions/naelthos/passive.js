@@ -7,7 +7,7 @@ export default {
   hpPerStack: 25,
   maxHeal: 35,
   description() {
-    return `Sempre que Naelthos receber dano,
+    return `Sempre que Naelthos receber dano (exceto dano ao longo do tempo),
     ele se cura em +${this.healPerStack} para cada ${this.hpPerStack} de HP perdido neste acerto.
     (Máx. +${this.maxHeal} por acerto)`;
   },
@@ -18,6 +18,7 @@ export default {
 
   onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
+    if (context?.isDot) return;
 
     /* console.log(
       "PASSIVA NAELTHOS DISPARADA",

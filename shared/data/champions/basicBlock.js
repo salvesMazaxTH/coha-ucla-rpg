@@ -47,7 +47,6 @@ const basicBlock = {
     const effect = {
       key: "bloqueio_basico_effect",
       group: "skill",
-      form: "bola_agua",
 
       expiresAtTurn: context?.currentTurn + this.effectDuration,
 
@@ -64,7 +63,7 @@ const basicBlock = {
         return {
           cancel: true,
           immune: true,
-          message: `${formatChampionName(defender)} bloqueou o ataque com Bloqueio Total!`,
+          message: `${formatChampionName(defender)} bloqueou o ataque com <b>Bloqueio Total</b>!`,
         };
       },
 

@@ -44,11 +44,20 @@ const congelado = {
 
   onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
-    defender.removeStatusEffect("congelado");
-
-    return {
-      log: `${formatChampionName(defender)} foi descongelado após receber dano!`,
-    };
+    // Só remove se o status já estava presente antes do dano (evita remover logo após aplicar)
+    // Busca o status atual e verifica se o turno de expiração é maior que o turno atual
+    const currentTurn = context?.currentTurn ?? 0;
+    const effect =
+      defender.getStatusEffect?.("congelado") ||
+      defender.statusEffects?.get?.("congelado");
+    if (effect && effect.appliedAtTurn < currentTurn) {
+      defender.removeStatusEffect("congelado");
+      return {
+        log: `${formatChampionName(defender)} foi descongelado após receber dano!`,
+      };
+    }
+    // Se acabou de ser aplicado neste turno, não remove
+    return;
   },
 
   createInstance({ owner, duration, context, metadata }) {
