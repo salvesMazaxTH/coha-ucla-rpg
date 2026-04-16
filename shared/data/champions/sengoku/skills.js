@@ -43,6 +43,7 @@ const sengokuSkills = [
     damageMode: "piercing",
     piercingPercentage: 50,
     priority: 0,
+    element: "fire",
 
     description() {
       return `Sengoku lança uma bola de fogo, causando dano perfurante ao inimigo (${this.piercingPercentage}% de perfuração).`;

@@ -30,6 +30,9 @@ const morakhanSkills = [
 
       user.runtime.hookEffects ??= [];
       user.runtime.hookEffects.push({
+        hookScope: {
+          onAfterDmgTaking: "defender",
+        },
         key: "mantra_do_ferro_vivo_shield",
         name: "Mantra do Ferro Vivo (Proteção)",
         onAfterDmgTaking({ defender, damage, context }) {
@@ -143,6 +146,9 @@ const morakhanSkills = [
           onStatusEffectIncoming: "target",
         },
         onBeforeDmgTaking({ defender, attacker, damage, skill, context }) {
+
+          if (context.damageDepth > 0) return; // evita loops infinitos com o dano refletido
+
           const reflectedDamage = damage * 0.5;
           context.registerDialog?.({
             message: `<b>[ULTIMATE — ${this.name}]</b> ${formatChampionName(defender)} reflete ${Math.floor(reflectedDamage)} de dano para o atacante!`,
