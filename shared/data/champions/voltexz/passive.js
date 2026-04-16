@@ -5,7 +5,7 @@ const editMode = false; // Ative para testar o recuo de Voltexz (dano: 0 ou 999)
 export default {
   key: "sobrecarga_instavel",
   name: "Sobrecarga Instável",
-  recoilPercent: 20,
+  recoilPercent: 15,
   condutorDuration: 2,
   condutorBonusPercent: 15,
   description() {
