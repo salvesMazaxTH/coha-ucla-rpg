@@ -19,7 +19,6 @@ export default {
   hookPolicies: {
     onAfterDmgTaking: {
       allowOnNestedDamage: true,
-      allowOnDot: false,
     },
   },
 

@@ -158,11 +158,20 @@ export class DamageEvent {
       ...(source?.hookPolicies?.[eventName] || {}),
     };
 
-    if (isDot && !policy.allowOnDot) {
-      return false;
+    if (damageDepth > 0) {
+      if (!policy.allowOnNestedDamage) {
+        return false;
+      }
+
+      // Dot é um caso específico dentro de dano aninhado.
+      if (isDot && !policy.allowOnDot) {
+        return false;
+      }
+
+      return true;
     }
 
-    if (damageDepth > 0 && !policy.allowOnNestedDamage) {
+    if (isDot && !policy.allowOnDot) {
       return false;
     }
 
