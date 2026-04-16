@@ -535,3 +535,22 @@ registerSkillAnimation("relampagos_gemeos", async ({ userEl, targetEl }) => {
 
   canvas.remove();
 });
+
+// Register all lightning skills with contact: false to use the same animation
+[
+  // Voltexz
+  "relampagos_gemeos",
+  "choque_estatico",
+  "descarga_cataclismica",
+  // Elias Cross
+  "impacto_relampago",
+  "carga_latente",
+  "tempestade_de_raios",
+].forEach((key) => {
+  if (key !== "relampagos_gemeos") {
+    registerSkillAnimation(
+      key,
+      skillAnimationRegistry.get("relampagos_gemeos"),
+    );
+  }
+});
