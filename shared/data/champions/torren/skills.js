@@ -18,7 +18,7 @@ const torrenSkills = [
     damageMode: "standard",
     priority: 0,
     description() {
-      return `Causa dano ao inimigo escolhido e atordoa um inimigo adjacente aleatório.`;
+      return `Causa dano ao inimigo escolhido e atordoa um outro inimigo aleatório.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
@@ -34,14 +34,19 @@ const torrenSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      const adjacentEnemies = context.getAdjacentChampions(enemy) || [];
+      const otherEnemies =
+        context?.allChampions?.filter(
+          (champion) =>
+            champion.team !== user.team &&
+            champion.id !== enemy.id &&
+            champion.isAlive?.(),
+        ) || [];
 
-      if (!adjacentEnemies.length) return damageEvent;
+      if (!otherEnemies.length) return damageEvent;
 
-      // 🎯 Seleciona um inimigo adjacente aleatório
-      const randomAdjEnemy =
-        adjacentEnemies[Math.floor(Math.random() * adjacentEnemies.length)];
-      randomAdjEnemy.applyStatusEffect("atordoado", 1, context, {
+      const randomEnemy =
+        otherEnemies[Math.floor(Math.random() * otherEnemies.length)];
+      randomEnemy.applyStatusEffect("atordoado", 1, context, {
         source: {
           type: "skill",
           skill: this,
