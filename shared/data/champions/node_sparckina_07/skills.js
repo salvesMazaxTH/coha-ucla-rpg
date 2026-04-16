@@ -38,7 +38,7 @@ const nodeSparckina07Skills = [
     key: "radiant_Rush",
     name: "Radiant Rush",
     speedBuff: 10,
-    evasionPercent: 5,
+    evasionPercent: 10, // Aumenta a Esquiva em 10% da Velocidade
     contact: false,
 
     priority: 3,

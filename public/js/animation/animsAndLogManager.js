@@ -66,6 +66,21 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function parseVisualHpState(hpText) {
+  if (typeof hpText !== "string") return null;
+
+  const hpMatch = hpText.match(/^(\d+)\/(\d+)/);
+  if (!hpMatch) return null;
+
+  const shieldMatch = hpText.match(/🛡️\s*\((\d+)\)/);
+
+  return {
+    currentHP: parseInt(hpMatch[1], 10),
+    maxHP: parseInt(hpMatch[2], 10),
+    shield: shieldMatch ? parseInt(shieldMatch[1], 10) : 0,
+  };
+}
+
 function getChampionElement(championId) {
   return document.querySelector(`.champion[data-champion-id="${championId}"]`);
 }
@@ -356,7 +371,11 @@ export function createCombatAnimationManager(deps) {
     const {
       targetId,
       userId,
+      sourceId,
       amount,
+      rawAmount,
+      absorbedByShield,
+      remainingShield,
       isCritical,
       isDot,
       obliterate,
@@ -365,9 +384,13 @@ export function createCombatAnimationManager(deps) {
       skillKey,
     } = effect;
 
+    const casterId = userId || sourceId || null;
+
     const champion = deps.activeChampions.get(targetId);
     const championEl = getChampionElement(targetId);
-    const userEl = userId ? getChampionElement(userId) : null;
+    const userEl = casterId ? getChampionElement(casterId) : null;
+    const userChampion = casterId ? deps.activeChampions.get(casterId) : null;
+    const skill = userChampion?.skills?.find((s) => s?.key === skillKey);
 
     if (!championEl) return Promise.resolve();
 
@@ -380,7 +403,7 @@ export function createCombatAnimationManager(deps) {
 
     // 🔥 Skill animation (if registered) — now per DamageEvent
     if (skillKey) {
-      await animateSkill(skillKey, { targetEl: championEl, userEl });
+      await animateSkill(skillKey, { targetEl: championEl, userEl, skill });
     }
 
     // ========================
@@ -420,12 +443,21 @@ export function createCombatAnimationManager(deps) {
     audioManager.play("damage");
 
     if (portraitWrapper) {
-      const floatValue = isObliterate || isFinishing ? "999" : `-${amount}`;
+      const hpDamage = Math.max(0, Number(amount) || 0);
+      const hasShieldAbsorption = (Number(absorbedByShield) || 0) > 0;
+      const floatValue =
+        isObliterate || isFinishing
+          ? "999"
+          : hpDamage > 0
+            ? `-${hpDamage}`
+            : hasShieldAbsorption
+              ? "🛡️"
+              : "0";
       const extraClass = isObliterate
         ? "obliterate"
         : isFinishing
           ? "finishing"
-          : `damage-tier-${getDamageTier(amount)}`;
+          : `damage-tier-${getDamageTier(Math.max(1, hpDamage))}`;
 
       createFloatElement(
         portraitWrapper,
@@ -455,7 +487,23 @@ export function createCombatAnimationManager(deps) {
     }
 
     // dano normal
-    updateVisualHP(targetId, -amount);
+    const hpDamage = Math.max(0, Number(amount) || 0);
+
+    const hpText = championEl.querySelector(".hp")?.textContent || "";
+    const visualState = parseVisualHpState(hpText);
+    const rawHit = Math.max(0, Number(rawAmount));
+    const absorbedFromEvent = Math.max(0, Number(absorbedByShield));
+    const fallbackAbsorbed = visualState
+      ? Math.min(visualState.shield, Math.max(0, rawHit - hpDamage))
+      : 0;
+    const absorbed = absorbedFromEvent || fallbackAbsorbed;
+
+    updateVisualHP(targetId, -hpDamage, null, {
+      shieldDelta: absorbed > 0 ? -absorbed : 0,
+      shieldOverride: Number.isFinite(remainingShield)
+        ? Math.max(0, Number(remainingShield))
+        : null,
+    });
 
     // ========================
     // CRÍTICO (dialog interno)
@@ -666,6 +714,11 @@ export function createCombatAnimationManager(deps) {
     if (portraitWrapper) {
       createFloatElement(portraitWrapper, `🛡️ ${amount}`, "shield-float");
     }
+
+    updateVisualHP(targetId, 0, null, {
+      shieldDelta: Number(amount) || 0,
+    });
+
     // Shield bubble visual (.has-shield) is applied when state syncs via updateUI
     await wait(600);
   }
@@ -924,8 +977,17 @@ export function createCombatAnimationManager(deps) {
   //  applyStateSnapshots() which calls champion.updateUI().
   // ============================================================
 
-  function updateVisualHP(championId, delta, currentVisualHP = null) {
+  function updateVisualHP(
+    championId,
+    delta,
+    currentVisualHP = null,
+    options = {},
+  ) {
     delta = Number(delta) || 0;
+    const shieldDelta = Number(options?.shieldDelta) || 0;
+    const shieldOverride = Number.isFinite(options?.shieldOverride)
+      ? Math.max(0, Number(options.shieldOverride))
+      : null;
 
     console.log(
       `Updating visual HP for champion ${championId}: delta=${delta}, currentVisualHP=${currentVisualHP}`,
@@ -940,20 +1002,23 @@ export function createCombatAnimationManager(deps) {
 
     // Parse current displayed HP (format: "current/max" or "current/max 🛡️ (N)")
     const hpText = hpSpan.textContent;
-    const match = hpText.match(/^(\d+)\/(\d+)/);
-    if (!match) return;
+    const visualState = parseVisualHpState(hpText);
+    if (!visualState) return;
 
     currentVisualHP =
-      currentVisualHP !== null ? currentVisualHP : parseInt(match[1], 10);
+      currentVisualHP !== null ? currentVisualHP : visualState.currentHP;
 
-    const maxHP = parseInt(match[2], 10);
+    const maxHP = visualState.maxHP;
+    const currentShield = visualState.shield;
 
     // Apply delta and clamp
     currentVisualHP = Math.max(0, Math.min(maxHP, currentVisualHP + delta));
+    const nextShield =
+      shieldOverride !== null
+        ? shieldOverride
+        : Math.max(0, currentShield + shieldDelta);
 
-    // Preserve shield info if present
-    const shieldMatch = hpText.match(/🛡️\s*\(\d+\)/);
-    const shieldSuffix = shieldMatch ? ` ${shieldMatch[0]}` : "";
+    const shieldSuffix = nextShield > 0 ? ` 🛡️ (${nextShield})` : "";
 
     hpSpan.textContent = `${currentVisualHP}/${maxHP}${shieldSuffix}`;
 

@@ -25,11 +25,26 @@ export function registerSkillAnimation(skillKey, factory) {
  * Play a skill animation if one is registered.
  * Returns immediately if no animation exists for the given skill.
  * @param {string} skillKey
- * @param {{ targetEl?: Element, userEl?: Element }} opts
+ * @param {{ targetEl?: Element, userEl?: Element, skill?: object }} opts
  * @returns {Promise<void>}
  */
+function shouldUseDefaultLightningAnimation(skill) {
+  if (!skill || typeof skill !== "object") return false;
+  if (skill.element !== "lightning") return false;
+  if (skill.contact !== false) return false;
+
+  // Restrict to damaging skills only.
+  // In this codebase, offensive skills consistently define damageMode.
+  return typeof skill.damageMode === "string" && skill.damageMode.length > 0;
+}
+
 export async function animateSkill(skillKey, opts = {}) {
-  const factory = skillAnimationRegistry.get(skillKey);
+  let factory = skillAnimationRegistry.get(skillKey);
+
+  if (!factory && shouldUseDefaultLightningAnimation(opts.skill)) {
+    factory = skillAnimationRegistry.get("relampagos_gemeos");
+  }
+
   if (!factory) return;
   await factory(opts);
 }
@@ -240,7 +255,8 @@ class MeleePunchEffect {
       },
     });
     this.fistPrint = new THREE.Mesh(printGeo, this.printMat);
-    this.fistPrint.rotation.z = angle;
+    // Keep the punch silhouette upright as authored in the PNG.
+    this.fistPrint.rotation.z = 0;
     this.fistPrint.position.set(targetPos.x, targetPos.y, 0);
     this.fistPrint.visible = false;
     scene.add(this.fistPrint);
@@ -340,86 +356,81 @@ class MeleePunchEffect {
 //  Register: gancho_rapido
 // ============================================================
 
-registerSkillAnimation("gancho_rapido", async ({ targetEl, userEl }) => {
-  const container = document.getElementById("webgl-container");
-  if (!container || !targetEl) return;
+["gancho_rapido", "barragem_de_socos_incandescentes"].forEach((skillName) => {
+  registerSkillAnimation(skillName, async ({ targetEl, userEl }) => {
+    const container = document.getElementById("webgl-container");
+    if (!container || !targetEl) return;
 
-  // --- Load post-processing addons ---
-  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
-    await Promise.all([
-      import("three/addons/postprocessing/EffectComposer.js"),
-      import("three/addons/postprocessing/RenderPass.js"),
-      import("three/addons/postprocessing/UnrealBloomPass.js"),
-    ]);
+    const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }] =
+      await Promise.all([
+        import("three/addons/postprocessing/EffectComposer.js"),
+        import("three/addons/postprocessing/RenderPass.js"),
+        import("three/addons/postprocessing/UnrealBloomPass.js"),
+      ]);
 
-  // --- Setup scene ---
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    45,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000,
-  );
-  camera.position.z = 15;
-  camera.updateMatrixWorld();
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000,
+    );
 
-  // --- Compute world positions BEFORE inserting the canvas (avoids layout reflow) ---
-  const targetCenter = getElementCenter(targetEl);
-  const worldTarget = screenToWorld(targetCenter.x, targetCenter.y, camera);
+    camera.position.z = 15;
+    camera.updateMatrixWorld();
 
-  let worldUser;
-  if (userEl) {
-    const userCenter = getElementCenter(userEl);
-    worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
-  } else {
-    worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
-  }
+    const targetCenter = getElementCenter(targetEl);
+    const worldTarget = screenToWorld(targetCenter.x, targetCenter.y, camera);
 
-  // Opaque black background — screen blend mode turns black → transparent
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setClearColor(0x000000, 1);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  container.appendChild(renderer.domElement);
-
-  // --- Post-processing (bloom) ---
-  const renderScene = new RenderPass(scene, camera);
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    2.5,
-    0.5,
-    0.1,
-  );
-  const composer = new EffectComposer(renderer);
-  composer.addPass(renderScene);
-  composer.addPass(bloomPass);
-
-  // --- Create effect (travels from user → target) ---
-  const effect = new MeleePunchEffect(scene, worldUser, worldTarget);
-
-  // --- Render loop (promise-based) ---
-  const clock = new THREE.Clock();
-
-  await new Promise((resolve) => {
-    function animate() {
-      const dt = clock.getDelta();
-
-      if (!effect.update(dt)) {
-        effect.dispose(scene);
-        composer.dispose();
-        renderer.dispose();
-        if (renderer.domElement.parentNode) {
-          renderer.domElement.remove();
-        }
-        resolve();
-        return;
-      }
-
-      composer.render();
-      requestAnimationFrame(animate);
+    let worldUser;
+    if (userEl) {
+      const userCenter = getElementCenter(userEl);
+      worldUser = screenToWorld(userCenter.x, userCenter.y, camera);
+    } else {
+      worldUser = new THREE.Vector3(worldTarget.x - 5, worldTarget.y, 0);
     }
 
-    animate();
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setClearColor(0x000000, 1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const renderScene = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      2.5,
+      0.5,
+      0.1,
+    );
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass);
+
+    const effect = new MeleePunchEffect(scene, worldUser, worldTarget);
+
+    const clock = new THREE.Clock();
+
+    await new Promise((resolve) => {
+      function animate() {
+        const dt = clock.getDelta();
+
+        if (!effect.update(dt)) {
+          effect.dispose(scene);
+          composer.dispose();
+          renderer.dispose();
+          renderer.domElement.remove();
+          resolve();
+          return;
+        }
+
+        composer.render();
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    });
   });
 });
 

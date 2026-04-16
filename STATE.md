@@ -1,3 +1,34 @@
+## [2026-04-16] Quick: consistência de dano com escudo no intermediateSnapshot/UI
+
+- Corrigido desalinhamento entre backend e client-side na exibição de dano com escudo.
+- `shared/engine/combat/pipeline/05_applyDamage.js` agora registra dano visual como dano efetivo em HP (`actualDmg`) e inclui metadados: `rawAmount`, `absorbedByShield`, `remainingShield`.
+- `shared/engine/combat/TurnResolver.js` passou a serializar esses novos campos no `damageEvents`.
+- `public/js/animation/animsAndLogManager.js` agora aplica imediatamente o consumo de escudo no HUD durante `animateDamage` (float + barra + texto de HP/escudo), evitando efeito de HP "desce e sobe".
+- `animateShield` também atualiza o escudo visual no momento da animação, sem depender apenas do snapshot final.
+- Artefatos: `.planning/quick/260416-k87-shield-snapshot-consistency/`.
+
+---
+
+## [2026-04-16] Quick: punch_silouete sem rotação no impacto
+
+- Corrigida a orientação da `punch_silouete.png` em `public/js/animation/skillAnimations.js` (`MeleePunchEffect`).
+- `this.fistPrint.rotation.z` deixou de usar o `angle` do ataque e passou a ficar fixo em `0`.
+- Resultado visual: o soco continua aparecendo no alvo correto, mas sem girar a imagem em orientações aleatórias.
+- Artefatos: `.planning/quick/260416-jvq-favor-corrigir-a-posi-o-da-particle-alph/`.
+
+---
+
+## [2026-04-16] Quick: policy de hooks reativos centralizada em DamageEvent
+
+- `combatEvents` voltou a ser dispatcher genérico (sem estado local de policy de dano reativo).
+- `emitCombatEvent` agora aceita callback opcional `shouldRunHook(eventName, champ, source)`.
+- `04_beforeHooks.js` delega gating de hooks para `event.shouldRunDamageReactiveHook(...)`.
+- `07_afterHooks.js` delega gating de hooks para `event.shouldRunDamageReactiveHook(...)`.
+- Resultado: a step da pipeline passa a usar exatamente a policy fixada em `DamageEvent` (`allowOnDot`, `allowOnNestedDamage`) sem duplicação de estado.
+- Artefatos: `.planning/quick/260416-19h-favor-prosseguir-com-a-implementa-o-a-st/`.
+
+---
+
 ## [2026-04-15] Quick: lifesteal separado de heal comum no visual
 
 - `Champion.heal` agora aceita opção de tipo de cura e mantém o fluxo de HP centralizado para cura normal e lifesteal.

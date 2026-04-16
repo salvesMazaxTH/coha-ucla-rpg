@@ -16,9 +16,14 @@ export default {
     onAfterDmgTaking: "defender",
   },
 
+  hookPolicies: {
+    onAfterDmgTaking: {
+      allowOnNestedDamage: true,
+    },
+  },
+
   onAfterDmgTaking({ attacker, defender, owner, damage, context }) {
     if (damage <= 0) return;
-    if (context?.isDot) return;
 
     /* console.log(
       "PASSIVA NAELTHOS DISPARADA",

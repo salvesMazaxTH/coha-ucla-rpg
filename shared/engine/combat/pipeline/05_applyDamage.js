@@ -7,6 +7,11 @@ export function applyDamage(event) {
   }
 
   const hpBefore = event.defender.HP;
+  const shieldBefore = Array.isArray(event.defender.runtime?.shields)
+    ? event.defender.runtime.shields
+        .filter((s) => !s?.type || s.type === "regular")
+        .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+    : 0;
 
   const damageToApply = Math.floor(event.damage);
 
@@ -21,10 +26,19 @@ export function applyDamage(event) {
 
   event.hpAfter = event.defender.HP;
   event.actualDmg = hpBefore - event.hpAfter;
+  const remainingShield = Array.isArray(event.defender.runtime?.shields)
+    ? event.defender.runtime.shields
+        .filter((s) => !s?.type || s.type === "regular")
+        .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
+    : 0;
+  const absorbedByShield = Math.max(0, shieldBefore - remainingShield);
 
   event.context.registerDamage({
     target: event.defender,
-    amount: damageToApply,
+    amount: event.actualDmg,
+    rawAmount: damageToApply,
+    absorbedByShield,
+    remainingShield,
     sourceId: event.attacker?.id,
     isCritical: event.crit?.didCrit,
     isDot: !!event.context.isDot,

@@ -777,6 +777,9 @@ export class TurnResolver {
       registerDamage({
         target,
         amount,
+        rawAmount,
+        absorbedByShield,
+        remainingShield,
         sourceId,
         isCritical = false,
         damageDepth = 0,
@@ -804,6 +807,13 @@ export class TurnResolver {
           sourceId: sourceId || null,
           targetId: target.id,
           amount,
+          rawAmount: Number.isFinite(rawAmount) ? rawAmount : null,
+          absorbedByShield: Number.isFinite(absorbedByShield)
+            ? absorbedByShield
+            : null,
+          remainingShield: Number.isFinite(remainingShield)
+            ? remainingShield
+            : null,
           isCritical: !!isCritical,
           isDot: !!isDot,
           damageDepth: damageDepth || 0,
