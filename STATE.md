@@ -1,3 +1,14 @@
+## [2026-04-16] Quick: consistência de dano com escudo no intermediateSnapshot/UI
+
+- Corrigido desalinhamento entre backend e client-side na exibição de dano com escudo.
+- `shared/engine/combat/pipeline/05_applyDamage.js` agora registra dano visual como dano efetivo em HP (`actualDmg`) e inclui metadados: `rawAmount`, `absorbedByShield`, `remainingShield`.
+- `shared/engine/combat/TurnResolver.js` passou a serializar esses novos campos no `damageEvents`.
+- `public/js/animation/animsAndLogManager.js` agora aplica imediatamente o consumo de escudo no HUD durante `animateDamage` (float + barra + texto de HP/escudo), evitando efeito de HP "desce e sobe".
+- `animateShield` também atualiza o escudo visual no momento da animação, sem depender apenas do snapshot final.
+- Artefatos: `.planning/quick/260416-k87-shield-snapshot-consistency/`.
+
+---
+
 ## [2026-04-16] Quick: punch_silouete sem rotação no impacto
 
 - Corrigida a orientação da `punch_silouete.png` em `public/js/animation/skillAnimations.js` (`MeleePunchEffect`).
