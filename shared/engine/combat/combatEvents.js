@@ -1,6 +1,6 @@
 const debugMode = true; // Set to true to enable detailed logging of combat events
 
-export function emitCombatEvent(eventName, payload, champions) {
+export function emitCombatEvent(eventName, payload, champions, options = {}) {
   const results = [];
 
   /*   const ignoredEventsForDebug = new Set([
@@ -70,8 +70,12 @@ export function emitCombatEvent(eventName, payload, champions) {
       }
 
       const scope = source.hookScope?.[eventName];
+      const canRun = options?.canRun;
 
       if (scope && payload[scope] !== champ) continue;
+      if (typeof canRun === "function" && !canRun(eventName, champ, source)) {
+        continue;
+      }
 
       try {
         // console.log(`[HOOK CALL] ${champ.name} → ${source.key}.${eventName}`);

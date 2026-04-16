@@ -99,7 +99,10 @@ function _processHook(event, eventName, payload) {
   if (!event.allChampions || event.allChampions.length === 0) {
     /*  console.error("❌ ERRO CRÍTICO: allChampions sumiu antes do emit!"); */
   }
-  const results = emitCombatEvent(eventName, payload, event.allChampions) || [];
+  const results =
+    emitCombatEvent(eventName, payload, event.allChampions, {
+      canRun: (name, champ, source) => event.canRunHook(name, champ, source),
+    }) || [];
   const summary = {
     logs: [],
     critChanged: false,

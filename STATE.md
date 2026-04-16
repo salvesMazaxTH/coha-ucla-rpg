@@ -1,3 +1,14 @@
+## [2026-04-16] Quick: policy de hooks reativos centralizada em DamageEvent
+
+- `combatEvents` voltou a ser dispatcher genérico (sem estado local de policy de dano reativo).
+- `emitCombatEvent` agora aceita callback opcional `shouldRunHook(eventName, champ, source)`.
+- `04_beforeHooks.js` delega gating de hooks para `event.shouldRunDamageReactiveHook(...)`.
+- `07_afterHooks.js` delega gating de hooks para `event.shouldRunDamageReactiveHook(...)`.
+- Resultado: a step da pipeline passa a usar exatamente a policy fixada em `DamageEvent` (`allowOnDot`, `allowOnNestedDamage`) sem duplicação de estado.
+- Artefatos: `.planning/quick/260416-19h-favor-prosseguir-com-a-implementa-o-a-st/`.
+
+---
+
 ## [2026-04-15] Quick: lifesteal separado de heal comum no visual
 
 - `Champion.heal` agora aceita opção de tipo de cura e mantém o fluxo de HP centralizado para cura normal e lifesteal.

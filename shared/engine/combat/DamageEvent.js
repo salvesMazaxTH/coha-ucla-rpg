@@ -8,6 +8,18 @@ import { processObliterate } from "./pipeline/06_obliterate.js";
 import { processExtraQueue } from "./pipeline/08_extraQueue.js";
 import { buildFinalResult } from "./pipeline/09_resultBuilder.js";
 
+const DEFAULT_HOOK_POLICY = Object.freeze({
+  allowOnDot: false,
+  allowOnNestedDamage: false,
+});
+
+const REACTIVE_HOOKS = new Set([
+  "onBeforeDmgDealing",
+  "onBeforeDmgTaking",
+  "onAfterDmgDealing",
+  "onAfterDmgTaking",
+]);
+
 export class DamageEvent {
   static Modes = {
     STANDARD: "standard",
@@ -73,6 +85,8 @@ export class DamageEvent {
 
     this.damageDepth = this.context.damageDepth ?? 0;
 
+    this.hookPolicy = DEFAULT_HOOK_POLICY;
+
     // 🔥 ESTADO INTERNO
     this.crit = { didCrit: false };
     this.actualDmg = 0;
@@ -124,5 +138,34 @@ export class DamageEvent {
     }
 
     return buildFinalResult(this);
+  }
+
+  canRunHook(eventName, champ, source) {
+    if (!REACTIVE_HOOKS.has(eventName)) return true;
+
+    const context = this.context;
+    if (!context) return true;
+
+    const isDot = !!context.isDot;
+    const damageDepth = Number(context.damageDepth ?? 0);
+
+    if (!isDot && damageDepth <= 0) return true;
+
+    const policy = {
+      ...this.hookPolicy,
+      ...(champ?.combatHookPolicy || {}),
+      ...(source?.combatHookPolicy || {}),
+      ...(source?.hookPolicies?.[eventName] || {}),
+    };
+
+    if (isDot && !policy.allowOnDot) {
+      return false;
+    }
+
+    if (damageDepth > 0 && !policy.allowOnNestedDamage) {
+      return false;
+    }
+
+    return true;
   }
 }
