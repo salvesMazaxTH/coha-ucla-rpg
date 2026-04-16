@@ -165,7 +165,7 @@ const naelthosSkills = [
     effectDuration: 3,
     hpPerStack: 30,
     bonusPerStack: 20,
-    maxBonus: 220,
+    maxBonus: 500,
     damageMode: "standard",
     contact: false,
     isUltimate: true,
