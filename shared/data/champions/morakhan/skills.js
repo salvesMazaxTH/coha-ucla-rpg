@@ -29,11 +29,15 @@ const morakhanSkills = [
       const shieldPercent = this.shieldPercent;
 
       user.runtime.hookEffects ??= [];
+      user.runtime.hookEffects = user.runtime.hookEffects.filter(
+        (e) => e.key !== "mantra_do_ferro_vivo_shield",
+      );
       user.runtime.hookEffects.push({
         hookScope: {
           onAfterDmgTaking: "defender",
         },
         key: "mantra_do_ferro_vivo_shield",
+        expiresAtTurn: context.currentTurn + 1,
         name: "Mantra do Ferro Vivo (Proteção)",
         onAfterDmgTaking({ defender, damage, context }) {
           const shieldAmount = Math.floor(damage * (shieldPercent / 100));
@@ -141,6 +145,7 @@ const morakhanSkills = [
 
     resolve({ user, context }) {
       const effect = {
+        key: "postura_da_montanha",
         hookScope: {
           onBeforeDmgTaking: "defender",
           onStatusEffectIncoming: "target",
@@ -192,6 +197,10 @@ const morakhanSkills = [
       };
 
       user.runtime.hookEffects ??= [];
+      // evita duplicação caso a ultimate seja usada mais de uma vez
+      user.runtime.hookEffects = user.runtime.hookEffects.filter(
+        (e) => e.key !== effect.key,
+      );
       user.runtime.hookEffects.push(effect);
     },
   },
