@@ -1,3 +1,12 @@
+## [2026-04-16] Quick: punch_silouete sem rotação no impacto
+
+- Corrigida a orientação da `punch_silouete.png` em `public/js/animation/skillAnimations.js` (`MeleePunchEffect`).
+- `this.fistPrint.rotation.z` deixou de usar o `angle` do ataque e passou a ficar fixo em `0`.
+- Resultado visual: o soco continua aparecendo no alvo correto, mas sem girar a imagem em orientações aleatórias.
+- Artefatos: `.planning/quick/260416-jvq-favor-corrigir-a-posi-o-da-particle-alph/`.
+
+---
+
 ## [2026-04-16] Quick: policy de hooks reativos centralizada em DamageEvent
 
 - `combatEvents` voltou a ser dispatcher genérico (sem estado local de policy de dano reativo).

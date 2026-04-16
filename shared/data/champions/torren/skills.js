@@ -34,13 +34,14 @@ const torrenSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      const otherEnemies =
-        context?.allChampions?.filter(
-          (champion) =>
-            champion.team !== user.team &&
-            champion.id !== enemy.id &&
-            champion.isAlive?.(),
-        ) || [];
+      const otherEnemies = context?.allChampions
+        ? Array.from(context.allChampions.values()).filter(
+            (champion) =>
+              champion.team !== user.team &&
+              champion.id !== enemy.id &&
+              champion.isAlive?.(),
+          )
+        : [];
 
       if (!otherEnemies.length) return damageEvent;
 

@@ -147,10 +147,10 @@ const morakhanSkills = [
       const effect = {
         key: "postura_da_montanha",
         hookScope: {
-          onBeforeDmgTaking: "defender",
+          onAfterDmgTaking: "defender",
           onStatusEffectIncoming: "target",
         },
-        onBeforeDmgTaking({ defender, attacker, damage, skill, context }) {
+        onAfterDmgTaking({ defender, attacker, damage, skill, context }) {
 
           if (context.damageDepth > 0) return; // evita loops infinitos com o dano refletido
 

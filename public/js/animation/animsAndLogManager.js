@@ -356,6 +356,7 @@ export function createCombatAnimationManager(deps) {
     const {
       targetId,
       userId,
+      sourceId,
       amount,
       isCritical,
       isDot,
@@ -365,9 +366,13 @@ export function createCombatAnimationManager(deps) {
       skillKey,
     } = effect;
 
+    const casterId = userId || sourceId || null;
+
     const champion = deps.activeChampions.get(targetId);
     const championEl = getChampionElement(targetId);
-    const userEl = userId ? getChampionElement(userId) : null;
+    const userEl = casterId ? getChampionElement(casterId) : null;
+    const userChampion = casterId ? deps.activeChampions.get(casterId) : null;
+    const skill = userChampion?.skills?.find((s) => s?.key === skillKey);
 
     if (!championEl) return Promise.resolve();
 
@@ -380,7 +385,7 @@ export function createCombatAnimationManager(deps) {
 
     // 🔥 Skill animation (if registered) — now per DamageEvent
     if (skillKey) {
-      await animateSkill(skillKey, { targetEl: championEl, userEl });
+      await animateSkill(skillKey, { targetEl: championEl, userEl, skill });
     }
 
     // ========================
