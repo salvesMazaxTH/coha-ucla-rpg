@@ -1,5 +1,5 @@
 export default {
-  name: "Jeff the Death",
+  name: "Jeff The Death",
   portrait: "/assets/portraits/jeff_the_death.webp",
 
   HP: 355,
