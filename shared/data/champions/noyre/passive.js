@@ -31,6 +31,15 @@ function _processEntropy(owner, context, resolver) {
         enemy.spendUlt(1);
       }
 
+      // Dialog animado ao consumir stacks (imitando Blyskartri, com prefixo padrão)
+      if (context?.registerDialog) {
+        context.registerDialog({
+          message: `<b>[Passiva — Entropia]</b> ${formatChampionName(owner)} drenou o ultômetro de ${formatChampionName(enemy)}!`,
+          sourceId: owner.id,
+          targetId: enemy.id,
+        });
+      }
+
       // 🔥 punição
       if (canUlt) {
         const dmg = Math.floor(enemy.maxHP * 0.15);
@@ -60,9 +69,9 @@ export default {
 
     return `Sempre que um inimigo ganha ou consome ultômetro, Noyre acumula Entropia.
 
-<b>Acúmulos atuais: ${stacks}</b>
+    <b>Acúmulos atuais: ${stacks}</b>
 
-A cada 6 acúmulos, remove 1 unidade de ultômetro de todos os inimigos. Inimigos que tinham ult suficiente para usar sua ultimate sofrem 15% do HP máximo como dano piercing.`;
+    A cada 6 acúmulos, remove 1 unidade de ultômetro de todos os inimigos. Inimigos que tinham ult suficiente para usar sua ultimate sofrem 15% do HP máximo como Dano Perfurante.`;
   },
 
   hookScope: {

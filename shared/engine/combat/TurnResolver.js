@@ -185,14 +185,13 @@ export class TurnResolver {
 
   executeSkillAction(action, turnExecutionMap, context) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
+
     const user = this.combat.activeChampions.get(action.userId);
 
-    // Referência a estado de "switched out" desativada junto com a lógica de switch.
+    // 1. valida existência / alive
     const isInactive = !user || !user.alive;
-
     if (isInactive) {
       const userName = user ? formatChampionName(user) : "campeão desconhecido";
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "inactive",
@@ -202,8 +201,8 @@ export class TurnResolver {
       };
     }
 
+    // 2. valida ação (hooks)
     const denial = this.canExecuteAction(user, action);
-
     if (denial?.denied) {
       context.registerDialog({
         message: denial.message || `${formatChampionName(user)} não pode agir.`,
@@ -211,7 +210,6 @@ export class TurnResolver {
         damageDepth: context.damageDepth ?? 0,
       });
 
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "denied",
@@ -221,9 +219,9 @@ export class TurnResolver {
       };
     }
 
+    // 3. valida skill
     const skill = user.skills.find((s) => s.key === action.skillKey);
     if (!skill) {
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "skill_not_found",
@@ -233,7 +231,22 @@ export class TurnResolver {
       };
     }
 
+    // 4. resolve targets
     const roleTargets = this.resolveSkillTargets(user, skill, action, context);
+
+    // (game design) Se quiser que habilidades sem alvo NÃO consumam recurso,
+    // mover o consumo de recurso para depois da verificação de !roleTargets.
+    // Caso contrário, manter aqui para consumir mesmo sem alvo.
+
+    // 5. AGORA SIM: consumir recurso
+    if (action.ultCost > 0 && !this.editMode.freeCostSkills) {
+      this.applyResourceChange({
+        target: user,
+        amount: -action.ultCost,
+        context,
+        sourceId: user.id,
+      });
+    }
 
     // console.log("STEP 1 - TARGETS:", roleTargets);
     if (!roleTargets) {

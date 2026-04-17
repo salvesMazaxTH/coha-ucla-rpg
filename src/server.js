@@ -1520,9 +1520,10 @@ io.on("connection", (socket) => {
         return socket.emit("actionFailed", "Ultômetro insuficiente.");
       }
 
-      if (!editMode.freeCostSkills) {
-        user.spendUlt(cost);
-      }
+      //if (!editMode.freeCostSkills) {
+        // user.spendUlt(cost);
+        // a lógica de consumo/gasto de recurso (ultômetro) foi movida para responsabilidade da TurnResolver na execução da ação da skill respectiva.
+      //}
     }
 
     const action = new Action({ userId, skillKey, targetIds });
