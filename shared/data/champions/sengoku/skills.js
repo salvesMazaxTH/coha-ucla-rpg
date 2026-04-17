@@ -13,7 +13,7 @@ const sengokuSkills = [
   {
     key: "golpe_furioso",
     name: "Golpe Furioso",
-    bf: 80,
+    bf: 70,
     damageMode: "standard",
     contact: true,
     priority: 0,
@@ -38,7 +38,7 @@ const sengokuSkills = [
   {
     key: "bola_de_fogo",
     name: "Bola de Fogo",
-    bf: 55,
+    bf: 45,
     contact: false,
     damageMode: "piercing",
     piercingPercentage: 50,
@@ -72,7 +72,7 @@ const sengokuSkills = [
     duration: 3,
     transformInto: "sengoku_primordial",
     isUltimate: true,
-    ultCost: 2,
+    ultCost: 3,
     priority: 0,
     description() {
       return `Sengoku assume sua forma primordial dracônica por ${this.duration} turnos, alterando suas skills, passiva e atributos.`;

@@ -34,7 +34,7 @@ const sengokuPrimordialSkills = [
     damageMode: "standard",
     contact: false,
     isUltimate: true,
-    ultCost: 3,
+    ultCost: 2,
     priority: 0,
     description() {
       return `Sengoku expele fogo primordial sobre todos os inimigos.`;
