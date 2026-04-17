@@ -120,6 +120,61 @@ const noyreSkills = [
       };
     },
   },
+  {
+    key: "colapso_entropico",
+    name: "Colapso Entrópico",
+    isUltimate: true,
+    ultCost: 4,
+    damageRatioPerUlt: 0.05,
+
+    priority: 0,
+    description() {
+      return `Colapsa a energia dos inimigos, causando dano perfurante equivalente a ${this.damageRatioPerUlt * 100}% do HP máximo para cada unidade de ultômetro atual do alvo. Em seguida, drena todo o ultômetro restante.`;
+    },
+    targetSpec: ["all:enemy"],
+    resolve({ user, targets, context, resolver }) {
+      const enemies = targets.filter(
+        (champion) => champion.team !== user.team && champion.alive,
+      );
+
+      const results = [];
+
+      for (const enemy of enemies) {
+        const ult = enemy.ultMeter || 0;
+        if (ult <= 0) continue;
+
+        const damage = Math.floor(enemy.maxHP * this.damageRatioPerUlt * ult);
+
+        const damageResult = new DamageEvent({
+          baseDamage: damage,
+          attacker: user,
+          defender: enemy,
+          skill: this,
+          context,
+          allChampions: context.allChampions,
+          mode: "piercing",
+          piercingPercentage: 100,
+        }).execute();
+
+        results.push(damageResult);
+
+        resolver.applyResourceChange({
+          target: enemy,
+          amount: -ult,
+          context,
+          sourceId: user.id,
+          emitHooks: false,
+        });
+      }
+
+      context.registerDialog({
+        message: `<b>[Colapso Entrópico]</b> A energia acumulada colapsa violentamente.`,
+        sourceId: user.id,
+      });
+
+      return results;
+    },
+  },
 ];
 
 export default noyreSkills;
