@@ -94,8 +94,16 @@ export const StatusIndicator = {
     if (!portrait) return;
 
     const activeStatuses = new Set(
-      [...champion.statusEffects.keys()].map((s) => s.toLowerCase()),
+      [...champion.statusEffects.keys()].map((s) => String(s).toLowerCase()),
     );
+    const runtimeHookEffectKeys = Array.isArray(
+      champion.runtime?.hookEffectKeys,
+    )
+      ? champion.runtime.hookEffectKeys
+      : [];
+    for (const hookKey of runtimeHookEffectKeys) {
+      activeStatuses.add(String(hookKey).toLowerCase());
+    }
     const hasActiveTaunt =
       Array.isArray(champion.tauntEffects) && champion.tauntEffects.length > 0;
 
@@ -171,12 +179,7 @@ export const StatusIndicator = {
       }
     });
 
-    const statusEffectNames = [...champion.statusEffects.keys()];
-    if (hasActiveTaunt) {
-      statusEffectNames.push("provocado");
-    }
-
-    for (const statusEffectName of statusEffectNames) {
+    for (const statusEffectName of activeStatuses) {
       const icon =
         this.statusEffectIcons[statusEffectName.toLowerCase()] ||
         getExclusiveIndicator(statusEffectName);

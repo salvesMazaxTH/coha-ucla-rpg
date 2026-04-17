@@ -227,6 +227,20 @@ export class Champion {
         return clone;
       })(),
 
+      // Data-only keys for client-side indicator/UI logic.
+      // Never serialize hook functions or full hook objects.
+      runtimeHookEffectKeys: (() => {
+        const hooks = Array.isArray(this.runtime?.hookEffects)
+          ? this.runtime.hookEffects
+          : [];
+
+        return hooks
+          .map((effect) =>
+            typeof effect?.key === "string" ? effect.key.toLowerCase() : null,
+          )
+          .filter(Boolean);
+      })(),
+
       statusEffects: Array.from(this.statusEffects.entries()).map(
         ([key, value]) => {
           const safeValue = { ...value };

@@ -1285,6 +1285,12 @@ export function createCombatAnimationManager(deps) {
       };
     }
 
+    // Runtime hook keys (data-only, safe for client UI)
+    if (Array.isArray(snap.runtimeHookEffectKeys)) {
+      champion.runtime ??= {};
+      champion.runtime.hookEffectKeys = snap.runtimeHookEffectKeys;
+    }
+
     // StatusEffects
     if (Array.isArray(snap.statusEffects)) {
       champion.statusEffects = new Map(snap.statusEffects);
