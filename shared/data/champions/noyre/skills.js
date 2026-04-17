@@ -20,14 +20,6 @@ const noyreSkills = {
   resolve({ user, targets, context, resolver }) {
     const [target] = targets;
 
-    // 🔹 reduzir ult
-    resolver.applyResourceChange({
-      target,
-      amount: -2,
-      context,
-      sourceId: user.id,
-    });
-
     // 🔹 checar condição (3 barras = 12 unidades)
     const hasHighUlt = target.ultMeter >= 12;
 
@@ -43,6 +35,15 @@ const noyreSkills = {
       context,
       allChampions: context.allChampions,
     }).execute();
+
+    // 🔹 reduzir ult
+    resolver.applyResourceChange({
+      target,
+      amount: -2,
+      context,
+      sourceId: user.id,
+      emitHooks: false,
+    });
 
     return {
       log: hasHighUlt

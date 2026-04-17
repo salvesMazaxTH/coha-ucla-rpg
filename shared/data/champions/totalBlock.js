@@ -1,7 +1,7 @@
 // Centralização do Bloqueio Total (ranged global)
 import { formatChampionName } from "../../ui/formatters.js";
 
-const basicBlock = {
+const totalBlock = {
   key: "bloqueio_basico",
   name: "Bloqueio Total",
   priority: 5,
@@ -12,22 +12,22 @@ const basicBlock = {
   targetSpec: ["self"],
   resolve({ user, context = {} }) {
     user.runtime.hookEffects ??= [];
-    user.runtime.basicBlockStreak ??= 0;
+    user.runtime.totalBlockStreak ??= 0;
 
     // Progressão geométrica base 2: 100%, 50%, 25%, 12.5%, ...
     console.log(
-      `[basicBlock debug] ${formatChampionName(user)} tem uma streak atual de ${user.runtime.basicBlockStreak}.`,
+      `[totalBlock debug] ${formatChampionName(user)} tem uma streak atual de ${user.runtime.totalBlockStreak}.`,
     );
-    const streak = user.runtime.basicBlockStreak;
+    const streak = user.runtime.totalBlockStreak;
     const chance = 1 / Math.pow(2, streak);
     const roll = Math.random();
     console.log(
-      `[basicBlock debug] streak: ${streak}, chance: ${(chance * 100).toFixed(1)}%, roll: ${roll}`,
+      `[totalBlock debug] streak: ${streak}, chance: ${(chance * 100).toFixed(1)}%, roll: ${roll}`,
     );
     const success = roll < chance;
 
     if (!success) {
-      user.runtime.basicBlockStreak = 0;
+      user.runtime.totalBlockStreak = 0;
 
       const failMessage = `${formatChampionName(user)} tentou usar <b>Bloqueio Total</b>, mas falhou.`;
 
@@ -42,7 +42,7 @@ const basicBlock = {
       };
     }
 
-    user.runtime.basicBlockStreak += 1;
+    user.runtime.totalBlockStreak += 1;
 
     const effect = {
       key: "bloqueio_basico_effect",
@@ -76,17 +76,17 @@ const basicBlock = {
       },
 
       onTurnEnd({ owner, context }) {
-        if (context.currentTurn !== owner.runtime.lastBasicBlockTurn) {
-          owner.runtime.basicBlockStreak = 0;
+        if (context.currentTurn !== owner.runtime.lastTotalBlockTurn) {
+          owner.runtime.totalBlockStreak = 0;
           console.log(
-            `[basicBlock debug] ${owner.name} não usou Bloqueio Total neste turno. Basic Block Streak resetada.`,
+            `[totalBlock debug] ${owner.name} não usou Bloqueio Total neste turno. Basic Block Streak resetada.`,
           );
         }
       },
     };
 
     user.runtime.hookEffects.push(effect);
-    user.runtime.lastBasicBlockTurn = context.currentTurn;
+    user.runtime.lastTotalBlockTurn = context.currentTurn;
 
     return {
       message: `${formatChampionName(user)} usou <b>Bloqueio Total</b> e está protegido contra o próximo ataque!`,
@@ -94,4 +94,4 @@ const basicBlock = {
   },
 };
 
-export default basicBlock;
+export default totalBlock;

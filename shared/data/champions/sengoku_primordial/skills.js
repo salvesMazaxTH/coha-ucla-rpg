@@ -1,8 +1,8 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const sengokuPrimordialSkills = [
-  basicBlock,
+  totalBlock,
   {
     key: "garra_primordial",
     name: "Garra Primordial",

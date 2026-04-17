@@ -26,6 +26,7 @@ function _processEntropy(owner, context, resolver) {
           amount: -1,
           context,
           sourceId: owner.id,
+          emitHooks: false,
         });
       } else {
         enemy.spendUlt(1);

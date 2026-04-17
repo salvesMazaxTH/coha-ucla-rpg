@@ -1,10 +1,10 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 import basicStrike from "../basicStrike.js";
 
 const tutuSkills = [
-  basicBlock,
+  totalBlock,
   basicStrike,
   {
     key: "investida_protetora",
