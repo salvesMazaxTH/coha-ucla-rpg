@@ -2,8 +2,6 @@ export default {
   name: "Isarelis",
   portrait: "/assets/portraits/isarelis.webp",
 
-  unreleased: true,
-
   HP: 300,
   Attack: 310,
   Defense: 60,
