@@ -193,8 +193,8 @@ const blyskartriSkills = [
     name: "Horizonte Infinito",
     damageMode: "standard",
 
-    dmgBonus: 10, // Bônus de dano por velocidade acima da base (em %)
-    speedPerStack: 5,
+    dmgBonus: 3, // Bônus de dano por velocidade (em %)
+    speedPerStack: 10,
 
     piercingDamageBonus: 75,
 
@@ -207,7 +207,7 @@ const blyskartriSkills = [
     ultCost: 3,
 
     description() {
-      return `Escolhe um aliado. Por ${this.effectDuration} turno(s), ele recebe +${this.dmgBonus}% de dano bruto para cada ${this.speedPerStack} de Velocidade acima da base.  
+      return `Escolhe um aliado. Por ${this.effectDuration} turno(s), ele recebe +${this.dmgBonus}% de dano bruto para cada ${this.speedPerStack} de Velocidade total.  
       Sempre que o alvo direto NÃO agir antes do aliado, causa +${this.piercingDamageBonus} de dano perfurante adicional.`;
     },
 
@@ -231,8 +231,8 @@ const blyskartriSkills = [
         expiresAtTurn: context.currentTurn + this.effectDuration,
         apply: ({ baseDamage, attacker, defender }, eventContext = {}) => {
           // Bônus por velocidade
-          const bonusSpeed = Math.max(0, attacker.Speed - attacker.baseSpeed);
-          const stacks = Math.floor(bonusSpeed / 5);
+          const speed = attacker.Speed;
+          const stacks = Math.floor(speed / this.speedPerStack);
           let resultDamage = baseDamage;
           if (stacks > 0) {
             const bonusPercent = stacks * this.dmgBonus;

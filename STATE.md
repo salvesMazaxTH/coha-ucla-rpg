@@ -1,3 +1,13 @@
+## [2026-04-17] Quick: indicador de provocação no rotation loop de status
+
+- `shared/ui/statusIndicator.js` agora trata provocação ativa (`champion.tauntEffects`) como pseudo-status de UI.
+- Adicionados mapeamentos `provocado` e `taunted` usando `/assets/taunted_indicator.png`.
+- O indicador de provocação entra na mesma pipeline de criação/remoção dos demais `.status-indicator`.
+- Com múltiplos indicadores, provocação participa do mesmo `rotationLoop` global sem fluxo especial.
+- Artefatos: `.planning/quick/260417-hwk-preciso-que-se-use-o-taunted-indicator-p/`.
+
+---
+
 ## [2026-04-16] Quick: consistência de dano com escudo no intermediateSnapshot/UI
 
 - Corrigido desalinhamento entre backend e client-side na exibição de dano com escudo.

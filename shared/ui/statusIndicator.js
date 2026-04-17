@@ -1,3 +1,5 @@
+import { getExclusiveIndicator } from "../indicators/exclusiveIndicators.js";
+
 // Ícones Boxicons para seta para cima/baixo
 const BUFF_ICON = {
   type: "icon",
@@ -22,7 +24,7 @@ export const StatusIndicator = {
   statusEffectIcons: {
     paralisado: {
       type: "image",
-      value: "/assets/paralisado_indicator.png",
+      value: "/assets/indicators/paralisado_indicator.png",
       background: "",
     },
     atordoado: {
@@ -52,13 +54,8 @@ export const StatusIndicator = {
     },
     "imunidade absoluta": {
       type: "image",
-      value: "/assets/imunidade_absoluta_indicator.png",
+      value: "/assets/indicators/imunidade_absoluta_indicator.png",
       background: "rgba(0, 255, 255, 0.8)",
-    },
-    tributo: {
-      type: "text",
-      value: "TRIB.",
-      color: "#ff2a2a",
     },
     queimando: {
       type: "emoji",
@@ -69,6 +66,11 @@ export const StatusIndicator = {
       type: "emoji",
       value: "🌱",
       background: "rgba(34, 139, 34, 0.8)",
+    },
+    provocado: {
+      type: "image",
+      value: "/assets/indicators/taunted_indicator.png",
+      background: "",
     },
   },
 
@@ -92,8 +94,22 @@ export const StatusIndicator = {
     if (!portrait) return;
 
     const activeStatuses = new Set(
-      [...champion.statusEffects.keys()].map((s) => s.toLowerCase()),
+      [...champion.statusEffects.keys()].map((s) => String(s).toLowerCase()),
     );
+    const runtimeHookEffectKeys = Array.isArray(
+      champion.runtime?.hookEffectKeys,
+    )
+      ? champion.runtime.hookEffectKeys
+      : [];
+    for (const hookKey of runtimeHookEffectKeys) {
+      activeStatuses.add(String(hookKey).toLowerCase());
+    }
+    const hasActiveTaunt =
+      Array.isArray(champion.tauntEffects) && champion.tauntEffects.length > 0;
+
+    if (hasActiveTaunt) {
+      activeStatuses.add("provocado");
+    }
 
     // --- BUFF/DEBUFF INDICATORS ---
     // Remove buff/debuff indicators antigos
@@ -163,8 +179,10 @@ export const StatusIndicator = {
       }
     });
 
-    for (const [statusEffectName] of champion.statusEffects.entries()) {
-      const icon = this.statusEffectIcons[statusEffectName.toLowerCase()];
+    for (const statusEffectName of activeStatuses) {
+      const icon =
+        this.statusEffectIcons[statusEffectName.toLowerCase()] ||
+        getExclusiveIndicator(statusEffectName);
       if (!icon) continue;
 
       let indicator = portrait.querySelector(
