@@ -70,6 +70,16 @@ export const StatusIndicator = {
       value: "🌱",
       background: "rgba(34, 139, 34, 0.8)",
     },
+    provocado: {
+      type: "image",
+      value: "/assets/taunted_indicator.png",
+      background: "",
+    },
+    taunted: {
+      type: "image",
+      value: "/assets/taunted_indicator.png",
+      background: "",
+    },
   },
 
   // Duração mínima visual para indicadores (em ms)
@@ -94,6 +104,12 @@ export const StatusIndicator = {
     const activeStatuses = new Set(
       [...champion.statusEffects.keys()].map((s) => s.toLowerCase()),
     );
+    const hasActiveTaunt =
+      Array.isArray(champion.tauntEffects) && champion.tauntEffects.length > 0;
+
+    if (hasActiveTaunt) {
+      activeStatuses.add("provocado");
+    }
 
     // --- BUFF/DEBUFF INDICATORS ---
     // Remove buff/debuff indicators antigos
@@ -163,7 +179,12 @@ export const StatusIndicator = {
       }
     });
 
-    for (const [statusEffectName] of champion.statusEffects.entries()) {
+    const statusEffectNames = [...champion.statusEffects.keys()];
+    if (hasActiveTaunt) {
+      statusEffectNames.push("provocado");
+    }
+
+    for (const statusEffectName of statusEffectNames) {
       const icon = this.statusEffectIcons[statusEffectName.toLowerCase()];
       if (!icon) continue;
 

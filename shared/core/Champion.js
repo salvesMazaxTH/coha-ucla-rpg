@@ -261,6 +261,12 @@ export class Champion {
       damageModifiersCount: (this.damageModifiers || []).length,
       damageReductionModifiersCount: (this.damageReductionModifiers || [])
         .length,
+
+      // Taunt effects for UI indicator (provocação)
+      tauntEffects: (this.tauntEffects || []).map((t) => ({
+        taunterId: t.taunterId,
+        expiresAtTurn: t.expiresAtTurn,
+      })),
     };
   }
 

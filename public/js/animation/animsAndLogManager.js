@@ -1290,6 +1290,11 @@ export function createCombatAnimationManager(deps) {
       champion.statusEffects = new Map(snap.statusEffects);
     }
 
+    // TauntEffects (for provocação indicator)
+    if (Array.isArray(snap.tauntEffects)) {
+      champion.tauntEffects = snap.tauntEffects;
+    }
+
     // Alive
     if (snap.HP !== undefined) {
       champion.alive = snap.HP > 0;
