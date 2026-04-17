@@ -229,6 +229,7 @@ function createContext({ allChampions, turn, sourceId }) {
     logs: [],
     dialogs: [],
     damageEvents: [],
+    resourceChanges: [],
     heals: [],
     buffs: [],
     shields: [],
@@ -240,6 +241,9 @@ function createContext({ allChampions, turn, sourceId }) {
     },
     registerDamage(entry) {
       this.damageEvents.push(entry);
+    },
+    registerResourceChange(entry) {
+      this.resourceChanges.push(entry);
     },
     registerHeal(entry) {
       this.heals.push(entry);
@@ -263,6 +267,54 @@ function createContext({ allChampions, turn, sourceId }) {
     },
     registerShield(entry) {
       this.shields.push(entry);
+    },
+  };
+}
+
+function createLabResolver({ activeChampions }) {
+  return {
+    combat: {
+      activeChampions,
+    },
+    applyResourceChange({
+      target,
+      amount,
+      context,
+      sourceId,
+      emitHooks = true,
+    }) {
+      if (!target || amount === 0) return 0;
+
+      const applied =
+        amount > 0 ? target.addUlt(amount) : target.spendUlt(amount);
+
+      if (applied === 0) return 0;
+
+      if (typeof context?.registerResourceChange === "function") {
+        context.registerResourceChange({ target, amount: applied, sourceId });
+      }
+
+      if (!emitHooks) return applied;
+
+      const eventType = applied > 0 ? "onResourceGain" : "onResourceSpend";
+      const payloadType = applied > 0 ? "resourceGain" : "resourceSpend";
+
+      emitCombatEvent(
+        eventType,
+        {
+          target,
+          owner: target,
+          amount: Math.abs(applied),
+          context,
+          type: payloadType,
+          resourceType: "ult",
+          source: activeChampions.get(sourceId) || null,
+          resolver: this,
+        },
+        activeChampions,
+      );
+
+      return applied;
     },
   };
 }
@@ -295,10 +347,15 @@ function resolveTargets({ user, defender, skill }) {
 
 function executeSkill({ user, defender, skill, context }) {
   const targets = resolveTargets({ user, defender, skill });
+  const resolver = createLabResolver({
+    activeChampions: context.activeChampions,
+  });
+
   return skill.resolve({
     user,
     targets,
     context,
+    resolver,
   });
 }
 

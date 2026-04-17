@@ -125,12 +125,15 @@ const noyreSkills = [
     name: "Colapso Entrópico",
     isUltimate: true,
     ultCost: 4,
-    damageRatioPerUlt: 0.05,
+    damageRatioPerUlt: 0.04,
+    piercingPercentage: 60,
 
     priority: 0,
+
     description() {
-      return `Colapsa a energia dos inimigos, causando dano perfurante equivalente a ${this.damageRatioPerUlt * 100}% do HP máximo para cada unidade de ultômetro atual do alvo. Em seguida, drena todo o ultômetro restante.`;
+      return `Colapsa a energia dos inimigos, causando Dano Perfurante (${this.piercingPercentage}% de perfuração) equivalente a ${this.damageRatioPerUlt * 100}% do HP máximo para cada unidade de ultômetro atual do alvo (Máx.: 65% do HP). Em seguida, drena 2/3 do ultômetro do alvo (Mín.: 3 unidades, ou todo o ultômetro restante se o alvo tiver menos).`;
     },
+
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context, resolver }) {
       const enemies = targets.filter(
@@ -143,7 +146,10 @@ const noyreSkills = [
         const ult = enemy.ultMeter || 0;
         if (ult <= 0) continue;
 
-        const damage = Math.floor(enemy.maxHP * this.damageRatioPerUlt * ult);
+        const rawDamage = enemy.maxHP * this.damageRatioPerUlt * ult;
+        const cappedDamage = Math.min(rawDamage, enemy.maxHP * 0.65);
+
+        const damage = Math.floor(cappedDamage);
 
         const damageResult = new DamageEvent({
           baseDamage: damage,
@@ -153,18 +159,25 @@ const noyreSkills = [
           context,
           allChampions: context.allChampions,
           mode: "piercing",
-          piercingPercentage: 100,
+          piercingPercentage: this.piercingPercentage,
         }).execute();
 
         results.push(damageResult);
 
-        resolver.applyResourceChange({
-          target: enemy,
-          amount: -ult,
-          context,
-          sourceId: user.id,
-          emitHooks: false,
-        });
+        // Drenar 2/3 do ultômetro, mínimo 3, máximo o que o alvo tem, nunca negativo
+        let ultToDrain = Math.floor((ult * 2) / 3);
+
+        ultToDrain = Math.max(ultToDrain, Math.min(3, ult));
+
+        if (ultToDrain > 0) {
+          resolver.applyResourceChange({
+            target: enemy,
+            amount: -ultToDrain,
+            context,
+            sourceId: user.id,
+            emitHooks: false,
+          });
+        }
       }
 
       context.registerDialog({
