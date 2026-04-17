@@ -543,7 +543,7 @@ export class TurnResolver {
    * Ponto único de entrada (Backend) para mudança de recursos com emissão de hooks.
    * Orquestra: Mudança de Estado (Champion) -> Visual (Context) -> Gameplay Hooks (Emitter).
    */
-  applyResourceChange({ target, amount, context, sourceId }) {
+  applyResourceChange({ target, amount, context, sourceId, emitHooks = true }) {
     if (!target || amount === 0) return 0;
 
     // 1. Backend State Change (Champion)
@@ -557,6 +557,8 @@ export class TurnResolver {
 
     // 2. Frontend Visual Registration (Context)
     context.registerResourceChange({ target, amount: applied, sourceId });
+
+    if (!emitHooks) return applied;
 
     // 3. Backend Gameplay Logic (Hooks)
     emitCombatEvent(

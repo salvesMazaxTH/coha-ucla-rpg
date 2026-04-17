@@ -29,6 +29,7 @@ import sengoku_primordial from "./sengoku_primordial/index.js";
 import theopetra from "./theopetra/index.js";
 import isarelis from "./isarelis/index.js";
 import morakhan from "./morakhan/index.js";
+import noyre from "./noyre/index.js";
 
 const championDB = {
   ralia,
@@ -62,6 +63,7 @@ const championDB = {
   theopetra,
   isarelis,
   morakhan,
+  noyre,
 };
 
 export default championDB;
