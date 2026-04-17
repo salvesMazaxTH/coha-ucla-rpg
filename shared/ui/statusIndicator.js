@@ -1,3 +1,5 @@
+import { getExclusiveIndicator } from "../indicators/exclusiveIndicators.js";
+
 // Ícones Boxicons para seta para cima/baixo
 const BUFF_ICON = {
   type: "icon",
@@ -22,7 +24,7 @@ export const StatusIndicator = {
   statusEffectIcons: {
     paralisado: {
       type: "image",
-      value: "/assets/paralisado_indicator.png",
+      value: "/assets/indicators/paralisado_indicator.png",
       background: "",
     },
     atordoado: {
@@ -52,13 +54,8 @@ export const StatusIndicator = {
     },
     "imunidade absoluta": {
       type: "image",
-      value: "/assets/imunidade_absoluta_indicator.png",
+      value: "/assets/indicators/imunidade_absoluta_indicator.png",
       background: "rgba(0, 255, 255, 0.8)",
-    },
-    tributo: {
-      type: "text",
-      value: "TRIB.",
-      color: "#ff2a2a",
     },
     queimando: {
       type: "emoji",
@@ -72,12 +69,7 @@ export const StatusIndicator = {
     },
     provocado: {
       type: "image",
-      value: "/assets/taunted_indicator.png",
-      background: "",
-    },
-    taunted: {
-      type: "image",
-      value: "/assets/taunted_indicator.png",
+      value: "/assets/indicators/taunted_indicator.png",
       background: "",
     },
   },
@@ -185,7 +177,9 @@ export const StatusIndicator = {
     }
 
     for (const statusEffectName of statusEffectNames) {
-      const icon = this.statusEffectIcons[statusEffectName.toLowerCase()];
+      const icon =
+        this.statusEffectIcons[statusEffectName.toLowerCase()] ||
+        getExclusiveIndicator(statusEffectName);
       if (!icon) continue;
 
       let indicator = portrait.querySelector(
