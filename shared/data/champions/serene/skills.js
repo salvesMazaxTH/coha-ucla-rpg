@@ -55,17 +55,27 @@ const sereneSkills = [
     contact: false,
     damageMode: "piercing",
     piercingPercentage: 100,
-    priority: 0,
+    priority: 1, // buff: prio +1
     description() {
-      return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) igual a ${this.hpDamagePercent}% do HP máximo do alvo e deixa o alvo {atordoado} por ${this.stunDuration} turno(s).`;
+      return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) igual a ${this.hpDamagePercent}% do HP máximo do alvo e deixa o alvo {atordoado} por ${this.stunDuration} turno(s). Se usada consecutivamente, a partir do segundo uso, a chance de atordoar é 50%.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
 
-      const baseDamage = enemy.maxHP * (this.hpDamagePercent / 100);
+      user.runtime ??= {};
+      user.runtime.sereneStreak ??= 0;
+      user.runtime.lastSereneSkillTurn ??= null;
 
-      // resolve dano
+      // streak: conta usos consecutivos
+      if (user.runtime.lastSereneSkillTurn === context.currentTurn - 1) {
+        user.runtime.sereneStreak += 1;
+      } else {
+        user.runtime.sereneStreak = 1;
+      }
+      user.runtime.lastSereneSkillTurn = context.currentTurn;
+
+      const baseDamage = enemy.maxHP * (this.hpDamagePercent / 100);
       const result = new DamageEvent({
         baseDamage,
         piercingPercentage: this.piercingPercentage,
@@ -77,18 +87,33 @@ const sereneSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
-      if (!result?.evaded && !result?.immune) {
+      // Stun logic
+      let stunSuccess = true;
+      if (user.runtime.sereneStreak > 1) {
+        // 50% chance a partir do segundo uso consecutivo
+        stunSuccess = Math.random() < 0.5;
+      }
+
+      if (!result?.evaded && !result?.immune && stunSuccess) {
         const stunned = enemy.applyStatusEffect(
           "atordoado",
           this.stunDuration,
           context,
         );
-        // if (stunned && stunned.log && result?.log) {
-        //   result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
-        // } else if (stunned && stunned.log) {
-        //   result.log = `${formatChampionName(enemy)} foi atordoado pela Quietude!`;
-        // }
+        if (stunned && stunned.log && result?.log) {
+          result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        } else if (stunned && stunned.log) {
+          result.log = `${formatChampionName(enemy)} foi atordoado pela Quietude!`;
+        }
+      } else if (
+        user.runtime.sereneStreak > 1 &&
+        !result?.evaded &&
+        !result?.immune
+      ) {
+        // Falhou o stun por chance
+        result.log =
+          (result.log || "") +
+          `\n${formatChampionName(enemy)} resistiu ao atordoamento!`;
       }
 
       return result;
