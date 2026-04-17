@@ -9,7 +9,7 @@ export default {
   name: "Peso dos Séculos",
   reductionPercent: 30,
   description() {
-    return `No início de cada turno, Sengoku perde ${this.reductionPercent}% do valor atual de seu Ataque e Defesa (aplicação composta, não cumulativa sobre o valor base).`;
+    return `Sengoku inicia o combate com atributos muito acima do normal, mas não consegue sustentar esse poder por muito tempo. No início de cada turno, perde ${this.reductionPercent}% do valor atual de seu Ataque e Defesa.`;
   },
   onTurnStart({ owner, context }) {
     // Reduz 30% do valor ATUAL de Attack e Defense a cada turno

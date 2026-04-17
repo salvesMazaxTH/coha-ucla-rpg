@@ -34,6 +34,14 @@ const torrenSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
+      if (
+        damageEvent?.evaded ||
+        damageEvent?.immune ||
+        !(damageEvent?.totalDamage > 0)
+      ) {
+        return damageEvent;
+      }
+
       const otherEnemies = context?.allChampions
         ? Array.from(context.allChampions.values()).filter(
             (champion) =>
@@ -139,13 +147,19 @@ const torrenSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      enemy.applyStatusEffect("atordoado", this.stunDuration, context, {
-        source: {
-          type: "skill",
-          skill: this,
-          champion: user,
-        },
-      });
+      if (
+        !damageEvent?.evaded &&
+        !damageEvent?.immune &&
+        damageEvent?.totalDamage > 0
+      ) {
+        enemy.applyStatusEffect("atordoado", this.stunDuration, context, {
+          source: {
+            type: "skill",
+            skill: this,
+            champion: user,
+          },
+        });
+      }
 
       return damageEvent;
     },
