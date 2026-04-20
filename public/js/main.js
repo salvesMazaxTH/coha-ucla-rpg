@@ -351,36 +351,13 @@ function createChampionOverlay(champion) {
   `;
   }
 
-  // atributos do campeão (p.Ex: ATQ, DEF ,etc...)
-  const statsItemHtml = [
-    { name: "Ataque", value: champion.Attack },
-    { name: "Defesa", value: champion.Defense },
-    { name: "Velocidade", value: champion.Speed },
-    { name: "Esquiva", value: champion.Evasion ?? 0 },
-    { name: "Crítico", value: champion.Critical ?? 0 },
-    { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
-  ]
-    .filter((item) => item.value !== undefined)
-    .map(
-      (item) => `
-        <div class="portrait-overlay-stat">
-          <h4 class="portrait-overlay-stat-name">${escapeHtml(item.name)}: </h4>
-          <p class="portrait-overlay-stat-value">${escapeHtml(item.value)}</p>
-        </div>
-      `,
-    )
-    .join("");
-
   const details = document.createElement("div");
   details.classList.add("portrait-overlay-details");
   details.innerHTML = `
     <div class="portrait-overlay-details-content">
-      <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
+      <h3 class="portrait-overlay-details-title">Passiva</h3>
       <div class="portrait-overlay-passive-list">
         ${passiveItemHtml}
-      </div>
-      <div class="portrait-overlay-stats-list">
-        ${statsItemHtml}
       </div>
     </div>
   `;
