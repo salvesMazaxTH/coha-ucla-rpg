@@ -116,6 +116,7 @@ const isarelisSkills = [
     damageMode: "standard",
     contact: true,
     isUltimate: true,
+    ultCost: 3,
     priority: 0,
 
     executeThreshold: 0.2, // 20%
