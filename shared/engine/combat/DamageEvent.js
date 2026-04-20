@@ -29,7 +29,7 @@ export class DamageEvent {
 
   static GLOBAL_DMG_CAP = 999;
 
-  static debugMode = true;
+  static debugMode = false;
 
   constructor(params) {
     const { attacker, defender, skill, context, baseDamage } = params;
