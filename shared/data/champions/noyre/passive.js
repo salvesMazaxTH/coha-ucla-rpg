@@ -1,11 +1,11 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
 
-function _processEntropy(owner, context, resolver) {
+function _processEntropy(owner, context, resolver, stacksCap = 8) {
   let procs = 0;
 
-  while ((owner.runtime.entropyStacks || 0) >= 6) {
-    owner.runtime.entropyStacks -= 6;
+  while ((owner.runtime.entropyStacks || 0) >= stacksCap) {
+    owner.runtime.entropyStacks -= stacksCap;
     procs++;
 
     const enemies = context.aliveChampions.filter((c) => c.team !== owner.team);
@@ -64,6 +64,7 @@ function _processEntropy(owner, context, resolver) {
 export default {
   key: "entropia_noyre",
   name: "Entropia Entrópica",
+  stacksCap: 8,
 
   description(champion) {
     const stacks = champion.runtime.entropyStacks || 0;
@@ -72,7 +73,7 @@ export default {
 
     <b>Acúmulos atuais: ${stacks}</b>
 
-    A cada 6 acúmulos, remove 1 unidade de ultômetro de todos os inimigos. Inimigos que tinham ult suficiente para usar sua ultimate sofrem 15% do HP máximo como Dano Perfurante.`;
+    A cada ${this.stacksCap} acúmulos, remove 1 unidade de ultômetro de todos os inimigos. Inimigos que tinham ult suficiente para usar sua ultimate sofrem 15% do HP máximo como Dano Perfurante.`;
   },
 
   hookScope: {
@@ -87,7 +88,7 @@ export default {
     owner.runtime.entropyStacks ??= 0;
     owner.runtime.entropyStacks += amount;
 
-    const procs = _processEntropy(owner, context, resolver);
+    const procs = _processEntropy(owner, context, resolver, this.stacksCap);
 
     if (procs > 0) {
       return {
@@ -105,7 +106,7 @@ export default {
     owner.runtime.entropyStacks ??= 0;
     owner.runtime.entropyStacks += amount;
 
-    const procs = _processEntropy(owner, context, resolver);
+    const procs = _processEntropy(owner, context, resolver, this.stacksCap);
 
     if (procs > 0) {
       return {
