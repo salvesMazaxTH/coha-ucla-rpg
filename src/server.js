@@ -38,7 +38,7 @@ const editMode = {
   autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
-  unavailableChampions: false,
+  unavailableChampions: true,
   damageOutput: null, // Valor fixo de dano para testes (ex: 999). null = desativado. (SERVER-ONLY)
   alwaysCrit: false, // Força crítico em todo ataque. (SERVER-ONLY)
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)

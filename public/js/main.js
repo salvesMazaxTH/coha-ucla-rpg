@@ -1545,11 +1545,11 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   }
 
   socket.emit("useSkill", { userId, skillKey, targetIds });
+  // Habilita o undo imediatamente após enfileirar a ação
+  document.getElementById("undo-actions-btn").disabled = false;
   if (!editMode.actMultipleTimesPerTurn) {
     advanceActionBarSlot(userId);
   }
-
-  document.getElementById("undo-actions-btn").disabled = false;
 });
 
 // --- Coleta de alvos no client ---
@@ -2037,6 +2037,8 @@ function advanceActionBarSlot(champId) {
   if (actionBarSlotOrder[currentActionBarSlot] === champId) {
     currentActionBarSlot++;
     showActionBarSlot();
+    // Habilita o undo sempre que avança slot (há ação pendente)
+    document.getElementById("undo-actions-btn").disabled = false;
     // rebuildReserveDisplay(playerTeam);
   }
 }
