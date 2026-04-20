@@ -758,9 +758,8 @@ export function createCombatAnimationManager(deps) {
       direction ?? (effect?.type === "resourceSpend" ? -1 : 1);
 
     const sign = eventDirection >= 0 ? "+" : "-";
-    const bars = getUltBarDelta(
-      eventDirection >= 0 ? normalizedAmount : -normalizedAmount,
-    );
+    // Sempre passa valor positivo para o float, só o sinal visual muda
+    const bars = getUltBarDelta(normalizedAmount);
 
     if (portraitWrapper) {
       const floatClass =
