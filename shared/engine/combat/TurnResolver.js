@@ -2,6 +2,25 @@ import { formatChampionName } from "../../ui/formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 import { snapshotChampions } from "./snapshotChampions.js";
 
+const RESOURCE_DEBUG_TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
+
+function isResourceDebugEnabled() {
+  if (typeof process === "undefined") return false;
+
+  const raw = process?.env?.DEBUG_RESOURCE_FLOW;
+
+  if (raw == null) {
+    return process?.env?.NODE_ENV !== "production";
+  }
+
+  return RESOURCE_DEBUG_TRUE_VALUES.has(String(raw).toLowerCase());
+}
+
+function logResourceDebug(payload) {
+  if (!isResourceDebugEnabled()) return;
+  console.log("[RESOURCE_DEBUG]", payload);
+}
+
 export class TurnResolver {
   constructor(match, editMode, options = {}) {
     this.match = match;
@@ -556,22 +575,85 @@ export class TurnResolver {
    * Ponto único de entrada (Backend) para mudança de recursos com emissão de hooks.
    * Orquestra: Mudança de Estado (Champion) -> Visual (Context) -> Gameplay Hooks (Emitter).
    */
-  applyResourceChange({ target, amount, context, sourceId, emitHooks = true }) {
-    if (!target || amount === 0) return 0;
+  applyResourceChange({
+    target,
+    amount,
+    context,
+    sourceId,
+    emitHooks = true,
+    visualPhase = null,
+    visualAfterHooks = false,
+    debugLabel = null,
+  }) {
+    const requestedAmount = Number(amount) || 0;
+    if (!target || requestedAmount === 0) return 0;
+
+    const beforeUlt = Number(target.ultMeter) || 0;
+    const sourceChampion = sourceId
+      ? this.combat.activeChampions.get(sourceId) || null
+      : null;
 
     // 1. Backend State Change (Champion)
     const applied =
-      amount > 0 ? target.addUlt(amount) : target.spendUlt(amount);
+      requestedAmount > 0
+        ? target.addUlt(requestedAmount)
+        : target.spendUlt(Math.abs(requestedAmount));
 
-    if (applied === 0) return 0;
+    const afterUlt = Number(target.ultMeter) || 0;
+
+    if (applied === 0) {
+      logResourceDebug({
+        stage: "applyResourceChange:blocked",
+        sourceId: sourceId || null,
+        sourceName: sourceChampion?.name || null,
+        targetId: target.id,
+        targetName: target.name,
+        requestedAmount,
+        beforeUlt,
+        afterUlt,
+        debugLabel,
+      });
+      return 0;
+    }
 
     const eventType = applied > 0 ? "onResourceGain" : "onResourceSpend";
     const payloadType = applied > 0 ? "resourceGain" : "resourceSpend";
 
-    // 2. Frontend Visual Registration (Context)
-    context.registerResourceChange({ target, amount: applied, sourceId });
+    logResourceDebug({
+      stage: "applyResourceChange:applied",
+      sourceId: sourceId || null,
+      sourceName: sourceChampion?.name || null,
+      targetId: target.id,
+      targetName: target.name,
+      requestedAmount,
+      applied,
+      eventType,
+      payloadType,
+      beforeUlt,
+      afterUlt,
+      emitHooks,
+      visualPhase,
+      visualAfterHooks,
+      debugLabel,
+    });
 
-    if (!emitHooks) return applied;
+    const registerVisual = () =>
+      context.registerResourceChange({
+        target,
+        amount: applied,
+        sourceId,
+        phase: visualPhase,
+      });
+
+    if (!visualAfterHooks) {
+      // 2. Frontend Visual Registration (Context)
+      registerVisual();
+    }
+
+    if (!emitHooks) {
+      if (visualAfterHooks) registerVisual();
+      return applied;
+    }
 
     // 3. Backend Gameplay Logic (Hooks)
     emitCombatEvent(
@@ -587,6 +669,10 @@ export class TurnResolver {
       },
       this.combat.activeChampions,
     );
+
+    if (visualAfterHooks) {
+      registerVisual();
+    }
 
     return applied;
   }
@@ -978,7 +1064,7 @@ export class TurnResolver {
         this._lastEventRef = event;
       },
       // -- RESOURCE REGISTRY (Visual Only) -- //
-      registerResourceChange({ target, amount, sourceId } = {}) {
+      registerResourceChange({ target, amount, sourceId, phase = null } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return 0;
 
@@ -990,12 +1076,23 @@ export class TurnResolver {
           sourceId: sourceId || this.healSourceId || target.id,
           amount: Math.abs(value),
           resourceType: "ult",
+          phase,
           preDialogs: [],
           postDialogs: [],
         };
 
         this.visual.resourceEvents.push(event);
         this._lastEventRef = event;
+
+        logResourceDebug({
+          stage: "registerResourceChange",
+          targetId: target.id,
+          targetName: target.name,
+          sourceId: event.sourceId,
+          eventType,
+          amount: Math.abs(value),
+          phase,
+        });
 
         return value;
       },

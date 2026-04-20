@@ -41,6 +41,7 @@ const TIMING = {
   // Sequencing gaps
   BETWEEN_EFFECTS: 60, // Reduced from 120
   BETWEEN_ACTIONS: 60, // Reduced from 60
+  RESOURCE_PHASE_GAP: 260,
 
   DEATH_CLAIM_EFFECT: 5600,
 };
@@ -311,8 +312,21 @@ export function createCombatAnimationManager(deps) {
         return;
       }
 
+      let prevResourcePhase = null;
+
       for (const event of events) {
         if (!event) continue;
+
+        if (key === "resourceEvents") {
+          const phase = event.phase ?? "default";
+
+          if (prevResourcePhase !== null && phase !== prevResourcePhase) {
+            await wait(TIMING.RESOURCE_PHASE_GAP);
+          }
+
+          prevResourcePhase = phase;
+        }
+
         await runEvent(event, handler);
       }
     }
@@ -727,7 +741,7 @@ export function createCombatAnimationManager(deps) {
   //  RESOURCE REGEN ANIMATION
   // ============================================================
 
-  function animateResourceChange(effect, direction = 1) {
+  function animateResourceChange(effect, direction = null) {
     const { targetId, amount } = effect || {};
     const normalizedAmount = Math.abs(Number(amount) || 0);
 
@@ -740,14 +754,19 @@ export function createCombatAnimationManager(deps) {
     const actualPortrait = portraitWrapper.querySelector(".portrait");
     scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
-    const sign = direction >= 0 ? "+" : "-";
+    const eventDirection =
+      direction ?? (effect?.type === "resourceSpend" ? -1 : 1);
+
+    const sign = eventDirection >= 0 ? "+" : "-";
     const bars = getUltBarDelta(
-      direction >= 0 ? normalizedAmount : -normalizedAmount,
+      eventDirection >= 0 ? normalizedAmount : -normalizedAmount,
     );
 
     if (portraitWrapper) {
       const floatClass =
-        direction >= 0 ? "resource-float-ult-gain" : "resource-float-ult-spend";
+        eventDirection >= 0
+          ? "resource-float-ult-gain"
+          : "resource-float-ult-spend";
 
       createFloatElement(
         portraitWrapper,
@@ -759,7 +778,7 @@ export function createCombatAnimationManager(deps) {
 
     updateVisualResource(
       targetId,
-      direction >= 0 ? normalizedAmount : -normalizedAmount,
+      eventDirection >= 0 ? normalizedAmount : -normalizedAmount,
       "ult",
     );
   }

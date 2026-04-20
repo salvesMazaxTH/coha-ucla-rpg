@@ -1,7 +1,7 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
 
-function _processEntropy(owner, context, resolver, stacksCap = 8) {
+function _processEntropy(owner, context, resolver, stacksCap = 7) {
   let procs = 0;
 
   while ((owner.runtime.entropyStacks || 0) >= stacksCap) {
@@ -20,20 +20,27 @@ function _processEntropy(owner, context, resolver, stacksCap = 8) {
           enemy.getSkillCost?.(enemy.skills.find((s) => s.isUltimate));
 
       // 🔹 drenar 1 unidade
+      let drained = 0;
+
       if (resolver?.applyResourceChange) {
-        resolver.applyResourceChange({
+        const applied = resolver.applyResourceChange({
           target: enemy,
           amount: -1,
           context,
           sourceId: owner.id,
           emitHooks: false,
+          visualPhase: "entropy_drain",
+          debugLabel: "noyre_entropy_drain",
         });
+
+        drained = Math.abs(applied || 0);
       } else {
-        enemy.spendUlt(1);
+        const applied = enemy.spendUlt(1);
+        drained = Math.abs(applied || 0);
       }
 
       // Dialog animado ao consumir stacks (imitando Blyskartri, com prefixo padrão)
-      if (context?.registerDialog) {
+      if (drained > 0 && context?.registerDialog) {
         context.registerDialog({
           message: `<b>[Passiva — Entropia]</b> ${formatChampionName(owner)} drenou o ultômetro de ${formatChampionName(enemy)}!`,
           sourceId: owner.id,
@@ -61,15 +68,20 @@ function _processEntropy(owner, context, resolver, stacksCap = 8) {
   return procs;
 }
 
+function _accumulateEntropy(owner) {
+  owner.runtime.entropyStacks ??= 0;
+  owner.runtime.entropyStacks += 1;
+}
+
 export default {
   key: "entropia_noyre",
   name: "Entropia Entrópica",
-  stacksCap: 8,
+  stacksCap: 7,
 
   description(champion) {
     const stacks = champion.runtime.entropyStacks || 0;
 
-    return `Sempre que um inimigo ganha ou consome ultômetro, Noyre acumula Entropia.
+    return `Sempre que um inimigo ganha ou consome ultômetro, Noyre acumula 1 Entropia.
 
     <b>Acúmulos atuais: ${stacks}</b>
 
@@ -85,8 +97,7 @@ export default {
     if (owner.team === target.team) return;
     if (amount <= 0) return;
 
-    owner.runtime.entropyStacks ??= 0;
-    owner.runtime.entropyStacks += amount;
+    _accumulateEntropy(owner);
 
     const procs = _processEntropy(owner, context, resolver, this.stacksCap);
 
@@ -103,8 +114,7 @@ export default {
     if (owner.team === target.team) return;
     if (amount <= 0) return;
 
-    owner.runtime.entropyStacks ??= 0;
-    owner.runtime.entropyStacks += amount;
+    _accumulateEntropy(owner);
 
     const procs = _processEntropy(owner, context, resolver, this.stacksCap);
 

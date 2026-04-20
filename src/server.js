@@ -465,6 +465,9 @@ function applyGlobalTurnRegen(champion, context, resolver) {
         amount: GLOBAL_ULT_REGEN,
         context,
         sourceId: champion.id,
+        visualPhase: "global_turn_regen",
+        visualAfterHooks: true,
+        debugLabel: "global_turn_regen",
       })
     : champion.addUlt(GLOBAL_ULT_REGEN);
 
@@ -1521,8 +1524,8 @@ io.on("connection", (socket) => {
       }
 
       //if (!editMode.freeCostSkills) {
-        // user.spendUlt(cost);
-        // a lógica de consumo/gasto de recurso (ultômetro) foi movida para responsabilidade da TurnResolver na execução da ação da skill respectiva.
+      // user.spendUlt(cost);
+      // a lógica de consumo/gasto de recurso (ultômetro) foi movida para responsabilidade da TurnResolver na execução da ação da skill respectiva.
       //}
     }
 
