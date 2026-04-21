@@ -1,8 +1,8 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const imunidadeAbsoluta = {
-  key: "imunidadeAbsoluta",
+const absoluteImmunity = {
+  key: "absoluteImmunity",
   name: "Imunidade Absoluta",
   type: "buff",
   subtypes: ["immunity"],
@@ -48,4 +48,4 @@ const imunidadeAbsoluta = {
   },
 };
 
-export default imunidadeAbsoluta;
+export default absoluteImmunity;

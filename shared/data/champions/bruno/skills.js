@@ -18,14 +18,14 @@ const brunoSkills = [
     key: "missil_de_gelo",
     name: "Míssil de Gelo",
     bf: 55,
-    geladoDuration: 2,
+    chillDuration: 2,
     contact: false,
     damageMode: "standard",
     priority: 0,
     element: "ice",
 
     description() {
-      return `Causa dano ao inimigo e o deixa Gelado por ${this.geladoDuration} turno(s).`;
+      return `Causa dano ao inimigo e o deixa Gelado por ${this.chillDuration} turno(s).`;
     },
 
     targetSpec: ["enemy"],
@@ -44,7 +44,7 @@ const brunoSkills = [
       }).execute();
 
       if (!result?.evaded && !result?.immune) {
-        target.applyStatusEffect("gelado", this.geladoDuration, context);
+        target.applyStatusEffect("chilled", this.chillDuration, context);
       }
 
       return result;
@@ -91,7 +91,7 @@ const brunoSkills = [
     key: "tempestade_de_gelo",
     name: "Tempestade de Gelo",
     bf: 120,
-    geladoDuration: 2,
+    chillDuration: 2,
     contact: false,
     damageMode: "standard",
     priority: 0,
@@ -100,7 +100,7 @@ const brunoSkills = [
     element: "ice",
 
     description() {
-      return `Desencadeia uma tempestade de gelo sobre o inimigo, causando dano devastador e o Gelando por ${this.geladoDuration} turno(s).`;
+      return `Desencadeia uma tempestade de gelo sobre o inimigo, causando dano devastador e o Gelando por ${this.chillDuration} turno(s).`;
     },
 
     targetSpec: ["enemy"],
@@ -119,7 +119,7 @@ const brunoSkills = [
       }).execute();
 
       if (!result?.evaded && !result?.immune) {
-        target.applyStatusEffect("gelado", this.geladoDuration, context);
+        target.applyStatusEffect("chilled", this.chillDuration, context);
       }
 
       return result;

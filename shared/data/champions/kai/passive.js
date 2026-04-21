@@ -56,7 +56,7 @@ export default {
         `Aplicando queimadura padrão (duração: ${burnDuration}) em ${defender.name} por ataque de ${skill?.key}.`,
       );
 
-      defender.applyStatusEffect("queimando", burnDuration, context, {
+      defender.applyStatusEffect("burning", burnDuration, context, {
         source: owner.name,
       });
 

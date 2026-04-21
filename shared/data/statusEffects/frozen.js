@@ -2,8 +2,8 @@ import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
 // Reduz velocidade e ataque a 0 e impede de agir por X turno(s) (X geralmente 1)
-const congelado = {
-  key: "congelado",
+const frozen = {
+  key: "frozen",
   name: "Congelado",
   type: "debuff",
   subtypes: ["hardCC", "ice"],
@@ -26,7 +26,7 @@ const congelado = {
       ignoreMinimum: true,
     });
     return {
-      message: `${owner.name} foi Congelado!`,
+      message: `${owner.name} foi ${this.name}!`,
     };
   },
 
@@ -48,10 +48,10 @@ const congelado = {
     // Busca o status atual e verifica se o turno de expiração é maior que o turno atual
     const currentTurn = context?.currentTurn ?? 0;
     const effect =
-      defender.getStatusEffect?.("congelado") ||
-      defender.statusEffects?.get?.("congelado");
+      defender.getStatusEffect?.("frozen") ||
+      defender.statusEffects?.get?.("frozen");
     if (effect && effect.appliedAtTurn < currentTurn) {
-      defender.removeStatusEffect("congelado");
+      defender.removeStatusEffect("frozen");
       return {
         log: `${formatChampionName(defender)} foi descongelado após receber dano!`,
       };
@@ -80,4 +80,4 @@ const congelado = {
   },
 };
 
-export default congelado;
+export default frozen;

@@ -55,7 +55,7 @@ const torrenSkills = [
 
       const randomEnemy =
         otherEnemies[Math.floor(Math.random() * otherEnemies.length)];
-      randomEnemy.applyStatusEffect("atordoado", 1, context, {
+      randomEnemy.applyStatusEffect("stunned", 1, context, {
         source: {
           type: "skill",
           skill: this,
@@ -152,7 +152,7 @@ const torrenSkills = [
         !damageEvent?.immune &&
         damageEvent?.totalDamage > 0
       ) {
-        enemy.applyStatusEffect("atordoado", this.stunDuration, context, {
+        enemy.applyStatusEffect("stunned", this.stunDuration, context, {
           source: {
             type: "skill",
             skill: this,

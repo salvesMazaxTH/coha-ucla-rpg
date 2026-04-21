@@ -385,30 +385,37 @@ export class Champion {
   // ======== STATUS EFFECTS (Delegated) ========
   // ===============================
 
-  applyStatusEffect(statusEffectKey, duration, context, metadata = {}) {
+  applyStatusEffect(
+    statusEffectKey,
+    duration,
+    context,
+    metadata = {},
+    stackCount = 1,
+  ) {
     return applyStatusEffect(
       this,
       statusEffectKey,
       duration,
       context,
       metadata,
+      stackCount,
     );
   }
 
-  hasStatusEffect(statusEffectName) {
-    return hasStatusEffect(this, statusEffectName);
+  hasStatusEffect(statusEffectKey) {
+    return hasStatusEffect(this, statusEffectKey);
   }
 
-  getStatusEffectData(name) {
-    return getStatusEffectData(this, name);
+  getStatusEffectData(statusEffectKey) {
+    return getStatusEffectData(this, statusEffectKey);
   }
 
-  getStatusEffect(statusEffectName) {
-    return getStatusEffect(this, statusEffectName);
+  getStatusEffect(statusEffectKey) {
+    return getStatusEffect(this, statusEffectKey);
   }
 
-  removeStatusEffect(statusEffectName) {
-    return removeStatusEffect(this, statusEffectName);
+  removeStatusEffect(statusEffectKey) {
+    return removeStatusEffect(this, statusEffectKey);
   }
 
   purgeExpiredStatusEffects(currentTurn) {

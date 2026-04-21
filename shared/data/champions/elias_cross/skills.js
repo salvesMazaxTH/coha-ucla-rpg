@@ -29,7 +29,7 @@ const eliasCrossSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const isOverloaded = enemy.hasStatusEffect("condutor");
+      const isOverloaded = enemy.hasStatusEffect("conductor");
       /* console.log(
         `Impacto Relâmpago: ${formatChampionName(enemy)} ${isOverloaded ? "está" : "não está"} sobrecarregado. StatusEffects do alvo: ${[...enemy.statusEffects.keys()].join(", ")}`,
       );
@@ -90,7 +90,7 @@ const eliasCrossSkills = [
       }
 
       const baseDamage = (user.Attack * this.bf) / 100;
-      const isOverloaded = enemy.hasStatusEffect("condutor");
+      const isOverloaded = enemy.hasStatusEffect("conductor");
 
       const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
@@ -134,7 +134,7 @@ const eliasCrossSkills = [
 
     finishingRule(ctx) {
       const target = ctx.defender;
-      const hasOverload = target.hasStatusEffect("condutor");
+      const hasOverload = target.hasStatusEffect("conductor");
       return hasOverload ? 0.25 : 0.17;
     },
 

@@ -15,6 +15,27 @@ const DEBUFF_ICON = {
   background: "rgba(255,0,0,0.15)",
   name: "debuff",
 };
+
+function syncStatusStackBadge(indicator, icon, effectData) {
+  if (!indicator) return;
+
+  const currentBadge = indicator.querySelector(".status-indicator-stack-badge");
+  const stackCount = Number(effectData?.stacks ?? effectData?.stackCount) || 0;
+  const shouldShowBadge = Boolean(icon?.showStackCount) && stackCount > 0;
+
+  if (!shouldShowBadge) {
+    currentBadge?.remove();
+    return;
+  }
+
+  const badge = currentBadge || document.createElement("span");
+  badge.className = "status-indicator-stack-badge";
+  badge.textContent = String(stackCount);
+
+  if (!currentBadge) {
+    indicator.appendChild(badge);
+  }
+}
 /**
  * Sistema de indicadores visuais para status de campeões
  * Gerencia exibição de ícones e efeitos visuais baseados em statusEffects
@@ -22,55 +43,72 @@ const DEBUFF_ICON = {
 export const StatusIndicator = {
   // Mapeamento de statusEffects -> ícones e cores
   statusEffectIcons: {
-    paralisado: {
+    paralyzed: {
       type: "image",
       value: "/assets/indicators/paralisado_indicator.png",
       background: "",
+      label: "Paralisado",
     },
-    atordoado: {
+    stunned: {
       type: "emoji",
       value: "💫",
       background: "rgba(241, 241, 241, 0.8)",
+      label: "Atordoado",
     },
-    gelado: {
+    chilled: {
       type: "emoji",
       value: "❄️",
       background: "rgba(173, 216, 230, 0.8)",
+      label: "Gelado",
     },
-    congelado: {
+    frozen: {
       type: "emoji",
       value: "❄️",
       background: "rgba(16, 216, 230, 0.8)",
+      label: "Congelado",
     },
-    inerte: {
+    inert: {
       type: "emoji",
       value: "🔒",
       background: "rgba(128, 128, 128, 0.8)",
+      label: "Inerte",
     },
-    condutor: {
+    conductor: {
       type: "emoji",
       value: "⚡",
       background: "rgba(255, 255, 0, 0.8)",
+      label: "Condutor",
     },
-    "imunidade absoluta": {
+    absoluteimmunity: {
       type: "image",
       value: "/assets/indicators/imunidade_absoluta_indicator.png",
       background: "rgba(0, 255, 255, 0.8)",
+      label: "Imunidade Absoluta",
     },
-    queimando: {
+    burning: {
       type: "emoji",
       value: "🔥",
       background: "rgba(255, 69, 0, 0.8)",
+      label: "Queimando",
     },
-    enraizado: {
+    bleeding: {
+      type: "emoji",
+      value: "🩸",
+      background: "rgba(170, 0, 20, 0.88)",
+      label: "Sangramento",
+      showStackCount: true,
+    },
+    rooted: {
       type: "emoji",
       value: "🌱",
       background: "rgba(34, 139, 34, 0.8)",
+      label: "Enraizado",
     },
     provocado: {
       type: "image",
       value: "/assets/indicators/taunted_indicator.png",
       background: "",
+      label: "Provocado",
     },
   },
 
@@ -180,6 +218,7 @@ export const StatusIndicator = {
     });
 
     for (const statusEffectName of activeStatuses) {
+      const effectData = champion.statusEffects.get(statusEffectName) || null;
       const icon =
         this.statusEffectIcons[statusEffectName.toLowerCase()] ||
         getExclusiveIndicator(statusEffectName);
@@ -202,7 +241,7 @@ export const StatusIndicator = {
 
         indicator.className = "status-indicator";
         indicator.dataset.statusEffect = statusEffectName;
-        indicator.title = statusEffectName;
+        indicator.title = icon.label || statusEffectName;
 
         // Safe class
         const safe = statusEffectName
@@ -227,7 +266,7 @@ export const StatusIndicator = {
         } else {
           const img = document.createElement("img");
           img.src = icon.value;
-          img.alt = statusEffectName;
+          img.alt = icon.label || statusEffectName;
           img.className = "indicator-image";
           indicator.appendChild(img);
         }
@@ -236,6 +275,15 @@ export const StatusIndicator = {
 
         portrait.appendChild(indicator);
       }
+
+      const stackCount =
+        Number(effectData?.stacks ?? effectData?.stackCount) || 0;
+      indicator.title =
+        stackCount > 1
+          ? `${icon.label || statusEffectName} x${stackCount}`
+          : icon.label || statusEffectName;
+
+      syncStatusStackBadge(indicator, icon, effectData);
     }
 
     // When multiple indicators exist, show only the current rotation index

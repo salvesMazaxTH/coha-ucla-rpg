@@ -41,7 +41,7 @@ const gryskarchuSkills = [
       // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
       if (!result?.evaded && !result?.immune) {
         const rooted = enemy.applyStatusEffect(
-          "enraizado",
+          "rooted",
           this.rootDuration,
           context,
         );

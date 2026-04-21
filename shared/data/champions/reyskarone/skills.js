@@ -41,7 +41,7 @@ const reyskaroneSkills = [
         ? enemy.runtime.shields
         : [];
 
-      const hasImunidadeAbsoluta = enemy.hasStatusEffect?.("imunidadeAbsoluta");
+      const hasAbsoluteImmunity = enemy.hasStatusEffect?.("absoluteImmunity");
       const supremeShieldIdx = shields.findIndex(
         (shield) => shield?.type === "supreme" && shield?.amount > 0,
       );
@@ -50,9 +50,7 @@ const reyskaroneSkills = [
       );
 
       const tributoBlocked =
-        hasImunidadeAbsoluta ||
-        supremeShieldIdx !== -1 ||
-        spellShieldIdx !== -1;
+        hasAbsoluteImmunity || supremeShieldIdx !== -1 || spellShieldIdx !== -1;
 
       if (!tributoBlocked) {
         // =========================

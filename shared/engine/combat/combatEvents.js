@@ -1,4 +1,4 @@
-const debugMode = true; // Set to true to enable detailed logging of combat events
+const debugMode = false; // Set to true to enable detailed logging of combat events
 
 export function emitCombatEvent(eventName, payload, champions, options = {}) {
   const results = [];

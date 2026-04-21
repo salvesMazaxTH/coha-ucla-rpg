@@ -103,7 +103,7 @@ const nodeSparckina07Skills = [
       }).execute();
 
       if (!result?.evaded && !result?.immune && result?.totalDamage > 0) {
-        enemy.applyStatusEffect("paralisado", this.paralyzeDuration, context);
+        enemy.applyStatusEffect("paralyzed", this.paralyzeDuration, context);
       }
 
       return result;

@@ -45,7 +45,7 @@ export default {
     }
 
     const paralyzed = defender.applyStatusEffect(
-      "paralisado",
+      "paralyzed",
       this.paralyzeDuration,
       context,
       {

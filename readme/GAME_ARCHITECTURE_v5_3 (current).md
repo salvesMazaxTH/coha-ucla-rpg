@@ -143,17 +143,17 @@ Esses campos permitem controlar a ordem e o momento exato em que mensagens apare
 │   │   │       └── passive.js      # Objeto passiva com hooks
 │   │   └── statusEffects/
 │   │       ├── effectsRegistry.js
-│   │       ├── atordoado.js
-│   │       ├── paralisado.js
-│   │       ├── enraizado.js
-│   │       ├── inerte.js
-│   │       ├── gelado.js
-│   │       ├── congelado.js
-│   │       ├── queimando.js
-│   │       ├── imunidadeAbsoluta.js
-│   │       ├── condutor.js
-│   │       ├── envenenado.js        # (a implementar)
-│   │       ├── sangramento.js       # (a implementar)
+│   │       ├── stunned.js
+│   │       ├── paralyzed.js
+│   │       ├── rooted.js
+│   │       ├── inert.js
+│   │       ├── chilled.js
+│   │       ├── frozen.js
+│   │       ├── burning.js
+│   │       ├── absoluteImmunity.js
+│   │       ├── conductor.js
+│   │       ├── poisoned.js         # (a implementar)
+│   │       ├── bleeding.js         # (a implementar)
 │   │       └── tributoDeSangue.js   # (a implementar)
 │   │
 │   ├── ui/
@@ -256,7 +256,7 @@ O servidor gerencia toda a sessão por meio de uma instância de `GameMatch` (ve
 
 **Fase pós-animações (`handleStartTurn`):** Ambos os clientes emitem `combatAnimationsFinished`. O servidor então:
 
-1. Dispara hooks `onTurnStart` (DoTs como `queimando` respondem aqui).
+1. Dispara hooks `onTurnStart` (DoTs como `burning` respondem aqui).
 2. Executa `scheduledEffects` agendados para o turno atual.
 3. Processa mortes por DoT/efeitos.
 4. Purga status-effects e stat modifiers expirados.
@@ -673,7 +673,7 @@ Onde `StatusEffectInstance` representa o objeto completo do efeito ativo (não s
 
 ```js
 {
-  key: "queimando",
+  key: "burning",
   expiresAtTurn: 12,
   duration: 2,
   appliedAtTurn: 10,
@@ -730,7 +730,7 @@ Funções puras para mecânicas de dano, stats e escudos:
 Gerenciamento de status-effects com validação de imunidade e armazenamento único em `statusEffects` (Map):
 
 ```js
-applyStatusEffect(champ, key, duration, context, metadata);
+applyStatusEffect(champ, key, duration, context, metadata, stackCount);
 // 1. Valida registry
 // 2. emitCombatEvent("onStatusEffectIncoming") — imunidades podem cancelar
 // 3. Instancia via definition.createInstance(...) → new StatusEffect(...)
@@ -743,7 +743,7 @@ getStatusEffect(champ, name);
 purgeExpiredStatusEffects(champ, currentTurn);
 ```
 
-As operações acima usam a key canônica do efeito diretamente (ex.: `"queimando"`, `"congelado"`, `"imunidadeAbsoluta"`). Não há normalização adicional de string nessa camada.
+As operações acima usam a key canônica do efeito diretamente (ex.: `"burning"`, `"frozen"`, `"absoluteImmunity"`). A camada de status aceita aliases legados em português apenas para compatibilidade.
 
 ### 7.4 championUI.js
 
@@ -894,7 +894,7 @@ skill.resolve({ user, targets, context })
 
 ```
 ├── emitCombatEvent("onDamageIncoming", ...)
-│     → status-effects com onDamageIncoming (ex: imunidadeAbsoluta) podem cancelar
+│     → status-effects com onDamageIncoming (ex: absoluteImmunity) podem cancelar
 │     → se cancelado: registerDamage({ flags:{immune:true} }); retorna
 │
 ├── Evasão? (saltado se mode === "absolute" ou skill.cannotBeEvaded)
@@ -1040,7 +1040,7 @@ const { actionResults, deathResults } = resolver.resolveTurn();
 ```
 1. Verifica se user está vivo → senão reembolsa recurso e retorna
 2. canExecuteAction(user) → emitCombatEvent("onValidateAction")
-   → hooks podem negar (atordoado, congelado, etc.)
+  → hooks podem negar (stunned, frozen, etc.)
 3. Resolve skill pelo skillKey
 4. resolveSkillTargets() → resolve taunt, preenche roles, valida alvos
 5. performSkillExecution() → executa skill.resolve(), captura snapshot intermediário
@@ -1360,33 +1360,34 @@ Importante: o valor armazenado no Map é a instância completa do status-effect 
 
 ```js
 export const StatusEffectsRegistry = {
-  paralisado,
-  atordoado,
-  enraizado,
-  inerte,
-  gelado,
-  congelado,
-  queimando,
-  imunidadeAbsoluta,
-  condutor,
-  // envenenado,     ← futuro
-  // sangramento,    ← futuro
+  paralyzed,
+  stunned,
+  rooted,
+  inert,
+  chilled,
+  frozen,
+  burning,
+  bleeding,
+  absoluteImmunity,
+  conductor,
+  // poisoned,     ← futuro
 };
 ```
 
 ### Efeitos Implementados
 
-| Efeito             | Key                 | Tipo   | Subtypes          | Comportamento                                 |
-| ------------------ | ------------------- | ------ | ----------------- | --------------------------------------------- |
-| Paralisado         | `paralisado`        | debuff | softCC, lightning | -100% SPD, 40% chance de negar ação           |
-| Atordoado          | `atordoado`         | debuff | hardCC            | Não pode agir (stun)                          |
-| Enraizado          | `enraizado`         | debuff | hardCC, nature    | Não pode usar skills de contato               |
-| Inerte             | `inerte`            | debuff | hardCC            | Não pode agir (auto-imposto)                  |
-| Gelado             | `gelado`            | debuff | statMod, ice      | -50% SPD/ATK                                  |
-| Congelado          | `congelado`         | debuff | hardCC, ice       | -100% SPD/ATK, não age, quebra ao sofrer dano |
-| Queimando          | `queimando`         | debuff | dot, fire         | 15 + 4% maxHP de dano no início do turno      |
-| Imunidade Absoluta | `imunidadeAbsoluta` | buff   | immunity          | Imune a todo dano + debuffs                   |
-| Condutor           | `condutor`          | buff   | lightning         | Amplifica skills elétricas                    |
+| Efeito             | Key                | Tipo   | Subtypes          | Comportamento                                                          |
+| ------------------ | ------------------ | ------ | ----------------- | ---------------------------------------------------------------------- |
+| Paralisado         | `paralyzed`        | debuff | softCC, lightning | -100% SPD, 40% chance de negar ação                                    |
+| Atordoado          | `stunned`          | debuff | hardCC            | Não pode agir (stun)                                                   |
+| Enraizado          | `rooted`           | debuff | hardCC, nature    | Não pode usar skills de contato                                        |
+| Inerte             | `inert`            | debuff | hardCC            | Não pode agir (auto-imposto)                                           |
+| Gelado             | `chilled`          | debuff | statMod, ice      | -50% SPD/ATK                                                           |
+| Congelado          | `frozen`           | debuff | hardCC, ice       | -100% SPD/ATK, não age, quebra ao sofrer dano                          |
+| Queimando          | `burning`          | debuff | dot, fire         | 15 + 4% maxHP de dano no início do turno                               |
+| Sangramento        | `bleeding`         | debuff | dot, physical     | 8% maxHP por stack no início do turno; acumula stacks e renova duração |
+| Imunidade Absoluta | `absoluteImmunity` | buff   | immunity          | Imune a todo dano + debuffs                                            |
+| Condutor           | `conductor`        | buff   | lightning         | Amplifica skills elétricas                                             |
 
 ### Regra de Hard CC
 
@@ -1395,10 +1396,11 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
 ### Ciclo de Vida
 
 ```
-1. APLICAÇÃO: champion.applyStatusEffect(key, duration, context, metadata)
+1. APLICAÇÃO: champion.applyStatusEffect(key, duration, context, metadata, stackCount)
    ├── Valida no StatusEffectsRegistry
    ├── emitCombatEvent("onStatusEffectIncoming") — pode cancelar
-   ├── definition.createInstance(...) constrói `new StatusEffect(...)`
+  ├── definition.createInstance(...) constrói `new StatusEffect(...)`
+  ├── se for stackable e já existir, reaplica/refresh mantendo a mesma key canônica
    └── Registra em champion.statusEffects Map.set(key, statusEffectInstance)
 
 2. DISPARO: emitCombatEvent itera passivas + statusEffects ativos + runtime.hookEffects
@@ -1415,7 +1417,7 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
 Cada item do `champion.statusEffects` deve atender ao contrato abaixo:
 
 ```js
-const effect = champion.statusEffects.get("queimando");
+const effect = champion.statusEffects.get("burning");
 
 effect instanceof StatusEffect; // true
 typeof effect.onTurnStart === "function"; // hook direto na instância
@@ -1425,7 +1427,7 @@ effect.expiresAtTurn; // controle de expiração
 ### Serialização
 
 ```js
-statusEffects: [["queimando", { expiresAtTurn: 5 }], ...]
+statusEffects: [["bleeding", { expiresAtTurn: 5, stacks: 3, stackCount: 3 }], ...]
 // cliente reconstrói: new Map(snap.statusEffects)
 ```
 
@@ -1618,7 +1620,7 @@ VFX contínuos renderizados via canvas HTML5 sobre o retrato do campeão. `syncC
 | `shield`           | `runtime.shields.length > 0`                     |
 | `fireStanceIdle`   | `runtime.fireStance === "postura"`               |
 | `fireStanceActive` | `runtime.fireStance === "brasa_viva"`            |
-| `congelado`        | `statusEffects.has("congelado")`                 |
+| `frozen`           | `statusEffects.has("frozen")`                    |
 | `waterBubble`      | `runtime.form === "bola_agua"`                   |
 | `obliterate`       | `playObliterateEffect(el)` — chamado diretamente |
 

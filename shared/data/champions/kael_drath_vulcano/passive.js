@@ -17,6 +17,6 @@ export default {
     // não aplica em si mesmo
     if (defender.id === owner?.id) return;
 
-    attacker.applyStatusEffect("queimando", this.burnDuration, context);
+    attacker.applyStatusEffect("burning", this.burnDuration, context);
   },
 };

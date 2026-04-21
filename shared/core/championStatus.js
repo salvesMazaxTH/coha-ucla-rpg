@@ -2,13 +2,116 @@ import { StatusEffectsRegistry } from "../data/statusEffects/effectsRegistry.js"
 import { emitCombatEvent } from "../engine/combat/combatEvents.js";
 import { formatChampionName } from "../ui/formatters.js";
 
+const legacyStatusEffectAliases = {
+  paralisado: "paralyzed",
+  atordoado: "stunned",
+  enraizado: "rooted",
+  inerte: "inert",
+  gelado: "chilled",
+  congelado: "frozen",
+  queimando: "burning",
+  imunidadeabsoluta: "absoluteImmunity",
+  "imunidade absoluta": "absoluteImmunity",
+  condutor: "conductor",
+  invisivel: "invisible",
+  invisível: "invisible",
+  envenenado: "poisoned",
+  sangramento: "bleeding",
+};
+
+function normalizeStatusEffectKey(statusEffectKey) {
+  if (typeof statusEffectKey !== "string") {
+    return statusEffectKey;
+  }
+
+  const trimmedKey = statusEffectKey.trim();
+  return legacyStatusEffectAliases[trimmedKey] || trimmedKey;
+}
+
+function getStatusEffectDefinition(statusEffectKey) {
+  const canonicalKey = normalizeStatusEffectKey(statusEffectKey);
+  return {
+    canonicalKey,
+    definition: StatusEffectsRegistry[canonicalKey] || null,
+  };
+}
+
+function resolveStatusEffectDuration(duration, metadata = {}) {
+  if (metadata?.persistent) return Infinity;
+  return Number.isFinite(duration) ? duration : 1;
+}
+
+function buildStatusEffectApplyResult(
+  champion,
+  statusEffectKey,
+  effectInstance,
+) {
+  const statusDisplayName = formatStatusDisplayName(statusEffectKey);
+  const stackSuffix =
+    Number.isFinite(effectInstance?.stacks) && effectInstance.stacks > 1
+      ? ` x${effectInstance.stacks}`
+      : "";
+
+  return {
+    log: `${formatChampionName(champion)} recebeu <b>${statusDisplayName}</b>${stackSuffix}.`,
+    statusEffectKey,
+    targetId: champion.id,
+    type: "statusEffectApply",
+    stacks: effectInstance?.stacks ?? 1,
+  };
+}
+
+function reapplyStackableStatusEffect({
+  champion,
+  definition,
+  canonicalStatusEffectKey,
+  existingInstance,
+  duration,
+  context,
+  metadata,
+  stackCount,
+}) {
+  const nextDuration = resolveStatusEffectDuration(duration, metadata);
+
+  if (typeof definition.reapplyInstance === "function") {
+    return definition.reapplyInstance({
+      owner: champion,
+      existingInstance,
+      duration: nextDuration,
+      context,
+      metadata,
+      stackCount,
+    });
+  }
+
+  existingInstance.stacks = Math.max(
+    1,
+    (Number(existingInstance.stacks) || 1) + stackCount,
+  );
+  existingInstance.appliedAtTurn = context?.currentTurn ?? 0;
+  existingInstance.expiresAtTurn =
+    nextDuration === Infinity
+      ? Infinity
+      : existingInstance.appliedAtTurn + nextDuration;
+  existingInstance.metadata = {
+    ...(existingInstance.metadata || {}),
+    ...metadata,
+    stacks: existingInstance.stacks,
+    stackCount: existingInstance.stacks,
+  };
+
+  return existingInstance;
+}
+
 /**
  * Auxiliary function for logs and interface
  * @param {string} statusEffectKey - Name of the statusEffect
  * @returns {string} - Formatted name for display
  */
 function formatStatusDisplayName(statusEffectKey) {
-  return statusEffectKey
+  const { canonicalKey, definition } =
+    getStatusEffectDefinition(statusEffectKey);
+  return (definition?.name || canonicalKey)
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -16,10 +119,11 @@ function formatStatusDisplayName(statusEffectKey) {
 /**
  * Apply a statusEffect effect to this champion
  * @param {object} champion - The champion instance
- * @param {string} statusEffectKey - Name of the statusEffect (e.g., 'inerte', 'imunidade absoluta')
+ * @param {string} statusEffectKey - Name of the statusEffect (e.g., 'inert', 'absoluteImmunity')
  * @param {number} duration - Number of turns the statusEffect lasts
  * @param {object} context - Context with currentTurn
  * @param {object} metadata - Additional data to store with the statusEffect, for example: persistent
+ * @param {number} stackCount - Number of stacks to apply when the status supports stacking
  */
 export function applyStatusEffect(
   champion,
@@ -27,14 +131,23 @@ export function applyStatusEffect(
   duration,
   context,
   metadata = {},
+  stackCount = 1,
 ) {
+  const canonicalStatusEffectKey = normalizeStatusEffectKey(statusEffectKey);
+  const normalizedStackCount = Number.isFinite(stackCount)
+    ? Math.max(1, Math.floor(stackCount))
+    : 1;
+
   if (!(champion?.statusEffects instanceof Map)) {
     throw new TypeError(
-      `[STATUS ERROR] Champion inválido ao aplicar status "${statusEffectKey}".`,
+      `[STATUS ERROR] Champion inválido ao aplicar status "${canonicalStatusEffectKey}".`,
     );
   }
 
-  if (typeof statusEffectKey !== "string" || statusEffectKey.length === 0) {
+  if (
+    typeof canonicalStatusEffectKey !== "string" ||
+    canonicalStatusEffectKey.length === 0
+  ) {
     throw new TypeError(
       `[STATUS ERROR] statusEffectKey inválido: ${statusEffectKey}`,
     );
@@ -42,35 +155,41 @@ export function applyStatusEffect(
 
   if (!context || typeof context !== "object") {
     throw new TypeError(
-      `[STATUS ERROR] Context inválido ao aplicar status "${statusEffectKey}".`,
+      `[STATUS ERROR] Context inválido ao aplicar status "${canonicalStatusEffectKey}".`,
     );
   }
 
   if (!Number.isFinite(context.currentTurn)) {
     throw new Error(
-      `[STATUS ERROR] context.currentTurn inválido ao aplicar status "${statusEffectKey}".`,
+      `[STATUS ERROR] context.currentTurn inválido ao aplicar status "${canonicalStatusEffectKey}".`,
     );
   }
 
-  const definition = StatusEffectsRegistry[statusEffectKey];
+  if (normalizedStackCount < 1) {
+    throw new Error(
+      `[STATUS ERROR] stackCount inválido ao aplicar status "${canonicalStatusEffectKey}": ${stackCount}`,
+    );
+  }
+
+  const definition = StatusEffectsRegistry[canonicalStatusEffectKey];
   if (!definition) {
     throw new Error(
-      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
+      `[STATUS ERROR] StatusEffect "${canonicalStatusEffectKey}" não existe no registry`,
     );
   }
 
   if (
     typeof definition.key !== "string" ||
-    definition.key !== statusEffectKey
+    definition.key !== canonicalStatusEffectKey
   ) {
     throw new Error(
-      `[STATUS ERROR] Registry inconsistente: key "${statusEffectKey}" não corresponde ao definition.key.`,
+      `[STATUS ERROR] Registry inconsistente: key "${canonicalStatusEffectKey}" não corresponde ao definition.key.`,
     );
   }
 
   const validation = _canApplyStatusEffect(
     champion,
-    statusEffectKey,
+    canonicalStatusEffectKey,
     duration,
     metadata,
     context,
@@ -83,7 +202,7 @@ export function applyStatusEffect(
       context.registerDialog({
         message:
           validation.message ??
-          `${formatChampionName(champion)} não pode receber "${statusEffectKey}".`,
+          `${formatChampionName(champion)} não pode receber "${formatStatusDisplayName(canonicalStatusEffectKey)}".`,
         sourceId: champion.id,
         targetId: champion.id,
       });
@@ -92,17 +211,43 @@ export function applyStatusEffect(
   }
 
   const isStackable = definition.isStackable || false;
+  const existingInstance = champion.statusEffects.get(canonicalStatusEffectKey);
 
-  if (!isStackable && hasStatusEffect(champion, statusEffectKey)) {
+  if (!isStackable && existingInstance) {
     return false;
   }
 
-  duration = Number.isFinite(duration) ? duration : 1;
-  if (metadata?.persistent) duration = Infinity;
+  duration = resolveStatusEffectDuration(duration, metadata);
+
+  if (isStackable && existingInstance) {
+    const refreshedInstance = reapplyStackableStatusEffect({
+      champion,
+      definition,
+      canonicalStatusEffectKey,
+      existingInstance,
+      duration,
+      context,
+      metadata,
+      stackCount: normalizedStackCount,
+    });
+
+    if (!refreshedInstance || typeof refreshedInstance !== "object") {
+      throw new Error(
+        `[STATUS ERROR] Reaplicação de "${canonicalStatusEffectKey}" retornou instância inválida.`,
+      );
+    }
+
+    champion.statusEffects.set(canonicalStatusEffectKey, refreshedInstance);
+    return buildStatusEffectApplyResult(
+      champion,
+      canonicalStatusEffectKey,
+      refreshedInstance,
+    );
+  }
 
   if (typeof definition.createInstance !== "function") {
     throw new Error(
-      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não implementa createInstance().`,
+      `[STATUS ERROR] StatusEffect "${canonicalStatusEffectKey}" não implementa createInstance().`,
     );
   }
 
@@ -110,22 +255,25 @@ export function applyStatusEffect(
     owner: champion,
     duration,
     context,
-    metadata,
+    metadata: {
+      ...metadata,
+      stackCount: normalizedStackCount,
+    },
   });
 
   if (!effectInstance || typeof effectInstance !== "object") {
     throw new Error(
-      `[STATUS ERROR] createInstance() de "${statusEffectKey}" retornou instância inválida.`,
+      `[STATUS ERROR] createInstance() de "${canonicalStatusEffectKey}" retornou instância inválida.`,
     );
   }
 
-  if (effectInstance.key !== statusEffectKey) {
+  if (effectInstance.key !== canonicalStatusEffectKey) {
     throw new Error(
-      `[STATUS ERROR] Instância de status inválida: key "${effectInstance.key}" difere de "${statusEffectKey}".`,
+      `[STATUS ERROR] Instância de status inválida: key "${effectInstance.key}" difere de "${canonicalStatusEffectKey}".`,
     );
   }
 
-  champion.statusEffects.set(statusEffectKey, effectInstance);
+  champion.statusEffects.set(canonicalStatusEffectKey, effectInstance);
 
   // Call onStatusEffectAdded if present
   if (typeof effectInstance.onStatusEffectAdded === "function") {
@@ -136,15 +284,11 @@ export function applyStatusEffect(
     });
   }
 
-  // Display name for logs
-  const statusDisplayName = formatStatusDisplayName(statusEffectKey);
-
-  return {
-    log: `${formatChampionName(champion)} recebeu <b>${statusDisplayName}</b>.`,
-    statusEffectKey,
-    targetId: champion.id,
-    type: "statusEffectApply",
-  };
+  return buildStatusEffectApplyResult(
+    champion,
+    canonicalStatusEffectKey,
+    effectInstance,
+  );
 }
 
 function _canApplyStatusEffect(
@@ -162,7 +306,8 @@ function _canApplyStatusEffect(
     return { allowed: false, reason: "shield-blocked" };
   }
 
-  const definition = StatusEffectsRegistry[statusEffectKey];
+  const canonicalStatusEffectKey = normalizeStatusEffectKey(statusEffectKey);
+  const definition = StatusEffectsRegistry[canonicalStatusEffectKey];
 
   const eventResults = emitCombatEvent(
     "onStatusEffectIncoming",
@@ -197,7 +342,7 @@ function _canApplyStatusEffect(
  * @returns {boolean}
  */
 export function hasStatusEffect(champion, statusEffectName) {
-  return champion.statusEffects.has(statusEffectName);
+  return champion.statusEffects.has(normalizeStatusEffectKey(statusEffectName));
 }
 
 /**
@@ -207,7 +352,7 @@ export function hasStatusEffect(champion, statusEffectName) {
  * @returns {object|null}
  */
 export function getStatusEffectData(champion, name) {
-  return champion.statusEffects.get(name) || null;
+  return champion.statusEffects.get(normalizeStatusEffectKey(name)) || null;
 }
 
 /**
@@ -217,7 +362,10 @@ export function getStatusEffectData(champion, name) {
  * @returns {object|null}
  */
 export function getStatusEffect(champion, statusEffectName) {
-  return champion.statusEffects.get(statusEffectName) || null;
+  return (
+    champion.statusEffects.get(normalizeStatusEffectKey(statusEffectName)) ||
+    null
+  );
 }
 
 /**
@@ -226,11 +374,13 @@ export function getStatusEffect(champion, statusEffectName) {
  * @param {string} statusEffectName - Name of the statusEffect to remove
  */
 export function removeStatusEffect(champion, statusEffectName) {
-  if (champion.statusEffects.has(statusEffectName)) {
-    champion.statusEffects.delete(statusEffectName);
+  const canonicalStatusEffectKey = normalizeStatusEffectKey(statusEffectName);
+
+  if (champion.statusEffects.has(canonicalStatusEffectKey)) {
+    champion.statusEffects.delete(canonicalStatusEffectKey);
     // No longer remove from runtime.hookEffects; status effect hooks are only in statusEffects Map now
     /* console.log(
-      `[STATUS REMOVE] ${champion.name}: StatusEffect "${statusEffectName}" removido.`,
+      `[STATUS REMOVE] ${champion.name}: StatusEffect "${canonicalStatusEffectKey}" removido.`,
     );
     */
     // 🎨 Anima a remoção do indicador

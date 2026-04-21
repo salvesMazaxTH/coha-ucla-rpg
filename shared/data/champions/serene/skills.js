@@ -96,7 +96,7 @@ const sereneSkills = [
 
       if (!result?.evaded && !result?.immune && stunSuccess) {
         const stunned = enemy.applyStatusEffect(
-          "atordoado",
+          "stunned",
           this.stunDuration,
           context,
         );
@@ -199,7 +199,7 @@ const sereneSkills = [
               return;
             }
 
-            if (owner.hasStatusEffect("imunidadeAbsoluta")) {
+            if (owner.hasStatusEffect("absoluteImmunity")) {
               // console.log("[EPIFANIA] Abortado → já possui imunidade absoluta");
               return;
             }
@@ -213,7 +213,7 @@ const sereneSkills = [
             // console.log("[EPIFANIA] HP final desejado:", lockedHP);
             // console.log("[EPIFANIA] Dano ajustado:", adjustedDamage);
 
-            owner.applyStatusEffect("imunidadeAbsoluta", 1, context, {
+            owner.applyStatusEffect("absoluteImmunity", 1, context, {
               source: "epifania",
             });
 

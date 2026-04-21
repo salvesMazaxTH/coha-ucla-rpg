@@ -26,7 +26,7 @@ const nytheraSkills = [
       const baseDamage = (user.Attack * this.bf) / 100;
       let totalDamage = baseDamage;
 
-      const isFrozen = target.hasStatusEffect("congelado");
+      const isFrozen = target.hasStatusEffect("frozen");
 
       // Bônus de dano pré-calculado se alvo já estiver congelado
       if (isFrozen) {
@@ -45,9 +45,9 @@ const nytheraSkills = [
       // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
       if (!result?.evaded && !result?.immune) {
         if (isFrozen) {
-          target.applyStatusEffect("congelado", this.freezeDuration, context);
+          target.applyStatusEffect("frozen", this.freezeDuration, context);
         } else {
-          target.applyStatusEffect("gelado", this.chillDuration, context);
+          target.applyStatusEffect("chilled", this.chillDuration, context);
         }
       }
 
@@ -96,7 +96,7 @@ const nytheraSkills = [
         },
 
         onAfterDmgTaking({ attacker, defender, damage, context }) {
-          attacker.applyStatusEffect("congelado", freezeDuration, context);
+          attacker.applyStatusEffect("frozen", freezeDuration, context);
         },
       };
 
@@ -129,8 +129,8 @@ const nytheraSkills = [
     resolve({ user, targets, context = {} }) {
       const [target] = targets;
 
-      const isFrozen = target.hasStatusEffect("congelado");
-      const isChilled = target.hasStatusEffect("gelado");
+      const isFrozen = target.hasStatusEffect("frozen");
+      const isChilled = target.hasStatusEffect("chilled");
 
       let baseDamage;
 
@@ -158,9 +158,9 @@ const nytheraSkills = [
       // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
       if (!result?.evaded && !result?.immune) {
         if (!isChilled && !isFrozen) {
-          target.applyStatusEffect("gelado", this.chillDuration, context);
+          target.applyStatusEffect("chilled", this.chillDuration, context);
         } else if (isChilled && !isFrozen) {
-          target.applyStatusEffect("congelado", this.freezeDuration, context);
+          target.applyStatusEffect("frozen", this.freezeDuration, context);
         }
       }
 

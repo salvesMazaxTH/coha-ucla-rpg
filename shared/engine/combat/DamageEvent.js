@@ -72,6 +72,14 @@ export class DamageEvent {
     this.skill = skill;
 
     this.context = context ?? {};
+
+    // Any DoT should be treated as nested damage (depth >= 1) by default.
+    // Callers can still explicitly pass a higher damageDepth when needed.
+    if (this.context.isDot) {
+      const resolvedDepth = Number(this.context.damageDepth ?? 0);
+      this.context.damageDepth =
+        Number.isFinite(resolvedDepth) && resolvedDepth > 1 ? resolvedDepth : 1;
+    }
     this.allChampions =
       params.allChampions instanceof Map
         ? [...params.allChampions.values()]

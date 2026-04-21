@@ -1,7 +1,7 @@
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const condutor = {
-  key: "condutor",
+const conductor = {
+  key: "conductor",
   name: "Condutor",
   type: "debuff",
   subtypes: ["damageMod", "lightning"],
@@ -36,4 +36,4 @@ const condutor = {
   },
 };
 
-export default condutor;
+export default conductor;

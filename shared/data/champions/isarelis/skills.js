@@ -51,9 +51,9 @@ const isarelisSkills = [
 
     resolve({ user, context }) {
       // reset invis anterior
-      user.removeStatusEffect("invisivel");
+      user.removeStatusEffect("invisible");
 
-      user.applyStatusEffect("invisivel", 99, context, {
+      user.applyStatusEffect("invisible", 99, context, {
         source: "passo_furtivo",
       });
 
@@ -82,7 +82,7 @@ const isarelisSkills = [
           if (context === appliedContext) return;
 
           // qualquer outra ação remove
-          owner.removeStatusEffect("invisivel");
+          owner.removeStatusEffect("invisible");
 
           owner.runtime.hookEffects = owner.runtime.hookEffects.filter(
             (e) => e.key !== "passo_furtivo_cleanup",
@@ -160,7 +160,7 @@ const isarelisSkills = [
       // ============================
       // 🔥 BONUS DE STEALTH
       // ============================
-      const isInvisible = user.hasStatusEffect("invisivel");
+      const isInvisible = user.hasStatusEffect("invisible");
 
       if (isInvisible) {
         baseDamage *= 1 + this.stealthBonus;

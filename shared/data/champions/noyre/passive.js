@@ -3,6 +3,7 @@ import { formatChampionName } from "../../../ui/formatters.js";
 
 function _processEntropy(owner, context, resolver, stacksCap = 7) {
   let procs = 0;
+  const results = [];
 
   while ((owner.runtime.entropyStacks || 0) >= stacksCap) {
     owner.runtime.entropyStacks -= stacksCap;
@@ -23,7 +24,7 @@ function _processEntropy(owner, context, resolver, stacksCap = 7) {
       let drained = 0;
 
       if (resolver?.applyResourceChange) {
-        const applied = resolver.applyResourceChange({
+        const resourceChange = resolver.applyResourceChange({
           target: enemy,
           amount: -1,
           context,
@@ -33,7 +34,7 @@ function _processEntropy(owner, context, resolver, stacksCap = 7) {
           debugLabel: "noyre_entropy_drain",
         });
 
-        drained = Math.abs(applied || 0);
+        drained = Math.abs(resourceChange?.applied || 0);
       } else {
         const applied = enemy.spendUlt(1);
         drained = Math.abs(applied || 0);
@@ -52,7 +53,7 @@ function _processEntropy(owner, context, resolver, stacksCap = 7) {
       if (canUlt) {
         const dmg = Math.floor(enemy.maxHP * 0.15);
 
-        new DamageEvent({
+        const damageResult = new DamageEvent({
           baseDamage: dmg,
           attacker: owner,
           defender: enemy,
@@ -61,11 +62,17 @@ function _processEntropy(owner, context, resolver, stacksCap = 7) {
           mode: "piercing",
           piercingPercentage: 75,
         }).execute();
+
+        if (Array.isArray(damageResult)) {
+          results.push(...damageResult);
+        } else if (damageResult) {
+          results.push(damageResult);
+        }
       }
     }
   }
 
-  return procs;
+  return { procs, results };
 }
 
 function _accumulateEntropy(owner) {
@@ -99,14 +106,22 @@ export default {
 
     _accumulateEntropy(owner);
 
-    const procs = _processEntropy(owner, context, resolver, this.stacksCap);
+    const { procs, results } = _processEntropy(
+      owner,
+      context,
+      resolver,
+      this.stacksCap,
+    );
 
     if (procs > 0) {
-      return {
-        log: `<b>[PASSIVA — Entropia]</b> ${formatChampionName(
-          owner,
-        )} desencadeou Entropia ${procs}x.`,
-      };
+      return [
+        {
+          log: `<b>[PASSIVA — Entropia]</b> ${formatChampionName(
+            owner,
+          )} desencadeou Entropia ${procs}x.`,
+        },
+        ...results,
+      ];
     }
   },
 
@@ -116,14 +131,22 @@ export default {
 
     _accumulateEntropy(owner);
 
-    const procs = _processEntropy(owner, context, resolver, this.stacksCap);
+    const { procs, results } = _processEntropy(
+      owner,
+      context,
+      resolver,
+      this.stacksCap,
+    );
 
     if (procs > 0) {
-      return {
-        log: `<b>[PASSIVA — Entropia]</b> ${formatChampionName(
-          owner,
-        )} desencadeou Entropia ${procs}x.`,
-      };
+      return [
+        {
+          log: `<b>[PASSIVA — Entropia]</b> ${formatChampionName(
+            owner,
+          )} desencadeou Entropia ${procs}x.`,
+        },
+        ...results,
+      ];
     }
   },
 };

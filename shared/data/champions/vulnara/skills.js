@@ -88,8 +88,12 @@ const vulnaraSkills = [
           allChampions: context?.allChampions,
         }).execute();
         // Aplicar queimando com 15% de chance (só se o golpe chegou)
-        if (!damageResult?.evaded && !damageResult?.immune && Math.random() < this.burnChance) {
-          enemy.applyStatusEffect("queimando", 2, context);
+        if (
+          !damageResult?.evaded &&
+          !damageResult?.immune &&
+          Math.random() < this.burnChance
+        ) {
+          enemy.applyStatusEffect("burning", 2, context);
         }
 
         results.push(damageResult);

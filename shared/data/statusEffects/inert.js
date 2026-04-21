@@ -1,9 +1,9 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const atordoado = {
-  key: "atordoado",
-  name: "Atordoado",
+const inert = {
+  key: "inert",
+  name: "Inerte",
   type: "debuff",
   subtypes: ["hardCC"],
 
@@ -14,7 +14,7 @@ const atordoado = {
   onValidateAction({ actionSource }) {
     return {
       deny: true,
-      message: `${formatChampionName(actionSource)} está Atordoado e não pode agir!`,
+      message: `${formatChampionName(actionSource)} está Inerte e não pode agir!`,
     };
   },
 
@@ -36,4 +36,4 @@ const atordoado = {
   },
 };
 
-export default atordoado;
+export default inert;

@@ -1982,12 +1982,12 @@ function showActionBarSlot() {
     btn.addEventListener("mouseleave", () => removeSkillOverlay());
     btn.addEventListener("click", () => handleSkillUsage(btn));
 
-    // Disable contact skill if champion is enraizado
-    const hasEnraizado =
+    // Disable contact skill if champion is rooted
+    const hasRooted =
       champion.statusEffects &&
       champion.statusEffects.has &&
-      champion.statusEffects.has("enraizado");
-    if (skill.contact && hasEnraizado) {
+      champion.statusEffects.has("rooted");
+    if (skill.contact && hasRooted) {
       btn.disabled = true;
       btn.title = "Não pode usar habilidades de contato enquanto Enraizado.";
     }

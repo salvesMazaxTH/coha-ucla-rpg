@@ -490,7 +490,7 @@ export class TurnResolver {
     this.applyUltMeterFromContext({ user, context });
 
     // 🔹 7. Hook onActionResolved
-    emitCombatEvent(
+    const actionResolvedResults = emitCombatEvent(
       "onActionResolved",
       {
         actionSource: user,
@@ -502,7 +502,19 @@ export class TurnResolver {
       this.combat.activeChampions,
     );
 
-    return results;
+    const normalizedActionResolvedResults = Array.isArray(actionResolvedResults)
+      ? actionResolvedResults
+      : actionResolvedResults
+        ? [actionResolvedResults]
+        : [];
+
+    const registeredResults = context.consumeRegisteredResults();
+
+    return [
+      ...results,
+      ...normalizedActionResolvedResults,
+      ...registeredResults,
+    ];
   }
 
   // ============================================================
@@ -586,7 +598,9 @@ export class TurnResolver {
     debugLabel = null,
   }) {
     const requestedAmount = Number(amount) || 0;
-    if (!target || requestedAmount === 0) return 0;
+    if (!target || requestedAmount === 0) {
+      return { applied: 0, hookResults: [] };
+    }
 
     const beforeUlt = Number(target.ultMeter) || 0;
     const sourceChampion = sourceId
@@ -613,7 +627,7 @@ export class TurnResolver {
         afterUlt,
         debugLabel,
       });
-      return 0;
+      return { applied: 0, hookResults: [] };
     }
 
     const eventType = applied > 0 ? "onResourceGain" : "onResourceSpend";
@@ -652,11 +666,11 @@ export class TurnResolver {
 
     if (!emitHooks) {
       if (visualAfterHooks) registerVisual();
-      return applied;
+      return { applied, hookResults: [] };
     }
 
     // 3. Backend Gameplay Logic (Hooks)
-    emitCombatEvent(
+    const hookResults = emitCombatEvent(
       eventType,
       {
         target,
@@ -670,11 +684,22 @@ export class TurnResolver {
       this.combat.activeChampions,
     );
 
+    const result = {
+      type: payloadType,
+      resourceType: "ult",
+      applied,
+      targetId: target.id,
+      sourceId: sourceId || null,
+      hookResults,
+    };
+
+    context.registerResult?.(result);
+
     if (visualAfterHooks) {
       registerVisual();
     }
 
-    return applied;
+    return result;
   }
 
   // ============================================================
@@ -840,6 +865,8 @@ export class TurnResolver {
 
       _lastEventRef: null, // referência para o último evento registrado, útil para diálogos que precisam se referir a ele
 
+      registeredResults: [],
+
       repeatActionRequest: null,
       flags: {},
 
@@ -853,6 +880,28 @@ export class TurnResolver {
         this.flags.championMutationRequests.push(request);
 
         return request;
+      },
+
+      registerResult(result) {
+        if (!result) return null;
+
+        if (Array.isArray(result)) {
+          for (const entry of result) {
+            this.registerResult(entry);
+          }
+          return result;
+        }
+
+        this.registeredResults.push(result);
+        return result;
+      },
+
+      consumeRegisteredResults() {
+        if (!this.registeredResults.length) return [];
+
+        const results = [...this.registeredResults];
+        this.registeredResults.length = 0;
+        return results;
       },
 
       schedule(scheduledEffect) {

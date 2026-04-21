@@ -114,7 +114,7 @@ const voltexzSkills = [
         mainDamage?.totalDamage > 0
       ) {
         paralyzed = enemy.applyStatusEffect(
-          "paralisado",
+          "paralyzed",
           this.paralyzeDuration,
           context,
         );

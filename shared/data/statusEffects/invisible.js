@@ -1,8 +1,8 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const invisivel = {
-  key: "invisivel",
+const invisible = {
+  key: "invisible",
   name: "Invisível",
   type: "buff",
   subtypes: ["stealth"],
@@ -50,4 +50,4 @@ const invisivel = {
   },
 };
 
-export default invisivel;
+export default invisible;

@@ -1,20 +1,24 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const inerte = {
-  key: "inerte",
-  name: "Inerte",
+const rooted = {
+  key: "rooted",
+  name: "Enraizado",
   type: "debuff",
-  subtypes: ["hardCC"],
+  subtypes: ["softCC"],
 
   hookScope: {
     onValidateAction: "actionSource",
   },
 
-  onValidateAction({ actionSource }) {
+  onValidateAction({ actionSource, skill }) {
+    if (!skill?.contact) return;
+
+    const skillName = skill?.name || "habilidade";
+
     return {
       deny: true,
-      message: `${formatChampionName(actionSource)} está Inerte e não pode agir!`,
+      message: `${formatChampionName(actionSource)} está Enraizado e não pode usar a habilidade de contato "${skillName}"!`,
     };
   },
 
@@ -36,4 +40,4 @@ const inerte = {
   },
 };
 
-export default inerte;
+export default rooted;

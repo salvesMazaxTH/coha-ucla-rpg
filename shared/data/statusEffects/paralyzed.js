@@ -1,8 +1,8 @@
 import { formatChampionName } from "../../ui/formatters.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const paralisado = {
-  key: "paralisado",
+const paralyzed = {
+  key: "paralyzed",
   name: "Paralisado",
   type: "debuff",
   subtypes: ["softCC", "statMod", "lightning"],
@@ -58,4 +58,4 @@ const paralisado = {
   },
 };
 
-export default paralisado;
+export default paralyzed;

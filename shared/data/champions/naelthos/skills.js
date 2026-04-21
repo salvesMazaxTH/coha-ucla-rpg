@@ -143,8 +143,8 @@ const naelthosSkills = [
       user.runtime.hookEffects.push(hookEffect);
       user.runtime.form = "bola_agua"; // Para animação visual
 
-      // Apply inerte como status effect (interrompível por ação)
-      /*       user.applyStatusEffect("inerte", this.effectDuration, context, {
+      // Apply inert como status effect (interrompível por ação)
+      /*       user.applyStatusEffect("inert", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
  */

@@ -1,8 +1,8 @@
 import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
 
-const queimando = {
-  key: "queimando",
+const burning = {
+  key: "burning",
   name: "Queimando",
   type: "debuff",
   subtypes: ["dot", "fire"],
@@ -11,12 +11,11 @@ const queimando = {
     const damage = 15 + Math.floor(owner.maxHP * 0.04); // dano base + 4% do HP máximo
 
     context.isDot = true;
-    context.damageDepth = 1;
 
     const dmgEvent = new DamageEvent({
       attacker: null,
       defender: owner,
-      skill: { name: "Queimadura", key: "queimando" },
+      skill: { name: "Queimadura", key: "burning_tick" },
       context,
       baseDamage: damage,
       mode: DamageEvent.Modes.ABSOLUTE,
@@ -51,4 +50,4 @@ const queimando = {
   },
 };
 
-export default queimando;
+export default burning;

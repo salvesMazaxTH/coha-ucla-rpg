@@ -89,7 +89,7 @@ const kaeldrathVulcanoSkills = [
         !primaryResult?.immune &&
         primaryResult.totalDamage > 0
       )
-        enemy.applyStatusEffect("queimando", this.burnDuration, context);
+        enemy.applyStatusEffect("burning", this.burnDuration, context);
 
       const [secondaryTarget] = context.getAdjacentChampions(enemy, {
         side: "right",
@@ -105,8 +105,6 @@ const kaeldrathVulcanoSkills = [
       console.log(
         `[BOLA DE MAGMA] Dano causado ao alvo principal: ${primaryResult.totalDamage}`,
       );
-
-      /*       if (!context.damageDepth) context.damageDepth = 1; */
 
       const splashDamage = primaryResult.totalDamage / 2;
       // dano secundário é igual à metade do dano causado no alvo principal

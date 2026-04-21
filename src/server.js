@@ -475,7 +475,7 @@ function applyGlobalTurnRegen(champion, context, resolver) {
     ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
   ); */
 
-  return applied;
+  // não retorna nada
 }
 
 //  EMISSÃO DE AÇÕES DE COMBATE (v2)
@@ -663,17 +663,38 @@ function emitCombatAction(envelope) {
   io.emit("combatAction", envelope);
 }
 
+function collectCombatLogs(value, logs = [], visited = new Set()) {
+  if (value == null) return logs;
+
+  if (typeof value === "string") return logs;
+  if (typeof value !== "object") return logs;
+  if (visited.has(value)) return logs;
+
+  visited.add(value);
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectCombatLogs(entry, logs, visited);
+    }
+    return logs;
+  }
+
+  if (typeof value.log === "string" && value.log.trim()) {
+    logs.push(value.log);
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectCombatLogs(nestedValue, logs, visited);
+  }
+
+  return logs;
+}
+
 function emitCombatLogsFromResults(results = []) {
   if (!Array.isArray(results) || results.length === 0) return;
 
-  // Suporta: objeto plano, array de objetos, arrays aninhados, DamageEvent, { log: ... }
-  const flatResults = results.flat(Infinity);
-  for (const result of flatResults) {
-    if (!result || typeof result !== "object") continue;
-    const log = result.log;
-    if (typeof log === "string" && log.trim()) {
-      io.emit("combatLog", log);
-    }
+  for (const log of collectCombatLogs(results)) {
+    io.emit("combatLog", log);
   }
 }
 
