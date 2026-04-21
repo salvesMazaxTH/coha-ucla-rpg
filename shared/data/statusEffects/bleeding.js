@@ -11,7 +11,7 @@ const bleeding = {
 
   onTurnStart({ owner, context }) {
     const stacks = Math.max(1, Number(this.stacks) || 1);
-    const damagePerStack = Math.floor(owner.maxHP * 0.08);
+    const damagePerStack = Math.floor(owner.maxHP * 0.05); // 5% do HP máximo por stack
     const totalDamage = damagePerStack * stacks;
 
     context.isDot = true;
