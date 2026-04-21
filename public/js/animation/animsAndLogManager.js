@@ -430,14 +430,13 @@ export function createCombatAnimationManager(deps) {
     }
 
     const resolvedFinishingType =
-      finishingType ||
-      (obliterate ? "obliterate" : finishing ? "generic" : null);
-    const isFinishing = !!resolvedFinishingType;
-    const isObliterate = resolvedFinishingType === "obliterate";
+      finishingType || (finishing ? "regular" : null);
+    const hasFinishing = !!resolvedFinishingType;
+    const usesObliterateStyle = resolvedFinishingType === "obliterate";
 
     if (effect.immune) return await animateImmune(effect);
     if (effect.shieldBlocked) return await animateShieldBlock(effect);
-    if (!isFinishing && (!amount || amount <= 0)) return;
+    if (!hasFinishing && (!amount || amount <= 0)) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
 
@@ -460,16 +459,16 @@ export function createCombatAnimationManager(deps) {
       const hpDamage = Math.max(0, Number(amount) || 0);
       const hasShieldAbsorption = (Number(absorbedByShield) || 0) > 0;
       const floatValue =
-        isObliterate || isFinishing
+        usesObliterateStyle || hasFinishing
           ? "999"
           : hpDamage > 0
             ? `-${hpDamage}`
             : hasShieldAbsorption
               ? "🛡️"
               : "0";
-      const extraClass = isObliterate
+      const extraClass = usesObliterateStyle
         ? "obliterate"
-        : isFinishing
+        : hasFinishing
           ? "finishing"
           : `damage-tier-${getDamageTier(Math.max(1, hpDamage))}`;
 
@@ -485,17 +484,15 @@ export function createCombatAnimationManager(deps) {
     // EXECUÇÃO PRINCIPAL
     // ========================
 
-    if (isFinishing) {
+    if (hasFinishing) {
       updateVisualHP(targetId, -champion.currentHp, 0);
 
       await playFinishingEffect(championEl, {
-        variant: resolvedFinishingType || undefined,
+        variant: resolvedFinishingType || "regular",
       });
 
       championEl.dataset.finishing = "true";
-      if (isObliterate) {
-        championEl.dataset.obliterated = "true";
-      }
+      championEl.dataset.finishingType = resolvedFinishingType || "regular";
 
       return; // já aguardou tudo
     }
@@ -1491,7 +1488,7 @@ export function createCombatAnimationManager(deps) {
       await wait(TIMING.DEATH_CLAIM_EFFECT);
 
       // normal death
-    } else if (!el.dataset.obliterated && !el.dataset.finishing) {
+    } else if (!el.dataset.finishing) {
       // Apply dying class — triggers CSS collapse animation
       el.classList.add("dying");
 

@@ -4,7 +4,7 @@ import { composeDamage } from "./pipeline/03_composeDamage.js";
 import { runBeforeHooks } from "./pipeline/04_beforeHooks.js";
 import { runAfterHooks } from "./pipeline/07_afterHooks.js";
 import { applyDamage } from "./pipeline/05_applyDamage.js";
-import { processObliterate } from "./pipeline/06_obliterate.js";
+import { processFinishing } from "./pipeline/06_finishing.js";
 import { processExtraQueue } from "./pipeline/08_extraQueue.js";
 import { buildFinalResult } from "./pipeline/09_resultBuilder.js";
 
@@ -123,7 +123,7 @@ export class DamageEvent {
 
     applyDamage(this);
 
-    processObliterate(this);
+    processFinishing(this);
 
     runAfterHooks(this);
 

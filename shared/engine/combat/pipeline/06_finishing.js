@@ -1,9 +1,10 @@
-export function processObliterate(event) {
-  console.log("🔥 _processObliterateIfNeeded chamado:", {
+export function processFinishing(event) {
+  console.log("🔥 _processFinishingIfNeeded chamado:", {
     defender: event.defender.name,
     hp: event.defender.HP,
     maxHP: event.defender.maxHP,
   });
+
   const rule = event.skill?.finishingRule ?? event.skill?.obliterateRule;
   if (!rule) return;
 
@@ -16,11 +17,8 @@ export function processObliterate(event) {
   // finishing só faz sentido se o hit realmente conectou e causou dano
   if (!event.actualDmg || event.actualDmg <= 0) return;
 
-  if (
-    finishingType === "obliterate" &&
-    event.defender.runtime?.preventObliterate
-  ) {
-    console.log("[OBLITERATE] Cancelado por efeito de sobrevivência");
+  if (event.defender.runtime?.preventFinishing) {
+    console.log("[FINISHING] Cancelado por efeito de sobrevivência");
     return;
   }
 
@@ -62,19 +60,12 @@ function resolveFinishingType(skill) {
       ? skill.finishingType()
       : skill?.finishingType;
 
-  return skillType || (skill?.obliterateRule ? "obliterate" : "generic");
+  return skillType || (skill?.obliterateRule ? "obliterate" : "regular");
 }
 
 function buildFinishingFlags(finishingType) {
-  if (finishingType === "obliterate") {
-    return {
-      isObliterate: true,
-      finishingType,
-    };
-  }
-
   return {
-    isFinishing: true,
+    finishing: true,
     finishingType,
   };
 }
@@ -98,3 +89,5 @@ function registerFinishingDialog(event, finishingType) {
     targetId: event.defender?.id,
   });
 }
+
+export { processFinishing as processObliterate };

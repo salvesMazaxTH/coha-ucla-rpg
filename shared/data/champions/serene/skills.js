@@ -192,7 +192,7 @@ const sereneSkills = [
             if (!defender || defender.id !== owner.id || defender !== owner)
               return;
 
-            owner.runtime.preventObliterate = true;
+            owner.runtime.preventFinishing = true;
 
             if (owner.HP - damage > 0) {
               // console.log("[EPIFANIA] Abortado → dano não é letal");

@@ -2,6 +2,17 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const DEFAULT_FINISHING_VARIANT = {
+  // Regular finishing: physical slash + blood accents, no magic blue flash.
+  crackColor: "rgba(210,25,25,0.9)",
+  slashCore: "rgba(255,250,250,0.96)",
+  slashGlow: "rgba(210,40,40,0.85)",
+  slashTrail: "rgba(255,120,120,0.7)",
+  particlePalette: ["rgba(220,40,40,0.9)", "rgba(235,235,235,0.78)"],
+  flash: { enabled: false },
+  blood: true,
+};
+
 const FINISHING_VARIANTS = {
   obliterate: {
     crackColor: "rgba(140,210,255,0.9)",
@@ -22,25 +33,27 @@ const FINISHING_VARIANTS = {
     blood: false,
   },
 
-  // Isarelis execution: physical slash + blood accents, no magic blue flash.
-  isarelis_finishing: {
-    crackColor: "rgba(210,25,25,0.9)",
-    slashCore: "rgba(255,250,250,0.96)",
-    slashGlow: "rgba(210,40,40,0.85)",
-    slashTrail: "rgba(255,120,120,0.7)",
-    particlePalette: ["rgba(220,40,40,0.9)", "rgba(235,235,235,0.78)"],
-    flash: { enabled: false },
-    blood: true,
-  },
+  regular: DEFAULT_FINISHING_VARIANT,
+  default: DEFAULT_FINISHING_VARIANT,
 };
 
 function getVariantStyle(variant) {
-  return FINISHING_VARIANTS[variant] || FINISHING_VARIANTS.obliterate;
+  const normalizedVariant = normalizeFinishingVariant(variant);
+
+  return (
+    FINISHING_VARIANTS[normalizedVariant] ||
+    FINISHING_VARIANTS.regular ||
+    FINISHING_VARIANTS.obliterate
+  );
+}
+
+function normalizeFinishingVariant(variant) {
+  return variant || "regular";
 }
 
 export async function playFinishingEffect(
   championEl,
-  { variant = "obliterate" } = {},
+  { variant = "regular" } = {},
 ) {
   const wrapper = championEl.querySelector(".portrait-wrapper");
   if (!wrapper) return;

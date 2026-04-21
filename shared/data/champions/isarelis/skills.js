@@ -124,7 +124,7 @@ const isarelisSkills = [
     stealthBonus: 0.5, // +50% dano se invisível
     damageBonusRatio: 0.2,
     piercingRatio: 0.6,
-    finishingType: "isarelis_finishing",
+    finishingType: "regular",
 
     description() {
       return `Desfere um golpe letal. Se o alvo estiver abaixo de ${this.executeThreshold * 100}% de Vida, é executado. Causa mais dano se usado enquanto Invisível.`;

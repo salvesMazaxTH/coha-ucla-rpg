@@ -1,4 +1,14 @@
-﻿## [2026-04-21] Quick: status effects canônicos em inglês internamente
+﻿## [2026-04-21] Quick: centralização do finishing da Isarelis
+
+- A etapa 6 do combate foi renomeada de `06_obliterate.js` para `06_finishing.js`, e o processamento agora passa por `processFinishing`.
+- `preventObliterate` foi substituído por `preventFinishing` no runtime da Serene, alinhando o bloqueio de sobrevivência ao gênero finishing.
+- O pipeline agora serializa apenas `finishing` e `finishingType`; `obliterate` segue como tipo, mas sem flag booleana própria, e o acabamento `regular` fica como padrão reutilizável para personagens futuros.
+- O código executável e a arquitetura atual foram sincronizados para eliminar `isObliterate` como nome de flag.
+- Validação local: `get_errors` sem erros nos arquivos tocados e grep confirmou a saída de `preventObliterate` e `06_obliterate.js` do código executável.
+
+---
+
+## [2026-04-21] Quick: status effects canônicos em inglês internamente
 
 - Histórico antigo consolidado em `STATE.archive.md` para manter este arquivo enxuto.
 

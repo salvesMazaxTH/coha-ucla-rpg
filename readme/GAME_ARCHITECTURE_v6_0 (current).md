@@ -122,7 +122,7 @@ Esses campos permitem controlar a ordem e o momento exato em que mensagens apare
 │   │   │       ├── 03_composeDamage.js
 │   │   │       ├── 04_beforeHooks.js
 │   │   │       ├── 05_applyDamage.js
-│   │   │       ├── 06_obliterate.js
+│   │   │       ├── 06_finishing.js
 │   │   │       ├── 07_afterHooks.js
 │   │   │       ├── 08_extraQueue.js
 │   │   │       └── 09_resultBuilder.js
@@ -880,7 +880,7 @@ skill.resolve({ user, targets, context })
         ├── 3. composeDamage()         [03_composeDamage.js]
         ├── 4. runBeforeHooks()        [04_beforeHooks.js]
         ├── 5. applyDamage()           [05_applyDamage.js]
-        ├── 6. processObliterate()     [06_obliterate.js]
+        ├── 6. processFinishing()      [06_finishing.js]
         ├── 7. runAfterHooks()         [07_afterHooks.js]
         ├── 8. processExtraQueue()     [08_extraQueue.js]
         └── 9. buildFinalResult()      [09_resultBuilder.js]
@@ -960,13 +960,13 @@ defender.takeDamage(damage, context)
 context.registerDamage({ target, amount, sourceId, isCritical })
 ```
 
-#### `06_obliterate.js`
+#### `06_finishing.js`
 
 ```
 Se skill.obliterateRule existir && defender vivo:
   threshold = obliterateRule(dmgEvent)
   se defender.HP/maxHP ≤ threshold:
-    mata instantaneamente → registerDamage({ flags: { isObliterate: true } })
+    mata instantaneamente → registerDamage({ flags: { finishing: true, finishingType: "obliterate" } })
 ```
 
 #### `07_afterHooks.js`
@@ -1575,7 +1575,7 @@ combatAnimations.reset();
 3. shieldBlocked?    → animateShieldBlock
 4. isDot?            → showBlockingDialog pré-dano
 5. Aplica classe .damage (shake + tint); cria float
-6. obliterate?       → playObliterateEffect
+6. finishing?        → playFinishingEffect
    senão             → updateVisualHP; isCritical → dialog "CRÍTICO"
 ```
 
@@ -1615,14 +1615,14 @@ Quando a fila esvazia **durante a fase "combat"**, o manager chama `onQueueEmpty
 
 VFX contínuos renderizados via canvas HTML5 sobre o retrato do campeão. `syncChampionVFX(champion)` compara o estado atual com `champion._vfxState` e liga/desliga canvas conforme necessário.
 
-| VFX                | Trigger                                          |
-| ------------------ | ------------------------------------------------ |
-| `shield`           | `runtime.shields.length > 0`                     |
-| `fireStanceIdle`   | `runtime.fireStance === "postura"`               |
-| `fireStanceActive` | `runtime.fireStance === "brasa_viva"`            |
-| `frozen`           | `statusEffects.has("frozen")`                    |
-| `waterBubble`      | `runtime.form === "bola_agua"`                   |
-| `obliterate`       | `playObliterateEffect(el)` — chamado diretamente |
+| VFX                | Trigger                                                      |
+| ------------------ | ------------------------------------------------------------ |
+| `shield`           | `runtime.shields.length > 0`                                 |
+| `fireStanceIdle`   | `runtime.fireStance === "postura"`                           |
+| `fireStanceActive` | `runtime.fireStance === "brasa_viva"`                        |
+| `frozen`           | `statusEffects.has("frozen")`                                |
+| `waterBubble`      | `runtime.form === "bola_agua"`                               |
+| `finishing`        | `playFinishingEffect(el, { variant })` — chamado diretamente |
 
 ### 20.2 Skill Animations — One-Shot WebGL
 

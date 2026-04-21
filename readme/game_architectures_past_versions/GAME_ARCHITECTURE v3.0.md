@@ -669,7 +669,7 @@ context.registerDamage({
     immune?,       // true se imunidade absoluta
     shieldBlocked?,// true se escudo supremo/feitiço bloqueou
     obliterate?,      // true se morte por obliterateRule
-    isObliterate?,    // alias de obliterate
+    finishing?,       // alias de finishing
   }
 });
 // → push em context.visual.damageEvents[]
