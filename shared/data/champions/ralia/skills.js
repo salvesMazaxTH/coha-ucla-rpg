@@ -122,9 +122,9 @@ const raliaSkills = [
   {
     key: "decreto_do_bastiao",
     name: "Decreto do Bastião",
-    bf: 55,
+    bf: 50,
     damageMode: "piercing",
-    piercingPercentage: 90,
+    piercingPercentage: 75,
 
     atkDebuff: 20,
     debuffDuration: 2,

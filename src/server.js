@@ -927,11 +927,13 @@ function handleStartTurn() {
   });
 
   // 3. Hooks onTurnStart (DoTs, passivas reativas, etc.)
-  emitCombatEvent(
+  const turnStartResults = emitCombatEvent(
     "onTurnStart",
     { context: turnStartContext },
     match.combat.activeChampions,
   );
+
+  emitCombatLogsFromResults(turnStartResults);
 
   // 4. Executar scheduled effects deste turno (inclusive os agendados durante onTurnStart)
   const remaining = [];
@@ -1640,7 +1642,25 @@ io.on("connection", (socket) => {
 //  INICIALIZAÇÃO DO SERVIDOR
 // ============================================================
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+const configuredPort = Number(process.env.PORT);
+const hasExplicitPort = Number.isInteger(configuredPort) && configuredPort > 0;
+const initialPort = hasExplicitPort ? configuredPort : 3000;
+
+function startServer(port) {
+  httpServer.once("error", (error) => {
+    if (error.code === "EADDRINUSE" && !hasExplicitPort) {
+      console.warn(`Porta ${port} em uso. Tentando a próxima...`);
+      startServer(port + 1);
+      return;
+    }
+
+    console.error("Falha ao iniciar o servidor:", error);
+    process.exit(1);
+  });
+
+  httpServer.listen(port, () => {
+    console.log(`Servidor rodando na porta ${port}`);
+  });
+}
+
+startServer(initialPort);
