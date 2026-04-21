@@ -960,14 +960,54 @@ defender.takeDamage(damage, context)
 context.registerDamage({ target, amount, sourceId, isCritical })
 ```
 
-#### `06_finishing.js`
+#### `06_finishing.js` — Pipeline de Finishing (Contrato Atual)
 
+O pipeline de finishing agora é **genérico** e não depende mais de flags como `isObliterate` ou funções `obliterateRule`. Toda skill que executa ("finishing move") deve definir o campo `finishingType` (ex: "regular", "obliterate", etc). O pipeline verifica se a skill possui um tipo de finishing e aplica a lógica correspondente.
+
+**Contrato oficial:**
+
+- O pipeline espera que skills que executam tenham:
+  - `finishingType: "regular"` (ou outro tipo, como "obliterate")
+  - Opcionalmente, métodos auxiliares como `finishingRule()` e `finishingDialog()` para customizar o limiar e a mensagem.
+- Ao atingir o limiar de execução, o pipeline registra:
+  - `{ finishing: true, finishingType: "..." }` no evento de dano.
+- Não existe mais flag `isObliterate`, nem função `obliterateRule`.
+
+**Exemplo de skill (Isarelis):**
+
+```js
+{
+  key: "golpe_de_misericordia",
+  name: "Golpe de Misericórdia",
+  bf: 85,
+  damageMode: "standard",
+  contact: true,
+  isUltimate: true,
+  ultCost: 3,
+  priority: 0,
+  executeThreshold: 0.2, // 20%
+  stealthBonus: 0.5, // +50% dano se invisível
+  damageBonusRatio: 0.2,
+  piercingRatio: 0.6,
+  finishingType: "regular",
+  description() { ... },
+  finishingRule({ defender }) {
+    const maxHP = defender?.maxHP;
+    if (!Number.isFinite(maxHP) || maxHP <= 0) return this.executeThreshold;
+    return Math.min(this.executeThreshold, 80 / maxHP);
+  },
+  finishingDialog({ attacker, defender }) {
+    return `${formatChampionName(attacker)} executa ${formatChampionName(defender)}!`;
+  },
+  resolve({ user, targets, context }) { ... }
+}
 ```
-Se skill.obliterateRule existir && defender vivo:
-  threshold = obliterateRule(dmgEvent)
-  se defender.HP/maxHP ≤ threshold:
-    mata instantaneamente → registerDamage({ flags: { finishing: true, finishingType: "obliterate" } })
-```
+
+**Resumo:**
+
+- O pipeline de finishing é extensível e usa apenas `{ finishing: true, finishingType }`.
+- Não há mais flags soltas ou nomes "obliterate" hardcoded.
+- O tipo de finishing é definido por skill, e o frontend/animador consome apenas esse contrato.
 
 #### `07_afterHooks.js`
 

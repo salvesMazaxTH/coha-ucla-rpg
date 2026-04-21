@@ -1,4 +1,12 @@
-﻿## [2026-04-21] Quick: centralização do finishing da Isarelis
+﻿## [2026-04-21] Quick: Isarelis executa com teto absoluto de 80 HP
+
+- `shared/data/champions/isarelis/skills.js` agora limita o finishing da ultimate ao menor valor entre 20% da vida máxima e 80 HP absolutos.
+- A descrição da skill foi atualizada para refletir a nova regra.
+- Validação local concluída: `get_errors` no arquivo tocado retornou sem erros.
+
+---
+
+## [2026-04-21] Quick: centralização do finishing da Isarelis
 
 - A etapa 6 do combate foi renomeada de `06_obliterate.js` para `06_finishing.js`, e o processamento agora passa por `processFinishing`.
 - `preventObliterate` foi substituído por `preventFinishing` no runtime da Serene, alinhando o bloqueio de sobrevivência ao gênero finishing.

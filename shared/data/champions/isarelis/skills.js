@@ -119,61 +119,50 @@ const isarelisSkills = [
     ultCost: 3,
     priority: 0,
 
-    executeThreshold: 0.2, // 20%
-    // 0.9, // 90% PARA TESTES
-    stealthBonus: 0.5, // +50% dano se invisível
-    damageBonusRatio: 0.2,
-    piercingRatio: 0.6,
+    executeThreshold: 0.25, // ≤ 25% do HP máximo
+    executeFlatThreshold: 85, // ≤ 85 HP
+    stealthBonus: 0.5,
     finishingType: "regular",
 
     description() {
-      return `Desfere um golpe letal. Se o alvo estiver abaixo de ${this.executeThreshold * 100}% de Vida, é executado. Causa mais dano se usado enquanto Invisível.`;
+      const percent = this.executeThreshold * 100;
+      return `Desfere um golpe letal. Executa o alvo apenas se estiver extremamente ferido (≤ ${percent}% do HP máximo e ≤ ${this.executeFlatThreshold} HP). Causa ${this.stealthBonus * 100}% a mais de dano enquanto Invisível.`;
     },
 
-    finishingRule() {
+    finishingRule({ defender }) {
+      const maxHP = defender?.maxHP;
+      const currentHP = defender?.HP;
+
+      if (!Number.isFinite(maxHP) || maxHP <= 0) {
+        return this.executeThreshold;
+      }
+
+      if (!Number.isFinite(currentHP)) return;
+
+      // condição flat primeiro (mais restritiva em HP alto)
+      if (currentHP > this.executeFlatThreshold) return;
+
       return this.executeThreshold;
-    },
-
-    finishingDialog({ attacker, defender }) {
-      return `${attacker.name} executa ${defender.name}!`;
     },
 
     targetSpec: ["enemy"],
 
     resolve({ user, targets, context }) {
       const [enemy] = targets;
+      if (!enemy) return;
 
       let baseDamage = (user.Attack * this.bf) / 100;
 
-      // ================================
-      // 🔴 CHECAGEM DE ORDEM DE TURNO
-      // ================================
-      const execIdx = context.executionIndex;
-
-      const turnMap = context.turnExecutionMap;
-      const targetIdx = turnMap?.get(enemy?.id);
-
-      const actedBeforeTarget =
-        execIdx !== undefined &&
-        (targetIdx === undefined || execIdx < targetIdx);
-
-      // ============================
-      // 🔥 BONUS DE STEALTH
-      // ============================
-      const isInvisible = user.hasStatusEffect("invisible");
-
-      if (isInvisible) {
+      if (user.hasStatusEffect("invisible")) {
         baseDamage *= 1 + this.stealthBonus;
 
         context.registerDialog({
-          message: `${user.name} ataca das sombras!`,
+          message: `${formatChampionName(user)} ataca das sombras!`,
           sourceId: user.id,
           targetId: enemy.id,
         });
       }
 
-      // ================================
-      // Agora a passiva cuida do bônus de dano/perfuração via hook
       return new DamageEvent({
         baseDamage,
         attacker: user,
