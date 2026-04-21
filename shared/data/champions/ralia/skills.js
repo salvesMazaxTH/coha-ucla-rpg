@@ -146,7 +146,7 @@ const raliaSkills = [
 
       const results = [];
 
-      // Aplicar dano em cada inimigo
+      // Aplicar dano e bleed em cada inimigo
       for (const enemy of enemies) {
         const damageResult = new DamageEvent({
           baseDamage,
@@ -164,6 +164,11 @@ const raliaSkills = [
           duration: this.debuffDuration,
           context,
         }); // -20 Attack por 2 turnos
+
+        // TESTE: aplica bleed de 2 stacks
+        if (enemy.applyStatusEffect) {
+          enemy.applyStatusEffect("bleeding", 2, context, {}, 2);
+        }
 
         results.push(damageResult);
       }

@@ -130,5 +130,3 @@
 - Patches: `shared/engine/match/championTransformation.js`, `shared/engine/match/GameMatch.js`, `shared/engine/combat/TurnResolver.js`, `src/server.js`, `shared/data/champions/index.js`, `shared/data/champions/lana/passive.js`, `shared/data/champions/lana_dino/passive.js`, `shared/data/champions/sengoku/skills.js`, `shared/data/champions/sengoku_primordial/`, `.planning/quick/260413-h9x-implemente-transforma-es-no-jogo-deixand/`
 
 ---
-
-
