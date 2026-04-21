@@ -125,32 +125,43 @@ const raliaSkills = [
     bf: 55,
     damageMode: "piercing",
     piercingPercentage: 90,
+
     atkDebuff: 20,
     debuffDuration: 2,
+    bleedStacks: 2,
+    bleedDuration: 2,
+
     contact: false,
     isUltimate: true,
     ultCost: 3,
 
     priority: 0,
     description() {
-      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos.`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos. Também aplica ${this.bleedStacks} stacks de Sangramento (por ${this.bleedDuration} turnos).`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
-      // Pegar todos os inimigos (time diferente do usuário)
-      const enemies = targets.filter(
-        (champion) => champion.team !== user.team && champion.alive,
-      );
+      // Os alvos já são os inimigos
+      const enemies = targets;
+
+      // Aplica o debuff de Ataque antes do dano
+      for (const enemy of enemies) {
+        enemy.modifyStat({
+          statName: "Attack",
+          amount: -this.atkDebuff,
+          duration: this.debuffDuration,
+          context,
+        });
+      }
 
       const baseDamage = (user.Attack * this.bf) / 100;
-
       const results = [];
 
       // Aplicar dano e bleed em cada inimigo
       for (const enemy of enemies) {
-        const damageResult = new DamageEvent({
+        const rawResult = new DamageEvent({
           baseDamage,
-          mode: "piercing",
+          mode: this.damageMode,
           piercingPercentage: this.piercingPercentage,
           attacker: user,
           defender: enemy,
@@ -158,19 +169,27 @@ const raliaSkills = [
           context,
           allChampions: context?.allChampions,
         }).execute();
-        enemy.modifyStat({
-          statName: "Attack",
-          amount: -this.atkDebuff,
-          duration: this.debuffDuration,
-          context,
-        }); // -20 Attack por 2 turnos
 
-        // TESTE: aplica bleed de 2 stacks
-        if (enemy.applyStatusEffect) {
-          enemy.applyStatusEffect("bleeding", 2, context, {}, 2);
+        const resultsArray = Array.isArray(rawResult) ? rawResult : [rawResult];
+        const mainDamage = resultsArray[0];
+
+        results.push(...resultsArray);
+
+        const hitLanded =
+          mainDamage &&
+          mainDamage.evaded !== true &&
+          mainDamage.immune !== true &&
+          (mainDamage.totalDamage ?? 0) > 0;
+
+        if (hitLanded) {
+          enemy.applyStatusEffect(
+            "bleeding",
+            this.bleedDuration,
+            context,
+            {},
+            this.bleedStacks,
+          );
         }
-
-        results.push(damageResult);
       }
 
       return results;

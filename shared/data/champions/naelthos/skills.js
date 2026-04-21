@@ -43,7 +43,10 @@ const naelthosSkills = [
           context,
           allChampions: context?.allChampions,
         }).execute();
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+        results.push(...damageResults);
       }
       let allyLog = "";
       let statLog = "";

@@ -82,12 +82,17 @@ const kaeldrathVulcanoSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      const mainPrimaryDamage = primaryResults[0];
+
+      results.push(...primaryResults);
 
       if (
-        !primaryResult?.evaded &&
-        !primaryResult?.immune &&
-        primaryResult.totalDamage > 0
+        !mainPrimaryDamage?.evaded &&
+        !mainPrimaryDamage?.immune &&
+        mainPrimaryDamage.totalDamage > 0
       )
         enemy.applyStatusEffect("burning", this.burnDuration, context);
 
@@ -103,10 +108,10 @@ const kaeldrathVulcanoSkills = [
       if (!secondaryTarget) return results;
 
       console.log(
-        `[BOLA DE MAGMA] Dano causado ao alvo principal: ${primaryResult.totalDamage}`,
+        `[BOLA DE MAGMA] Dano causado ao alvo principal: ${mainPrimaryDamage?.totalDamage}`,
       );
 
-      const splashDamage = primaryResult.totalDamage / 2;
+      const splashDamage = (mainPrimaryDamage?.totalDamage ?? 0) / 2;
       // dano secundário é igual à metade do dano causado no alvo principal
 
       const secondaryResult = new DamageEvent({
@@ -118,7 +123,10 @@ const kaeldrathVulcanoSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(secondaryResult);
+      const secondaryResults = Array.isArray(secondaryResult)
+        ? secondaryResult
+        : [secondaryResult];
+      results.push(...secondaryResults);
 
       return results;
     },

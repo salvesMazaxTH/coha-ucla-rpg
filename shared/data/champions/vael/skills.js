@@ -63,7 +63,10 @@ const vaelSkills = [
         critOptions: { disable: true }, // sem crítico
         allChampions: context?.allChampions,
       }).execute();
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      results.push(...primaryResults);
 
       console.log(
         `[INVESTIDA TRANSPASSANTE] primary.combatSlot: ${primary.combatSlot}, primary.team: ${primary.team}`,
@@ -89,7 +92,10 @@ const vaelSkills = [
         critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,
       }).execute();
-      results.push(secondaryResult);
+      const secondaryResults = Array.isArray(secondaryResult)
+        ? secondaryResult
+        : [secondaryResult];
+      results.push(...secondaryResults);
 
       return results;
     },

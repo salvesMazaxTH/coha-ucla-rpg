@@ -36,7 +36,10 @@ const tutuSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
+      const damageResults = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
+      results.push(...damageResults);
 
       const lowestHealthAlly = context.aliveChampions
         .filter((c) => c.team === user.team && c.id !== user.id)

@@ -45,7 +45,10 @@ const voltexzSkills = [
           allChampions: context?.allChampions,
         }).execute();
         // console.log("🌊 Target affinities:", primary.elementalAffinities);
-        results.push(primaryResult);
+        const primaryResults = Array.isArray(primaryResult)
+          ? primaryResult
+          : [primaryResult];
+        results.push(...primaryResults);
       }
 
       if (secondary) {
@@ -58,7 +61,10 @@ const voltexzSkills = [
           allChampions: context?.allChampions,
         }).execute();
         // console.log("🌊 Target affinities:", secondary.elementalAffinities);
-        results.push(secondaryResult);
+        const secondaryResults = Array.isArray(secondaryResult)
+          ? secondaryResult
+          : [secondaryResult];
+        results.push(...secondaryResults);
       }
 
       return results;
@@ -90,11 +96,11 @@ const voltexzSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
-
       const damageArray = Array.isArray(damageResult)
         ? damageResult
         : [damageResult];
+
+      results.push(...damageArray);
 
       const mainDamage = damageArray[0];
 
@@ -163,7 +169,11 @@ const voltexzSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
+      const damageResults = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
+
+      results.push(...damageResults);
 
       return results;
     },

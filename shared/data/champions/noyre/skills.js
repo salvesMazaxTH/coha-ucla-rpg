@@ -162,7 +162,11 @@ const noyreSkills = [
           piercingPercentage: this.piercingPercentage,
         }).execute();
 
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+
+        results.push(...damageResults);
 
         // Drenar 2/3 do ultômetro, mínimo 3, máximo o que o alvo tem, nunca negativo
         let ultToDrain = Math.floor((ult * 2) / 3);

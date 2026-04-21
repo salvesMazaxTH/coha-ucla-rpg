@@ -44,7 +44,10 @@ const jeffTheDeathSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      results.push(...primaryResults);
 
       // 🧠 Se não tiver stacks, acabou
       if (user.runtime.deathCounter <= 0) return results;
@@ -64,7 +67,8 @@ const jeffTheDeathSkills = [
           allChampions: context?.allChampions,
         }).execute();
 
-        results.push(result);
+        const adjacentResults = Array.isArray(result) ? result : [result];
+        results.push(...adjacentResults);
       }
 
       return results;
