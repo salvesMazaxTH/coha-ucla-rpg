@@ -54,9 +54,17 @@ export default {
     };
   },
 
-  /* onTurnStart({ owner, context }) {
-    if (owner.runtime.lana?.triggered) return;
-    owner.addShield();
-    // amount, decayPerTurn = 0, context, type = "regular"
-  }, */
+  onTurnStart({ owner, context }) {
+    owner.runtime.lana ??= {
+      triggered: false,
+    };
+
+    if (owner.runtime.lana.triggered) return;
+
+    owner.addShield(1, 1, context, "spell");
+
+    return {
+      log: `${formatChampionName(owner)} recebeu um Escudo de Feitiço.`,
+    };
+  },
 };

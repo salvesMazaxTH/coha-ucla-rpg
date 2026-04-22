@@ -36,12 +36,56 @@ export function addShield(
 }
 
 /**
+ * Decays shields that have per-turn duration.
+ * Shields that reach 0 are removed from runtime storage.
+ * @param {object} champion - The champion instance
+ */
+export function decayShields(champion) {
+  if (
+    !Array.isArray(champion.runtime?.shields) ||
+    !champion.runtime.shields.length
+  ) {
+    return 0;
+  }
+
+  let removed = 0;
+
+  champion.runtime.shields = champion.runtime.shields
+    .map((shield) => {
+      if (!shield) return null;
+
+      const amount = Number(shield.amount) || 0;
+      const decayPerTurn = Number(shield.decayPerTurn) || 0;
+
+      if (amount <= 0 || decayPerTurn <= 0) {
+        return shield;
+      }
+
+      const nextAmount = amount - decayPerTurn;
+
+      if (nextAmount <= 0) {
+        removed += 1;
+        return null;
+      }
+
+      return {
+        ...shield,
+        amount: nextAmount,
+      };
+    })
+    .filter(Boolean);
+
+  return removed;
+}
+
+/**
  * Checks if shield blocks the current action
  * @param {object} champion - The champion instance
  * @param {object} context - Combat context
+ * @param {string} damageType - Damage type for the current event
  * @returns {boolean}
  */
-export function _checkAndConsumeShieldBlock(champion, context) {
+export function _checkAndConsumeShieldBlock(champion, context, damageType) {
   if (!Array.isArray(champion.runtime?.shields)) return false;
 
   // 🛡️ Escudo Supremo: bloqueia QUALQUER ação
@@ -57,15 +101,15 @@ export function _checkAndConsumeShieldBlock(champion, context) {
     return true;
   }
 
-  // 🛡️ Escudo de Feitiço: bloqueia apenas ações sem contato
-  if (context?.currentSkill?.contact === false) {
+  // 🛡️ Escudo de Feitiço: bloqueia apenas dano mágico
+  if (damageType === "magical") {
     const spellIdx = champion.runtime.shields.findIndex(
       (s) => s.type === "spell" && s.amount > 0,
     );
     if (spellIdx !== -1) {
       champion.runtime.shields.splice(spellIdx, 1);
       /* console.log(
-        `[Champion] 🛡️ ${champion.name}: Escudo de Feitiço bloqueou a ação sem contato e se dissipou!`,
+      `[Champion] 🛡️ ${champion.name}: Escudo de Feitiço bloqueou o dano mágico e se dissipou!`,
       );
       */
       return true;

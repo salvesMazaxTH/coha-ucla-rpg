@@ -1,4 +1,11 @@
-﻿## [2026-04-21] Quick: Isarelis executa com teto absoluto de 80 HP
+﻿## [2026-04-22] Quick: Lana ganha Escudo de Feitiço por turno
+
+- `shared/data/champions/lana/passive.js` voltou a aplicar um `spell` shield no `onTurnStart` enquanto `owner.runtime.lana.triggered` ainda for `false`, mantendo o buff ativo só enquanto Tutu estiver vivo.
+- `shared/core/championCombat.js` passou a decair escudos com `decayPerTurn` por turno e o `spellShield` agora bloqueia apenas dano `magical` no pre-check.
+- `src/server.js` aplica o decaimento de escudos no início do turno, antes dos hooks de `onTurnStart`, para o escudo novo durar o turno corrente inteiro.
+- Validação local pendente após a edição.
+
+## [2026-04-21] Quick: Isarelis executa com teto absoluto de 80 HP
 
 - `shared/data/champions/isarelis/skills.js` agora limita o finishing da ultimate ao menor valor entre 20% da vida máxima e 80 HP absolutos.
 - A descrição da skill foi atualizada para refletir a nova regra.

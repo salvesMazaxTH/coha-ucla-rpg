@@ -24,6 +24,7 @@ import { Action } from "../shared/engine/combat/Action.js";
 import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 import { DamageEvent } from "../shared/engine/combat/DamageEvent.js";
 import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js";
+import { decayShields } from "../shared/core/championCombat.js";
 import {
   applyChampionTransformation,
   revertChampionTransformation,
@@ -924,6 +925,11 @@ function handleStartTurn() {
     if (!champ.alive) return;
     champ.runtime = champ.runtime || {};
     champ.runtime.currentContext = turnStartContext;
+  });
+
+  match.combat.activeChampions.forEach((champ) => {
+    if (!champ.alive) return;
+    decayShields(champ);
   });
 
   // 3. Hooks onTurnStart (DoTs, passivas reativas, etc.)

@@ -463,8 +463,8 @@ export class Champion {
     return modifyHP(this, amount, config);
   }
 
-  _checkAndConsumeShieldBlock(context) {
-    return _checkAndConsumeShieldBlock(this, context);
+  _checkAndConsumeShieldBlock(context, damageType) {
+    return _checkAndConsumeShieldBlock(this, context, damageType);
   }
 
   addShield(amount, decayPerTurn = 0, context, type = "regular") {
