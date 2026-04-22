@@ -1,5 +1,13 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
+function clearLanaSpellShield(owner) {
+  if (!Array.isArray(owner.runtime?.shields)) return;
+
+  owner.runtime.shields = owner.runtime.shields.filter(
+    (shield) => shield?.type !== "spell",
+  );
+}
+
 export default {
   key: "amigo_imaginario",
   name: "Amigo Imaginário",
@@ -61,7 +69,9 @@ export default {
 
     if (owner.runtime.lana.triggered) return;
 
-    owner.addShield(1, 1, context, "spell");
+    clearLanaSpellShield(owner);
+
+    owner.addShield(1, 0, context, "spell");
 
     return {
       log: `${formatChampionName(owner)} recebeu um Escudo de Feitiço.`,

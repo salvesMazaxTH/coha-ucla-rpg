@@ -1,5 +1,23 @@
-export function startShield(canvas) {
+const SHIELD_PALETTES = {
+  regular: {
+    grid: "rgba(80, 210, 255, 0.25)",
+    glowInner: "rgba(120,200,255,0.15)",
+    glowOuter: "rgba(0,120,255,0.6)",
+    ring: "rgba(80, 220, 255, 0.9)",
+    arc: "rgba(80, 220, 255, 0.9)",
+  },
+  spell: {
+    grid: "rgba(170, 110, 255, 0.26)",
+    glowInner: "rgba(118, 54, 168, 0.2)",
+    glowOuter: "rgba(56, 10, 92, 0.72)",
+    ring: "rgba(184, 108, 255, 0.92)",
+    arc: "rgba(133, 54, 214, 0.95)",
+  },
+};
+
+export function startShield(canvas, data = {}) {
   const ctx = canvas.getContext("2d");
+  const palette = SHIELD_PALETTES[data.variant] || SHIELD_PALETTES.regular;
 
   let running = true;
   let time = 0;
@@ -20,7 +38,7 @@ export function startShield(canvas) {
     const vertDist = hexHeight;
     const horizDist = hexWidth * 0.75;
 
-    ctx.strokeStyle = "rgba(80, 210, 255, 0.25)";
+    ctx.strokeStyle = palette.grid;
 
     ctx.lineWidth = 1;
 
@@ -83,8 +101,8 @@ export function startShield(canvas) {
       radius,
     );
 
-    gradient.addColorStop(0, "rgba(120,200,255,0.15)");
-    gradient.addColorStop(1, "rgba(0,120,255,0.6)");
+    gradient.addColorStop(0, palette.glowInner);
+    gradient.addColorStop(1, palette.glowOuter);
 
     /*     gradient.addColorStop(0, "rgba(255, 230, 120, 0.15)");
     gradient.addColorStop(1, "rgba(255, 180, 0, 0.6)"); */
@@ -96,7 +114,7 @@ export function startShield(canvas) {
 
     // Borda externa
     /*     ctx.strokeStyle = "rgba(255, 220, 80, 0.9)"; */
-    ctx.strokeStyle = "rgba(80, 220, 255, 0.9)";
+    ctx.strokeStyle = palette.ring;
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(cx, cy, radius - 2, 0, Math.PI * 2);
@@ -113,7 +131,7 @@ export function startShield(canvas) {
     ctx.restore();
 
     // Arco rotatório
-    ctx.strokeStyle = "rgba(80, 220, 255, 0.9)";
+    ctx.strokeStyle = palette.arc;
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(cx, cy, radius - 6, time, time + Math.PI / 1.4);

@@ -63,6 +63,21 @@ const ExclusiveVFXTriggers = {
 
 const activeEffects = new WeakMap();
 
+function getShieldVFXData(champion) {
+  const shields = Array.isArray(champion.runtime?.shields)
+    ? champion.runtime.shields
+    : [];
+
+  const variant = shields.some((shield) => shield?.type === "spell")
+    ? "spell"
+    : "regular";
+
+  return {
+    variant,
+    stateKey: shields.length > 0 ? `shield:${variant}` : false,
+  };
+}
+
 export function syncChampionVFX(champion) {
   if (!champion?.el) return;
   if (!champion.el.isConnected) return;
@@ -95,19 +110,26 @@ export function syncChampionVFX(champion) {
   // 2. Triggers exclusivos/habilidades
   for (const [type, trigger] of Object.entries(ExclusiveVFXTriggers)) {
     const shouldExist = trigger(champion);
-    const exists = champion._vfxState[type];
+    const vfxData = type === "shield" ? getShieldVFXData(champion) : null;
+    const nextState = type === "shield" ? vfxData.stateKey : shouldExist;
+    const exists = champion._vfxState[type] === nextState;
+    const hadCanvas = !!champion._vfxCanvases?.[type];
 
     if (shouldExist && !exists) {
+      if (hadCanvas) {
+        removeVFXCanvas(champion, type);
+      }
+
       const canvas = createVFXCanvas(type, champion);
       champion._vfxCanvases[type] = canvas;
-      playVFX(type, canvas);
+      playVFX(type, canvas, vfxData || {});
     }
 
-    if (!shouldExist && exists) {
+    if (!shouldExist && hadCanvas) {
       removeVFXCanvas(champion, type);
     }
 
-    champion._vfxState[type] = shouldExist;
+    champion._vfxState[type] = nextState;
   }
 }
 
