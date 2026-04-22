@@ -88,6 +88,7 @@ function _applyBeforeTakingPassive(event) {
     attacker: event.attacker,
     defender: event.defender,
     context: event.context,
+    type: event.type,
   });
 }
 

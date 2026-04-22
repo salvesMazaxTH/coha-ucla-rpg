@@ -4,14 +4,13 @@ export default {
   key: "primeiro_sutra_coracao_adamantino",
   name: "Primeiro Sutra: Coração Adamantino",
 
-  flatReductionVSContact: 25,
+  flatReductionVSContact: 25, // Mantém para referência, mas não mais usado para trigger
   stabilityStacksCap: 4,
 
   description(champion) {
     const stacks = champion.runtime?.stabilityStacks || 0;
-
-    return `Morakhan reduz o dano sofrido em 10% (exceto dano absoluto). Contra ataques de contato, também reduz ${this.flatReductionVSContact} de dano adicional.
-    Sempre que sofre dano de contato, ganha 1 acúmulo de <b>Estabilidade</b> (máx. ${this.stabilityStacksCap}).
+    return `Morakhan reduz o dano sofrido em 10% (exceto dano absoluto). Contra ataques <b>físicos</b>, também reduz ${this.flatReductionVSContact} de dano adicional.
+    Sempre que sofre dano <b>físico</b>, ganha 1 acúmulo de <b>Estabilidade</b> (máx. ${this.stabilityStacksCap}).
 
     Ao sofrer dano, se estiver com acúmulos ou for atingido por um golpe significativo, consome todos os acúmulos, reduzindo o dano em 10% por acúmulo.
 
@@ -23,13 +22,14 @@ export default {
     onAfterDmgTaking: "defender",
   },
 
-  onBeforeDmgTaking({ damage, skill, context, owner, defender }) {
-    const isContact = skill?.contact;
+  onBeforeDmgTaking({ damage, skill, context, owner, defender, type }) {
+    // type: "physical" | "magical" | ...
+    const isPhysical = type === "physical";
     const stacks = owner.runtime?.stabilityStacks || 0;
 
     let finalDamage = damage;
 
-    if (isContact)
+    if (isPhysical)
       finalDamage = Math.max(0, finalDamage - this.flatReductionVSContact);
 
     finalDamage *= 0.9;
@@ -58,8 +58,9 @@ export default {
     return { damage: finalDamage, log: msg };
   },
 
-  onAfterDmgTaking({ damage, skill, owner }) {
-    if (damage <= 0 || !skill?.contact) return;
+  onAfterDmgTaking({ damage, skill, owner, type }) {
+    // type: "physical" | "magical" | ...
+    if (damage <= 0 || type !== "physical") return;
 
     const runtime = (owner.runtime ??= {});
     const stacks = runtime.stabilityStacks || 0;

@@ -97,6 +97,7 @@ function _applyAfterTakingPassive(event) {
     mode: event.mode,
     crit: event.crit,
     context: event.context,
+    type: event.type,
   });
 }
 
