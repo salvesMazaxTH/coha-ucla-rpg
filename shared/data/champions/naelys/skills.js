@@ -45,6 +45,7 @@ const naelysSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
@@ -170,6 +171,7 @@ const naelysSkills = [
             baseDamage,
             attacker: owner,
             defender: attacker,
+            type: "physical",
             skill: {
               ...basic,
               key: "massa_do_mar_revolto_counter",

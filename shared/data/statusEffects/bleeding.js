@@ -21,6 +21,7 @@ const bleeding = {
       defender: owner,
       skill: { name: "Sangramento", key: "bleeding_tick" },
       context,
+      type: "physical",
       baseDamage: totalDamage,
       mode: DamageEvent.Modes.ABSOLUTE,
       allChampions: context.allChampions,
@@ -29,7 +30,9 @@ const bleeding = {
     const result = dmgEvent.execute();
 
     if (result?.immune) {
-      return { log: `${formatChampionName(owner)} é imune ao dano de Sangramento!` };
+      return {
+        log: `${formatChampionName(owner)} é imune ao dano de Sangramento!`,
+      };
     }
 
     return {

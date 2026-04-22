@@ -32,7 +32,7 @@ export class DamageEvent {
   static debugMode = false;
 
   constructor(params) {
-    const { attacker, defender, skill, context, baseDamage } = params;
+    const { attacker, defender, skill, context, baseDamage, type } = params;
 
     if (!attacker && !context?.isDot) {
       throw new Error("DamageEvent precisa de attacker");
@@ -40,6 +40,12 @@ export class DamageEvent {
 
     if (!defender) {
       throw new Error("DamageEvent precisa de defender");
+    }
+
+    if (type !== "physical" && type !== "magical") {
+      throw new Error(
+        `[DamageEvent] type obrigat\u00f3rio e inv\u00e1lido: ${type}`,
+      );
     }
 
     this.mode = params.mode ?? DamageEvent.Modes.STANDARD;
@@ -70,6 +76,8 @@ export class DamageEvent {
       this.defender,
     );
     this.skill = skill;
+    this.type = type;
+    console.log("[DamageEvent_constructor] Damage type:", this.type);
 
     this.context = context ?? {};
 

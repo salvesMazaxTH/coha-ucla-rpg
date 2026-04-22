@@ -6,7 +6,7 @@ const noyreSkills = [
   // ========================
   // Disparo Básico (global)
   // ========================
-  basicShot,
+  { ...basicShot, type: "magical" },
   // ========================
   // Habilidades Especiais
   // ========================
@@ -35,6 +35,7 @@ const noyreSkills = [
         attacker: user,
         defender: target,
         skill: this,
+        type: "magical",
         context,
         allChampions: context.allChampions,
       }).execute();
@@ -156,6 +157,7 @@ const noyreSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context.allChampions,
           mode: "piercing",

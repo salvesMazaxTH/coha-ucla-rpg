@@ -67,6 +67,7 @@ export default {
         name: "Frio Absoluto (Passiva)",
         contact: false,
       },
+      type: "magical",
       context: { ...context, damageDepth: (context.damageDepth || 0) + 1 },
       allChampions: context.allChampions,
     }).execute();

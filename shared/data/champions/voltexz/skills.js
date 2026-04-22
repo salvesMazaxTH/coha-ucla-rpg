@@ -41,6 +41,7 @@ const voltexzSkills = [
           attacker: user,
           defender: primary,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
@@ -57,6 +58,7 @@ const voltexzSkills = [
           attacker: user,
           defender: secondary,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
@@ -92,6 +94,7 @@ const voltexzSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -165,6 +168,7 @@ const voltexzSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();

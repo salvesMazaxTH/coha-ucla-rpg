@@ -23,6 +23,7 @@ export function preChecks(event) {
       defender: event.defender,
       damage: event.damage,
       skill: event.skill,
+      type: event.type,
       context: event.context,
     },
     event.allChampions,
@@ -87,6 +88,7 @@ export function preChecks(event) {
         evaded: true,
         targetId: event.defender.id,
         userId: event.attacker.id,
+        type: event.type,
       };
     }
   }
@@ -182,6 +184,7 @@ function _buildImmuneResult(event, customMessage = null) {
     userId: event.attacker?.id ?? null,
     evaded: false,
     immune: true,
+    type: event.type,
     log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };
@@ -213,6 +216,7 @@ function _buildInactiveTargetResult(event) {
     userId: event.attacker?.id ?? null,
     evaded: false,
     inactiveTarget: true,
+    type: event.type,
     log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };

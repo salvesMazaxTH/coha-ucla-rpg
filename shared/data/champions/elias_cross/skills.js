@@ -46,6 +46,7 @@ const eliasCrossSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -97,6 +98,7 @@ const eliasCrossSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -177,6 +179,7 @@ const eliasCrossSkills = [
             mode: this.recoilDamageMode,
             attacker: user,
             defender: user,
+            type: "magical",
             skill: this,
           });
         }
@@ -186,6 +189,7 @@ const eliasCrossSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();

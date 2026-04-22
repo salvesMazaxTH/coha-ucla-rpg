@@ -23,6 +23,7 @@ const kaiSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -84,6 +85,7 @@ const kaiSkills = [
             piercingPercentage: 100,
             attacker: owner,
             defender: attacker,
+            type: "physical",
             skill: {
               key: "postura_da_brasa_viva_counter",
               name: "Contra-ataque Brasa Viva",
@@ -198,6 +200,7 @@ const kaiSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();

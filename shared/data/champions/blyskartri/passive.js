@@ -123,12 +123,16 @@ export default {
         key: "progressao_irrefreavel_explosion",
         contact: false,
       },
+      type: "magical",
       context,
       allChampions: context?.allChampions,
     }).execute();
 
     owner.runtime.impulsoStacks = 0;
 
-    return { damageEvent, log: `${formatChampionName(owner)} explodiu em velocidade e descarregou os acúmulos sobre ${formatChampionName(lowestHealthEnemy)}!` };
+    return {
+      damageEvent,
+      log: `${formatChampionName(owner)} explodiu em velocidade e descarregou os acúmulos sobre ${formatChampionName(lowestHealthEnemy)}!`,
+    };
   },
 };

@@ -17,6 +17,7 @@ const burning = {
       defender: owner,
       skill: { name: "Queimadura", key: "burning_tick" },
       context,
+      type: "magical",
       baseDamage: damage,
       mode: DamageEvent.Modes.ABSOLUTE,
       allChampions: context.allChampions,

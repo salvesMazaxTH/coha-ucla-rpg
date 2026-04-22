@@ -43,6 +43,7 @@ export function buildFinalResult(event) {
     finalHP: event.defender.HP,
     targetId: event.defender.id,
     userId: event.attacker?.id ?? null,
+    type: event.type,
     log: finalLog,
     crit: event.crit,
     damageDepth: event.context.damageDepth,

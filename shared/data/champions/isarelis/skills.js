@@ -33,6 +33,7 @@ const isarelisSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context.allChampions,
       }).execute();
@@ -168,6 +169,7 @@ const isarelisSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context.allChampions,
       }).execute();

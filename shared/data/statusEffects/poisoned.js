@@ -22,6 +22,7 @@ const poisoned = {
       defender: owner,
       skill: { name: "Envenenado", key: "poisoned_tick" },
       context,
+      type: "magical",
       baseDamage: totalDamage,
       mode: DamageEvent.Modes.ABSOLUTE,
       allChampions: context.allChampions,

@@ -166,6 +166,7 @@ const blyskartriSkills = [
             skill: {
               key: "condutancia_vital_counter",
             },
+            type: "physical",
             context,
             allChampions: context?.allChampions,
           }).execute();

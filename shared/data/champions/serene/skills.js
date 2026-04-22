@@ -6,7 +6,7 @@ const sereneSkills = [
   // ========================
   // Disparo Básico (global)
   // ========================
-  basicShot,
+  { ...basicShot, type: "magical" },
   // ========================
   // Habilidades Especiais
   // ========================
@@ -83,6 +83,7 @@ const sereneSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();

@@ -31,6 +31,7 @@ const baraoEstrondosoSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -94,6 +95,7 @@ const baraoEstrondosoSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,

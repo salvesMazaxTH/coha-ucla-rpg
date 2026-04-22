@@ -38,6 +38,7 @@ const nytheraSkills = [
         attacker: user,
         defender: target,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -151,6 +152,7 @@ const nytheraSkills = [
         attacker: user,
         defender: target,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();

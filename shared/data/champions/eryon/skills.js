@@ -7,7 +7,7 @@ const eryonSkills = [
   // Disparo Básico (global)
   // =========================
 
-  basicShot,
+  { ...basicShot, type: "magical" },
   // =========================
   // Habilidades Especiais
   // =========================
@@ -209,6 +209,7 @@ const eryonSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "magical",
           context,
           allChampions: context.allChampions,
         }).execute();

@@ -40,6 +40,7 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -63,6 +64,7 @@ const jeffTheDeathSkills = [
           attacker: user,
           defender: adjEnemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
@@ -105,6 +107,7 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -139,6 +142,7 @@ const jeffTheDeathSkills = [
               contact: false,
               damageMode: "absolute",
             },
+            type: "magical",
             context,
             allChampions: context?.allChampions,
           }).execute();
@@ -209,6 +213,7 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();

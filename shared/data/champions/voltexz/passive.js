@@ -31,7 +31,7 @@ export default {
 
     if (recoilDamage > 0) {
       context.extraDamageQueue.push({
-        type: "recuo_dano",
+        type: "magical",
         mode: "absolute",
         baseDamage: recoilDamage,
         attacker: owner,

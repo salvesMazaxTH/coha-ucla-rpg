@@ -30,6 +30,7 @@ const vaelSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -59,6 +60,7 @@ const vaelSkills = [
         attacker: user,
         defender: primary,
         skill: this,
+        type: "physical",
         context,
         critOptions: { disable: true }, // sem crítico
         allChampions: context?.allChampions,
@@ -88,6 +90,7 @@ const vaelSkills = [
         attacker: user,
         defender: secondaryTarget,
         skill: this,
+        type: "physical",
         context,
         critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,
@@ -123,6 +126,7 @@ const vaelSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();

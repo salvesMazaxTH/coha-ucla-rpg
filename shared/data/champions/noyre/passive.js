@@ -61,6 +61,7 @@ function _processEntropy(owner, context, resolver, stacksCap = 7) {
           allChampions: context.allChampions,
           mode: "piercing",
           piercingPercentage: 75,
+          type: "magical",
         }).execute();
 
         if (Array.isArray(damageResult)) {

@@ -6,7 +6,7 @@ const vulnaraSkills = [
   // ========================
   // Disparo Básico (global)
   // ========================
-  basicShot,
+  { ...basicShot, type: "physical" },
   // ========================
   // Habilidades Especiais
   // ========================
@@ -84,6 +84,7 @@ const vulnaraSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
@@ -147,6 +148,7 @@ const vulnaraSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
