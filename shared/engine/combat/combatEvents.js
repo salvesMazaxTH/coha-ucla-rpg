@@ -86,12 +86,7 @@ export function emitCombatEvent(eventName, payload, champions, options = {}) {
         });
 
         if (res) {
-          if (debugMode)
-            /*  console.log(
-              `[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`,
-              res,
-            ); */
-            results.push(res);
+          results.push(res);
         }
       } catch (err) {
         console.error(

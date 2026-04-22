@@ -129,7 +129,7 @@ const jeffTheDeathSkills = [
 
           context.isDot = true;
 
-          new DamageEvent({
+          const result = new DamageEvent({
             baseDamage: punishDamage,
             mode: DamageEvent.Modes.ABSOLUTE,
             attacker: null,
@@ -142,6 +142,14 @@ const jeffTheDeathSkills = [
             context,
             allChampions: context?.allChampions,
           }).execute();
+
+          if (result?.immune) {
+            return { log: `${owner.name} é imune ao dano de Abraço da Morte!` };
+          }
+
+          return {
+            log: `${owner.name} sofre ${result?.totalDamage ?? punishDamage} de dano de <b>Abraço da Morte</b>.`,
+          };
         },
       });
 

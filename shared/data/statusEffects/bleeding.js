@@ -29,11 +29,11 @@ const bleeding = {
     const result = dmgEvent.execute();
 
     if (result?.immune) {
-      return { log: `${owner.name} é imune ao dano de Sangramento!` };
+      return { log: `${formatChampionName(owner)} é imune ao dano de Sangramento!` };
     }
 
     return {
-      log: `${owner.name} sofre ${result?.totalDamage ?? totalDamage} de dano de Sangramento (${stacks}x).`,
+      log: `${formatChampionName(owner)} sofre ${result?.totalDamage ?? totalDamage} de dano de <b>Sangramento</b> (${stacks}x).`,
     };
   },
 
