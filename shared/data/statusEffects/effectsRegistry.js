@@ -9,8 +9,7 @@ import bleeding from "./bleeding.js";
 import absoluteImmunity from "./absoluteImmunity.js";
 import conductor from "./conductor.js";
 import invisible from "./invisible.js";
-// A IMPLEMENTAR: poisoned
-/* import poisoned from "./poisoned.js";*/
+import poisoned from "./poisoned.js";
 
 export const StatusEffectsRegistry = {
   paralyzed,
@@ -24,6 +23,5 @@ export const StatusEffectsRegistry = {
   absoluteImmunity,
   conductor,
   invisible,
-
-  /*   poisoned, IMPLEMENTAÇÃO FUTURA */
+  poisoned,
 };

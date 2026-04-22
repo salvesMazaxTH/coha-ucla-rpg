@@ -98,6 +98,13 @@ export const StatusIndicator = {
       label: "Sangramento",
       showStackCount: true,
     },
+    poisoned: {
+      type: "image",
+      value: "/assets/indicators/poisoned_indicator.png",
+      background: "rgba(80, 255, 80, 0.88)",
+      label: "Envenenado",
+      showStackCount: true,
+    },
     rooted: {
       type: "emoji",
       value: "🌱",
