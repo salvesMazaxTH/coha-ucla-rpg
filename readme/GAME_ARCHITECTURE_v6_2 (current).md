@@ -827,6 +827,24 @@ Conversão: `champion.getSkillCost(skill)` retorna `skill.ultCost * 4` (unidades
 
 `DamageEvent` é uma **classe instanciada por evento** (não singleton). Cada evento de dano cria uma instância independente, executa a pipeline numerada e retorna um resultado estruturado.
 
+### Contrato Obrigatório de Dano
+
+Toda instanciação de `new DamageEvent({...})` deve informar obrigatoriamente o campo `type`, com valor string exato `"physical"` ou `"magical"`.
+
+Esse campo é parte do contrato canônico do motor de combate e passa por toda a pipeline, pelos hooks e pelo resultado final do evento.
+
+### Relação com `basicShot`
+
+O `basicShot` não fixa mais o tipo de dano no próprio arquivo base. O `type` do `DamageEvent` é decidido pela cópia da skill usada por cada campeão.
+
+Exemplo:
+
+```js
+{ ...basicShot, type: "magical" }
+```
+
+Na prática, isso permite que o perfil do campeão, incluindo uma convenção como `damageType` em seus dados base, determine se o disparo básico será físico ou mágico sem precisar alterar a skill compartilhada.
+
 ### Convenção Oficial de Papéis
 
 | Camada               | Alias canônico              |
@@ -845,6 +863,7 @@ const result = new DamageEvent({
   attacker: user,
   defender: target,
   skill,
+  type: "physical", // obrigatório: "physical" | "magical"
   context,
   mode, // "standard" | "piercing" | "absolute" (padrão: "standard")
   piercingPercentage, // % da defesa do alvo a ignorar (0-100, modo piercing, default 100)
@@ -1780,6 +1799,7 @@ export default {
   Critical: 10,
   LifeSteal: 0,
   elementalAffinities: ["lightning"],
+  damageType: "magical", // convenção do campeão para orientar skills compartilhadas como basicShot
   // unreleased: true,  ← oculta do pool padrão
 };
 ```
@@ -1787,11 +1807,12 @@ export default {
 ### 3. `skills.js` — Array de habilidades
 
 ```js
+import data from "./data.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import basicAttack from "../basicAttack.js";
 
 const skills = [
-  basicAttack,
+  { ...basicAttack, type: data.damageType ?? "physical" },
   {
     key: "minha_skill",
     name: "Nome da Skill",
