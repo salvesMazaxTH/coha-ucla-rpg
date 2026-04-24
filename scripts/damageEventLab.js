@@ -111,8 +111,7 @@ function parseArgs(argv) {
     attackerAttack: null,
     defenderDefense: null,
     noPassive: false,
-    // Defaults hardcoded for quick local repro: Tharox ultado -> Impacto da Couraca.
-    preSkills: ["apoteose_do_monolito", "apoteose_do_monolito"],
+    preSkills: [],
     attackerSet: [],
     defenderSet: [],
     contextSet: [],
