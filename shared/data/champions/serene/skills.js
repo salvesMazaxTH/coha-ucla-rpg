@@ -64,16 +64,24 @@ const sereneSkills = [
       const [enemy] = targets;
 
       user.runtime ??= {};
+      const previousSkillKey = user.runtime.lastSereneSkillKey ?? null;
       user.runtime.sereneStreak ??= 0;
-      user.runtime.lastSereneSkillTurn ??= null;
 
-      // streak: conta usos consecutivos
-      if (user.runtime.lastSereneSkillTurn === context.currentTurn - 1) {
+      console.debug(
+        `[Serene:selo_da_quietude] START turn=${context.currentTurn} execIdx=${context.executionIndex ?? "N/A"} user=${user.name} target=${enemy?.name} prevSkill=${previousSkillKey} prevStreak=${user.runtime.sereneStreak}`,
+      );
+
+      // streak: conta usos consecutivos da própria skill da Serene
+      const isConsecutiveQuietudeUse = previousSkillKey === this.key;
+      if (isConsecutiveQuietudeUse) {
         user.runtime.sereneStreak += 1;
       } else {
         user.runtime.sereneStreak = 1;
       }
-      user.runtime.lastSereneSkillTurn = context.currentTurn;
+
+      console.debug(
+        `[Serene:selo_da_quietude] STREAK turn=${context.currentTurn} consecutiveBySkill=${isConsecutiveQuietudeUse} streakNow=${user.runtime.sereneStreak}`,
+      );
 
       const baseDamage = enemy.maxHP * (this.hpDamagePercent / 100);
       const result = new DamageEvent({
@@ -90,16 +98,25 @@ const sereneSkills = [
 
       // Stun logic
       let stunSuccess = true;
+      let stunRoll = null;
       if (user.runtime.sereneStreak > 1) {
         // 50% chance a partir do segundo uso consecutivo
-        stunSuccess = Math.random() < 0.5;
+        stunRoll = Math.random();
+        stunSuccess = stunRoll < 0.5;
       }
+
+      console.debug(
+        `[Serene:selo_da_quietude] STUN_CHECK streak=${user.runtime.sereneStreak} roll=${stunRoll ?? "N/A"} success=${stunSuccess} evaded=${Boolean(result?.evaded)} immune=${Boolean(result?.immune)}`,
+      );
 
       if (!result?.evaded && !result?.immune && stunSuccess) {
         const stunned = enemy.applyStatusEffect(
           "stunned",
           this.stunDuration,
           context,
+        );
+        console.debug(
+          `[Serene:selo_da_quietude] APPLY_STUN attempted=true applied=${Boolean(stunned)} target=${enemy?.name}`,
         );
         if (stunned && stunned.log && result?.log) {
           result.log += `\n${formatChampionName(enemy)} foi atordoado pela Quietude!`;
@@ -115,7 +132,14 @@ const sereneSkills = [
         result.log =
           (result.log || "") +
           `\n${formatChampionName(enemy)} resistiu ao atordoamento!`;
+        console.debug(
+          `[Serene:selo_da_quietude] APPLY_STUN attempted=true applied=false reason=roll_failed target=${enemy?.name}`,
+        );
       }
+
+      console.debug(
+        `[Serene:selo_da_quietude] END turn=${context.currentTurn} streak=${user.runtime.sereneStreak} resultLogPresent=${Boolean(result?.log)}`,
+      );
 
       return result;
     },

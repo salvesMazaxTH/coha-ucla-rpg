@@ -9,12 +9,25 @@ export default {
 
   hookScope: {
     onAfterDmgTaking: "defender",
+    onActionResolved: "actionSource",
   },
 
   // Marca dano recebido no turno
   onAfterDmgTaking({ attacker, defender, owner, context }) {
     owner.runtime = owner.runtime || {};
     owner.runtime.sereneDamagedTurn = context.currentTurn;
+  },
+
+  onActionResolved({ owner, actionSource, skill, context }) {
+    if (!actionSource || actionSource.id !== owner.id) return;
+
+    owner.runtime ??= {};
+    const previousSkillKey = owner.runtime.lastSereneSkillKey ?? null;
+    owner.runtime.lastSereneSkillKey = skill?.key ?? null;
+
+    console.debug(
+      `[Serene:passive:onActionResolved] user=${owner.name} skill=${skill?.key ?? "N/A"} prevSkill=${previousSkillKey} nextSkill=${owner.runtime.lastSereneSkillKey} turn=${context?.currentTurn ?? "N/A"}`,
+    );
   },
 
   // Executa no início do turno

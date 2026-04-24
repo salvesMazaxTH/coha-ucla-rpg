@@ -30,6 +30,7 @@ import theopetra from "./theopetra/index.js";
 import isarelis from "./isarelis/index.js";
 import morakhan from "./morakhan/index.js";
 import noyre from "./noyre/index.js";
+import tox_vipranna from "./tox_vipranna/index.js";
 
 const championDB = {
   ralia,
@@ -64,6 +65,7 @@ const championDB = {
   isarelis,
   morakhan,
   noyre,
+  tox_vipranna,
 };
 
 export default championDB;

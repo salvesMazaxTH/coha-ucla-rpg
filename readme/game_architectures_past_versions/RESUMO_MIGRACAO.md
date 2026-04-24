@@ -24,8 +24,7 @@ A refatoração do sistema de recursos de **mana/energia** para **ultômetro** f
 
 #### ✅ Contexto (createBaseContext):
 
-- ✅ `registerResourceChange()` - Usa `addUlt()` e `spendUlt()`
-- ✅ `registerUltGain()` - **NOVA FUNÇÃO** para ganho de ultômetro por ações
+- ✅ `registerResourceChange()` - Usa `addUlt()` e `spendUlt()` numa única API visual
 - ✅ `resourceEvents[]` - Agora usa `resourceType: "ult"`
 
 #### ✅ Validação de Skills:

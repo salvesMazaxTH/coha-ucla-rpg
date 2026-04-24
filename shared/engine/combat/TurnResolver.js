@@ -1139,10 +1139,6 @@ export class TurnResolver {
         return value;
       },
 
-      // -- ULT GAIN REGISTRY (Visual Only) -- //
-      registerUltGain({ target, amount, sourceId } = {}) {
-        return this.registerResourceChange({ target, amount, sourceId });
-      },
       // -- DIALOG REGISTRY -- //
       registerDialog({
         message,

@@ -1,4 +1,20 @@
-﻿## [2026-04-22] Quick: Lana ganha Escudo de Feitiço por turno
+﻿## [2026-04-23] Quick: Serene streak centralizada no passivo
+
+- `shared/data/champions/serene/passive.js` agora registra `lastSereneSkillKey` em `onActionResolved`, usando a assinatura-contrato do hook em vez de espalhar marcação pelas skills.
+- `shared/data/champions/serene/skills.js` perdeu a instrumentação temporária e passou a ler apenas o estado centralizado para decidir a streak do `Selo da Quietude`.
+- A checagem confirmou que o contrato `onActionResolved` já cobre a necessidade de rastrear uso consecutivo sem depender de `currentTurn` global.
+
+---
+
+## [2026-04-22] Quick: API de recurso de ult unificada
+
+- `shared/engine/combat/TurnResolver.js` deixou de expor `registerUltGain`; o contexto agora usa só `registerResourceChange()` para registrar ganho e gasto de ult pelo sinal do valor.
+- A documentação de arquitetura foi alinhada para não manter o alias redundante como API pública.
+- Validação local pendente após a edição.
+
+---
+
+## [2026-04-22] Quick: Lana ganha Escudo de Feitiço por turno
 
 - `shared/data/champions/lana/passive.js` voltou a aplicar um `spell` shield no `onTurnStart` enquanto `owner.runtime.lana.triggered` ainda for `false`, mantendo o buff ativo só enquanto Tutu estiver vivo.
 - `shared/core/championCombat.js` passou a decair escudos com `decayPerTurn` por turno e o `spellShield` agora bloqueia apenas dano `magical` no pre-check.

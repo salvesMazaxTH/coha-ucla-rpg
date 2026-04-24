@@ -30,7 +30,7 @@ export default {
     let finalDamage = damage;
 
     if (isPhysical)
-      finalDamage = Math.max(0, finalDamage - this.flatReductionVSContact);
+      finalDamage = Math.max(5, finalDamage - this.flatReductionVSContact); // 5 para respeitar o piso mínimo global
 
     finalDamage *= 0.9;
 

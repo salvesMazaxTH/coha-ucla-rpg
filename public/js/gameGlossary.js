@@ -22,6 +22,11 @@ export const GAME_GLOSSARY = {
     description:
       "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
   },
+  escudo_de_feitiço: {
+    title: "Escudo de Feitiço",
+    description:
+      "O campeão recebe um escudo que absorve o próximo dano que seja mágico.",
+  },
   gelado: {
     title: "Gelado",
     description: "O campeão tem sua velocidade e ataque reduzidos.",

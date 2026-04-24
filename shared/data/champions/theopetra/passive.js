@@ -4,9 +4,10 @@ export default {
   key: "rocha_eternizada",
   name: "Rocha Eternizada",
   maxStacks: 3,
-  bonusPercent: 95, // bônus de dano na próxima habilidade
+  bonusPercent: 135, // bônus de dano na próxima habilidade
+  piercingRatio: 0.35, // 35% do dano se torna perfurante
   description() {
-    return `Ganha 1 stack ao tomar dano (máx ${this.maxStacks}). Ao atingir ${this.maxStacks} stacks, a próxima habilidade causa +${this.bonusPercent}% de dano e os stacks são zerados.\nTheópetra é imune a efeitos de Controle (softCC e hardCC).`;
+    return `Ganha 1 stack ao tomar dano (máx ${this.maxStacks}). Ao atingir ${this.maxStacks} stacks, a próxima habilidade causa +${this.bonusPercent}% de dano e se torna perfurante (${this.piercingRatio * 100}% de perfuração) e os stacks são zerados.\nTheópetra é imune a efeitos de Controle (softCC e hardCC).`;
   },
 
   hookScope: {
@@ -45,9 +46,17 @@ export default {
     )
       return;
     owner.runtime.theopetraStacks = 0;
+
     const bonus = Math.floor(damage * (this.bonusPercent / 100));
+
+    const finalBaseDamage = damage + bonus;
+
     return {
-      damage: damage + bonus,
+      damage: finalBaseDamage,
+      piercingPercentage: this.piercingRatio * 100,
+      mode: "piercing",
+      baseDamage: finalBaseDamage,
+      preMitigationDamage: finalBaseDamage,
       log: `[PASSIVA — Rocha Eternizada] ${formatChampionName(owner)} consome os stacks e recebe +${this.bonusPercent}% de dano nesta habilidade!`,
     };
   },

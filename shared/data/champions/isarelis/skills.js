@@ -73,7 +73,7 @@ const isarelisSkills = [
         ownerId: user.id,
 
         hookScope: {
-          onActionResolved: "source",
+          onActionResolved: "actionSource",
         },
 
         onActionResolved({ owner, actionSource, context }) {

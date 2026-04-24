@@ -456,7 +456,7 @@ export function createCombatAnimationManager(deps) {
     audioManager.play("damage");
 
     if (portraitWrapper) {
-      const hpDamage = Math.max(0, Number(amount) || 0);
+      const hpDamage = Math.max(0, Number(rawAmount) || 0);
       const hasShieldAbsorption = (Number(absorbedByShield) || 0) > 0;
       const floatValue =
         usesObliterateStyle || hasFinishing
@@ -498,7 +498,7 @@ export function createCombatAnimationManager(deps) {
     }
 
     // dano normal
-    const hpDamage = Math.max(0, Number(amount) || 0);
+    const hpDamage = Math.max(0, Number(rawAmount) || 0);
 
     const hpText = championEl.querySelector(".hp")?.textContent || "";
     const visualState = parseVisualHpState(hpText);

@@ -1177,7 +1177,6 @@ context = {
   registerBuff({ ... }),
   registerShield({ ... }),
   registerResourceChange({ ... }),
-  registerUltGain({ ... }),
   registerDialog({ ... }),
 }
 ```
