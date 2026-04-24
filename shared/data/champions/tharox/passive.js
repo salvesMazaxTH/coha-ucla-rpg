@@ -3,7 +3,7 @@ import { formatChampionName } from "../../../ui/formatters.js";
 export default {
   name: "Massa Inamolgável",
   stacksNeeded: 2,
-  defBonus: 15,
+  defBonus: 20,
   hpBonus: 10,
   description() {
     return `Sempre que Tharox tomar dano, ele ganha 1 acúmulo de Inércia. Ao chegar a ${this.stacksNeeded}, consome ambos e ganha +${this.defBonus} Defesa e +${this.hpBonus} HP (aumenta a vida).`;
