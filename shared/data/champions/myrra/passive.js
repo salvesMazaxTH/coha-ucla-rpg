@@ -3,7 +3,7 @@ export default {
   name: "Olhar que Encontra a Falha",
 
   // Scaling de crítico
-  critPerHit: 5,
+  critPerHit: 3,
 
   // Conversão de excesso em dano
   critConversionThreshold: 55,
@@ -18,7 +18,7 @@ export default {
 
     Quando ultrapassa ${this.critConversionThreshold}%, o excesso é convertido em dano adicional (${this.critOverflowToDamage * 100}% do excesso).
 
-    Acertos críticos recebem +${this.critBonusFlat}% de dano adicional.
+    Acertos críticos recebem +${this.critBonusFlat} de dano adicional.
     `;
   },
 
