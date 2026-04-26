@@ -96,7 +96,7 @@ export class DamageEvent {
     //   "[DamageEvent_constructor] ALL-CHAMPIONS DEBUG allChampions in DamageEvent:",
     //   this.allChampions,
     // );
-    this.critOptions = params.critOptions ?? [];
+    this.critOptions = params.critOptions ?? params.context?.critOptions ?? [];
     this.flags = params.flags ?? {};
 
     this.damageDepth = this.context.damageDepth ?? 0;

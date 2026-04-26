@@ -2,6 +2,8 @@
 // DEFENSE SYSTEM
 // ============================================================================
 
+const MIN_DAMAGE_FLOOR = 5;
+
 function defToMitPct(defense, debugMode) {
   if (debugMode) console.group(`🛡️ [DEFENSE DEBUG]`);
 
@@ -93,7 +95,11 @@ export function composeDamage(event) {
 
   // 1. Tira a foto do dano máximo alcançado antes do alvo se defender
   event.preMitigationDamage = event.damage;
-  console.log(`📸 Dano pré-mitigação: ${event.preMitigationDamage.toFixed(2)}`);
+  if (event.constructor.debugMode) {
+    console.log(
+      `📸 Dano pré-mitigação: ${event.preMitigationDamage.toFixed(2)}`,
+    );
+  }
 
   event.crit ??= { didCrit: false, critExtra: 0 };
 
@@ -124,10 +130,22 @@ export function composeDamage(event) {
     ? Math.min(baseDefense, currentDefense)
     : currentDefense;
 
-  const { flat, percent } = event.defender.getTotalDamageReduction?.() || {
-    flat: 0,
-    percent: 0,
-  };
+  let flat = 0;
+  let percent = 0;
+
+  // If context requests to ignore defender damage reductions, skip percent/flat reductions
+  if (!event.context?.ignoreDamageReduction) {
+    const tr = event.defender.getTotalDamageReduction?.() || {
+      flat: 0,
+      percent: 0,
+    };
+    flat = tr.flat || 0;
+    percent = tr.percent || 0;
+  } else {
+    console.log(
+      "[DAMAGE COMPOSITION] ignoreDamageReduction ativo: pulando totalDamageReduction do defensor (percent=0, flat=0)",
+    );
+  }
 
   // ---------------- STANDARD ----------------
   if (event.mode === event.constructor.Modes.STANDARD) {
@@ -224,10 +242,12 @@ export function composeDamage(event) {
 
   // -------- FLOOR --------
   if (!event.context?.ignoreMinimumFloor) {
-    event.damage = Math.max(event.damage, 5);
+    event.damage = Math.max(event.damage, MIN_DAMAGE_FLOOR);
   }
 
-  event.damage = Math.min(event.damage, event.constructor.GLOBAL_DMG_CAP);
+  if (Number.isFinite(event.constructor.GLOBAL_DMG_CAP)) {
+    event.damage = Math.min(event.damage, event.constructor.GLOBAL_DMG_CAP);
+  }
 
   // 2. Tira a foto do dano matemático final, pronto para ser aplicado
 

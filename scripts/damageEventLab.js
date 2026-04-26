@@ -112,6 +112,7 @@ function parseArgs(argv) {
     defenderDefense: null,
     noPassive: false,
     preSkills: [],
+    preSkillsDefender: [],
     attackerSet: [],
     defenderSet: [],
     contextSet: [],
@@ -144,6 +145,15 @@ function parseArgs(argv) {
         throw new Error("Missing value for --pre-skill");
       }
       out.preSkills.push(next);
+      i += 1;
+      continue;
+    }
+
+    if (key === "pre-skill-defender") {
+      if (next == null || next.startsWith("--")) {
+        throw new Error("Missing value for --pre-skill-defender");
+      }
+      out.preSkillsDefender.push(next);
       i += 1;
       continue;
     }
@@ -194,6 +204,7 @@ function parseArgs(argv) {
     else if (key === "skill") out.skill = next;
     else if (key === "turn") out.turn = Number(next);
     else if (key === "stacks") out.stacks = Number(next);
+    else if (key === "crit") out.crit = String(next);
     else if (key === "compare-path") out.comparePath = next;
     else if (key === "compare-min") out.compareMin = Number(next);
     else if (key === "compare-max") out.compareMax = Number(next);
@@ -268,6 +279,15 @@ function createContext({ allChampions, turn, sourceId }) {
       this.shields.push(entry);
     },
   };
+}
+
+// Helper to set critOptions on context when requested by CLI
+function applyCritOptionToContext(context, critFlag) {
+  if (!critFlag) return;
+  const v = String(critFlag).toLowerCase();
+  if (v === "disable") context.critOptions = { disable: true };
+  else if (v === "force") context.critOptions = { force: true };
+  else context.critOptions = {}; // auto / unknown -> leave empty
 }
 
 function createLabResolver({ activeChampions }) {
@@ -417,6 +437,9 @@ function runScenario(options, tag) {
 
   applyAssignments(context, options.contextSet || []);
 
+  // Apply CLI crit option to context so DamageEvent can pick it up
+  applyCritOptionToContext(context, options.crit);
+
   const trackedBefore = [];
   for (const path of options.track || []) {
     const { root, localPath } = resolveRootByPath(path, {
@@ -428,6 +451,30 @@ function runScenario(options, tag) {
   }
 
   const skill = getSkill(attacker, options.skill);
+  // Defender pre-skills (executed before attacker's pre-skills)
+  const preSkillDefQueue = Array.isArray(options.preSkillsDefender)
+    ? options.preSkillsDefender
+    : options.preSkillsDefender
+      ? [options.preSkillsDefender]
+      : [];
+
+  const preSkillResultsDefender = [];
+  for (const preSkillKey of preSkillDefQueue) {
+    if (!preSkillKey || preSkillKey === "none") continue;
+    const skillExists = (defender.skills || []).some(
+      (s) => s.key === preSkillKey,
+    );
+    if (!skillExists) continue;
+    const preSkill = getSkill(defender, preSkillKey);
+    const preResult = executeSkill({
+      user: defender,
+      defender: attacker,
+      skill: preSkill,
+      context,
+    });
+
+    preSkillResultsDefender.push({ key: preSkillKey, result: preResult });
+  }
 
   const preSkillQueue = Array.isArray(options.preSkills)
     ? options.preSkills
@@ -450,12 +497,12 @@ function runScenario(options, tag) {
       skill: preSkill,
       context,
     });
+
     preSkillResults.push({
       key: preSkillKey,
       result: preResult,
     });
   }
-
   const baseDamage = estimateSkillBaseDamage(attacker, skill);
 
   const result = executeSkill({

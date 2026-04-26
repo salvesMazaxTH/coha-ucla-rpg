@@ -24,6 +24,8 @@ import torren from "./torren/index.js";
 import lana from "./lana/index.js";
 import lana_dino from "./lana_dino/index.js";
 import bruno from "./bruno/index.js";
+import myrra from "./myrra/index.js";
+import akane from "./akane/index.js";
 import sengoku from "./sengoku/index.js";
 import sengoku_primordial from "./sengoku_primordial/index.js";
 import theopetra from "./theopetra/index.js";
@@ -58,6 +60,8 @@ const championDB = {
   torren,
   lana,
   lana_dino,
+  myrra,
+  akane,
   bruno,
   sengoku,
   sengoku_primordial,
