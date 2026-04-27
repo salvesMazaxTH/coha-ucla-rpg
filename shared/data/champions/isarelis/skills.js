@@ -1,7 +1,15 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
+import totalBlock from "../totalBlock.js";
 
 const isarelisSkills = [
+  // =========================
+  // Bloqueio Total (global)
+  // =========================
+  totalBlock,
+  // =========================
+  // Habilidades Especiais
+  // =========================
   {
     key: "eviscerar",
     name: "Eviscerar",
