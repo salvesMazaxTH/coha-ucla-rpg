@@ -68,80 +68,81 @@ const torrenSkills = [
     },
   },
 
-    {
-      key: "desprezar_os_fracos",
-      name: "Desprezar os Fracos",
+  {
+    key: "desprezar_os_fracos",
+    name: "Desprezar os Fracos",
 
-      bf: 40,
-      contact: true,
-      damageMode: "piercing",
-      piercingPercentage: 100,
-      thresholdMultiplier: 1.35,
-      priority: 2,
+    bf: 40,
+    contact: true,
+    damageMode: "piercing",
+    piercingPercentage: 100,
+    thresholdMultiplier: 1.35,
+    priority: 2,
 
-      tauntDuration: 2,
+    tauntDuration: 2,
 
-      description() {
-        return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) ao inimigo mais frágil.
-        Se sua fragilidade for significativamente maior que a de Torren, ele é provocado por ${this.tauntDuration} turno(s) e causa menos dano a outros inimigos.`;
-      },
-      targetSpec: ["all:enemy"],
-
-      resolve({ user, targets, context = {} }) {
-        const baseDamage = (user.Attack * this.bf) / 100;
-
-        const torrenScore = user.Attack / (user.HP + user.Defense);
-
-        const scoredTargets = targets.map((t) => {
-          const score = t.Attack / Math.max(1, t.HP + t.Defense);
-          return { t, score };
-        });
-
-        // 🔹 sempre escolhe o mais frágil (mesmo se não passar threshold)
-        const best = scoredTargets.reduce((best, curr) => {
-          return !best || curr.score > best.score ? curr : best;
-        }, null);
-
-        if (!best) return null; // segurança
-
-        const target = best.t;
-        const targetScore = best.score;
-
-        const damageEvent = new DamageEvent({
-          baseDamage,
-          mode: this.damageMode,
-          piercingPercentage: this.piercingPercentage,
-          attacker: user,
-          defender: target,
-          skill: this,
-          type: "physical",
-          context,
-          allChampions: context?.allChampions,
-        }).execute();
-
-        // 🔥 condição real de fraqueza
-        const isWeakEnough =
-          targetScore >= torrenScore * this.thresholdMultiplier;
-
-        let tauntLog = null;
-
-        if (isWeakEnough) {
-          tauntLog = target.applyTaunt(user.id, this.tauntDuration, context);
-          target.addDamageModifier({
-            key: "desprezado",
-            expiresAtTurn: context.currentTurn + this.tauntDuration,
-            apply: ({ damage, defender }) => {
-              if (!defender || defender.id !== user.id) {
-                return damage * 0.7;
-              }
-              return damage;
-            },
-          });
-        }
-
-        return tauntLog ? [damageEvent, tauntLog] : damageEvent;
-      },
+    description() {
+      return `Causa dano perfurante (${this.piercingPercentage}% de perfuração) ao inimigo mais frágil.
+      Se sua fragilidade for significativamente maior que a de Torren, ele é provocado por ${this.tauntDuration} turno(s) e causa menos dano a outros alvos.`;
     },
+    
+    targetSpec: ["all:enemy"],
+
+    resolve({ user, targets, context = {} }) {
+      const baseDamage = (user.Attack * this.bf) / 100;
+
+      const torrenScore = user.Attack / Math.max(1, user.HP + user.Defense);
+
+      const scoredTargets = targets.map((t) => {
+        const score = t.Attack / Math.max(1, t.HP + t.Defense);
+        return { t, score };
+      });
+
+      // 🔹 sempre escolhe o mais frágil (mesmo se não passar threshold)
+      const best = scoredTargets.reduce((best, curr) => {
+        return !best || curr.score > best.score ? curr : best;
+      }, null);
+
+      if (!best) return null; // segurança
+
+      const target = best.t;
+      const targetScore = best.score;
+
+      const damageEvent = new DamageEvent({
+        baseDamage,
+        mode: this.damageMode,
+        piercingPercentage: this.piercingPercentage,
+        attacker: user,
+        defender: target,
+        skill: this,
+        type: "physical",
+        context,
+        allChampions: context?.allChampions,
+      }).execute();
+
+      // 🔥 condição real de fraqueza
+      const isWeakEnough =
+        targetScore >= torrenScore * this.thresholdMultiplier;
+
+      let tauntLog = null;
+
+      if (isWeakEnough) {
+        tauntLog = target.applyTaunt(user.id, this.tauntDuration, context);
+        target.addDamageModifier({
+          key: "desprezado",
+          expiresAtTurn: context.currentTurn + this.tauntDuration,
+          apply: ({ damage, defender }) => {
+            if (!defender || defender.id !== user.id) {
+              return damage * 0.7;
+            }
+            return damage;
+          },
+        });
+      }
+
+      return tauntLog ? [damageEvent, tauntLog] : damageEvent;
+    },
+  },
 
   {
     key: "juggernaut",

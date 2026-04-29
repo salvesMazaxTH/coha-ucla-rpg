@@ -3,8 +3,8 @@ import { formatChampionName } from "../../../ui/formatters.js";
 formatChampionName
 
 export default {
-  key: "torren_passive",
-  name: "Torren-PASSIVE",
+  key: "inexoravel",
+  name: "Inexorável",
 
   description() {
     return `Só pode sofrer dano direto de habilidades. Dano ao longo do tempo e efeitos não o afetam. Além disso, Torren recebe 10% a menos de dano de todas as fontes (exceto Dano Absoluto).`;
