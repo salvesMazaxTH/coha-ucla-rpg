@@ -43,11 +43,11 @@ const akaneSkills = [
     key: "banho_de_sangue",
     name: "Banho de Sangue",
     lifeStealBuff: 95,
-    buffDuration: 1,
+    buffDuration: 2,
     priority: 0,
 
     description() {
-      return `Ganha ${this.lifeStealBuff}% de Roubo de Vida por ${this.buffDuration} turno.`;
+      return `Ganha ${this.lifeStealBuff}% de Roubo de Vida por ${this.buffDuration} turno(s).`;
     },
 
     targetSpec: ["self"],
