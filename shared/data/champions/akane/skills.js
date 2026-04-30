@@ -10,7 +10,7 @@ const akaneSkills = [
   {
     key: "corte_carmesim",
     name: "Corte Carmesim",
-    bf: 70,
+    bf: 65,
     contact: true,
     damageMode: "standard",
     priority: 0,
@@ -71,7 +71,7 @@ const akaneSkills = [
   {
     key: "massacre_escarlate",
     name: "Massacre Escarlate",
-    bf: 140,
+    bf: 95,
     contact: true,
     damageMode: "standard",
     isUltimate: true,
