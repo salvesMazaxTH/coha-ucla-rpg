@@ -151,85 +151,31 @@ export function createCombatAnimationManager(deps) {
   let currentPhase = null;
   let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
-  const matchStats = new Map();
   const statsTabKeys = ["damage", "healingReceived", "healingDone", "rawTaken"];
 
-  function ensureStatsEntry(championId, fallback = {}) {
-    if (!championId) return null;
+  function getSnapshotStatsEntry(champion) {
+    if (!champion) return null;
 
-    const existing = matchStats.get(championId);
-    if (existing) {
-      if (fallback.name && !existing.name) existing.name = fallback.name;
-      if (typeof fallback.team === "number") existing.team = fallback.team;
-      return existing;
-    }
+    const backendStats = champion.matchStats || {};
 
-    const champion = deps.activeChampions.get(championId);
-    const entry = {
-      championId,
-      name: fallback.name || champion?.name || `ID ${championId}`,
-      team: typeof fallback.team === "number" ? fallback.team : champion?.team,
-      damage: 0,
-      healingReceived: 0,
-      healingDone: 0,
-      rawTaken: 0,
+    return {
+      championId: champion.id,
+      name: champion.name || `ID ${champion.id}`,
+      portrait: champion.portrait || "",
+      team: champion.team,
+      damage: Math.max(0, toNumber(backendStats.damage)),
+      healingReceived: Math.max(0, toNumber(backendStats.healingReceived)),
+      healingDone: Math.max(0, toNumber(backendStats.healingDone)),
+      rawTaken: Math.max(0, toNumber(backendStats.rawTaken)),
     };
-
-    matchStats.set(championId, entry);
-    return entry;
-  }
-
-  function recordDamageStats(effect) {
-    const dealerId = effect?.userId || effect?.sourceId;
-    const targetId = effect?.targetId;
-
-    const dealer = ensureStatsEntry(dealerId);
-    const target = ensureStatsEntry(targetId);
-
-    if (dealer) {
-      dealer.damage += Math.max(0, toNumber(effect?.amount));
-    }
-
-    if (target) {
-      const rawCandidate = toNumber(effect?.rawAmount);
-      const fallbackRaw = Math.max(0, toNumber(effect?.amount));
-      target.rawTaken += Math.max(0, rawCandidate || fallbackRaw);
-    }
-  }
-
-  function recordHealStats(effect) {
-    const target = ensureStatsEntry(effect?.targetId);
-    const source = ensureStatsEntry(effect?.sourceId);
-    const amount = Math.max(0, toNumber(effect?.amount));
-
-    if (target) {
-      target.healingReceived += amount;
-    }
-
-    if (source) {
-      source.healingDone += amount;
-    }
-  }
-
-  function recordLifestealStats(effect) {
-    const target = ensureStatsEntry(effect?.targetId);
-    const amount = Math.max(0, toNumber(effect?.amount));
-    if (target) {
-      target.healingReceived += amount;
-    }
-  }
-
-  function ensureAllActiveChampionsTracked() {
-    deps.activeChampions.forEach((champion, championId) => {
-      ensureStatsEntry(championId, {
-        name: champion?.name,
-        team: champion?.team,
-      });
-    });
   }
 
   function sortEntriesBy(metricKey) {
-    return Array.from(matchStats.values()).sort((a, b) => {
+    const entries = Array.from(deps.activeChampions.values())
+      .map(getSnapshotStatsEntry)
+      .filter(Boolean);
+
+    return entries.sort((a, b) => {
       const valueDiff = (b[metricKey] || 0) - (a[metricKey] || 0);
       if (valueDiff !== 0) return valueDiff;
 
@@ -237,7 +183,9 @@ export function createCombatAnimationManager(deps) {
       const teamB = typeof b.team === "number" ? b.team : 99;
       if (teamA !== teamB) return teamA - teamB;
 
-      return String(a.name || "").localeCompare(String(b.name || ""));
+      return String(a.championId || "").localeCompare(
+        String(b.championId || ""),
+      );
     });
   }
 
@@ -255,16 +203,32 @@ export function createCombatAnimationManager(deps) {
 
     tbody.innerHTML = entries
       .map((entry, index) => {
-        const teamLabel = typeof entry.team === "number" ? `T${entry.team}` : "-";
+        const safePortrait = String(entry.portrait || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
         const safeName = String(entry.name || `ID ${entry.championId}`)
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        const localTeam = Number(window.playerTeam);
+        const relationClass =
+          Number.isFinite(localTeam) && typeof entry.team === "number"
+            ? entry.team === localTeam
+              ? "ally"
+              : "enemy"
+            : "neutral";
         const value = Math.round(Math.max(0, toNumber(entry[metricKey])));
         return `
           <tr>
             <td>${index + 1}</td>
-            <td><span class="match-stats-team">${teamLabel}</span> ${safeName}</td>
+            <td>
+              <span class="match-stats-avatar-wrap ${relationClass}" title="${safeName}">
+                <img class="match-stats-portrait" src="${safePortrait}" alt="${safeName}">
+              </span>
+            </td>
             <td>${value}</td>
           </tr>
         `;
@@ -302,7 +266,6 @@ export function createCombatAnimationManager(deps) {
   }
 
   function renderMatchStatsPanel() {
-    ensureAllActiveChampionsTracked();
     bindStatsPanelTabs();
 
     renderStatsRows("matchStatsDamageBody", "damage");
@@ -328,7 +291,6 @@ export function createCombatAnimationManager(deps) {
   }
 
   function resetMatchStats() {
-    matchStats.clear();
     hideMatchStatsPanel();
   }
 
@@ -567,8 +529,6 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
-    recordDamageStats(effect);
-
     const {
       targetId,
       userId,
@@ -751,8 +711,6 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateHeal(effect) {
-    recordHealStats(effect);
-
     const { targetId, amount } = effect;
 
     const championEl = getChampionElement(targetId);
@@ -790,8 +748,6 @@ export function createCombatAnimationManager(deps) {
   }
 
   async function animateLifesteal(effect) {
-    recordLifestealStats(effect);
-
     const { targetId, amount, fromTargetId } = effect;
 
     const championEl = getChampionElement(targetId);
@@ -1465,13 +1421,14 @@ export function createCombatAnimationManager(deps) {
   }
 
   function syncChampionFromSnapshot(champion, snap) {
-    ensureStatsEntry(champion?.id, {
-      name: snap?.name || champion?.name,
-      team: snap?.team ?? champion?.team,
-    });
-
     if (snap.portrait != undefined) {
       champion.portrait = snap.portrait;
+    }
+
+    if (snap.matchStats !== undefined) {
+      champion.matchStats = champion.buildMatchStats
+        ? champion.buildMatchStats(snap.matchStats)
+        : { ...snap.matchStats };
     }
 
     // 🔥 HP só é aplicado se NÃO houve animação de dano

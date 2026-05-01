@@ -1457,6 +1457,10 @@
 }
 
 .timer-overlay-content {
+  position: fixed;
+  top: 50%;
+  right: 24px;
+  transform: translateY(-50%);
   background: rgba(26, 26, 26, 0.95);
   border: 2px solid rgba(0, 255, 150, 0.6);
   border-radius: 15px;
@@ -1473,12 +1477,13 @@
 .match-stats-panel {
   position: fixed;
   top: 50%;
-  left: 18px;
+  left: 0;
   transform: translateY(-50%);
-  width: min(430px, calc(100vw - 36px));
+  width: min(420px, calc(100vw - 120px));
   background: rgba(8, 14, 20, 0.94);
   border: 1px solid rgba(0, 255, 170, 0.4);
-  border-radius: 12px;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
   box-shadow:
     0 14px 28px rgba(0, 0, 0, 0.45),
     0 0 18px rgba(0, 255, 170, 0.2);
@@ -1565,6 +1570,7 @@
 .match-stats-table td {
   padding: 7px 8px;
   border-bottom: 1px solid rgba(0, 255, 170, 0.14);
+  vertical-align: middle;
 }
 
 .match-stats-table th {
@@ -1578,12 +1584,42 @@
   text-align: right;
 }
 
-.match-stats-team {
-  display: inline-block;
-  min-width: 2.2em;
-  margin-right: 4px;
-  color: #8ae3ff;
-  font-weight: 700;
+.match-stats-table th:nth-child(2),
+.match-stats-table td:nth-child(2) {
+  text-align: center;
+  width: 92px;
+}
+
+.match-stats-avatar-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #3a3a3a;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.match-stats-avatar-wrap.ally {
+  border-color: #00bfff;
+  box-shadow: 0 0 14px rgba(0, 191, 255, 0.45);
+}
+
+.match-stats-avatar-wrap.enemy {
+  border-color: #ff5757;
+  box-shadow: 0 0 14px rgba(255, 87, 87, 0.45);
+}
+
+.match-stats-avatar-wrap.neutral {
+  border-color: #999;
+}
+
+.match-stats-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .match-stats-empty {
@@ -1592,6 +1628,13 @@
 }
 
 @media (max-width: 900px) {
+  .timer-overlay-content {
+    position: static;
+    top: auto;
+    right: auto;
+    transform: none;
+  }
+
   .match-stats-panel {
     left: 50%;
     top: auto;

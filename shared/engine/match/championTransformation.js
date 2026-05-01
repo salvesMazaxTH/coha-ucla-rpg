@@ -130,6 +130,10 @@ function transferCombatState({ sourceChampion, nextChampion }) {
     0,
     Math.max(1, roundStat(asNumber(nextChampion?.ultCap, 24))),
   );
+
+  nextChampion.matchStats = nextChampion.buildMatchStats(
+    sourceChampion?.matchStats,
+  );
 }
 
 export function applyChampionTransformation({

@@ -12,6 +12,6 @@ Last activity: 2026-05-01 - Completed quick task 260501-if0: favor implementar a
 
 ### Quick Tasks Completed
 
-| #   | Description | Date | Commit | Directory |
-| --- | ----------- | ---- | ------ | --------- |
+| #          | Description                                                     | Date       | Commit  | Directory                                                                                                           |
+| ---------- | --------------------------------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
 | 260501-if0 | Painel de estatisticas pos-combate com 4 abas no canto esquerdo | 2026-05-01 | 3202ec1 | [260501-if0-favor-implementar-as-estatistica-que-apa](./quick/260501-if0-favor-implementar-as-estatistica-que-apa/) |

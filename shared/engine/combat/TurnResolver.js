@@ -938,6 +938,19 @@ export class TurnResolver {
       } = {}) {
         if (!target?.id) return;
 
+        const sourceChamp = sourceId
+          ? combat.activeChampions.get(sourceId)
+          : null;
+        const dealt = Math.max(0, Number(amount) || 0);
+        const rawCandidate = Number(rawAmount);
+        const raw = Number.isFinite(rawCandidate)
+          ? Math.max(0, rawCandidate)
+          : dealt;
+
+        sourceChamp?.addDamageDealt?.(dealt);
+        target?.addRawDamageTaken?.(raw);
+        target?.addDamageMitigated?.(Math.max(0, raw - dealt));
+
         this._lastEventRef = null;
 
         const finishingType =
@@ -985,6 +998,9 @@ export class TurnResolver {
           combat.activeChampions.get(this.healSourceId) ||
           target;
 
+        target?.addHealingReceived?.(value);
+        sourceChamp?.addHealingDone?.(value);
+
         this._lastEventRef = null;
 
         const event = {
@@ -1025,6 +1041,8 @@ export class TurnResolver {
           combat.activeChampions.get(sourceId) ||
           combat.activeChampions.get(this.healSourceId) ||
           target;
+
+        target?.addHealingReceived?.(value);
 
         this._lastEventRef = null;
 
