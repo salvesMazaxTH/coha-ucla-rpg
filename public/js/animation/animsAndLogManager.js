@@ -86,6 +86,11 @@ function getChampionElement(championId) {
   return document.querySelector(`.champion[data-champion-id="${championId}"]`);
 }
 
+function toNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
 function scrollIfNeeded(
   el,
   {
@@ -146,6 +151,186 @@ export function createCombatAnimationManager(deps) {
   let currentPhase = null;
   let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
+  const matchStats = new Map();
+  const statsTabKeys = ["damage", "healingReceived", "healingDone", "rawTaken"];
+
+  function ensureStatsEntry(championId, fallback = {}) {
+    if (!championId) return null;
+
+    const existing = matchStats.get(championId);
+    if (existing) {
+      if (fallback.name && !existing.name) existing.name = fallback.name;
+      if (typeof fallback.team === "number") existing.team = fallback.team;
+      return existing;
+    }
+
+    const champion = deps.activeChampions.get(championId);
+    const entry = {
+      championId,
+      name: fallback.name || champion?.name || `ID ${championId}`,
+      team: typeof fallback.team === "number" ? fallback.team : champion?.team,
+      damage: 0,
+      healingReceived: 0,
+      healingDone: 0,
+      rawTaken: 0,
+    };
+
+    matchStats.set(championId, entry);
+    return entry;
+  }
+
+  function recordDamageStats(effect) {
+    const dealerId = effect?.userId || effect?.sourceId;
+    const targetId = effect?.targetId;
+
+    const dealer = ensureStatsEntry(dealerId);
+    const target = ensureStatsEntry(targetId);
+
+    if (dealer) {
+      dealer.damage += Math.max(0, toNumber(effect?.amount));
+    }
+
+    if (target) {
+      const rawCandidate = toNumber(effect?.rawAmount);
+      const fallbackRaw = Math.max(0, toNumber(effect?.amount));
+      target.rawTaken += Math.max(0, rawCandidate || fallbackRaw);
+    }
+  }
+
+  function recordHealStats(effect) {
+    const target = ensureStatsEntry(effect?.targetId);
+    const source = ensureStatsEntry(effect?.sourceId);
+    const amount = Math.max(0, toNumber(effect?.amount));
+
+    if (target) {
+      target.healingReceived += amount;
+    }
+
+    if (source) {
+      source.healingDone += amount;
+    }
+  }
+
+  function recordLifestealStats(effect) {
+    const target = ensureStatsEntry(effect?.targetId);
+    const amount = Math.max(0, toNumber(effect?.amount));
+    if (target) {
+      target.healingReceived += amount;
+    }
+  }
+
+  function ensureAllActiveChampionsTracked() {
+    deps.activeChampions.forEach((champion, championId) => {
+      ensureStatsEntry(championId, {
+        name: champion?.name,
+        team: champion?.team,
+      });
+    });
+  }
+
+  function sortEntriesBy(metricKey) {
+    return Array.from(matchStats.values()).sort((a, b) => {
+      const valueDiff = (b[metricKey] || 0) - (a[metricKey] || 0);
+      if (valueDiff !== 0) return valueDiff;
+
+      const teamA = typeof a.team === "number" ? a.team : 99;
+      const teamB = typeof b.team === "number" ? b.team : 99;
+      if (teamA !== teamB) return teamA - teamB;
+
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+  }
+
+  function renderStatsRows(tbodyId, metricKey) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    const entries = sortEntriesBy(metricKey);
+
+    if (!entries.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="3" class="match-stats-empty">Sem dados de combate.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = entries
+      .map((entry, index) => {
+        const teamLabel = typeof entry.team === "number" ? `T${entry.team}` : "-";
+        const safeName = String(entry.name || `ID ${entry.championId}`)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        const value = Math.round(Math.max(0, toNumber(entry[metricKey])));
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td><span class="match-stats-team">${teamLabel}</span> ${safeName}</td>
+            <td>${value}</td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  function setStatsTab(tabKey) {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+
+    panel.querySelectorAll(".match-stats-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabKey);
+    });
+
+    panel.querySelectorAll(".match-stats-tab-panel").forEach((panelEl) => {
+      panelEl.classList.toggle("active", panelEl.dataset.tabPanel === tabKey);
+    });
+  }
+
+  function bindStatsPanelTabs() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel || panel.dataset.bound === "true") return;
+
+    panel.dataset.bound = "true";
+
+    panel.querySelectorAll(".match-stats-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tabKey = btn.dataset.tab;
+        if (statsTabKeys.includes(tabKey)) {
+          setStatsTab(tabKey);
+        }
+      });
+    });
+  }
+
+  function renderMatchStatsPanel() {
+    ensureAllActiveChampionsTracked();
+    bindStatsPanelTabs();
+
+    renderStatsRows("matchStatsDamageBody", "damage");
+    renderStatsRows("matchStatsHealingReceivedBody", "healingReceived");
+    renderStatsRows("matchStatsHealingDoneBody", "healingDone");
+    renderStatsRows("matchStatsRawTakenBody", "rawTaken");
+    setStatsTab("damage");
+  }
+
+  function showMatchStatsPanel() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+    renderMatchStatsPanel();
+    panel.classList.remove("hidden");
+    panel.classList.add("active");
+  }
+
+  function hideMatchStatsPanel() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+    panel.classList.remove("active");
+    panel.classList.add("hidden");
+  }
+
+  function resetMatchStats() {
+    matchStats.clear();
+    hideMatchStatsPanel();
+  }
 
   // Double-click em qualquer área da tela acelera apenas o dialog atual.
   document.addEventListener("click", () => {
@@ -382,6 +567,8 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateDamage(effect) {
+    recordDamageStats(effect);
+
     const {
       targetId,
       userId,
@@ -564,6 +751,8 @@ export function createCombatAnimationManager(deps) {
   // ============================================================
 
   async function animateHeal(effect) {
+    recordHealStats(effect);
+
     const { targetId, amount } = effect;
 
     const championEl = getChampionElement(targetId);
@@ -601,6 +790,8 @@ export function createCombatAnimationManager(deps) {
   }
 
   async function animateLifesteal(effect) {
+    recordLifestealStats(effect);
+
     const { targetId, amount, fromTargetId } = effect;
 
     const championEl = getChampionElement(targetId);
@@ -962,6 +1153,8 @@ export function createCombatAnimationManager(deps) {
       timerOverlay.classList.remove("hidden");
       timerOverlay.classList.add("active");
 
+      showMatchStatsPanel();
+
       let timeLeft = 120;
       countdownEl.textContent = `Retornando ao login em ${timeLeft}s...`;
 
@@ -1272,6 +1465,11 @@ export function createCombatAnimationManager(deps) {
   }
 
   function syncChampionFromSnapshot(champion, snap) {
+    ensureStatsEntry(champion?.id, {
+      name: snap?.name || champion?.name,
+      team: snap?.team ?? champion?.team,
+    });
+
     if (snap.portrait != undefined) {
       champion.portrait = snap.portrait;
     }
@@ -1555,6 +1753,7 @@ export function createCombatAnimationManager(deps) {
     queue.length = 0;
     processing = false;
     lastLoggedTurn = null;
+    resetMatchStats();
   }
 
   // ============================================================
