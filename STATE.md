@@ -1,4 +1,13 @@
-﻿## [2026-05-01] Quick: Sengoku se debuffa 18/13.5 com teto de 4 ativações
+﻿## [2026-05-01] Quick: Sengoku debuff agora usa base stats
+
+- `shared/data/champions/sengoku/passive.js` foi reworkada para usar `owner.modifyStat(..., isPercent: true)` em Ataque e Defesa, deixando o motor calcular o delta sobre `baseAttack/baseDefense`.
+- O ataque do debuff foi ajustado para `17%` do Ataque base e a defesa permanece em `13.5%` da Defesa base.
+- O teto de ativação continua em 4 usos por combate, preservado via `owner.runtime.pesoDosSeculosTriggers`.
+- Validação local pendente após a edição.
+
+---
+
+## [2026-05-01] Quick: Sengoku se debuffa 18/13.5 com teto de 4 ativações
 
 - `shared/data/champions/sengoku/passive.js` passou a usar `attackReductionPercent = 18` e `defenseReductionPercent = 13.5` na passiva `Peso dos Séculos`.
 - A mesma passiva agora controla `owner.runtime.pesoDosSeculosTriggers` e para de aplicar o auto-debuff após 4 ativações no combate.

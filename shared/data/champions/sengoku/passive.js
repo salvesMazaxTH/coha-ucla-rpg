@@ -1,17 +1,13 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
-function roundToFive(x) {
-  return Math.round(x / 5) * 5;
-}
-
 export default {
   key: "peso_dos_seculos",
   name: "Peso dos Séculos",
-  attackReductionPercent: 18,
+  attackReductionPercent: 17,
   defenseReductionPercent: 13.5,
   maxTriggers: 4,
   description() {
-    return `Sengoku inicia o combate com atributos muito acima do normal, mas não consegue sustentar esse poder por muito tempo. No início de cada turno, perde ${this.attackReductionPercent}% do valor atual de seu Ataque e ${this.defenseReductionPercent}% da sua Defesa, no máximo ${this.maxTriggers} vezes por combate.`;
+    return `Sengoku inicia o combate com atributos muito acima do normal, mas não consegue sustentar esse poder por muito tempo. No início de cada turno, perde ${this.attackReductionPercent}% do seu Ataque base e ${this.defenseReductionPercent}% da sua Defesa base, no máximo ${this.maxTriggers} vezes por combate.`;
   },
   onTurnStart({ owner, context }) {
     owner.runtime ??= {};
@@ -23,21 +19,26 @@ export default {
 
     owner.runtime.pesoDosSeculosTriggers += 1;
 
-    // Reduz o valor ATUAL de Attack e Defense até o limite de ativações
-    const attackReduction = roundToFive(
-      Math.floor(owner.Attack * (this.attackReductionPercent / 100)),
-    );
+    const attackResult = owner.modifyStat({
+      statName: "Attack",
+      amount: -this.attackReductionPercent,
+      context,
+      isPermanent: true,
+      isPercent: true,
+      statModifierSrc: owner,
+    });
 
-    const defenseReduction = roundToFive(
-      Math.floor(owner.Defense * (this.defenseReductionPercent / 100)),
-    );
+    const defenseResult = owner.modifyStat({
+      statName: "Defense",
+      amount: -this.defenseReductionPercent,
+      context,
+      isPermanent: true,
+      isPercent: true,
+      statModifierSrc: owner,
+    });
 
-    if (attackReduction > 0) {
-      owner.Attack -= attackReduction;
-    }
-    if (defenseReduction > 0) {
-      owner.Defense -= defenseReduction;
-    }
+    const attackLoss = Math.abs(attackResult?.appliedAmount ?? 0);
+    const defenseLoss = Math.abs(defenseResult?.appliedAmount ?? 0);
 
     context.registerDialog({
       message: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} se enfraqueceu (perdeu Ataque e Defesa).`,
@@ -46,7 +47,7 @@ export default {
     });
 
     return {
-      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackReduction} de Ataque e ${defenseReduction} de Defesa (${owner.runtime.pesoDosSeculosTriggers}/${this.maxTriggers}).`,
+      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackLoss} de Ataque base e ${defenseLoss} de Defesa base (${owner.runtime.pesoDosSeculosTriggers}/${this.maxTriggers}).`,
     };
   },
 };
