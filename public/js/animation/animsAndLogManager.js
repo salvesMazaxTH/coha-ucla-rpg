@@ -151,7 +151,13 @@ export function createCombatAnimationManager(deps) {
   let currentPhase = null;
   let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
-  const statsTabKeys = ["damage", "healingReceived", "healingDone", "rawTaken"];
+  const statsTabKeys = [
+    "damage",
+    "healingReceived",
+    "healingDone",
+    "rawTaken",
+    "damageMitigated",
+  ];
 
   function getSnapshotStatsEntry(champion) {
     if (!champion) return null;
@@ -167,6 +173,7 @@ export function createCombatAnimationManager(deps) {
       healingReceived: Math.max(0, toNumber(backendStats.healingReceived)),
       healingDone: Math.max(0, toNumber(backendStats.healingDone)),
       rawTaken: Math.max(0, toNumber(backendStats.rawTaken)),
+      damageMitigated: Math.max(0, toNumber(backendStats.damageMitigated)),
     };
   }
 
@@ -272,6 +279,7 @@ export function createCombatAnimationManager(deps) {
     renderStatsRows("matchStatsHealingReceivedBody", "healingReceived");
     renderStatsRows("matchStatsHealingDoneBody", "healingDone");
     renderStatsRows("matchStatsRawTakenBody", "rawTaken");
+    renderStatsRows("matchStatsDamageMitigatedBody", "damageMitigated");
     setStatsTab("damage");
   }
 

@@ -214,6 +214,14 @@
           >
             Dano Cru Recebido
           </button>
+          <button
+            class="match-stats-tab"
+            data-tab="damageMitigated"
+            role="tab"
+            type="button"
+          >
+            Dano Mitigado
+          </button>
         </div>
 
         <div class="match-stats-panels">
@@ -282,6 +290,23 @@
                 </tr>
               </thead>
               <tbody id="matchStatsRawTakenBody"></tbody>
+            </table>
+          </section>
+
+          <section
+            class="match-stats-tab-panel"
+            data-tab-panel="damageMitigated"
+            role="tabpanel"
+          >
+            <table class="match-stats-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Personagem</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="matchStatsDamageMitigatedBody"></tbody>
             </table>
           </section>
         </div>
