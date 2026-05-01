@@ -29,10 +29,6 @@ export default {
       triggered: false,
     };
 
-    if (owner.HP <= 0) {
-      return;
-    }
-
     if (owner.runtime.lana.triggered) {
       return;
     }
