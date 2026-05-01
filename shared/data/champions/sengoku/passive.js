@@ -7,18 +7,29 @@ function roundToFive(x) {
 export default {
   key: "peso_dos_seculos",
   name: "Peso dos Séculos",
-  reductionPercent: 30,
+  attackReductionPercent: 18,
+  defenseReductionPercent: 13.5,
+  maxTriggers: 4,
   description() {
-    return `Sengoku inicia o combate com atributos muito acima do normal, mas não consegue sustentar esse poder por muito tempo. No início de cada turno, perde ${this.reductionPercent}% do valor atual de seu Ataque e Defesa.`;
+    return `Sengoku inicia o combate com atributos muito acima do normal, mas não consegue sustentar esse poder por muito tempo. No início de cada turno, perde ${this.attackReductionPercent}% do valor atual de seu Ataque e ${this.defenseReductionPercent}% da sua Defesa, no máximo ${this.maxTriggers} vezes por combate.`;
   },
   onTurnStart({ owner, context }) {
-    // Reduz 30% do valor ATUAL de Attack e Defense a cada turno
+    owner.runtime ??= {};
+    owner.runtime.pesoDosSeculosTriggers ??= 0;
+
+    if (owner.runtime.pesoDosSeculosTriggers >= this.maxTriggers) {
+      return;
+    }
+
+    owner.runtime.pesoDosSeculosTriggers += 1;
+
+    // Reduz o valor ATUAL de Attack e Defense até o limite de ativações
     const attackReduction = roundToFive(
-      Math.floor(owner.Attack * (this.reductionPercent / 100)),
+      Math.floor(owner.Attack * (this.attackReductionPercent / 100)),
     );
 
     const defenseReduction = roundToFive(
-      Math.floor(owner.Defense * (this.reductionPercent / 100)),
+      Math.floor(owner.Defense * (this.defenseReductionPercent / 100)),
     );
 
     if (attackReduction > 0) {
@@ -35,7 +46,7 @@ export default {
     });
 
     return {
-      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackReduction} de Ataque e ${defenseReduction} de Defesa.`,
+      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackReduction} de Ataque e ${defenseReduction} de Defesa (${owner.runtime.pesoDosSeculosTriggers}/${this.maxTriggers}).`,
     };
   },
 };

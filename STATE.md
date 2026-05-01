@@ -1,4 +1,13 @@
-﻿## [2026-04-23] Quick: Serene streak centralizada no passivo
+﻿## [2026-05-01] Quick: Sengoku se debuffa 18/13.5 com teto de 4 ativações
+
+- `shared/data/champions/sengoku/passive.js` passou a usar `attackReductionPercent = 18` e `defenseReductionPercent = 13.5` na passiva `Peso dos Séculos`.
+- A mesma passiva agora controla `owner.runtime.pesoDosSeculosTriggers` e para de aplicar o auto-debuff após 4 ativações no combate.
+- A descrição da passiva foi atualizada para refletir a nova regra de redução e o limite de usos.
+- Validação local concluída: `get_errors` no arquivo tocado retornou sem erros.
+
+---
+
+## [2026-04-23] Quick: Serene streak centralizada no passivo
 
 - `shared/data/champions/serene/passive.js` agora registra `lastSereneSkillKey` em `onActionResolved`, usando a assinatura-contrato do hook em vez de espalhar marcação pelas skills.
 - `shared/data/champions/serene/skills.js` perdeu a instrumentação temporária e passou a ler apenas o estado centralizado para decidir a streak do `Selo da Quietude`.
