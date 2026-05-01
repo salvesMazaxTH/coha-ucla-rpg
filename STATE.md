@@ -1,4 +1,13 @@
-﻿## [2026-05-01] Quick: Sengoku debuff agora usa base stats
+﻿## [2026-05-01] Quick: gameOver no start-turn da Inevitabilidade da Morte
+
+- `src/server.js` agora emite `gameOver` tambem no fluxo `handleStartTurn`, logo apos `processChampionDeaths`.
+- Isso cobre o caso atipico em que a ult `inevitabilidade_da_morte` do Jeff mata o ultimo campeao vivo no inicio do turno, fora do fechamento padrao de acoes.
+- Resultado: a partida encerra corretamente com vencedor/derrotado em vez de seguir sem alvos validos.
+- Validacao local pendente de teste manual em partida.
+
+---
+
+## [2026-05-01] Quick: Sengoku debuff agora usa base stats
 
 - `shared/data/champions/sengoku/passive.js` foi reworkada para usar `owner.modifyStat(..., isPercent: true)` em Ataque e Defesa, deixando o motor calcular o delta sobre `baseAttack/baseDefense`.
 - O ataque do debuff foi ajustado para `17%` do Ataque base e a defesa permanece em `13.5%` da Defesa base.

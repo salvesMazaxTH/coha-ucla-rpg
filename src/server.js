@@ -986,6 +986,15 @@ function handleStartTurn() {
     emitChampionDeath(death);
   }
 
+  // Start-of-turn hooks (e.g. Jeff's Inevitabilidade da Morte) can kill the
+  // last real champion outside the regular end-turn action flow.
+  if (match.isGameEnded()) {
+    const winnerSlot = match.combat.computeWinnerSlot();
+    const winnerTeam = winnerSlot + 1;
+    const winnerName = match.players[winnerSlot]?.username;
+    io.emit("gameOver", { winnerTeam, winnerName });
+  }
+
   // 3. Limpar expirados
   match.combat.activeChampions.forEach((champion) => {
     champion.purgeExpiredStatModifiers(match.combat.currentTurn);
