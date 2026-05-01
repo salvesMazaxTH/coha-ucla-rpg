@@ -47,7 +47,7 @@ export default {
     });
 
     return {
-      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackLoss} de Ataque base e ${defenseLoss} de Defesa base (${owner.runtime.pesoDosSeculosTriggers}/${this.maxTriggers}).`,
+      log: `[PASSIVA — Peso dos Séculos] ${formatChampionName(owner)} perdeu ${attackLoss} de Ataque e ${defenseLoss} de Defesa (${owner.runtime.pesoDosSeculosTriggers}/${this.maxTriggers}).`,
     };
   },
 };

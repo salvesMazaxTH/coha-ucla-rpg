@@ -54,17 +54,25 @@ const theopetraSkills = [
       });
     },
   },
+
   {
     key: "magnitude_11",
     name: "Magnitude 11",
     bf: 85,
+
     damageMode: "standard",
+
+    cannotBeEvaded: true,
+
     contact: false,
+
     isUltimate: true,
     ultCost: 3,
+
     priority: 0,
+
     description() {
-      return `Theópetra invoca a magnitude 11, causando dano massivo a todos os inimigos.`;
+      return `Theópetra invoca a magnitude 11, causando dano massivo a todos os inimigos. Esse ataque não pode ser esquivado.`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
