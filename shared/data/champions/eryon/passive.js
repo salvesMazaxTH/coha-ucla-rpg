@@ -18,6 +18,7 @@ function _processResonance(owner, threshold, ultGain, context, resolver) {
         amount: ultGain,
         context,
         sourceId: owner.id,
+        debugLabel: "eryon_resonance_grant",
       });
     } else {
       ally.addUlt(ultGain);

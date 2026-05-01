@@ -2,6 +2,25 @@ import { formatChampionName } from "../../ui/formatters.js";
 import { emitCombatEvent } from "./combatEvents.js";
 import { snapshotChampions } from "./snapshotChampions.js";
 
+const RESOURCE_DEBUG_TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
+
+function isResourceDebugEnabled() {
+  if (typeof process === "undefined") return false;
+
+  const raw = process?.env?.DEBUG_RESOURCE_FLOW;
+
+  if (raw == null) {
+    return process?.env?.NODE_ENV !== "production";
+  }
+
+  return RESOURCE_DEBUG_TRUE_VALUES.has(String(raw).toLowerCase());
+}
+
+function logResourceDebug(payload) {
+  if (!isResourceDebugEnabled()) return;
+  console.log("[RESOURCE_DEBUG]", payload);
+}
+
 export class TurnResolver {
   constructor(match, editMode, options = {}) {
     this.match = match;
@@ -185,14 +204,13 @@ export class TurnResolver {
 
   executeSkillAction(action, turnExecutionMap, context) {
     // console.log("[EXECUTE SKILL ACTION] [TARGETS]", action);
+
     const user = this.combat.activeChampions.get(action.userId);
 
-    // Referência a estado de "switched out" desativada junto com a lógica de switch.
+    // 1. valida existência / alive
     const isInactive = !user || !user.alive;
-
     if (isInactive) {
       const userName = user ? formatChampionName(user) : "campeão desconhecido";
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "inactive",
@@ -202,8 +220,8 @@ export class TurnResolver {
       };
     }
 
+    // 2. valida ação (hooks)
     const denial = this.canExecuteAction(user, action);
-
     if (denial?.denied) {
       context.registerDialog({
         message: denial.message || `${formatChampionName(user)} não pode agir.`,
@@ -211,7 +229,6 @@ export class TurnResolver {
         damageDepth: context.damageDepth ?? 0,
       });
 
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "denied",
@@ -221,9 +238,9 @@ export class TurnResolver {
       };
     }
 
+    // 3. valida skill
     const skill = user.skills.find((s) => s.key === action.skillKey);
     if (!skill) {
-      this.refundActionResource(user, action);
       return {
         executed: false,
         reason: "skill_not_found",
@@ -233,7 +250,22 @@ export class TurnResolver {
       };
     }
 
+    // 4. resolve targets
     const roleTargets = this.resolveSkillTargets(user, skill, action, context);
+
+    // (game design) Se quiser que habilidades sem alvo NÃO consumam recurso,
+    // mover o consumo de recurso para depois da verificação de !roleTargets.
+    // Caso contrário, manter aqui para consumir mesmo sem alvo.
+
+    // 5. AGORA SIM: consumir recurso
+    if (action.ultCost > 0 && !this.editMode.freeCostSkills) {
+      this.applyResourceChange({
+        target: user,
+        amount: -action.ultCost,
+        context,
+        sourceId: user.id,
+      });
+    }
 
     // console.log("STEP 1 - TARGETS:", roleTargets);
     if (!roleTargets) {
@@ -458,7 +490,7 @@ export class TurnResolver {
     this.applyUltMeterFromContext({ user, context });
 
     // 🔹 7. Hook onActionResolved
-    emitCombatEvent(
+    const actionResolvedResults = emitCombatEvent(
       "onActionResolved",
       {
         actionSource: user,
@@ -470,7 +502,19 @@ export class TurnResolver {
       this.combat.activeChampions,
     );
 
-    return results;
+    const normalizedActionResolvedResults = Array.isArray(actionResolvedResults)
+      ? actionResolvedResults
+      : actionResolvedResults
+        ? [actionResolvedResults]
+        : [];
+
+    const registeredResults = context.consumeRegisteredResults();
+
+    return [
+      ...results,
+      ...normalizedActionResolvedResults,
+      ...registeredResults,
+    ];
   }
 
   // ============================================================
@@ -543,23 +587,90 @@ export class TurnResolver {
    * Ponto único de entrada (Backend) para mudança de recursos com emissão de hooks.
    * Orquestra: Mudança de Estado (Champion) -> Visual (Context) -> Gameplay Hooks (Emitter).
    */
-  applyResourceChange({ target, amount, context, sourceId }) {
-    if (!target || amount === 0) return 0;
+  applyResourceChange({
+    target,
+    amount,
+    context,
+    sourceId,
+    emitHooks = true,
+    visualPhase = null,
+    visualAfterHooks = false,
+    debugLabel = null,
+  }) {
+    const requestedAmount = Number(amount) || 0;
+    if (!target || requestedAmount === 0) {
+      return { applied: 0, hookResults: [] };
+    }
+
+    const beforeUlt = Number(target.ultMeter) || 0;
+    const sourceChampion = sourceId
+      ? this.combat.activeChampions.get(sourceId) || null
+      : null;
 
     // 1. Backend State Change (Champion)
     const applied =
-      amount > 0 ? target.addUlt(amount) : target.spendUlt(amount);
+      requestedAmount > 0
+        ? target.addUlt(requestedAmount)
+        : target.spendUlt(Math.abs(requestedAmount));
 
-    if (applied === 0) return 0;
+    const afterUlt = Number(target.ultMeter) || 0;
+
+    if (applied === 0) {
+      logResourceDebug({
+        stage: "applyResourceChange:blocked",
+        sourceId: sourceId || null,
+        sourceName: sourceChampion?.name || null,
+        targetId: target.id,
+        targetName: target.name,
+        requestedAmount,
+        beforeUlt,
+        afterUlt,
+        debugLabel,
+      });
+      return { applied: 0, hookResults: [] };
+    }
 
     const eventType = applied > 0 ? "onResourceGain" : "onResourceSpend";
     const payloadType = applied > 0 ? "resourceGain" : "resourceSpend";
 
-    // 2. Frontend Visual Registration (Context)
-    context.registerResourceChange({ target, amount: applied, sourceId });
+    logResourceDebug({
+      stage: "applyResourceChange:applied",
+      sourceId: sourceId || null,
+      sourceName: sourceChampion?.name || null,
+      targetId: target.id,
+      targetName: target.name,
+      requestedAmount,
+      applied,
+      eventType,
+      payloadType,
+      beforeUlt,
+      afterUlt,
+      emitHooks,
+      visualPhase,
+      visualAfterHooks,
+      debugLabel,
+    });
+
+    const registerVisual = () =>
+      context.registerResourceChange({
+        target,
+        amount: applied,
+        sourceId,
+        phase: visualPhase,
+      });
+
+    if (!visualAfterHooks) {
+      // 2. Frontend Visual Registration (Context)
+      registerVisual();
+    }
+
+    if (!emitHooks) {
+      if (visualAfterHooks) registerVisual();
+      return { applied, hookResults: [] };
+    }
 
     // 3. Backend Gameplay Logic (Hooks)
-    emitCombatEvent(
+    const hookResults = emitCombatEvent(
       eventType,
       {
         target,
@@ -573,7 +684,22 @@ export class TurnResolver {
       this.combat.activeChampions,
     );
 
-    return applied;
+    const result = {
+      type: payloadType,
+      resourceType: "ult",
+      applied,
+      targetId: target.id,
+      sourceId: sourceId || null,
+      hookResults,
+    };
+
+    context.registerResult?.(result);
+
+    if (visualAfterHooks) {
+      registerVisual();
+    }
+
+    return result;
   }
 
   // ============================================================
@@ -739,6 +865,8 @@ export class TurnResolver {
 
       _lastEventRef: null, // referência para o último evento registrado, útil para diálogos que precisam se referir a ele
 
+      registeredResults: [],
+
       repeatActionRequest: null,
       flags: {},
 
@@ -752,6 +880,28 @@ export class TurnResolver {
         this.flags.championMutationRequests.push(request);
 
         return request;
+      },
+
+      registerResult(result) {
+        if (!result) return null;
+
+        if (Array.isArray(result)) {
+          for (const entry of result) {
+            this.registerResult(entry);
+          }
+          return result;
+        }
+
+        this.registeredResults.push(result);
+        return result;
+      },
+
+      consumeRegisteredResults() {
+        if (!this.registeredResults.length) return [];
+
+        const results = [...this.registeredResults];
+        this.registeredResults.length = 0;
+        return results;
       },
 
       schedule(scheduledEffect) {
@@ -788,18 +938,25 @@ export class TurnResolver {
       } = {}) {
         if (!target?.id) return;
 
+        const sourceChamp = sourceId
+          ? combat.activeChampions.get(sourceId)
+          : null;
+        const dealt = Math.max(0, Number(amount) || 0);
+        const rawCandidate = Number(rawAmount);
+        const raw = Number.isFinite(rawCandidate)
+          ? Math.max(0, rawCandidate)
+          : dealt;
+
+        sourceChamp?.addDamageDealt?.(dealt);
+        target?.addRawDamageTaken?.(raw);
+        target?.addDamageMitigated?.(Math.max(0, raw - dealt));
+
         this._lastEventRef = null;
 
         const finishingType =
-          flags?.finishingType ??
-          (flags?.isObliterate
-            ? "obliterate"
-            : flags?.isFinishing
-              ? "generic"
-              : null);
+          flags?.finishingType ?? (flags?.finishing ? "regular" : null);
 
-        const isFinishing = !!finishingType;
-        const isObliterate = finishingType === "obliterate";
+        const hasFinishing = !!finishingType;
 
         const event = {
           // eventIndex: this.nextEventIndex(),
@@ -821,8 +978,7 @@ export class TurnResolver {
           immune: !!flags?.immune,
           immuneMessage: flags?.immuneMessage ?? null,
           shieldBlocked: !!flags?.shieldBlocked,
-          obliterate: isObliterate,
-          finishing: isFinishing,
+          finishing: hasFinishing,
           finishingType,
           preDialogs: [],
           postDialogs: [],
@@ -841,6 +997,9 @@ export class TurnResolver {
           combat.activeChampions.get(sourceId) ||
           combat.activeChampions.get(this.healSourceId) ||
           target;
+
+        target?.addHealingReceived?.(value);
+        sourceChamp?.addHealingDone?.(value);
 
         this._lastEventRef = null;
 
@@ -882,6 +1041,8 @@ export class TurnResolver {
           combat.activeChampions.get(sourceId) ||
           combat.activeChampions.get(this.healSourceId) ||
           target;
+
+        target?.addHealingReceived?.(value);
 
         this._lastEventRef = null;
 
@@ -963,7 +1124,7 @@ export class TurnResolver {
         this._lastEventRef = event;
       },
       // -- RESOURCE REGISTRY (Visual Only) -- //
-      registerResourceChange({ target, amount, sourceId } = {}) {
+      registerResourceChange({ target, amount, sourceId, phase = null } = {}) {
         const value = Number(amount) || 0;
         if (!target?.id || value === 0) return 0;
 
@@ -975,6 +1136,7 @@ export class TurnResolver {
           sourceId: sourceId || this.healSourceId || target.id,
           amount: Math.abs(value),
           resourceType: "ult",
+          phase,
           preDialogs: [],
           postDialogs: [],
         };
@@ -982,13 +1144,19 @@ export class TurnResolver {
         this.visual.resourceEvents.push(event);
         this._lastEventRef = event;
 
+        logResourceDebug({
+          stage: "registerResourceChange",
+          targetId: target.id,
+          targetName: target.name,
+          sourceId: event.sourceId,
+          eventType,
+          amount: Math.abs(value),
+          phase,
+        });
+
         return value;
       },
 
-      // -- ULT GAIN REGISTRY (Visual Only) -- //
-      registerUltGain({ target, amount, sourceId } = {}) {
-        return this.registerResourceChange({ target, amount, sourceId });
-      },
       // -- DIALOG REGISTRY -- //
       registerDialog({
         message,

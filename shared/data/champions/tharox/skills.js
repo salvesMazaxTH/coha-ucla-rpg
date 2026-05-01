@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const tharoxSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -95,9 +95,9 @@ const tharoxSkills = [
   {
     key: "impacto_da_couraça",
     name: "Impacto da Couraça",
-    bf: 80,
+    bf: 75,
     damageMode: "standard",
-    defScaling: 20,
+    defScaling: 15,
     contact: true,
     priority: 0,
     description() {
@@ -113,6 +113,7 @@ const tharoxSkills = [
         baseDamage,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -127,16 +128,14 @@ const tharoxSkills = [
     hpGain: 50,
     defGain: 10,
     damageMode: "standard",
-    baseDef: 205,
-    defDamagePercent: 45,
-    maxDamageBonus: 80,
     modifierDuration: 3,
+    defDamagePercent: 38,
     contact: false,
     ultCost: 3,
     isUltimate: true,
     priority: 0,
     description() {
-      return `Ganha +${this.hpGain} HP, +${this.defGain} DEF, cura proporcional à DEF acima de ${this.baseDef}, e ataques causam bônus de dano igual a ${this.defDamagePercent}% da DEF (máx. ${this.maxDamageBonus}) por ${this.modifierDuration} turnos.`;
+      return `Ganha +${this.hpGain} HP, +${this.defGain} DEF, cura proporcional à DEF acima da base e seus ataques passam a causar dano adicional com base na Defesa excedente, escalando de forma crescente e tornando-se devastadores em níveis altos, por ${this.modifierDuration} turnos.`;
     },
     targetSpec: ["self"],
     resolve({ user, context = {} }) {
@@ -153,19 +152,27 @@ const tharoxSkills = [
         isPermanent: true,
       }); // Aumenta DEF permanentemente
 
-      const proportionalHeal = user.Defense - this.baseDef;
+      const proportionalHeal = user.Defense - user.baseDefense;
       user.heal(proportionalHeal, context);
+
+      // Remove qualquer modificador anterior da ultimate antes de adicionar um novo
+      user.damageModifiers = user
+        .getDamageModifiers()
+        .filter((mod) => mod.id !== "apoteose-do-monolito");
 
       user.addDamageModifier({
         id: "apoteose-do-monolito",
         name: "Bônus de Apoteose do Monólito",
         expiresAtTurn: context.currentTurn + this.modifierDuration,
+        apply: ({ baseDamage, attacker }, context) => {
+          const baseDef = attacker.baseDefense;
+          const bonusDef = Math.max(0, attacker.Defense - baseDef);
 
-        apply: ({ baseDamage, attacker }) => {
-          const bonus = Math.min(
-            attacker.Defense * (this.defDamagePercent / 100),
-            this.maxDamageBonus,
-          );
+          const linear = bonusDef * 0.7;
+          const scaling = Math.pow(bonusDef, 1.4) * this.defDamagePercent / 100;
+
+          let bonus = linear + scaling;
+
           return baseDamage + bonus;
         },
       });

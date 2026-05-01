@@ -23,6 +23,7 @@ export function preChecks(event) {
       defender: event.defender,
       damage: event.damage,
       skill: event.skill,
+      type: event.type,
       context: event.context,
     },
     event.allChampions,
@@ -87,16 +88,19 @@ export function preChecks(event) {
         evaded: true,
         targetId: event.defender.id,
         userId: event.attacker.id,
+        type: event.type,
       };
     }
   }
 
   // 3️⃣ SHIELD BLOCK
-  /* if (
+  if (
     event.mode !== event.constructor.Modes.ABSOLUTE &&
     !event.skill?.cannotBeBlocked
   ) {
-    if (event.defender._checkAndConsumeShieldBlock?.(event.context)) {
+    if (
+      event.defender._checkAndConsumeShieldBlock?.(event.context, event.type)
+    ) {
       event.context.registerDamage({
         target: event.defender,
         amount: 0,
@@ -106,7 +110,7 @@ export function preChecks(event) {
 
       return _buildShieldBlockResult(event);
     }
-  } */
+  }
   return null;
 }
 
@@ -182,6 +186,7 @@ function _buildImmuneResult(event, customMessage = null) {
     userId: event.attacker?.id ?? null,
     evaded: false,
     immune: true,
+    type: event.type,
     log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };
@@ -213,25 +218,31 @@ function _buildInactiveTargetResult(event) {
     userId: event.attacker?.id ?? null,
     evaded: false,
     inactiveTarget: true,
+    type: event.type,
     log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };
 }
 
-/* function _buildShieldBlockResult(event) {
+function _buildShieldBlockResult(event) {
   const targetName = formatChampionName(event.defender);
-  const username = formatChampionName(event.attacker);
+  const username = event.attacker ? formatChampionName(event.attacker) : null;
   const skillName = event.skill?.name || "habilidade";
+
+  const log = username
+    ? `${username} usou ${skillName} em ${targetName}, mas o Escudo de Feitiço de ${targetName} bloqueou o dano mágico e se dissipou!`
+    : `${targetName} bloqueou um dano mágico com Escudo de Feitiço e ele se dissipou!`;
 
   return {
     baseDamage: event.baseDamage,
     totalDamage: 0,
     finalHP: event.defender.HP,
     targetId: event.defender.id,
-    userId: event.attacker.id,
+    userId: event.attacker?.id ?? null,
     shieldBlocked: true,
     evaded: false,
-    log: `${username} usou ${skillName} em ${targetName}, mas o escudo de ${targetName} bloqueou completamente e se dissipou!`,
+    type: event.type,
+    log,
     crit: { chance: 0, didCrit: false, bonus: 0, roll: null },
   };
-} */
+}

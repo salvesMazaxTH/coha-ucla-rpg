@@ -1,12 +1,12 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const kaeldrathVulcanoSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
 
   // ========================
   // Habilidades Especiais
@@ -39,6 +39,7 @@ const kaeldrathVulcanoSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -78,18 +79,24 @@ const kaeldrathVulcanoSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      const mainPrimaryDamage = primaryResults[0];
+
+      results.push(...primaryResults);
 
       if (
-        !primaryResult?.evaded &&
-        !primaryResult?.immune &&
-        primaryResult.totalDamage > 0
+        !mainPrimaryDamage?.evaded &&
+        !mainPrimaryDamage?.immune &&
+        mainPrimaryDamage.totalDamage > 0
       )
-        enemy.applyStatusEffect("queimando", this.burnDuration, context);
+        enemy.applyStatusEffect("burning", this.burnDuration, context);
 
       const [secondaryTarget] = context.getAdjacentChampions(enemy, {
         side: "right",
@@ -103,12 +110,10 @@ const kaeldrathVulcanoSkills = [
       if (!secondaryTarget) return results;
 
       console.log(
-        `[BOLA DE MAGMA] Dano causado ao alvo principal: ${primaryResult.totalDamage}`,
+        `[BOLA DE MAGMA] Dano causado ao alvo principal: ${mainPrimaryDamage?.totalDamage}`,
       );
 
-      /*       if (!context.damageDepth) context.damageDepth = 1; */
-
-      const splashDamage = primaryResult.totalDamage / 2;
+      const splashDamage = (mainPrimaryDamage?.totalDamage ?? 0) / 2;
       // dano secundário é igual à metade do dano causado no alvo principal
 
       const secondaryResult = new DamageEvent({
@@ -116,11 +121,15 @@ const kaeldrathVulcanoSkills = [
         attacker: user,
         defender: secondaryTarget,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(secondaryResult);
+      const secondaryResults = Array.isArray(secondaryResult)
+        ? secondaryResult
+        : [secondaryResult];
+      results.push(...secondaryResults);
 
       return results;
     },
@@ -184,6 +193,7 @@ const kaeldrathVulcanoSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();

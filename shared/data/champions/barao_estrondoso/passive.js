@@ -90,9 +90,9 @@ export default {
     if (skill.key === "golpe_basico") return;
 
     // Evita loop se alguma skill futura aplicar stun interno
-    if (owner.hasStatusEffect?.("atordoado")) return;
+    if (owner.hasStatusEffect?.("stunned")) return;
 
-    owner.applyStatusEffect?.("atordoado", 2, context);
+    owner.applyStatusEffect?.("stunned", 2, context);
 
     return {
       log: `${formatChampionName(owner)} sofreu <b>Sobrecarga do Núcleo</b> e ficará <b>Atordoado</b>!`,

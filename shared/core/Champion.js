@@ -43,7 +43,13 @@ import { formatChampionName } from "../ui/formatters.js";
 
 export class Champion {
   constructor(data = {}) {
-    const { identity = {}, stats = {}, combat = {}, runtime = {} } = data;
+    const {
+      identity = {},
+      stats = {},
+      combat = {},
+      runtime = {},
+      matchStats = {},
+    } = data;
 
     // IDENTIDADE
     this.id = identity.id;
@@ -95,6 +101,9 @@ export class Champion {
 
     // RUNTIME
     this.runtime = this.buildRuntime(runtime);
+
+    // MATCH STATS (backend authoritative)
+    this.matchStats = this.buildMatchStats(matchStats);
   }
 
   static fromBaseData(baseData, id, team, { combatSlot = null } = {}) {
@@ -201,6 +210,7 @@ export class Champion {
       LifeSteal: this.LifeSteal,
       ultMeter: this.ultMeter,
       ultCap: this.ultCap,
+      matchStats: this.getMatchStatsSnapshot(),
 
       runtime: (() => {
         const clone = { ...this.runtime };
@@ -382,33 +392,88 @@ export class Champion {
   }
 
   // ===============================
+  // ======== MATCH STATS ==========
+  // ===============================
+
+  buildMatchStats(matchStats = {}) {
+    return {
+      damage: Number(matchStats.damage) || 0,
+      healingReceived: Number(matchStats.healingReceived) || 0,
+      healingDone: Number(matchStats.healingDone) || 0,
+      rawTaken: Number(matchStats.rawTaken) || 0,
+      damageMitigated: Number(matchStats.damageMitigated) || 0,
+    };
+  }
+
+  getMatchStatsSnapshot() {
+    return {
+      damage: Number(this.matchStats?.damage) || 0,
+      healingReceived: Number(this.matchStats?.healingReceived) || 0,
+      healingDone: Number(this.matchStats?.healingDone) || 0,
+      rawTaken: Number(this.matchStats?.rawTaken) || 0,
+      damageMitigated: Number(this.matchStats?.damageMitigated) || 0,
+    };
+  }
+
+  resetMatchStats() {
+    this.matchStats = this.buildMatchStats();
+  }
+
+  addDamageDealt(value) {
+    this.matchStats.damage += Math.max(0, Number(value) || 0);
+  }
+
+  addHealingReceived(value) {
+    this.matchStats.healingReceived += Math.max(0, Number(value) || 0);
+  }
+
+  addHealingDone(value) {
+    this.matchStats.healingDone += Math.max(0, Number(value) || 0);
+  }
+
+  addRawDamageTaken(value) {
+    this.matchStats.rawTaken += Math.max(0, Number(value) || 0);
+  }
+
+  addDamageMitigated(value) {
+    this.matchStats.damageMitigated += Math.max(0, Number(value) || 0);
+  }
+
+  // ===============================
   // ======== STATUS EFFECTS (Delegated) ========
   // ===============================
 
-  applyStatusEffect(statusEffectKey, duration, context, metadata = {}) {
+  applyStatusEffect(
+    statusEffectKey,
+    duration,
+    context,
+    metadata = {},
+    stackCount = 1,
+  ) {
     return applyStatusEffect(
       this,
       statusEffectKey,
       duration,
       context,
       metadata,
+      stackCount,
     );
   }
 
-  hasStatusEffect(statusEffectName) {
-    return hasStatusEffect(this, statusEffectName);
+  hasStatusEffect(statusEffectKey) {
+    return hasStatusEffect(this, statusEffectKey);
   }
 
-  getStatusEffectData(name) {
-    return getStatusEffectData(this, name);
+  getStatusEffectData(statusEffectKey) {
+    return getStatusEffectData(this, statusEffectKey);
   }
 
-  getStatusEffect(statusEffectName) {
-    return getStatusEffect(this, statusEffectName);
+  getStatusEffect(statusEffectKey) {
+    return getStatusEffect(this, statusEffectKey);
   }
 
-  removeStatusEffect(statusEffectName) {
-    return removeStatusEffect(this, statusEffectName);
+  removeStatusEffect(statusEffectKey) {
+    return removeStatusEffect(this, statusEffectKey);
   }
 
   purgeExpiredStatusEffects(currentTurn) {
@@ -456,8 +521,8 @@ export class Champion {
     return modifyHP(this, amount, config);
   }
 
-  _checkAndConsumeShieldBlock(context) {
-    return _checkAndConsumeShieldBlock(this, context);
+  _checkAndConsumeShieldBlock(context, damageType) {
+    return _checkAndConsumeShieldBlock(this, context, damageType);
   }
 
   addShield(amount, decayPerTurn = 0, context, type = "regular") {

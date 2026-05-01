@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const theopetraSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -29,6 +29,7 @@ const theopetraSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -53,17 +54,25 @@ const theopetraSkills = [
       });
     },
   },
+
   {
     key: "magnitude_11",
     name: "Magnitude 11",
     bf: 85,
+
     damageMode: "standard",
+
+    cannotBeEvaded: true,
+
     contact: false,
+
     isUltimate: true,
     ultCost: 3,
+
     priority: 0,
+
     description() {
-      return `Theópetra invoca a magnitude 11, causando dano massivo a todos os inimigos.`;
+      return `Theópetra invoca a magnitude 11, causando dano massivo a todos os inimigos. Esse ataque não pode ser esquivado.`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
@@ -78,10 +87,14 @@ const theopetraSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+        results.push(...damageResults);
       }
       return results;
     },

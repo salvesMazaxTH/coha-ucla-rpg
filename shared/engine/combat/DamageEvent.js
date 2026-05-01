@@ -4,7 +4,7 @@ import { composeDamage } from "./pipeline/03_composeDamage.js";
 import { runBeforeHooks } from "./pipeline/04_beforeHooks.js";
 import { runAfterHooks } from "./pipeline/07_afterHooks.js";
 import { applyDamage } from "./pipeline/05_applyDamage.js";
-import { processObliterate } from "./pipeline/06_obliterate.js";
+import { processFinishing } from "./pipeline/06_finishing.js";
 import { processExtraQueue } from "./pipeline/08_extraQueue.js";
 import { buildFinalResult } from "./pipeline/09_resultBuilder.js";
 
@@ -29,10 +29,10 @@ export class DamageEvent {
 
   static GLOBAL_DMG_CAP = 999;
 
-  static debugMode = true;
+  static debugMode = false;
 
   constructor(params) {
-    const { attacker, defender, skill, context, baseDamage } = params;
+    const { attacker, defender, skill, context, baseDamage, type } = params;
 
     if (!attacker && !context?.isDot) {
       throw new Error("DamageEvent precisa de attacker");
@@ -40,6 +40,12 @@ export class DamageEvent {
 
     if (!defender) {
       throw new Error("DamageEvent precisa de defender");
+    }
+
+    if (type !== "physical" && type !== "magical") {
+      throw new Error(
+        `[DamageEvent] type obrigat\u00f3rio e inv\u00e1lido: ${type}`,
+      );
     }
 
     this.mode = params.mode ?? DamageEvent.Modes.STANDARD;
@@ -70,8 +76,18 @@ export class DamageEvent {
       this.defender,
     );
     this.skill = skill;
+    this.type = type;
+    console.log("[DamageEvent_constructor] Damage type:", this.type);
 
     this.context = context ?? {};
+
+    // Any DoT should be treated as nested damage (depth >= 1) by default.
+    // Callers can still explicitly pass a higher damageDepth when needed.
+    if (this.context.isDot) {
+      const resolvedDepth = Number(this.context.damageDepth ?? 0);
+      this.context.damageDepth =
+        Number.isFinite(resolvedDepth) && resolvedDepth > 1 ? resolvedDepth : 1;
+    }
     this.allChampions =
       params.allChampions instanceof Map
         ? [...params.allChampions.values()]
@@ -80,7 +96,7 @@ export class DamageEvent {
     //   "[DamageEvent_constructor] ALL-CHAMPIONS DEBUG allChampions in DamageEvent:",
     //   this.allChampions,
     // );
-    this.critOptions = params.critOptions ?? [];
+    this.critOptions = params.critOptions ?? params.context?.critOptions ?? [];
     this.flags = params.flags ?? {};
 
     this.damageDepth = this.context.damageDepth ?? 0;
@@ -115,7 +131,7 @@ export class DamageEvent {
 
     applyDamage(this);
 
-    processObliterate(this);
+    processFinishing(this);
 
     runAfterHooks(this);
 

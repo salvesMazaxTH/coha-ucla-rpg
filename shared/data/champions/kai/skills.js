@@ -23,6 +23,7 @@ const kaiSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -84,6 +85,7 @@ const kaiSkills = [
             piercingPercentage: 100,
             attacker: owner,
             defender: attacker,
+            type: "physical",
             skill: {
               key: "postura_da_brasa_viva_counter",
               name: "Contra-ataque Brasa Viva",
@@ -96,7 +98,7 @@ const kaiSkills = [
             },
           });
 
-          attacker.applyStatusEffect("queimando", 2, context, {
+          attacker.applyStatusEffect("burning", 2, context, {
             source: owner,
           });
 
@@ -127,7 +129,7 @@ const kaiSkills = [
           if (this.state === "brasa_viva") {
             if (!defender?.applyStatusEffect) return;
 
-            defender.applyStatusEffect("queimando", 2, context, {
+            defender.applyStatusEffect("burning", 2, context, {
               source: owner,
             });
 
@@ -188,7 +190,7 @@ const kaiSkills = [
 
         // console.log("[KAI] HIT", i, target.name, target.alive);
 
-        const directBonus = target.hasStatusEffect("queimando")
+        const directBonus = target.hasStatusEffect("burning")
           ? this.burningBonus
           : 0;
 
@@ -198,6 +200,7 @@ const kaiSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();

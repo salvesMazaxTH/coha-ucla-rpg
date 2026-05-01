@@ -24,6 +24,7 @@ import { Action } from "../shared/engine/combat/Action.js";
 import { TurnResolver } from "../shared/engine/combat/TurnResolver.js";
 import { DamageEvent } from "../shared/engine/combat/DamageEvent.js";
 import { snapshotChampions } from "../shared/engine/combat/snapshotChampions.js";
+import { decayShields } from "../shared/core/championCombat.js";
 import {
   applyChampionTransformation,
   revertChampionTransformation,
@@ -34,8 +35,8 @@ import {
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
+  enabled: true,
+  autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
@@ -44,7 +45,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
@@ -465,6 +466,9 @@ function applyGlobalTurnRegen(champion, context, resolver) {
         amount: GLOBAL_ULT_REGEN,
         context,
         sourceId: champion.id,
+        visualPhase: "global_turn_regen",
+        visualAfterHooks: true,
+        debugLabel: "global_turn_regen",
       })
     : champion.addUlt(GLOBAL_ULT_REGEN);
 
@@ -472,7 +476,7 @@ function applyGlobalTurnRegen(champion, context, resolver) {
     ` ${champion.name} regenerou ${applied} de ult no início do turno. Ult atual: ${champion.ultMeter}/${champion.ultCap}`,
   ); */
 
-  return applied;
+  // não retorna nada
 }
 
 //  EMISSÃO DE AÇÕES DE COMBATE (v2)
@@ -660,17 +664,38 @@ function emitCombatAction(envelope) {
   io.emit("combatAction", envelope);
 }
 
+function collectCombatLogs(value, logs = [], visited = new Set()) {
+  if (value == null) return logs;
+
+  if (typeof value === "string") return logs;
+  if (typeof value !== "object") return logs;
+  if (visited.has(value)) return logs;
+
+  visited.add(value);
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectCombatLogs(entry, logs, visited);
+    }
+    return logs;
+  }
+
+  if (typeof value.log === "string" && value.log.trim()) {
+    logs.push(value.log);
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectCombatLogs(nestedValue, logs, visited);
+  }
+
+  return logs;
+}
+
 function emitCombatLogsFromResults(results = []) {
   if (!Array.isArray(results) || results.length === 0) return;
 
-  // Suporta: objeto plano, array de objetos, arrays aninhados, DamageEvent, { log: ... }
-  const flatResults = results.flat(Infinity);
-  for (const result of flatResults) {
-    if (!result || typeof result !== "object") continue;
-    const log = result.log;
-    if (typeof log === "string" && log.trim()) {
-      io.emit("combatLog", log);
-    }
+  for (const log of collectCombatLogs(results)) {
+    io.emit("combatLog", log);
   }
 }
 
@@ -902,12 +927,19 @@ function handleStartTurn() {
     champ.runtime.currentContext = turnStartContext;
   });
 
+  match.combat.activeChampions.forEach((champ) => {
+    if (!champ.alive) return;
+    decayShields(champ);
+  });
+
   // 3. Hooks onTurnStart (DoTs, passivas reativas, etc.)
-  emitCombatEvent(
+  const turnStartResults = emitCombatEvent(
     "onTurnStart",
     { context: turnStartContext },
     match.combat.activeChampions,
   );
+
+  emitCombatLogsFromResults(turnStartResults);
 
   // 4. Executar scheduled effects deste turno (inclusive os agendados durante onTurnStart)
   const remaining = [];
@@ -952,6 +984,15 @@ function handleStartTurn() {
 
   for (const death of deathResults) {
     emitChampionDeath(death);
+  }
+
+  // Start-of-turn hooks (e.g. Jeff's Inevitabilidade da Morte) can kill the
+  // last real champion outside the regular end-turn action flow.
+  if (match.isGameEnded()) {
+    const winnerSlot = match.combat.computeWinnerSlot();
+    const winnerTeam = winnerSlot + 1;
+    const winnerName = match.players[winnerSlot]?.username;
+    io.emit("gameOver", { winnerTeam, winnerName });
   }
 
   // 3. Limpar expirados
@@ -1520,9 +1561,10 @@ io.on("connection", (socket) => {
         return socket.emit("actionFailed", "Ultômetro insuficiente.");
       }
 
-      if (!editMode.freeCostSkills) {
-        user.spendUlt(cost);
-      }
+      //if (!editMode.freeCostSkills) {
+      // user.spendUlt(cost);
+      // a lógica de consumo/gasto de recurso (ultômetro) foi movida para responsabilidade da TurnResolver na execução da ação da skill respectiva.
+      //}
     }
 
     const action = new Action({ userId, skillKey, targetIds });
@@ -1615,7 +1657,25 @@ io.on("connection", (socket) => {
 //  INICIALIZAÇÃO DO SERVIDOR
 // ============================================================
 
-const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+const configuredPort = Number(process.env.PORT);
+const hasExplicitPort = Number.isInteger(configuredPort) && configuredPort > 0;
+const initialPort = hasExplicitPort ? configuredPort : 3000;
+
+function startServer(port) {
+  httpServer.once("error", (error) => {
+    if (error.code === "EADDRINUSE" && !hasExplicitPort) {
+      console.warn(`Porta ${port} em uso. Tentando a próxima...`);
+      startServer(port + 1);
+      return;
+    }
+
+    console.error("Falha ao iniciar o servidor:", error);
+    process.exit(1);
+  });
+
+  httpServer.listen(port, () => {
+    console.log(`Servidor rodando na porta ${port}`);
+  });
+}
+
+startServer(initialPort);

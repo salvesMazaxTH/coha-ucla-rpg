@@ -22,14 +22,14 @@ export const GAME_GLOSSARY = {
     description:
       "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
   },
+  escudo_de_feitiço: {
+    title: "Escudo de Feitiço",
+    description:
+      "O campeão recebe um escudo que absorve o próximo dano que seja mágico.",
+  },
   gelado: {
     title: "Gelado",
     description: "O campeão tem sua velocidade e ataque reduzidos.",
-  },
-  híbrido: {
-    title: "Dano Híbrido",
-    description:
-      "Dano que é parte perfurante (ignora Defesa) e parte padrão (considera Defesa).",
   },
   imunidade_absoluta: {
     title: "Imunidade Absoluta",
@@ -65,11 +65,16 @@ export const GAME_GLOSSARY = {
   perfurante: {
     title: "Dano Perfurante",
     description:
-      "Ignora Defesa, mas ainda pode critar e sofrer bônus ou reduções.",
+      "Ignora um percentual da Defesa, mas ainda pode critar e sofrer bônus ou reduções.",
   },
   queimando: {
     title: "Queimando",
     description:
       "O campeão sofre dano contínuo (geralmente 20) por um certo número de turnos (geralmente 1).",
+  },
+  sangramento: {
+    title: "Sangramento",
+    description:
+      "O campeão sofre dano contínuo equivalente a 8% do HP máximo por stack no começo do turno. Novas aplicações acumulam stacks e renovam a duração total.",
   },
 };

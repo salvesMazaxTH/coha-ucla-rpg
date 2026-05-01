@@ -555,7 +555,7 @@ Se skill.obliterateRule existir:
   editMode.executionOverride?        ← threshold pode ser sobrescrito em debug
   se target.HP/maxHP ≤ threshold && target.HP > 0:
     target.HP = 0; target.alive = false
-    context.registerDamage({ flags:{ isObliterate:true } })
+    context.registerDamage({ flags:{ finishing:true, finishingType:"obliterate" } })
 ```
 
 **7. `runAfterHooks()`**
@@ -644,7 +644,7 @@ context = {
   // ========================
   visual: {
     damageEvents:      [],  // { type:"damage", targetId, sourceId, amount, isCritical, damageDepth,
-                            //   evaded?, immune?, shieldBlocked?, isObliterate?, isDot? }
+                            //   evaded?, immune?, shieldBlocked?, finishing?, isDot? }
     healEvents:        [],  // { type:"heal",   targetId, sourceId, amount }
     buffEvents:        [],  // { type:"buff",   targetId, sourceId, amount, statName }
     resourceEvents:    [],  // { type:"resourceGain"|"resourceSpend", targetId, sourceId, amount, resourceType:"ult" }
@@ -676,7 +676,7 @@ context.registerDamage({
     immune?,       // true se imunidade absoluta
     shieldBlocked?,
     obliterate?,   // true se morte por obliterateRule
-    isObliterate?, // alias de obliterate
+    finishing?, // alias de finishing
     isDot?,        // true se dano de tick
   }
 });

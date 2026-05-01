@@ -1,4 +1,4 @@
-const debugMode = true; // Set to true to enable detailed logging of combat events
+const debugMode = false; // Set to true to enable detailed logging of combat events
 
 export function emitCombatEvent(eventName, payload, champions, options = {}) {
   const results = [];
@@ -86,12 +86,7 @@ export function emitCombatEvent(eventName, payload, champions, options = {}) {
         });
 
         if (res) {
-          if (debugMode)
-            /*  console.log(
-              `[HOOK RESULT] ${champ.name} → ${source.key}.${eventName}:`,
-              res,
-            ); */
-            results.push(res);
+          results.push(res);
         }
       } catch (err) {
         console.error(

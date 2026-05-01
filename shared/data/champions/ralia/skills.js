@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const raliaSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -65,6 +65,7 @@ const raliaSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -99,6 +100,7 @@ const raliaSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -122,50 +124,75 @@ const raliaSkills = [
   {
     key: "decreto_do_bastiao",
     name: "Decreto do Bastião",
-    bf: 55,
+    bf: 50,
     damageMode: "piercing",
-    piercingPercentage: 90,
+    piercingPercentage: 75,
+
     atkDebuff: 20,
     debuffDuration: 2,
+    bleedStacks: 2,
+    bleedDuration: 2,
+
     contact: false,
     isUltimate: true,
     ultCost: 3,
 
     priority: 0,
     description() {
-      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos.`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos. Também aplica ${this.bleedStacks} stacks de Sangramento (por ${this.bleedDuration} turnos).`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
-      // Pegar todos os inimigos (time diferente do usuário)
-      const enemies = targets.filter(
-        (champion) => champion.team !== user.team && champion.alive,
-      );
+      // Os alvos já são os inimigos
+      const enemies = targets;
 
-      const baseDamage = (user.Attack * this.bf) / 100;
-
-      const results = [];
-
-      // Aplicar dano em cada inimigo
+      // Aplica o debuff de Ataque antes do dano
       for (const enemy of enemies) {
-        const damageResult = new DamageEvent({
-          baseDamage,
-          mode: "piercing",
-          piercingPercentage: this.piercingPercentage,
-          attacker: user,
-          defender: enemy,
-          skill: this,
-          context,
-          allChampions: context?.allChampions,
-        }).execute();
         enemy.modifyStat({
           statName: "Attack",
           amount: -this.atkDebuff,
           duration: this.debuffDuration,
           context,
-        }); // -20 Attack por 2 turnos
+        });
+      }
 
-        results.push(damageResult);
+      const baseDamage = (user.Attack * this.bf) / 100;
+      const results = [];
+
+      // Aplicar dano e bleed em cada inimigo
+      for (const enemy of enemies) {
+        const rawResult = new DamageEvent({
+          baseDamage,
+          mode: this.damageMode,
+          piercingPercentage: this.piercingPercentage,
+          attacker: user,
+          defender: enemy,
+          skill: this,
+          type: "physical",
+          context,
+          allChampions: context?.allChampions,
+        }).execute();
+
+        const resultsArray = Array.isArray(rawResult) ? rawResult : [rawResult];
+        const mainDamage = resultsArray[0];
+
+        results.push(...resultsArray);
+
+        const hitLanded =
+          mainDamage &&
+          mainDamage.evaded !== true &&
+          mainDamage.immune !== true &&
+          (mainDamage.totalDamage ?? 0) > 0;
+
+        if (hitLanded) {
+          enemy.applyStatusEffect(
+            "bleeding",
+            this.bleedDuration,
+            context,
+            {},
+            this.bleedStacks,
+          );
+        }
       }
 
       return results;

@@ -831,6 +831,35 @@
   z-index: -1;
 }
 
+.status-indicator-stack-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #fff2f2 0%,
+    #d61a2f 30%,
+    #6e0010 100%
+  );
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(214, 26, 47, 0.35);
+  color: #fff8f8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  transform: translate(28%, -18%);
+}
+
 @keyframes indicatorFloat {
   0% {
     transform: translate(-50%, 0px);

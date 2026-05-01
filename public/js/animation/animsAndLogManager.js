@@ -41,6 +41,7 @@ const TIMING = {
   // Sequencing gaps
   BETWEEN_EFFECTS: 60, // Reduced from 120
   BETWEEN_ACTIONS: 60, // Reduced from 60
+  RESOURCE_PHASE_GAP: 260,
 
   DEATH_CLAIM_EFFECT: 5600,
 };
@@ -83,6 +84,11 @@ function parseVisualHpState(hpText) {
 
 function getChampionElement(championId) {
   return document.querySelector(`.champion[data-champion-id="${championId}"]`);
+}
+
+function toNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
 }
 
 function scrollIfNeeded(
@@ -145,6 +151,156 @@ export function createCombatAnimationManager(deps) {
   let currentPhase = null;
   let activeDialogController = null;
   const editMode = deps.editMode || { freeCostSkills: false };
+  const statsTabKeys = [
+    "damage",
+    "healingReceived",
+    "healingDone",
+    "rawTaken",
+    "damageMitigated",
+  ];
+
+  function getSnapshotStatsEntry(champion) {
+    if (!champion) return null;
+
+    const backendStats = champion.matchStats || {};
+
+    return {
+      championId: champion.id,
+      name: champion.name || `ID ${champion.id}`,
+      portrait: champion.portrait || "",
+      team: champion.team,
+      damage: Math.max(0, toNumber(backendStats.damage)),
+      healingReceived: Math.max(0, toNumber(backendStats.healingReceived)),
+      healingDone: Math.max(0, toNumber(backendStats.healingDone)),
+      rawTaken: Math.max(0, toNumber(backendStats.rawTaken)),
+      damageMitigated: Math.max(0, toNumber(backendStats.damageMitigated)),
+    };
+  }
+
+  function sortEntriesBy(metricKey) {
+    const entries = Array.from(deps.activeChampions.values())
+      .map(getSnapshotStatsEntry)
+      .filter(Boolean);
+
+    return entries.sort((a, b) => {
+      const valueDiff = (b[metricKey] || 0) - (a[metricKey] || 0);
+      if (valueDiff !== 0) return valueDiff;
+
+      const teamA = typeof a.team === "number" ? a.team : 99;
+      const teamB = typeof b.team === "number" ? b.team : 99;
+      if (teamA !== teamB) return teamA - teamB;
+
+      return String(a.championId || "").localeCompare(
+        String(b.championId || ""),
+      );
+    });
+  }
+
+  function renderStatsRows(tbodyId, metricKey) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+
+    const entries = sortEntriesBy(metricKey);
+
+    if (!entries.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="3" class="match-stats-empty">Sem dados de combate.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = entries
+      .map((entry, index) => {
+        const safePortrait = String(entry.portrait || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        const safeName = String(entry.name || `ID ${entry.championId}`)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        const localTeam = Number(window.playerTeam);
+        const relationClass =
+          Number.isFinite(localTeam) && typeof entry.team === "number"
+            ? entry.team === localTeam
+              ? "ally"
+              : "enemy"
+            : "neutral";
+        const value = Math.round(Math.max(0, toNumber(entry[metricKey])));
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td>
+              <span class="match-stats-avatar-wrap ${relationClass}" title="${safeName}">
+                <img class="match-stats-portrait" src="${safePortrait}" alt="${safeName}">
+              </span>
+            </td>
+            <td>${value}</td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  function setStatsTab(tabKey) {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+
+    panel.querySelectorAll(".match-stats-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === tabKey);
+    });
+
+    panel.querySelectorAll(".match-stats-tab-panel").forEach((panelEl) => {
+      panelEl.classList.toggle("active", panelEl.dataset.tabPanel === tabKey);
+    });
+  }
+
+  function bindStatsPanelTabs() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel || panel.dataset.bound === "true") return;
+
+    panel.dataset.bound = "true";
+
+    panel.querySelectorAll(".match-stats-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tabKey = btn.dataset.tab;
+        if (statsTabKeys.includes(tabKey)) {
+          setStatsTab(tabKey);
+        }
+      });
+    });
+  }
+
+  function renderMatchStatsPanel() {
+    bindStatsPanelTabs();
+
+    renderStatsRows("matchStatsDamageBody", "damage");
+    renderStatsRows("matchStatsHealingReceivedBody", "healingReceived");
+    renderStatsRows("matchStatsHealingDoneBody", "healingDone");
+    renderStatsRows("matchStatsRawTakenBody", "rawTaken");
+    renderStatsRows("matchStatsDamageMitigatedBody", "damageMitigated");
+    setStatsTab("damage");
+  }
+
+  function showMatchStatsPanel() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+    renderMatchStatsPanel();
+    panel.classList.remove("hidden");
+    panel.classList.add("active");
+  }
+
+  function hideMatchStatsPanel() {
+    const panel = document.getElementById("matchStatsPanel");
+    if (!panel) return;
+    panel.classList.remove("active");
+    panel.classList.add("hidden");
+  }
+
+  function resetMatchStats() {
+    hideMatchStatsPanel();
+  }
 
   // Double-click em qualquer área da tela acelera apenas o dialog atual.
   document.addEventListener("click", () => {
@@ -311,8 +467,21 @@ export function createCombatAnimationManager(deps) {
         return;
       }
 
+      let prevResourcePhase = null;
+
       for (const event of events) {
         if (!event) continue;
+
+        if (key === "resourceEvents") {
+          const phase = event.phase ?? "default";
+
+          if (prevResourcePhase !== null && phase !== prevResourcePhase) {
+            await wait(TIMING.RESOURCE_PHASE_GAP);
+          }
+
+          prevResourcePhase = phase;
+        }
+
         await runEvent(event, handler);
       }
     }
@@ -416,14 +585,13 @@ export function createCombatAnimationManager(deps) {
     }
 
     const resolvedFinishingType =
-      finishingType ||
-      (obliterate ? "obliterate" : finishing ? "generic" : null);
-    const isFinishing = !!resolvedFinishingType;
-    const isObliterate = resolvedFinishingType === "obliterate";
+      finishingType || (finishing ? "regular" : null);
+    const hasFinishing = !!resolvedFinishingType;
+    const usesObliterateStyle = resolvedFinishingType === "obliterate";
 
     if (effect.immune) return await animateImmune(effect);
     if (effect.shieldBlocked) return await animateShieldBlock(effect);
-    if (!isFinishing && (!amount || amount <= 0)) return;
+    if (!hasFinishing && (!amount || amount <= 0)) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
 
@@ -443,19 +611,19 @@ export function createCombatAnimationManager(deps) {
     audioManager.play("damage");
 
     if (portraitWrapper) {
-      const hpDamage = Math.max(0, Number(amount) || 0);
+      const hpDamage = Math.max(0, Number(rawAmount) || 0);
       const hasShieldAbsorption = (Number(absorbedByShield) || 0) > 0;
       const floatValue =
-        isObliterate || isFinishing
+        usesObliterateStyle || hasFinishing
           ? "999"
           : hpDamage > 0
             ? `-${hpDamage}`
             : hasShieldAbsorption
               ? "🛡️"
               : "0";
-      const extraClass = isObliterate
+      const extraClass = usesObliterateStyle
         ? "obliterate"
-        : isFinishing
+        : hasFinishing
           ? "finishing"
           : `damage-tier-${getDamageTier(Math.max(1, hpDamage))}`;
 
@@ -471,23 +639,21 @@ export function createCombatAnimationManager(deps) {
     // EXECUÇÃO PRINCIPAL
     // ========================
 
-    if (isFinishing) {
+    if (hasFinishing) {
       updateVisualHP(targetId, -champion.currentHp, 0);
 
       await playFinishingEffect(championEl, {
-        variant: resolvedFinishingType || undefined,
+        variant: resolvedFinishingType || "regular",
       });
 
       championEl.dataset.finishing = "true";
-      if (isObliterate) {
-        championEl.dataset.obliterated = "true";
-      }
+      championEl.dataset.finishingType = resolvedFinishingType || "regular";
 
       return; // já aguardou tudo
     }
 
     // dano normal
-    const hpDamage = Math.max(0, Number(amount) || 0);
+    const hpDamage = Math.max(0, Number(rawAmount) || 0);
 
     const hpText = championEl.querySelector(".hp")?.textContent || "";
     const visualState = parseVisualHpState(hpText);
@@ -727,7 +893,7 @@ export function createCombatAnimationManager(deps) {
   //  RESOURCE REGEN ANIMATION
   // ============================================================
 
-  function animateResourceChange(effect, direction = 1) {
+  function animateResourceChange(effect, direction = null) {
     const { targetId, amount } = effect || {};
     const normalizedAmount = Math.abs(Number(amount) || 0);
 
@@ -740,14 +906,18 @@ export function createCombatAnimationManager(deps) {
     const actualPortrait = portraitWrapper.querySelector(".portrait");
     scrollIfNeeded(actualPortrait, { threshold: 0.85 });
 
-    const sign = direction >= 0 ? "+" : "-";
-    const bars = getUltBarDelta(
-      direction >= 0 ? normalizedAmount : -normalizedAmount,
-    );
+    const eventDirection =
+      direction ?? (effect?.type === "resourceSpend" ? -1 : 1);
+
+    const sign = eventDirection >= 0 ? "+" : "-";
+    // Sempre passa valor positivo para o float, só o sinal visual muda
+    const bars = getUltBarDelta(normalizedAmount);
 
     if (portraitWrapper) {
       const floatClass =
-        direction >= 0 ? "resource-float-ult-gain" : "resource-float-ult-spend";
+        eventDirection >= 0
+          ? "resource-float-ult-gain"
+          : "resource-float-ult-spend";
 
       createFloatElement(
         portraitWrapper,
@@ -759,7 +929,7 @@ export function createCombatAnimationManager(deps) {
 
     updateVisualResource(
       targetId,
-      direction >= 0 ? normalizedAmount : -normalizedAmount,
+      eventDirection >= 0 ? normalizedAmount : -normalizedAmount,
       "ult",
     );
   }
@@ -946,6 +1116,8 @@ export function createCombatAnimationManager(deps) {
 
       timerOverlay.classList.remove("hidden");
       timerOverlay.classList.add("active");
+
+      showMatchStatsPanel();
 
       let timeLeft = 120;
       countdownEl.textContent = `Retornando ao login em ${timeLeft}s...`;
@@ -1261,6 +1433,12 @@ export function createCombatAnimationManager(deps) {
       champion.portrait = snap.portrait;
     }
 
+    if (snap.matchStats !== undefined) {
+      champion.matchStats = champion.buildMatchStats
+        ? champion.buildMatchStats(snap.matchStats)
+        : { ...snap.matchStats };
+    }
+
     // 🔥 HP só é aplicado se NÃO houve animação de dano
     if (snap.HP !== undefined) {
       champion.HP = snap.HP;
@@ -1473,7 +1651,7 @@ export function createCombatAnimationManager(deps) {
       await wait(TIMING.DEATH_CLAIM_EFFECT);
 
       // normal death
-    } else if (!el.dataset.obliterated && !el.dataset.finishing) {
+    } else if (!el.dataset.finishing) {
       // Apply dying class — triggers CSS collapse animation
       el.classList.add("dying");
 
@@ -1540,6 +1718,7 @@ export function createCombatAnimationManager(deps) {
     queue.length = 0;
     processing = false;
     lastLoggedTurn = null;
+    resetMatchStats();
   }
 
   // ============================================================

@@ -6,10 +6,10 @@ export default {
   key: "sobrecarga_instavel",
   name: "Sobrecarga Instável",
   recoilPercent: 15,
-  condutorDuration: 2,
-  condutorBonusPercent: 15,
+  conductorDuration: 2,
+  conductorBonusPercent: 15,
   description() {
-    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Condutor". Ao atacar um alvo com "Condutor", Voltexz causa ${this.condutorBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
+    return `Sempre que Voltexz causar dano com uma habilidade, ela sofre ${this.recoilPercent}% do dano ({absoluto}) efetivamente causado como recuo. Além disso, ao causar dano, ela marca o alvo com "Condutor". Ao atacar um alvo com "Condutor", Voltexz causa ${this.conductorBonusPercent}% de dano adicional (consome o status) (Dano adicional Mín. 15).`;
   },
   hookScope: {
     onAfterDmgDealing: "attacker",
@@ -31,7 +31,7 @@ export default {
 
     if (recoilDamage > 0) {
       context.extraDamageQueue.push({
-        type: "recuo_dano",
+        type: "magical",
         mode: "absolute",
         baseDamage: recoilDamage,
         attacker: owner,
@@ -51,12 +51,12 @@ export default {
       log += `[Passiva - <b>Sobrecarga Instável</b>] ${formatChampionName(owner)} sofreu ${Math.floor(recoilDamage)} de dano de recuo.`;
     }
 
-    if (defender.hasStatusEffect?.("condutor")) {
-      defender.removeStatusEffect("condutor");
+    if (defender.hasStatusEffect?.("conductor")) {
+      defender.removeStatusEffect("conductor");
       return;
     }
 
-    defender.applyStatusEffect("condutor", this.condutorDuration, context, {
+    defender.applyStatusEffect("conductor", this.conductorDuration, context, {
       sourceSkill: skill,
     });
 
@@ -77,13 +77,13 @@ export default {
     // console.log("OWNER:", owner?.name);
     // console.log("DMG SRC:", attacker?.name);
     // console.log("ALVO:", defender?.name);
-    // console.log("HAS CONDUTOR?", defender?.hasStatusEffect?.("condutor"));
+    // console.log("HAS CONDUTOR?", defender?.hasStatusEffect?.("conductor"));
 
-    if (!defender.hasStatusEffect?.("condutor")) return;
+    if (!defender.hasStatusEffect?.("conductor")) return;
 
-    const bonusDamage = (damage * this.condutorBonusPercent) / 100;
+    const bonusDamage = (damage * this.conductorBonusPercent) / 100;
 
-    defender.removeStatusEffect("condutor");
+    defender.removeStatusEffect("conductor");
 
     context.registerDialog({
       message: `${formatChampionName(defender)} foi consumido por <b>"Condutor"</b>!`,
@@ -93,7 +93,7 @@ export default {
       timing: "post",
     });
 
-    let log = `⚡ ACERTO ! ${formatChampionName(attacker)} explorou "Condutor" de ${formatChampionName(defender)} (+${this.condutorBonusPercent}% dano)!`;
+    let log = `⚡ ACERTO ! ${formatChampionName(attacker)} explorou "Condutor" de ${formatChampionName(defender)} (+${this.conductorBonusPercent}% dano)!`;
 
     return {
       damage: damage + bonusDamage,

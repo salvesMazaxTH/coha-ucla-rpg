@@ -833,7 +833,7 @@ Se skill.obliterateRule existir && defender vivo && !runtime.preventObliterate:
   editMode.executionOverride?             ← threshold sobrescrito em debug
   se defender.HP/maxHP ≤ threshold && HP > 0:
     defender.HP = 0; defender.alive = false
-    context.registerDamage({ flags:{ isObliterate:true } })
+    context.registerDamage({ flags:{ finishing:true, finishingType:"obliterate" } })
 ```
 
 #### `07_afterHooks.js`

@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const naelthosSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -40,10 +40,14 @@ const naelthosSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+        results.push(...damageResults);
       }
       let allyLog = "";
       let statLog = "";
@@ -143,8 +147,8 @@ const naelthosSkills = [
       user.runtime.hookEffects.push(hookEffect);
       user.runtime.form = "bola_agua"; // Para animação visual
 
-      // Apply inerte como status effect (interrompível por ação)
-      /*       user.applyStatusEffect("inerte", this.effectDuration, context, {
+      // Apply inert como status effect (interrompível por ação)
+      /*       user.applyStatusEffect("inert", this.effectDuration, context, {
         canBeInterruptedByAction: true,
       });
  */

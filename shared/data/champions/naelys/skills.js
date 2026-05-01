@@ -45,13 +45,17 @@ const naelysSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
 
         // console.log("[NAELYS] DamageEvent resultado:", damageResult);
 
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+        results.push(...damageResults);
       }
 
       // console.log("[NAELYS] Cura própria:", this.selfHealAmount);
@@ -167,6 +171,7 @@ const naelysSkills = [
             baseDamage,
             attacker: owner,
             defender: attacker,
+            type: "physical",
             skill: {
               ...basic,
               key: "massa_do_mar_revolto_counter",

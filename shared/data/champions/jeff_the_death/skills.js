@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const jeffTheDeathSkills = [
   // =========================
   // Bloqueio Total (global)
   // =========================
-  basicBlock,
+  totalBlock,
   // =========================
   // Habilidades Especiais
   // =========================
@@ -40,11 +40,15 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      results.push(...primaryResults);
 
       // 🧠 Se não tiver stacks, acabou
       if (user.runtime.deathCounter <= 0) return results;
@@ -60,11 +64,13 @@ const jeffTheDeathSkills = [
           attacker: user,
           defender: adjEnemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
 
-        results.push(result);
+        const adjacentResults = Array.isArray(result) ? result : [result];
+        results.push(...adjacentResults);
       }
 
       return results;
@@ -101,6 +107,7 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -124,9 +131,8 @@ const jeffTheDeathSkills = [
           }
 
           context.isDot = true;
-          context.damageDepth = 1;
 
-          new DamageEvent({
+          const result = new DamageEvent({
             baseDamage: punishDamage,
             mode: DamageEvent.Modes.ABSOLUTE,
             attacker: null,
@@ -136,9 +142,18 @@ const jeffTheDeathSkills = [
               contact: false,
               damageMode: "absolute",
             },
+            type: "magical",
             context,
             allChampions: context?.allChampions,
           }).execute();
+
+          if (result?.immune) {
+            return { log: `${owner.name} é imune ao dano de Abraço da Morte!` };
+          }
+
+          return {
+            log: `${owner.name} sofre ${result?.totalDamage ?? punishDamage} de dano de <b>Abraço da Morte</b>.`,
+          };
         },
       });
 
@@ -198,6 +213,7 @@ const jeffTheDeathSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();

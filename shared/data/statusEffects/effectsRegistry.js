@@ -1,29 +1,27 @@
-import paralisado from "./paralisado.js";
-import atordoado from "./atordoado.js";
-import enraizado from "./enraizado.js";
-import inerte from "./inerte.js";
-import gelado from "./gelado.js";
-import congelado from "./congelado.js";
-import queimando from "./queimando.js";
-import imunidadeAbsoluta from "./imunidadeAbsoluta.js";
-import condutor from "./condutor.js";
-import invisivel from "./invisivel.js";
-// A IMPLEMENTAR: envenenado, sangramento
-/* import envenenado from "./envenenado.js";*/
-/* import sangramento from "./sangramento.js";  */
+import paralyzed from "./paralyzed.js";
+import stunned from "./stunned.js";
+import rooted from "./rooted.js";
+import inert from "./inert.js";
+import chilled from "./chilled.js";
+import frozen from "./frozen.js";
+import burning from "./burning.js";
+import bleeding from "./bleeding.js";
+import absoluteImmunity from "./absoluteImmunity.js";
+import conductor from "./conductor.js";
+import invisible from "./invisible.js";
+import poisoned from "./poisoned.js";
 
 export const StatusEffectsRegistry = {
-  paralisado,
-  atordoado,
-  enraizado,
-  inerte,
-  gelado,
-  congelado,
-  queimando,
-  imunidadeAbsoluta,
-  condutor,
-  invisivel,
-
-  /*   envenenado, IMPLEMENTAÇÃO FUTURA */
-  /*   sangramento, IMPLEMENTAÇÃO FUTURA*/
+  paralyzed,
+  stunned,
+  rooted,
+  inert,
+  chilled,
+  frozen,
+  burning,
+  bleeding,
+  absoluteImmunity,
+  conductor,
+  invisible,
+  poisoned,
 };

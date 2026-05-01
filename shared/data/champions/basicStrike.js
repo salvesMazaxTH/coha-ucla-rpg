@@ -21,6 +21,7 @@ const basicStrike = {
       attacker: user,
       defender: enemy,
       skill: this,
+      type: "physical",
       context,
       allChampions: context?.allChampions,
     }).execute();

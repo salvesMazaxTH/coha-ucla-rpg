@@ -5,7 +5,7 @@
  *
  * 1. StatusEffectVFX: lista de status effects genéricos que ativam VFX automaticamente.
  *    Basta adicionar o nome do status effect na lista para ativar o VFX correspondente.
- *    Exemplo: "congelado".
+ *    Exemplo: "frozen".
  *
  * 2. ExclusiveVFXTriggers: triggers exclusivos para efeitos que NÃO são status effects genéricos,
  *    mas sim estados runtime, marcas especiais ou efeitos únicos de personagem/habilidade.
@@ -34,8 +34,8 @@ import { startInvisibilityCanvas } from "./invisibilityCanvas.js";
 
 // Triggers automáticos para status effects genéricos (nome do status effect === nome do VFX)
 const StatusEffectVFX = [
-  "congelado",
-  "invisivel",
+  "frozen",
+  "invisible",
   // Adicione outros status effects que tenham VFX próprios aqui
 ];
 
@@ -63,6 +63,21 @@ const ExclusiveVFXTriggers = {
 
 const activeEffects = new WeakMap();
 
+function getShieldVFXData(champion) {
+  const shields = Array.isArray(champion.runtime?.shields)
+    ? champion.runtime.shields
+    : [];
+
+  const variant = shields.some((shield) => shield?.type === "spell")
+    ? "spell"
+    : "regular";
+
+  return {
+    variant,
+    stateKey: shields.length > 0 ? `shield:${variant}` : false,
+  };
+}
+
 export function syncChampionVFX(champion) {
   if (!champion?.el) return;
   if (!champion.el.isConnected) return;
@@ -75,7 +90,7 @@ export function syncChampionVFX(champion) {
     const shouldExist = champion.statusEffects?.has(type);
     const exists = champion._vfxState[type];
 
-    if (type === "invisivel") {
+    if (type === "invisible") {
       champion.el.classList.toggle("is-invisible", !!shouldExist);
     }
 
@@ -95,19 +110,26 @@ export function syncChampionVFX(champion) {
   // 2. Triggers exclusivos/habilidades
   for (const [type, trigger] of Object.entries(ExclusiveVFXTriggers)) {
     const shouldExist = trigger(champion);
-    const exists = champion._vfxState[type];
+    const vfxData = type === "shield" ? getShieldVFXData(champion) : null;
+    const nextState = type === "shield" ? vfxData.stateKey : shouldExist;
+    const exists = champion._vfxState[type] === nextState;
+    const hadCanvas = !!champion._vfxCanvases?.[type];
 
     if (shouldExist && !exists) {
+      if (hadCanvas) {
+        removeVFXCanvas(champion, type);
+      }
+
       const canvas = createVFXCanvas(type, champion);
       champion._vfxCanvases[type] = canvas;
-      playVFX(type, canvas);
+      playVFX(type, canvas, vfxData || {});
     }
 
-    if (!shouldExist && exists) {
+    if (!shouldExist && hadCanvas) {
       removeVFXCanvas(champion, type);
     }
 
-    champion._vfxState[type] = shouldExist;
+    champion._vfxState[type] = nextState;
   }
 }
 
@@ -148,11 +170,11 @@ export function playVFX(type, canvas, data = {}) {
       controller = startShield(canvas, data);
       break;
 
-    case "congelado":
+    case "frozen":
       controller = startFrozenCanvas(canvas, data);
       break;
 
-    case "invisivel":
+    case "invisible":
       controller = startInvisibilityCanvas(canvas, data);
       break;
 
@@ -194,7 +216,7 @@ function removeVFXCanvas(champion, key) {
     if (imgEl) imgEl.style.visibility = "";
   }
 
-  if (key === "invisivel") {
+  if (key === "invisible") {
     champion.el?.classList.remove("is-invisible");
   }
 

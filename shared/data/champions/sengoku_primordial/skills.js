@@ -1,8 +1,8 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const sengokuPrimordialSkills = [
-  basicBlock,
+  totalBlock,
   {
     key: "garra_primordial",
     name: "Garra Primordial",
@@ -22,6 +22,7 @@ const sengokuPrimordialSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -34,7 +35,7 @@ const sengokuPrimordialSkills = [
     damageMode: "standard",
     contact: false,
     isUltimate: true,
-    ultCost: 3,
+    ultCost: 2,
     priority: 0,
     description() {
       return `Sengoku expele fogo primordial sobre todos os inimigos.`;
@@ -52,6 +53,7 @@ const sengokuPrimordialSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();

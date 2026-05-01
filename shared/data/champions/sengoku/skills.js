@@ -1,19 +1,19 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const sengokuSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
   {
     key: "golpe_furioso",
     name: "Golpe Furioso",
-    bf: 80,
+    bf: 70,
     damageMode: "standard",
     contact: true,
     priority: 0,
@@ -29,6 +29,7 @@ const sengokuSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -38,7 +39,7 @@ const sengokuSkills = [
   {
     key: "bola_de_fogo",
     name: "Bola de Fogo",
-    bf: 55,
+    bf: 45,
     contact: false,
     damageMode: "piercing",
     piercingPercentage: 50,
@@ -60,6 +61,7 @@ const sengokuSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -72,7 +74,7 @@ const sengokuSkills = [
     duration: 3,
     transformInto: "sengoku_primordial",
     isUltimate: true,
-    ultCost: 2,
+    ultCost: 3,
     priority: 0,
     description() {
       return `Sengoku assume sua forma primordial dracônica por ${this.duration} turnos, alterando suas skills, passiva e atributos.`;

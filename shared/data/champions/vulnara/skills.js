@@ -6,7 +6,7 @@ const vulnaraSkills = [
   // ========================
   // Disparo Básico (global)
   // ========================
-  basicShot,
+  { ...basicShot, type: "physical" },
   // ========================
   // Habilidades Especiais
   // ========================
@@ -79,20 +79,31 @@ const vulnaraSkills = [
 
       // Aplicar dano em cada inimigo
       for (const enemy of enemies) {
-        const damageResult = new DamageEvent({
+        const rawDamageResult = new DamageEvent({
           baseDamage,
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
+
+        const damageResults = Array.isArray(rawDamageResult)
+          ? rawDamageResult
+          : [rawDamageResult];
+        const mainDamage = damageResults[0];
+
         // Aplicar queimando com 15% de chance (só se o golpe chegou)
-        if (!damageResult?.evaded && !damageResult?.immune && Math.random() < this.burnChance) {
-          enemy.applyStatusEffect("queimando", 2, context);
+        if (
+          !mainDamage?.evaded &&
+          !mainDamage?.immune &&
+          Math.random() < this.burnChance
+        ) {
+          enemy.applyStatusEffect("burning", 2, context);
         }
 
-        results.push(damageResult);
+        results.push(...damageResults);
       }
 
       return results;
@@ -137,11 +148,13 @@ const vulnaraSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "physical",
           context,
           allChampions: context?.allChampions,
         }).execute();
 
-        results.push(result);
+        const hitResults = Array.isArray(result) ? result : [result];
+        results.push(...hitResults);
       }
 
       return results;

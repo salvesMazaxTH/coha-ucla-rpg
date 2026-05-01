@@ -351,36 +351,13 @@ function createChampionOverlay(champion) {
   `;
   }
 
-  // atributos do campeão (p.Ex: ATQ, DEF ,etc...)
-  const statsItemHtml = [
-    { name: "Ataque", value: champion.Attack },
-    { name: "Defesa", value: champion.Defense },
-    { name: "Velocidade", value: champion.Speed },
-    { name: "Esquiva", value: champion.Evasion ?? 0 },
-    { name: "Crítico", value: champion.Critical ?? 0 },
-    { name: "Roubo de Vida", value: champion.LifeSteal ?? 0 },
-  ]
-    .filter((item) => item.value !== undefined)
-    .map(
-      (item) => `
-        <div class="portrait-overlay-stat">
-          <h4 class="portrait-overlay-stat-name">${escapeHtml(item.name)}: </h4>
-          <p class="portrait-overlay-stat-value">${escapeHtml(item.value)}</p>
-        </div>
-      `,
-    )
-    .join("");
-
   const details = document.createElement("div");
   details.classList.add("portrait-overlay-details");
   details.innerHTML = `
     <div class="portrait-overlay-details-content">
-      <h3 class="portrait-overlay-details-title">Passiva & Atributos</h3>
+      <h3 class="portrait-overlay-details-title">Passiva</h3>
       <div class="portrait-overlay-passive-list">
         ${passiveItemHtml}
-      </div>
-      <div class="portrait-overlay-stats-list">
-        ${statsItemHtml}
       </div>
     </div>
   `;
@@ -1545,11 +1522,11 @@ socket.on("skillApproved", async ({ userId, skillKey }) => {
   }
 
   socket.emit("useSkill", { userId, skillKey, targetIds });
+  // Habilita o undo imediatamente após enfileirar a ação
+  document.getElementById("undo-actions-btn").disabled = false;
   if (!editMode.actMultipleTimesPerTurn) {
     advanceActionBarSlot(userId);
   }
-
-  document.getElementById("undo-actions-btn").disabled = false;
 });
 
 // --- Coleta de alvos no client ---
@@ -2005,12 +1982,12 @@ function showActionBarSlot() {
     btn.addEventListener("mouseleave", () => removeSkillOverlay());
     btn.addEventListener("click", () => handleSkillUsage(btn));
 
-    // Disable contact skill if champion is enraizado
-    const hasEnraizado =
+    // Disable contact skill if champion is rooted
+    const hasRooted =
       champion.statusEffects &&
       champion.statusEffects.has &&
-      champion.statusEffects.has("enraizado");
-    if (skill.contact && hasEnraizado) {
+      champion.statusEffects.has("rooted");
+    if (skill.contact && hasRooted) {
       btn.disabled = true;
       btn.title = "Não pode usar habilidades de contato enquanto Enraizado.";
     }
@@ -2037,6 +2014,8 @@ function advanceActionBarSlot(champId) {
   if (actionBarSlotOrder[currentActionBarSlot] === champId) {
     currentActionBarSlot++;
     showActionBarSlot();
+    // Habilita o undo sempre que avança slot (há ação pendente)
+    document.getElementById("undo-actions-btn").disabled = false;
     // rebuildReserveDisplay(playerTeam);
   }
 }

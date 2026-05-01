@@ -31,14 +31,14 @@ export default {
       return;
     }
 
-    const alreadyFrozen = attacker.hasStatusEffect("congelado");
-    const alreadyChilled = attacker.hasStatusEffect("gelado");
+    const alreadyFrozen = attacker.hasStatusEffect("frozen");
+    const alreadyChilled = attacker.hasStatusEffect("chilled");
 
     if (alreadyFrozen) return;
     if (alreadyChilled) {
-      attacker.applyStatusEffect("congelado", this.freezeDuration, context);
+      attacker.applyStatusEffect("frozen", this.freezeDuration, context);
     } else {
-      attacker.applyStatusEffect("gelado", this.chillDuration, context);
+      attacker.applyStatusEffect("chilled", this.chillDuration, context);
     }
   },
 };

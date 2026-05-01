@@ -1,5 +1,13 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 
+function clearLanaSpellShield(owner) {
+  if (!Array.isArray(owner.runtime?.shields)) return;
+
+  owner.runtime.shields = owner.runtime.shields.filter(
+    (shield) => shield?.type !== "spell",
+  );
+}
+
 export default {
   key: "amigo_imaginario",
   name: "Amigo Imaginário",
@@ -20,10 +28,6 @@ export default {
     owner.runtime.lana ??= {
       triggered: false,
     };
-
-    if (owner.HP <= 0) {
-      return;
-    }
 
     if (owner.runtime.lana.triggered) {
       return;
@@ -54,9 +58,19 @@ export default {
     };
   },
 
-  /* onTurnStart({ owner, context }) {
-    if (owner.runtime.lana?.triggered) return;
-    owner.addShield();
-    // amount, decayPerTurn = 0, context, type = "regular"
-  }, */
+  onTurnStart({ owner, context }) {
+    owner.runtime.lana ??= {
+      triggered: false,
+    };
+
+    if (owner.runtime.lana.triggered) return;
+
+    clearLanaSpellShield(owner);
+
+    owner.addShield(1, 0, context, "spell");
+
+    return {
+      log: `${formatChampionName(owner)} recebeu um Escudo de Feitiço.`,
+    };
+  },
 };

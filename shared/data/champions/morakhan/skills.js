@@ -151,7 +151,6 @@ const morakhanSkills = [
           onStatusEffectIncoming: "target",
         },
         onAfterDmgTaking({ defender, attacker, damage, skill, context }) {
-
           if (context.damageDepth > 0) return; // evita loops infinitos com o dano refletido
 
           const reflectedDamage = damage * 0.5;
@@ -166,6 +165,7 @@ const morakhanSkills = [
             baseDamage: reflectedDamage,
             attacker: defender,
             defender: attacker,
+            type: "magical",
             skill: {
               key: "quarto_sutra_postura_da_montanha_counter",
               name: "Contra-ataque Postura da Montanha",

@@ -1,13 +1,13 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const gryskarchuSkills = [
   // =========================
   // Bloqueio Total (global)
   // =========================
 
-  basicBlock,
+  totalBlock,
   // =========================
   // Habilidades Especiais
   // =========================
@@ -34,6 +34,7 @@ const gryskarchuSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -41,7 +42,7 @@ const gryskarchuSkills = [
       // Status-effect só se aplica se o dano chegou (não esquivado, não imune)
       if (!result?.evaded && !result?.immune) {
         const rooted = enemy.applyStatusEffect(
-          "enraizado",
+          "rooted",
           this.rootDuration,
           context,
         );

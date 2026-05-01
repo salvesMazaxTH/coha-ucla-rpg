@@ -1,13 +1,13 @@
 /* import { CombatResolver } from "../../engine/combat/combatResolver.js"; */
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const voltexzSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -41,11 +41,15 @@ const voltexzSkills = [
           attacker: user,
           defender: primary,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
         // console.log("🌊 Target affinities:", primary.elementalAffinities);
-        results.push(primaryResult);
+        const primaryResults = Array.isArray(primaryResult)
+          ? primaryResult
+          : [primaryResult];
+        results.push(...primaryResults);
       }
 
       if (secondary) {
@@ -54,11 +58,15 @@ const voltexzSkills = [
           attacker: user,
           defender: secondary,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
         // console.log("🌊 Target affinities:", secondary.elementalAffinities);
-        results.push(secondaryResult);
+        const secondaryResults = Array.isArray(secondaryResult)
+          ? secondaryResult
+          : [secondaryResult];
+        results.push(...secondaryResults);
       }
 
       return results;
@@ -86,15 +94,16 @@ const voltexzSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
-
       const damageArray = Array.isArray(damageResult)
         ? damageResult
         : [damageResult];
+
+      results.push(...damageArray);
 
       const mainDamage = damageArray[0];
 
@@ -114,7 +123,7 @@ const voltexzSkills = [
         mainDamage?.totalDamage > 0
       ) {
         paralyzed = enemy.applyStatusEffect(
-          "paralisado",
+          "paralyzed",
           this.paralyzeDuration,
           context,
         );
@@ -159,11 +168,16 @@ const voltexzSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
+      const damageResults = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
+
+      results.push(...damageResults);
 
       return results;
     },

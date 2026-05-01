@@ -9,22 +9,26 @@ Completei a migração completa do sistema de mana/energia para ultômetro em to
 ## 📦 ARQUIVOS FINALIZADOS (4)
 
 ### 1. ✅ server.js
+
 - Removidas funções legacy de mana/energy
 - `getSkillCost()` usa `skill.isUltimate` e `skill.ultCost * 3`
 - `applyGlobalTurnRegen()` adiciona +2 unidades por turno
-- `registerUltGain()` implementado no contexto
+- `registerResourceChange()` implementado no contexto para ganho e gasto de ult
 - Validação de skills usa ultMeter
 
 ### 2. ✅ combatResolver.js
+
 - Removida `applyRegenFromDamage()` completamente
 - Sistema limpo e pronto para ultMeter
 
 ### 3. ✅ Champion.js
+
 - Já estava migrado!
 - Sistema ultMeter funcionando perfeitamente
 - UI exibe "Ultômetro"
 
 ### 4. ✅ GAME_ARCHITECTURE.md
+
 - Seção 7 completamente reescrita
 - Documentação completa do sistema de ultômetro
 
@@ -33,12 +37,14 @@ Completei a migração completa do sistema de mana/energia para ultômetro em to
 ## 🎯 Sistema de Ultômetro
 
 ### Representação
+
 ```js
-champion.ultMeter = 0;    // 0-15 unidades
-champion.ultCap = 15;     // 5 barras × 3 unidades
+champion.ultMeter = 0; // 0-15 unidades
+champion.ultCap = 15; // 5 barras × 3 unidades
 ```
 
 ### Ganho por Ação
+
 - Causar dano (normal): +2 unidades
 - Causar dano (ultimate): +1 unidade
 - Tomar dano: +1 unidade
@@ -46,6 +52,7 @@ champion.ultCap = 15;     // 5 barras × 3 unidades
 - Regen global: +2 unidades por turno
 
 ### Custo de Ultimate
+
 ```js
 {
   isUltimate: true,

@@ -1,12 +1,12 @@
 import { formatChampionName } from "../../../ui/formatters.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const vaelSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -30,6 +30,7 @@ const vaelSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -59,11 +60,15 @@ const vaelSkills = [
         attacker: user,
         defender: primary,
         skill: this,
+        type: "physical",
         context,
         critOptions: { disable: true }, // sem crítico
         allChampions: context?.allChampions,
       }).execute();
-      results.push(primaryResult);
+      const primaryResults = Array.isArray(primaryResult)
+        ? primaryResult
+        : [primaryResult];
+      results.push(...primaryResults);
 
       console.log(
         `[INVESTIDA TRANSPASSANTE] primary.combatSlot: ${primary.combatSlot}, primary.team: ${primary.team}`,
@@ -85,11 +90,15 @@ const vaelSkills = [
         attacker: user,
         defender: secondaryTarget,
         skill: this,
+        type: "physical",
         context,
         critOptions: { force: true }, // crítico garantido
         allChampions: context?.allChampions,
       }).execute();
-      results.push(secondaryResult);
+      const secondaryResults = Array.isArray(secondaryResult)
+        ? secondaryResult
+        : [secondaryResult];
+      results.push(...secondaryResults);
 
       return results;
     },
@@ -117,6 +126,7 @@ const vaelSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();

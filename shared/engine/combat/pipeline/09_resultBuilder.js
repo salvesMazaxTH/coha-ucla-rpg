@@ -9,14 +9,28 @@ export function buildFinalResult(event) {
     // ...(event.context.extraLogs || []),
   ];
 
-  let finalLog = _buildLog(
-    event.attacker,
-    event.defender,
-    event.skill,
-    event.damage,
-    event.crit,
-    event.hpAfter,
-  );
+  let finalLog;
+  if (event.context?.isDot) {
+    const targetName = formatChampionName(event.defender);
+    const effectName =
+      event.skill && typeof event.skill === "object"
+        ? event.skill.name
+        : event.skill;
+    const dmg = Math.floor(event.damage);
+    finalLog = `${targetName} sofreu ${dmg} de dano${
+      effectName ? ` de <b>${effectName}</b>` : ""
+    }`;
+    finalLog += `\nHP final de ${targetName}: ${event.hpAfter}/${event.defender.maxHP}`;
+  } else {
+    finalLog = _buildLog(
+      event.attacker,
+      event.defender,
+      event.skill,
+      event.damage,
+      event.crit,
+      event.hpAfter,
+    );
+  }
 
   if (allLogs.length) {
     finalLog += "\n" + allLogs.join("\n");
@@ -29,6 +43,7 @@ export function buildFinalResult(event) {
     finalHP: event.defender.HP,
     targetId: event.defender.id,
     userId: event.attacker?.id ?? null,
+    type: event.type,
     log: finalLog,
     crit: event.crit,
     damageDepth: event.context.damageDepth,

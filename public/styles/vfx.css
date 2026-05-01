@@ -85,7 +85,7 @@
 
 /* Frozen status VFX (Canvas-based animations) */
 
-.vfx-congelado {
+.vfx-frozen {
   mix-blend-mode: screen;
   filter: brightness(1.05) contrast(1.05);
   z-index: 6;
@@ -93,7 +93,7 @@
 
 /* Invisivel status VFX (canvas + subtle portrait phasing) */
 
-.vfx-invisivel {
+.vfx-invisible {
   mix-blend-mode: screen;
   filter: saturate(0.9) brightness(1.06);
   z-index: 7;

@@ -24,11 +24,15 @@ import torren from "./torren/index.js";
 import lana from "./lana/index.js";
 import lana_dino from "./lana_dino/index.js";
 import bruno from "./bruno/index.js";
+import myrra from "./myrra/index.js";
+import akane from "./akane/index.js";
 import sengoku from "./sengoku/index.js";
 import sengoku_primordial from "./sengoku_primordial/index.js";
 import theopetra from "./theopetra/index.js";
 import isarelis from "./isarelis/index.js";
 import morakhan from "./morakhan/index.js";
+import noyre from "./noyre/index.js";
+import tox_vipranna from "./tox_vipranna/index.js";
 
 const championDB = {
   ralia,
@@ -56,12 +60,16 @@ const championDB = {
   torren,
   lana,
   lana_dino,
+  myrra,
+  akane,
   bruno,
   sengoku,
   sengoku_primordial,
   theopetra,
   isarelis,
   morakhan,
+  noyre,
+  tox_vipranna,
 };
 
 export default championDB;

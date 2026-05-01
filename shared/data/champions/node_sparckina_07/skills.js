@@ -28,6 +28,7 @@ const nodeSparckina07Skills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -93,27 +94,21 @@ const nodeSparckina07Skills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const paralyzed = enemy.applyStatusEffect(
-        "paralisado",
-        this.paralyzeDuration,
-        context,
-      );
-
-      if (!paralyzed || !paralyzed.log) {
-        /* console.log(
-          `[HABILIDADE — Radiant Burst] ${formatChampionName(user)} tentou aplicar "Paralisado" em ${formatChampionName(enemy)}, mas falhou.`,
-        );
-        */
-      }
-
-      return new DamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
+
+      if (!result?.evaded && !result?.immune && result?.totalDamage > 0) {
+        enemy.applyStatusEffect("paralyzed", this.paralyzeDuration, context);
+      }
+
+      return result;
     },
   },
 ];

@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const reyskaroneSkills = [
   // =========================
   // Bloqueio Total (global)
   // =========================
-  basicBlock,
+  totalBlock,
   // =========================
   // Habilidades Especiais
 
@@ -26,7 +26,7 @@ const reyskaroneSkills = [
 
     priority: 1,
     description() {
-      return `Reyskarone sacrifica ${this.hpSacrificePercent}% de seu HP máximo para aplicar "Tributo" por ${this.tributeDuration} turnos. Aliados que atacarem o alvo curam ${this.tributeHeal} HP e causam ${this.tributeBonusDamage} de dano a mais. Em seguida, ataca o alvo escolhido imediatamente.`;
+      return `Sacrifica ${this.hpSacrificePercent}% do HP máximo e marca o alvo com Tributo por ${this.tributeDuration} turnos (a marca é bloqueada por Imunidade Absoluta, Escudo Supremo ou Escudo de Feitiço). Aliados que o atacarem curam ${this.tributeHeal} HP e causam +${this.tributeBonusDamage} de dano. Em seguida, ataca o alvo.`;
     },
     targetSpec: ["enemy"],
     resolve({ user, targets, context = {} }) {
@@ -36,51 +36,75 @@ const reyskaroneSkills = [
 
       user.takeDamage(hpSacrifice);
 
-      // =========================
-      // HOOK TEMPORÁRIO: TRIBUTO
-      // =========================
-      enemy.runtime.hookEffects.push({
-        key: "tributo",
-        group: "skill",
+      enemy.runtime.hookEffects ??= [];
+      const shields = Array.isArray(enemy.runtime?.shields)
+        ? enemy.runtime.shields
+        : [];
 
-        expiresAtTurn: context.currentTurn + this.tributeDuration,
+      const hasAbsoluteImmunity = enemy.hasStatusEffect?.("absoluteImmunity");
+      const supremeShieldIdx = shields.findIndex(
+        (shield) => shield?.type === "supreme" && shield?.amount > 0,
+      );
+      const spellShieldIdx = shields.findIndex(
+        (shield) => shield?.type === "spell" && shield?.amount > 0,
+      );
 
-        hookScope: {
-          onAfterDmgDealing: "defender",
-        },
+      const tributoBlocked =
+        hasAbsoluteImmunity || supremeShieldIdx !== -1 || spellShieldIdx !== -1;
 
-        onBeforeDmgDealing: ({
-          attacker,
-          defender,
-          skill,
-          damage,
-          owner,
-          context,
-        }) => {
-          if (defender !== enemy) return;
+      if (!tributoBlocked) {
+        // =========================
+        // HOOK TEMPORÁRIO: TRIBUTO
+        // =========================
+        enemy.runtime.hookEffects.push({
+          key: "tributo",
+          group: "skill",
 
-          // bônus de dano
-          const bonusDamage = this.tributeBonusDamage;
+          expiresAtTurn: context.currentTurn + this.tributeDuration,
 
-          return {
-            damage: damage + bonusDamage,
-          };
-        },
+          hookScope: {
+            onAfterDmgDealing: "defender",
+          },
 
-        onAfterDmgDealing: ({ attacker, defender, owner, context }) => {
-          if (defender !== enemy) return;
+          onBeforeDmgDealing: ({
+            attacker,
+            defender,
+            skill,
+            damage,
+            owner,
+            context,
+          }) => {
+            if (defender !== enemy) return;
 
-          // cura o atacante
-          attacker.heal(this.tributeHeal, context, owner);
-        },
-      });
+            // bônus de dano
+            const bonusDamage = this.tributeBonusDamage;
 
-      context.registerDialog({
-        message: `${formatChampionName(enemy)} foi marcado com <b>Tributo</b>!`,
-        sourceId: user.id,
-        targetId: user.id,
-        duration: 1000,
-      });
+            return {
+              damage: damage + bonusDamage,
+            };
+          },
+
+          onAfterDmgDealing: ({ attacker, defender, owner, context }) => {
+            if (defender !== enemy) return;
+
+            // cura o atacante
+            attacker.heal(this.tributeHeal, context, owner);
+          },
+        });
+
+        context.registerDialog({
+          message: `${formatChampionName(enemy)} foi marcado com <b>Tributo</b>!`,
+          sourceId: user.id,
+          targetId: enemy.id,
+          duration: 1000,
+        });
+      } else {
+        if (supremeShieldIdx !== -1) {
+          shields.splice(supremeShieldIdx, 1);
+        } else if (spellShieldIdx !== -1) {
+          shields.splice(spellShieldIdx, 1);
+        }
+      }
 
       // ataque imediato
       const result = new DamageEvent({
@@ -88,12 +112,15 @@ const reyskaroneSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      if (result?.log) {
-        result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
+      if (!tributoBlocked) {
+        if (result?.log) {
+          result.log += `\n${formatChampionName(enemy)} foi marcado com Tributo.`;
+        }
       }
 
       return result;

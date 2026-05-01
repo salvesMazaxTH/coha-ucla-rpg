@@ -45,10 +45,10 @@ export default {
   },
 
   onStatusEffectIncoming({ target, statusEffect, context, owner }) {
-    if (statusEffect.key !== "congelado") return;
+    if (statusEffect.key !== "frozen") return;
     if (target.team === owner.team) return;
     if (!owner.alive) return;
-    if (target.hasStatusEffect?.("congelado")) return;
+    if (target.hasStatusEffect?.("frozen")) return;
     if (!context?.allChampions) return;
 
     context.registerDialog?.({
@@ -67,6 +67,7 @@ export default {
         name: "Frio Absoluto (Passiva)",
         contact: false,
       },
+      type: "magical",
       context: { ...context, damageDepth: (context.damageDepth || 0) + 1 },
       allChampions: context.allChampions,
     }).execute();

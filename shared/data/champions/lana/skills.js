@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const lanaSkills = [
   // ========================
   // Bloqueio Total (global)
   // ========================
-  basicBlock,
+  totalBlock,
   // ========================
   // Habilidades Especiais
   // ========================
@@ -89,6 +89,7 @@ const lanaSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -132,10 +133,14 @@ const lanaSkills = [
           attacker: user,
           defender: enemy,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
-        results.push(damageResult);
+        const damageResults = Array.isArray(damageResult)
+          ? damageResult
+          : [damageResult];
+        results.push(...damageResults);
       }
 
       return results;

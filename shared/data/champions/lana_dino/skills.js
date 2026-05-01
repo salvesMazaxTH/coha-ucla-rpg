@@ -1,10 +1,10 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 import basicStrike from "../basicStrike.js";
 
 const tutuSkills = [
-  basicBlock,
+  totalBlock,
   basicStrike,
   {
     key: "investida_protetora",
@@ -32,11 +32,15 @@ const tutuSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
         allChampions: context?.allChampions,
       }).execute();
 
-      results.push(damageResult);
+      const damageResults = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
+      results.push(...damageResults);
 
       const lowestHealthAlly = context.aliveChampions
         .filter((c) => c.team === user.team && c.id !== user.id)

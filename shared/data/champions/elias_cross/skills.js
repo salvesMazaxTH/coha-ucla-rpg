@@ -1,12 +1,12 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import basicBlock from "../basicBlock.js";
+import totalBlock from "../totalBlock.js";
 
 const eliasCrossSkills = [
   // =========================
   // Bloqueio Total (global)
   // =========================
-  basicBlock,
+  totalBlock,
   // =========================
   // Habilidades Especiais
   // =========================
@@ -29,7 +29,7 @@ const eliasCrossSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const isOverloaded = enemy.hasStatusEffect("condutor");
+      const isOverloaded = enemy.hasStatusEffect("conductor");
       /* console.log(
         `Impacto Relâmpago: ${formatChampionName(enemy)} ${isOverloaded ? "está" : "não está"} sobrecarregado. StatusEffects do alvo: ${[...enemy.statusEffects.keys()].join(", ")}`,
       );
@@ -46,6 +46,7 @@ const eliasCrossSkills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -90,13 +91,14 @@ const eliasCrossSkills = [
       }
 
       const baseDamage = (user.Attack * this.bf) / 100;
-      const isOverloaded = enemy.hasStatusEffect("condutor");
+      const isOverloaded = enemy.hasStatusEffect("conductor");
 
       const result = new DamageEvent({
         baseDamage: isOverloaded ? baseDamage + this.damageBonus : baseDamage,
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "magical",
         context,
         allChampions: context?.allChampions,
       }).execute();
@@ -134,7 +136,7 @@ const eliasCrossSkills = [
 
     finishingRule(ctx) {
       const target = ctx.defender;
-      const hasOverload = target.hasStatusEffect("condutor");
+      const hasOverload = target.hasStatusEffect("conductor");
       return hasOverload ? 0.25 : 0.17;
     },
 
@@ -177,6 +179,7 @@ const eliasCrossSkills = [
             mode: this.recoilDamageMode,
             attacker: user,
             defender: user,
+            type: "magical",
             skill: this,
           });
         }
@@ -186,6 +189,7 @@ const eliasCrossSkills = [
           attacker: user,
           defender: target,
           skill: this,
+          type: "magical",
           context,
           allChampions: context?.allChampions,
         }).execute();
