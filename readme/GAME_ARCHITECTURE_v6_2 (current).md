@@ -857,6 +857,16 @@ Na prática, isso permite que o perfil do campeão, incluindo uma convenção co
 
 Não cruzar aliases entre camadas.
 
+### `damageMode` (skill) vs `mode` (DamageEvent)
+
+- Skills declaram `damageMode` (ex: `"standard"`, `"piercing"`, `"absolute"`).
+- O `DamageEvent` opera com `mode` e usa `DamageEvent.Modes` como enum canônico.
+- Quando não houver override explícito, o fluxo padrão deve respeitar `skill.damageMode ?? DamageEvent.Modes.STANDARD`.
+- No estado atual:
+  - `basicStrike` usa `damageMode: "standard"`.
+  - `basicShot` usa `damageMode: "standard"`.
+  - `totalBlock` é skill defensiva de hook e não instancia `DamageEvent` (sem fluxo de dano direto).
+
 ### Uso
 
 ```js
@@ -867,7 +877,7 @@ const result = new DamageEvent({
   skill,
   type: "physical", // obrigatório: "physical" | "magical"
   context,
-  mode, // "standard" | "piercing" | "absolute" (padrão: "standard")
+  mode: skill.damageMode ?? DamageEvent.Modes.STANDARD,
   piercingPercentage, // % da defesa do alvo a ignorar (0-100, modo piercing, default 100)
   critOptions, // { force?, disable? }
   allChampions, // Map — necessário para hooks
