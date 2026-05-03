@@ -135,7 +135,9 @@ Esses campos permitem controlar a ordem e o momento exato em que mensagens apare
 │   │   ├── championDB.js           # Re-export do índice de campeões
 │   │   ├── champions/
 │   │   │   ├── index.js            # Índice de todos os campeões registrados
-│   │   │   ├── basicAttack.js      # Definição genérica do ataque básico
+│   │   │   ├── basicStrike.js      # Golpe básico global de contato (melee)
+│   │   │   ├── basicShot.js        # Disparo básico global à distância (ranged)
+│   │   │   ├── totalBlock.js       # Bloqueio defensivo global (self)
 │   │   │   └── <champion>/         # Um diretório por campeão
 │   │   │       ├── index.js        # Re-export: { ...data, skills, passive }
 │   │   │       ├── data.js         # Stats base (HP, ATK, DEF, SPD, etc.)
@@ -1808,10 +1810,14 @@ export default {
 ```js
 import data from "./data.js";
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
-import basicAttack from "../basicAttack.js";
+import basicStrike from "../basicStrike.js";
+import basicShot from "../basicShot.js";
+import totalBlock from "../totalBlock.js";
 
 const skills = [
-  { ...basicAttack, type: data.damageType ?? "physical" },
+  { ...basicStrike },
+  { ...basicShot, type: data.damageType ?? "physical" },
+  { ...totalBlock },
   {
     key: "minha_skill",
     name: "Nome da Skill",
