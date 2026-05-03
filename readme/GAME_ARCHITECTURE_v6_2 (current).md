@@ -1,7 +1,7 @@
 # GAME_ARCHITECTURE.md — Champion Arena (UCLA RPG)
 
 > Documentação mestre da arquitetura do sistema. Referência técnica completa para desenvolvimento, manutenção e extensão do jogo.
-> **v5.2 (estado operacional atual)** — O modo jogável atual voltou a ser **3v3 fixo**: cada jogador seleciona **3 campeões**, com **3 slots simultâneos em campo** (inicial e máximo). O sistema de **Switch/troca/reserva está temporariamente desabilitado por tempo indeterminado**.
+> **v6.2 (estado operacional atual)** — O modo jogável atual voltou a ser **3v3 fixo**: cada jogador seleciona **3 campeões**, com **3 slots simultâneos em campo** (inicial e máximo). O sistema de **Switch/troca/reserva está temporariamente desabilitado por tempo indeterminado**.
 
 ---
 
