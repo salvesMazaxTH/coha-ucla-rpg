@@ -1848,7 +1848,9 @@ const skills = [
         attacker: user,
         defender: enemy,
         skill: this,
+        type: "physical",
         context,
+        mode: this.damageMode,
         allChampions: context?.allChampions,
       }).execute();
     },
