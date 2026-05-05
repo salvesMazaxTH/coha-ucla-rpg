@@ -1,6 +1,5 @@
 import { DamageEvent } from "../../../engine/combat/DamageEvent.js";
 import { formatChampionName } from "../../../ui/formatters.js";
-import poisoned from "../../statusEffects/poisoned.js";
 import basicStrike from "../basicStrike.js";
 
 const toxViprannaSkills = [
@@ -81,6 +80,7 @@ const toxViprannaSkills = [
       user.runtime.hookEffects.push({
         key: "revestimento_toxico_retaliation",
         expiresAtTurn: activatedTurn + this.auraDuration,
+        poisonedStacks: this.poisonedStacks,
 
         hookScope: {
           onBeforeDmgTaking: "defender",

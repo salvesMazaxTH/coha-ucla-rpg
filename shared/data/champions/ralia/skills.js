@@ -131,7 +131,6 @@ const raliaSkills = [
     atkDebuff: 20,
     debuffDuration: 2,
     bleedStacks: 2,
-    bleedDuration: 2,
 
     contact: false,
     isUltimate: true,
@@ -139,7 +138,7 @@ const raliaSkills = [
 
     priority: 0,
     description() {
-      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos. Também aplica ${this.bleedStacks} stacks de Sangramento (por ${this.bleedDuration} turnos).`;
+      return `Ralia finca sua lâmina no chão e impõe sua lei ao campo. Por ${this.debuffDuration} turnos, inimigos ativos sofrem −${this.atkDebuff} de Ataque. Em seguida, Ralia causa dano perfurante (${this.piercingPercentage}% de perfuração) contra todos os inimigos vivos. Também aplica ${this.bleedStacks} stacks de Sangramento.`;
     },
     targetSpec: ["all:enemy"],
     resolve({ user, targets, context = {} }) {
@@ -187,7 +186,7 @@ const raliaSkills = [
         if (hitLanded) {
           enemy.applyStatusEffect(
             "bleeding",
-            this.bleedDuration,
+            undefined,
             context,
             {},
             this.bleedStacks,
