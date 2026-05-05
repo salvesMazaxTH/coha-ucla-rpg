@@ -22,6 +22,11 @@ export const GAME_GLOSSARY = {
     description:
       "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
   },
+  envenenado  : {
+    title: "Envenenado",
+    description:
+      "O campeão sofre dano contínuo por um certo número de turnos. Novas aplicações acumulam stacks e renovam a duração total.",
+  },
   escudo_de_feitiço: {
     title: "Escudo de Feitiço",
     description:

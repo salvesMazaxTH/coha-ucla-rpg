@@ -2,11 +2,8 @@ export default {
   name: "Tox Vipranna",
   portrait: "/assets/portraits/tox_vipranna.webp",
 
-  unreleased: true,
-
-  HP: 340,
-  Attack: 120,
-  Defense: 95,
-  Speed: 70,
-  Critical: 15,
+  HP: 360,
+  Attack: 170,
+  Defense: 110,
+  Speed: 75,
 };
