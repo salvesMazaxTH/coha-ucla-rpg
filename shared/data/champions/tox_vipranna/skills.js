@@ -43,7 +43,7 @@ const toxViprannaSkills = [
       const alreadyPoisoned = enemy.hasStatusEffect("poisoned");
       const stacks = alreadyPoisoned ? 2 : 4;
 
-      enemy.applyStatusEffect("poisoned", 2, context, {}, stacks);
+      enemy.applyStatusEffect("poisoned", undefined, context, {}, stacks);
 
       return result;
     },
@@ -61,8 +61,6 @@ const toxViprannaSkills = [
 
     auraDuration: 2,
     poisonedStacks: 2,
-    poisonedDuration: 2,
-
     targetSpec: ["self"],
 
     description() {
@@ -92,7 +90,13 @@ const toxViprannaSkills = [
           if (!skill?.contact) return;
           if (!attacker) return;
 
-          attacker.applyStatusEffect("poisoned", this.poisonedDuration, context, {}, this.poisonedStacks);
+          attacker.applyStatusEffect(
+            "poisoned",
+            undefined,
+            context,
+            {},
+            this.poisonedStacks,
+          );
 
           return {
             log: `<b>[${this.name}]</b> ${formatChampionName(attacker)} recebeu ${this.poisonedStacks} stacks de <b>Envenenado</b> ao atacar ${formatChampionName(owner)}!`,

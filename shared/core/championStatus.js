@@ -217,7 +217,10 @@ export function applyStatusEffect(
     return false;
   }
 
-  duration = resolveStatusEffectDuration(duration, metadata);
+  const durationFromStacks = definition.durationFromStacks === true;
+  duration = durationFromStacks
+    ? normalizedStackCount
+    : resolveStatusEffectDuration(duration, metadata);
 
   if (isStackable && existingInstance) {
     const refreshedInstance = reapplyStackableStatusEffect({
