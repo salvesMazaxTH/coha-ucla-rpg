@@ -22,10 +22,10 @@ export const GAME_GLOSSARY = {
     description:
       "O campeão fica preso no lugar, sendo incapacitado de agir com habilidades que façam contato.",
   },
-  envenenado  : {
+  envenenado: {
     title: "Envenenado",
     description:
-      "O campeão sofre dano contínuo por um certo número de turnos. Novas aplicações acumulam stacks e renovam a duração total.",
+      "No início do turno, causa dano mágico contínuo equivalente a 5% do HP máximo por stack e remove 1 stack. Quando o último stack é consumido, o efeito expira. Novas aplicações apenas somam stacks no mesmo status ativo.",
   },
   escudo_de_feitiço: {
     title: "Escudo de Feitiço",
@@ -80,6 +80,6 @@ export const GAME_GLOSSARY = {
   sangramento: {
     title: "Sangramento",
     description:
-      "O campeão sofre dano contínuo equivalente a 8% do HP máximo por stack no começo do turno. Novas aplicações acumulam stacks e renovam a duração total.",
+      "No início do turno, causa dano físico contínuo equivalente a 5% do HP máximo por stack e remove 1 stack. Quando o último stack é consumido, o efeito expira. Novas aplicações apenas somam stacks no mesmo status ativo.",
   },
 };

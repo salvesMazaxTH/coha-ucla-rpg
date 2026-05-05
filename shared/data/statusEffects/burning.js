@@ -30,7 +30,7 @@ const burning = {
     }
 
     return {
-      log: `${owner.name} sofre ${result?.totalDamage ?? damage} de dano de Queimadura.`,
+      log: `${owner.name} sofre ${result?.totalDamage ?? damage} de dano de <b>Queimadura</b>.`,
     };
   },
 

@@ -154,9 +154,8 @@ Esses campos permitem controlar a ordem e o momento exato em que mensagens apare
 │   │       ├── burning.js
 │   │       ├── absoluteImmunity.js
 │   │       ├── conductor.js
-│   │       ├── poisoned.js         # (a implementar)
-│   │       ├── bleeding.js         # (a implementar)
-│   │       └── tributoDeSangue.js   # (a implementar)
+│   │       └── tributoDeSangue.js   # efeito de marca (não-registrado por padrão)
+│   │       # bleeding/poisoned são definidos inline em effectsRegistry.js
 │   │
 │   ├── ui/
 │   │   ├── formatters.js           # HTML formatters (nomes com cor de time)
@@ -745,7 +744,7 @@ getStatusEffect(champ, name);
 purgeExpiredStatusEffects(champ, currentTurn);
 ```
 
-As operações acima usam a key canônica do efeito diretamente (ex.: `"burning"`, `"frozen"`, `"absoluteImmunity"`). A camada de status aceita aliases legados em português apenas para compatibilidade.
+As operações acima usam a key canônica do efeito diretamente (ex.: `"burning"`, `"frozen"`, `"absoluteImmunity"`). A camada de status não normaliza aliases legados; os chamadores devem usar as keys canônicas.
 
 ### 7.4 championUI.js
 
@@ -1440,24 +1439,25 @@ export const StatusEffectsRegistry = {
   bleeding,
   absoluteImmunity,
   conductor,
-  // poisoned,     ← futuro
+  poisoned,
 };
 ```
 
 ### Efeitos Implementados
 
-| Efeito             | Key                | Tipo   | Subtypes          | Comportamento                                                          |
-| ------------------ | ------------------ | ------ | ----------------- | ---------------------------------------------------------------------- |
-| Paralisado         | `paralyzed`        | debuff | softCC, lightning | -100% SPD, 40% chance de negar ação                                    |
-| Atordoado          | `stunned`          | debuff | hardCC            | Não pode agir (stun)                                                   |
-| Enraizado          | `rooted`           | debuff | hardCC, nature    | Não pode usar skills de contato                                        |
-| Inerte             | `inert`            | debuff | hardCC            | Não pode agir (auto-imposto)                                           |
-| Gelado             | `chilled`          | debuff | statMod, ice      | -50% SPD/ATK                                                           |
-| Congelado          | `frozen`           | debuff | hardCC, ice       | -100% SPD/ATK, não age, quebra ao sofrer dano                          |
-| Queimando          | `burning`          | debuff | dot, fire         | 15 + 4% maxHP de dano no início do turno                               |
-| Sangramento        | `bleeding`         | debuff | dot, physical     | 8% maxHP por stack no início do turno; acumula stacks e renova duração |
-| Imunidade Absoluta | `absoluteImmunity` | buff   | immunity          | Imune a todo dano + debuffs                                            |
-| Condutor           | `conductor`        | buff   | lightning         | Amplifica skills elétricas                                             |
+| Efeito             | Key                | Tipo   | Subtypes          | Comportamento                                                  |
+| ------------------ | ------------------ | ------ | ----------------- | -------------------------------------------------------------- |
+| Paralisado         | `paralyzed`        | debuff | softCC, lightning | -100% SPD, 40% chance de negar ação                            |
+| Atordoado          | `stunned`          | debuff | hardCC            | Não pode agir (stun)                                           |
+| Enraizado          | `rooted`           | debuff | hardCC, nature    | Não pode usar skills de contato                                |
+| Inerte             | `inert`            | debuff | hardCC            | Não pode agir (auto-imposto)                                   |
+| Gelado             | `chilled`          | debuff | statMod, ice      | -50% SPD/ATK                                                   |
+| Congelado          | `frozen`           | debuff | hardCC, ice       | -100% SPD/ATK, não age, quebra ao sofrer dano                  |
+| Queimando          | `burning`          | debuff | dot, fire         | 15 + 4% maxHP de dano no início do turno                       |
+| Sangramento        | `bleeding`         | debuff | dot, physical     | 5% maxHP por stack no início do turno; aplicações somam stacks |
+| Envenenado         | `poisoned`         | debuff | dot, magical      | 5% maxHP por stack no início do turno; aplicações somam stacks |
+| Imunidade Absoluta | `absoluteImmunity` | buff   | immunity          | Imune a todo dano + debuffs                                    |
+| Condutor           | `conductor`        | buff   | lightning         | Amplifica skills elétricas                                     |
 
 ### Regra de Hard CC
 
@@ -1470,7 +1470,8 @@ Apenas **um** hard CC (`subtypes: ["hardCC"]`) pode estar ativo por vez em um ca
    ├── Valida no StatusEffectsRegistry
    ├── emitCombatEvent("onStatusEffectIncoming") — pode cancelar
   ├── definition.createInstance(...) constrói `new StatusEffect(...)`
-  ├── se for stackable e já existir, reaplica/refresh mantendo a mesma key canônica
+  ├── se for stackable e já existir, soma stacks na mesma instância
+  ├── para efeitos `durationFromStacks`, `expiresAtTurn` fica em `Infinity` até stacks zerarem
    └── Registra em champion.statusEffects Map.set(key, statusEffectInstance)
 
 2. DISPARO: emitCombatEvent itera passivas + statusEffects ativos + runtime.hookEffects
@@ -1497,7 +1498,7 @@ effect.expiresAtTurn; // controle de expiração
 ### Serialização
 
 ```js
-statusEffects: [["bleeding", { expiresAtTurn: 5, stacks: 3, stackCount: 3 }], ...]
+statusEffects: [["bleeding", { expiresAtTurn: Infinity, stacks: 3, stackCount: 3 }], ...]
 // cliente reconstrói: new Map(snap.statusEffects)
 ```
 

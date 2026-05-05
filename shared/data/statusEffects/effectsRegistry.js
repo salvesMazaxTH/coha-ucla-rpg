@@ -57,19 +57,11 @@ function createStackBoundDot({
       if (next === 0) this.expiresAtTurn = context.currentTurn;
 
       const label = useFormatName ? formatChampionName(owner) : owner.name;
-      if (result?.immune) return { log: `${label} é imune ao dano de ${immuneLabel}!` };
+      if (result?.immune)
+        return { log: `${label} é imune ao dano de ${immuneLabel}!` };
       return {
         log: `${label} sofre ${result?.totalDamage ?? dmgPerStack * stacks} de dano de <b>${logName}</b> (${stacks}x).`,
       };
-    },
-
-    reapplyInstance({ existingInstance, context, stackCount }) {
-      const next = existingInstance.stacks + stackCount;
-      existingInstance.stacks = next;
-      existingInstance.stackCount = next;
-      existingInstance.appliedAtTurn = context?.currentTurn ?? 0;
-      existingInstance.expiresAtTurn = existingInstance.appliedAtTurn + next;
-      return existingInstance;
     },
 
     createInstance({ owner, duration, context, metadata }) {
@@ -111,7 +103,7 @@ const poisoned = createStackBoundDot({
   damageType: "magical",
   tickKey: "poisoned_tick",
   subtypes: ["dot", "magical"],
-  useFormatName: false,
+  useFormatName: true,
 });
 
 export const StatusEffectsRegistry = {

@@ -30,68 +30,7 @@ function buildStatusEffectApplyResult(
   };
 }
 
-function reapplyStackableStatusEffect({
-  champion,
-  definition,
-  existingInstance,
-  duration,
-  context,
-  metadata,
-  stackCount,
-}) {
-  const nextDuration = resolveStatusEffectDuration(duration, metadata);
-
-  if (typeof definition.reapplyInstance === "function") {
-    return definition.reapplyInstance({
-      owner: champion,
-      existingInstance,
-      duration: nextDuration,
-      context,
-      metadata,
-      stackCount,
-    });
-  }
-
-  existingInstance.stacks = Math.max(
-    1,
-    (Number(existingInstance.stacks) || 1) + stackCount,
-  );
-  existingInstance.appliedAtTurn = context?.currentTurn ?? 0;
-  existingInstance.expiresAtTurn =
-    nextDuration === Infinity
-      ? Infinity
-      : existingInstance.appliedAtTurn + nextDuration;
-  existingInstance.metadata = {
-    ...(existingInstance.metadata || {}),
-    ...metadata,
-    stacks: existingInstance.stacks,
-    stackCount: existingInstance.stacks,
-  };
-
-  return existingInstance;
-}
-
-/**
- * Apply a statusEffect effect to this champion
- * @param {object} champion - The champion instance
- * @param {string} statusEffectKey - Name of the statusEffect (e.g., 'inert', 'absoluteImmunity')
- * @param {number} duration - Number of turns the statusEffect lasts
- * @param {object} context - Context with currentTurn
- * @param {object} metadata - Additional data to store with the statusEffect, for example: persistent
- * @param {number} stackCount - Number of stacks to apply when the status supports stacking
- */
-export function applyStatusEffect(
-  champion,
-  statusEffectKey,
-  duration,
-  context,
-  metadata = {},
-  stackCount = 1,
-) {
-  const normalizedStackCount = Number.isFinite(stackCount)
-    ? Math.max(1, Math.floor(stackCount))
-    : 1;
-
+function assertStatusPreconditions(champion, statusEffectKey, context) {
   if (!(champion?.statusEffects instanceof Map)) {
     throw new TypeError(
       `[STATUS ERROR] Champion inválido ao aplicar status "${statusEffectKey}".`,
@@ -117,20 +56,152 @@ export function applyStatusEffect(
   }
 
   const definition = StatusEffectsRegistry[statusEffectKey];
+
   if (!definition) {
     throw new Error(
       `[STATUS ERROR] StatusEffect "${statusEffectKey}" não existe no registry`,
     );
   }
 
-  if (
-    typeof definition.key !== "string" ||
-    definition.key !== statusEffectKey
-  ) {
+  if (definition.key !== statusEffectKey) {
     throw new Error(
       `[STATUS ERROR] Registry inconsistente: key "${statusEffectKey}" não corresponde ao definition.key.`,
     );
   }
+
+  return definition;
+}
+
+function applyStatusEffectCore({
+  champion,
+  definition,
+  statusEffectKey,
+  duration,
+  context,
+  metadata,
+  normalizedStackCount,
+}) {
+  const isStackable = definition.isStackable || false;
+  const existingInstance = champion.statusEffects.get(statusEffectKey);
+
+  if (!isStackable && existingInstance) {
+    return false;
+  }
+
+  const durationFromStacks = definition.durationFromStacks === true;
+
+  const resolvedDuration = durationFromStacks
+    ? normalizedStackCount
+    : resolveStatusEffectDuration(duration, metadata);
+
+  if (isStackable && existingInstance) {
+    const newStacks = Math.max(
+      1,
+      (Number(existingInstance.stacks) || 1) + normalizedStackCount,
+    );
+
+    existingInstance.stacks = newStacks;
+    existingInstance.stackCount = newStacks;
+    existingInstance.appliedAtTurn = context.currentTurn;
+
+    if (!durationFromStacks) {
+      existingInstance.expiresAtTurn =
+        resolvedDuration === Infinity
+          ? Infinity
+          : context.currentTurn + resolvedDuration;
+    }
+
+    existingInstance.metadata = {
+      ...(existingInstance.metadata || {}),
+      ...metadata,
+      stacks: newStacks,
+      stackCount: newStacks,
+    };
+
+    champion.statusEffects.set(statusEffectKey, existingInstance);
+
+    return buildStatusEffectApplyResult(
+      champion,
+      statusEffectKey,
+      existingInstance,
+    );
+  }
+
+  if (typeof definition.createInstance !== "function") {
+    throw new Error(
+      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não implementa createInstance().`,
+    );
+  }
+
+  const effectInstance = definition.createInstance({
+    owner: champion,
+    duration: resolvedDuration,
+    context,
+    metadata: {
+      ...metadata,
+      stackCount: normalizedStackCount,
+    },
+  });
+
+  if (!effectInstance || typeof effectInstance !== "object") {
+    throw new Error(
+      `[STATUS ERROR] createInstance() de "${statusEffectKey}" retornou instância inválida.`,
+    );
+  }
+
+  if (effectInstance.key !== statusEffectKey) {
+    throw new Error(
+      `[STATUS ERROR] Instância de status inválida: key "${effectInstance.key}" difere de "${statusEffectKey}".`,
+    );
+  }
+
+  if (durationFromStacks) {
+    // Stack-bound effects only expire when stacks reach zero in onTurnStart.
+    effectInstance.expiresAtTurn = Infinity;
+  }
+
+  champion.statusEffects.set(statusEffectKey, effectInstance);
+
+  if (typeof effectInstance.onStatusEffectAdded === "function") {
+    effectInstance.onStatusEffectAdded({
+      owner: champion,
+      duration: resolvedDuration,
+      context,
+    });
+  }
+
+  return buildStatusEffectApplyResult(
+    champion,
+    statusEffectKey,
+    effectInstance,
+  );
+}
+
+/**
+ * Apply a statusEffect effect to this champion
+ * @param {object} champion - The champion instance
+ * @param {string} statusEffectKey - Name of the statusEffect (e.g., 'inert', 'absoluteImmunity')
+ * @param {number} duration - Number of turns the statusEffect lasts
+ * @param {object} context - Context with currentTurn
+ * @param {object} metadata - Additional data to store with the statusEffect, for example: persistent
+ * @param {number} stackCount - Number of stacks to apply when the status supports stacking
+ */
+export function applyStatusEffect(
+  champion,
+  statusEffectKey,
+  duration,
+  context,
+  metadata = {},
+  stackCount = 1,
+) {
+  const normalizedStackCount = Number.isFinite(stackCount)
+    ? Math.max(1, Math.floor(stackCount))
+    : 1;
+  const definition = assertStatusPreconditions(
+    champion,
+    statusEffectKey,
+    context,
+  );
 
   const validation = _canApplyStatusEffect(
     champion,
@@ -151,87 +222,15 @@ export function applyStatusEffect(
     return false;
   }
 
-  const isStackable = definition.isStackable || false;
-  const existingInstance = champion.statusEffects.get(statusEffectKey);
-
-  if (!isStackable && existingInstance) {
-    return false;
-  }
-
-  const durationFromStacks = definition.durationFromStacks === true;
-  duration = durationFromStacks
-    ? normalizedStackCount
-    : resolveStatusEffectDuration(duration, metadata);
-
-  if (isStackable && existingInstance) {
-    const refreshedInstance = reapplyStackableStatusEffect({
-      champion,
-      definition,
-      existingInstance,
-      duration,
-      context,
-      metadata,
-      stackCount: normalizedStackCount,
-    });
-
-    if (!refreshedInstance || typeof refreshedInstance !== "object") {
-      throw new Error(
-        `[STATUS ERROR] Reaplicação de "${statusEffectKey}" retornou instância inválida.`,
-      );
-    }
-
-    champion.statusEffects.set(statusEffectKey, refreshedInstance);
-    return buildStatusEffectApplyResult(
-      champion,
-      statusEffectKey,
-      refreshedInstance,
-    );
-  }
-
-  if (typeof definition.createInstance !== "function") {
-    throw new Error(
-      `[STATUS ERROR] StatusEffect "${statusEffectKey}" não implementa createInstance().`,
-    );
-  }
-
-  const effectInstance = definition.createInstance({
-    owner: champion,
+  return applyStatusEffectCore({
+    champion,
+    definition,
+    statusEffectKey,
     duration,
     context,
-    metadata: {
-      ...metadata,
-      stackCount: normalizedStackCount,
-    },
+    metadata,
+    normalizedStackCount,
   });
-
-  if (!effectInstance || typeof effectInstance !== "object") {
-    throw new Error(
-      `[STATUS ERROR] createInstance() de "${statusEffectKey}" retornou instância inválida.`,
-    );
-  }
-
-  if (effectInstance.key !== statusEffectKey) {
-    throw new Error(
-      `[STATUS ERROR] Instância de status inválida: key "${effectInstance.key}" difere de "${statusEffectKey}".`,
-    );
-  }
-
-  champion.statusEffects.set(statusEffectKey, effectInstance);
-
-  // Call onStatusEffectAdded if present
-  if (typeof effectInstance.onStatusEffectAdded === "function") {
-    effectInstance.onStatusEffectAdded({
-      owner: champion,
-      duration,
-      context,
-    });
-  }
-
-  return buildStatusEffectApplyResult(
-    champion,
-    statusEffectKey,
-    effectInstance,
-  );
 }
 
 function _canApplyStatusEffect(
