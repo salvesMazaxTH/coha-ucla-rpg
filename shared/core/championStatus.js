@@ -123,7 +123,10 @@ export function applyStatusEffect(
     );
   }
 
-  if (typeof definition.key !== "string" || definition.key !== statusEffectKey) {
+  if (
+    typeof definition.key !== "string" ||
+    definition.key !== statusEffectKey
+  ) {
     throw new Error(
       `[STATUS ERROR] Registry inconsistente: key "${statusEffectKey}" não corresponde ao definition.key.`,
     );
@@ -178,7 +181,11 @@ export function applyStatusEffect(
     }
 
     champion.statusEffects.set(statusEffectKey, refreshedInstance);
-    return buildStatusEffectApplyResult(champion, statusEffectKey, refreshedInstance);
+    return buildStatusEffectApplyResult(
+      champion,
+      statusEffectKey,
+      refreshedInstance,
+    );
   }
 
   if (typeof definition.createInstance !== "function") {
@@ -222,7 +229,7 @@ export function applyStatusEffect(
 
   return buildStatusEffectApplyResult(
     champion,
-    canonicalStatusEffectKey,
+    statusEffectKey,
     effectInstance,
   );
 }
