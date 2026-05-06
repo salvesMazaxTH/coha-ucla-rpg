@@ -133,7 +133,7 @@ const tharoxSkills = [
     contact: false,
     ultCost: 3,
     isUltimate: true,
-    priority: 0,
+    priority: 2,
     description() {
       return `Ganha +${this.hpGain} HP, +${this.defGain} DEF, cura proporcional à DEF acima da base e seus ataques passam a causar dano adicional com base na Defesa excedente, escalando de forma crescente e tornando-se devastadores em níveis altos, por ${this.modifierDuration} turnos.`;
     },
