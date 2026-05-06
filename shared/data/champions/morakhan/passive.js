@@ -6,13 +6,16 @@ export default {
 
   flatReductionVSContact: 25, // Mantém para referência, mas não mais usado para trigger
   stabilityStacksCap: 4,
+  dmgBuffAuraDuration: 2,
 
   description(champion) {
     const stacks = champion.runtime?.stabilityStacks || 0;
-    return `Morakhan reduz o dano sofrido em 10% (exceto dano absoluto). Contra ataques <b>físicos</b>, também reduz ${this.flatReductionVSContact} de dano adicional.
-    Sempre que sofre dano <b>físico</b>, ganha 1 acúmulo de <b>Estabilidade</b> (máx. ${this.stabilityStacksCap}).
 
-    Ao sofrer dano, se estiver com acúmulos ou for atingido por um golpe significativo, consome todos os acúmulos, reduzindo o dano em 10% por acúmulo.
+    return `Morakhan reduz dano sofrido em 10% (exceto dano absoluto) e reduz ${this.flatReductionVSContact} de dano adicional de ataques físicos.
+
+    Sempre que sofre dano físico, ganha 1 acúmulo de <b>Estabilidade</b> (máx. ${this.stabilityStacksCap}).
+
+    Ao sofrer um golpe significativo, consome todos os acúmulos para reduzir o dano recebido em 10% por acúmulo e fortalece seus próximos danos por ${this.dmgBuffAuraDuration} turno(s).
 
     <b>Acúmulos atuais: ${stacks}</b>`;
   },
@@ -46,6 +49,32 @@ export default {
 
     finalDamage *= 1 - 0.1 * stacks;
     owner.runtime.stabilityStacks = 0;
+
+    const runtime = (owner.runtime ??= {});
+    runtime.hookEffects ??= [];
+    runtime.hookEffects = runtime.hookEffects.filter(
+      (effect) => effect.key !== "morakhan_estabilidade_adamantina_burst",
+    );
+    runtime.hookEffects.push({
+      key: "morakhan_estabilidade_adamantina_burst",
+      name: "Estabilidade Adamantina Amplificada",
+      expiresAtTurn: context.currentTurn + 2,
+      hookScope: {
+        onBeforeDmgDealing: "attacker",
+      },
+      hookPolicies: {
+        onBeforeDmgDealing: {
+          allowOnDot: true,
+          allowOnNestedDamage: true,
+        },
+      },
+      onBeforeDmgDealing({ damage, attacker, skill }) {
+        return {
+          damage: damage * 2,
+          log: `<b>[Passiva — ${this.name}]</b> ${formatChampionName(attacker)} duplica o dano causado${skill?.key === "quarto_sutra_postura_da_montanha_counter" ? " pelo contra-ataque" : ""}!`,
+        };
+      },
+    });
 
     const msg = `<b>[Passiva — ${this.name}]</b> ${formatChampionName(owner)} consumiu ${stacks} acúmulo(s) de Estabilidade!`;
 

@@ -161,7 +161,8 @@ const morakhanSkills = [
           });
 
           context.extraDamageQueue.push({
-            mode: DamageEvent.Modes.ABSOLUTE,
+            mode: DamageEvent.Modes.PIERCING,
+            piercingPercentage: 100,
             baseDamage: reflectedDamage,
             attacker: defender,
             defender: attacker,
