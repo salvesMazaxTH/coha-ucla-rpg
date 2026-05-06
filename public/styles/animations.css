@@ -775,6 +775,51 @@
 }
 
 /* ============================================
+   SHIELD ABSORBED FLOAT
+   Mostra o quanto o escudo absorveu de dano
+   (exibido em paralelo ao float de HP)
+   ============================================ */
+
+.shield-absorbed-float {
+  position: absolute;
+  top: 30%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffdd88;
+  text-shadow:
+    0 0 6px rgba(255, 180, 50, 0.9),
+    0 0 12px rgba(255, 120, 0, 0.6),
+    1px 1px 2px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  z-index: 101;
+  animation: shieldAbsorbedFloat 1850ms ease-out forwards;
+}
+
+@keyframes shieldAbsorbedFloat {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.75);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -58%) scale(1.15);
+  }
+
+  65% {
+    opacity: 0.9;
+    transform: translate(-50%, -80%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.9);
+  }
+}
+
+/* ============================================
    STATUS INDICATOR ANIMATIONS
    ============================================ */
 

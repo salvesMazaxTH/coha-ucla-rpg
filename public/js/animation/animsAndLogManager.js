@@ -621,9 +621,7 @@ export function createCombatAnimationManager(deps) {
 
     if (portraitWrapper) {
       if (usesObliterateStyle || hasFinishing) {
-        const extraClass = usesObliterateStyle
-          ? "obliterate"
-          : "finishing";
+        const extraClass = usesObliterateStyle ? "obliterate" : "finishing";
         createFloatElement(portraitWrapper, "999", "damage-float", extraClass);
       } else {
         if (hasHpDamage) {
