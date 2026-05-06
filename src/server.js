@@ -545,6 +545,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
       buffEvents = [],
       resourceEvents = [],
       globalDialogs = [],
+      redirectionEvents = [],
     } = mainEnvelope;
 
     const hasVisualChanges =
@@ -554,6 +555,7 @@ function emitCombatEnvelopesFromContext({ user, skill, context }) {
       shieldEvents.length ||
       buffEvents.length ||
       resourceEvents.length ||
+      redirectionEvents.length ||
       globalDialogs.length;
 
     const shouldEmit = mainEnvelope.action || hasVisualChanges;
@@ -580,6 +582,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
     buffEvents = [],
     resourceEvents = [],
     globalDialogs = [],
+    redirectionEvents = [],
   } = context.visual || {};
 
   const userId = user?.id ?? null;
@@ -643,6 +646,7 @@ function buildMainEnvelopeFromContext({ user, skill, context }) {
     shieldEvents: mainShield,
     buffEvents: mainBuff,
     resourceEvents: mainResource,
+    redirectionEvents,
 
     globalDialogs,
 
