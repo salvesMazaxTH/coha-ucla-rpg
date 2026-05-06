@@ -11,6 +11,7 @@ export function roundToFive(x) {
  * @param {number} decayPerTurn - Decay per turn
  * @param {object} context - Combat context
  * @param {string} type - Shield type ("regular" | "spell" | "supreme")
+ * @param {object} extra - Additional shield fields to persist on runtime
  */
 export function addShield(
   champion,
@@ -18,11 +19,13 @@ export function addShield(
   decayPerTurn = 0,
   context,
   type = "regular",
+  extra = {},
 ) {
   champion.runtime.shields.push({
     amount,
     decayPerTurn,
     type,
+    ...extra,
   });
 
   if (context?.registerShield) {
@@ -36,11 +39,19 @@ export function addShield(
 }
 
 /**
- * Decays shields that have per-turn duration.
- * Shields that reach 0 are removed from runtime storage.
- * @param {object} champion - The champion instance
+ * Decays shields at the start of a turn.
+ *
+ * Two expiry modes are supported:
+ *  - Gradual decay:     shield.decayPerTurn > 0  — amount reduced each turn until depleted.
+ *  - Instant-at-end:   shield.expiresAtTurn set  — shield stays intact and is removed entirely
+ *                       when currentTurn >= expiresAtTurn (checked before gradual decay).
+ *
+ * Shields with neither field set are permanent (removed only by absorbing damage).
+ *
+ * @param {object} champion    - The champion instance
+ * @param {number} currentTurn - The turn number at the start of which decay is processed
  */
-export function decayShields(champion) {
+export function decayShields(champion, currentTurn) {
   if (
     !Array.isArray(champion.runtime?.shields) ||
     !champion.runtime.shields.length
@@ -54,6 +65,17 @@ export function decayShields(champion) {
     .map((shield) => {
       if (!shield) return null;
 
+      // Instant-at-end: shield stays whole until duration expires, then drops entirely.
+      if (shield.expiresAtTurn != null && currentTurn != null) {
+        if (currentTurn >= shield.expiresAtTurn) {
+          removed += 1;
+          return null;
+        }
+        // Not yet expired — skip gradual decay for this shield.
+        return shield;
+      }
+
+      // Gradual decay: reduce shield amount by decayPerTurn each turn.
       const amount = Number(shield.amount) || 0;
       const decayPerTurn = Number(shield.decayPerTurn) || 0;
 

@@ -29,7 +29,12 @@ function _applyLifeSteal(event) {
 
   // 1. Validações iniciais usando os dados da instância
   const lsRate = event.attacker?.LifeSteal || 0;
-  if (lsRate <= 0 || event.actualDmg <= 0 || event.context.isDot) {
+  const allowsLifeStealOnDot = event.context?.allowsLifeSteal === true;
+  if (
+    lsRate <= 0 ||
+    event.actualDmg <= 0 ||
+    (event.context.isDot && !allowsLifeStealOnDot)
+  ) {
     if (event.constructor.debugMode) {
       console.log(
         `⚠️ Pulando Lifesteal: LS=${lsRate}%, DMG=${event.actualDmg}`,

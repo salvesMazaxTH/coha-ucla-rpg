@@ -8,14 +8,18 @@ const drexSkills = [
   {
     key: "incisao_carmesim",
     name: "Incisão Carmesim",
+
     bf: 35,
     contact: true,
     damageMode: "standard",
+
+    bleedingStacks: 2,
+
     priority: 0,
     targetSpec: ["enemy"],
 
     description() {
-      return `Causa dano leve-médio ao alvo e aplica 1 stack de Sangramento. Se o alvo já estiver sangrando, aplica +1 stack adicional.`;
+      return `Causa dano leve-médio ao alvo e aplica ${this.bleedingStacks} stack(s) de Sangramento. Se o alvo já estiver sangrando, aplica +1 stack adicional.`;
     },
 
     resolve({ user, targets, context = {} }) {
@@ -40,7 +44,9 @@ const drexSkills = [
         !mainDamage?.immune &&
         (mainDamage?.totalDamage ?? 0) > 0
       ) {
-        const bleedStacks = enemy.hasStatusEffect("bleeding") ? 2 : 1;
+        const bleedStacks = enemy.hasStatusEffect("bleeding")
+          ? this.bleedingStacks + 1
+          : this.bleedingStacks;
         enemy.applyStatusEffect(
           "bleeding",
           undefined,
@@ -57,15 +63,18 @@ const drexSkills = [
   {
     key: "hemorragia_dirigida",
     name: "Hemorragia Dirigida",
-    bf: 70,
+    bf: 55,
     damagePerBleedStack: 18,
+    shieldBleedThreshold: 4,
+    shieldFromTargetMaxHpRatio: 0.2,
+    shieldDecayTurns: 3,
     contact: false,
     damageMode: "standard",
     priority: 0,
     targetSpec: ["enemy"],
 
     description() {
-      return `Causa dano moderado. O dano aumenta em +${this.damagePerBleedStack}% para cada stack de Sangramento no alvo. Não consome Sangramento.`;
+      return `Causa dano moderado. O dano aumenta em +${this.damagePerBleedStack}% para cada stack de Sangramento no alvo. Não consome Sangramento. Se atingir um alvo com ${this.shieldBleedThreshold}+ stacks de Sangramento, Drex ganha um escudo de ${Math.round(this.shieldFromTargetMaxHpRatio * 100)}% do HP máximo do alvo, que permanece intacto por ${this.shieldDecayTurns} turnos e se dissipa ao fim da duração, se ainda existir.`;
     },
 
     resolve({ user, targets, context = {} }) {
@@ -76,7 +85,7 @@ const drexSkills = [
         1 + (bleedStacks * this.damagePerBleedStack) / 100;
       const baseDamage = ((user.Attack * this.bf) / 100) * damageMultiplier;
 
-      return new DamageEvent({
+      const result = new DamageEvent({
         baseDamage,
         attacker: user,
         defender: enemy,
@@ -85,6 +94,32 @@ const drexSkills = [
         context,
         allChampions: context?.allChampions,
       }).execute();
+
+      const results = Array.isArray(result) ? result : [result];
+      const mainDamage = results[0];
+
+      const dealtDamage = Number(mainDamage?.totalDamage ?? 0) > 0;
+      const connected =
+        !mainDamage?.evaded && !mainDamage?.immune && dealtDamage;
+
+      if (connected && bleedStacks >= this.shieldBleedThreshold) {
+        const shieldAmount = Math.floor(
+          Number(enemy?.maxHP || 0) * this.shieldFromTargetMaxHpRatio,
+        );
+
+        if (shieldAmount > 0) {
+          user.addShield(shieldAmount, 0, context, "regular", {
+            expiresAtTurn: context.currentTurn + this.shieldDecayTurns,
+            sourceKey: this.key,
+          });
+
+          results.push({
+            log: `${formatChampionName(user)} converte a hemorragia em proteção e recebe um escudo de ${shieldAmount} HP.`,
+          });
+        }
+      }
+
+      return results;
     },
   },
 
@@ -130,6 +165,7 @@ const drexSkills = [
             context: {
               ...context,
               isDot: true,
+              allowsLifeSteal: true,
             },
             allChampions: context?.allChampions,
           }).execute();

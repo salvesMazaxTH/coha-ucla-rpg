@@ -527,8 +527,8 @@ export class Champion {
     return _checkAndConsumeShieldBlock(this, context, damageType);
   }
 
-  addShield(amount, decayPerTurn = 0, context, type = "regular") {
-    return addShield(this, amount, decayPerTurn, context, type);
+  addShield(amount, decayPerTurn = 0, context, type = "regular", extra = {}) {
+    return addShield(this, amount, decayPerTurn, context, type, extra);
   }
 
   applyTaunt(taunterId, duration, context) {
