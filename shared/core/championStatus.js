@@ -325,6 +325,57 @@ export function getStatusEffect(champion, statusEffectName) {
 }
 
 /**
+ * Get all active statusEffects for a champion, optionally filtered.
+ * @param {object} champion - The champion instance
+ * @param {object} options - Optional filters
+ * @param {string|string[]} options.type - Return only status effects matching one or more types
+ * @param {string|string[]} options.subtype - Return only status effects that include one or more subtypes
+ * @param {function} options.predicate - Custom filter callback receiving each status effect instance
+ * @returns {array}
+ */
+export function getStatusEffects(champion, options = {}) {
+  if (!(champion?.statusEffects instanceof Map)) {
+    return [];
+  }
+
+  const { type = null, subtype = null, predicate = null } = options;
+
+  const typeFilters = (Array.isArray(type) ? type : type ? [type] : []).filter(
+    Boolean,
+  );
+  const subtypeFilters = (
+    Array.isArray(subtype) ? subtype : subtype ? [subtype] : []
+  ).filter(Boolean);
+
+  return Array.from(champion.statusEffects.values()).filter((statusEffect) => {
+    if (!statusEffect || typeof statusEffect !== "object") {
+      return false;
+    }
+
+    if (typeFilters.length > 0 && !typeFilters.includes(statusEffect.type)) {
+      return false;
+    }
+
+    if (
+      subtypeFilters.length > 0 &&
+      !subtypeFilters.some((wantedSubtype) =>
+        Array.isArray(statusEffect.subtypes)
+          ? statusEffect.subtypes.includes(wantedSubtype)
+          : false,
+      )
+    ) {
+      return false;
+    }
+
+    if (typeof predicate === "function" && !predicate(statusEffect)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+/**
  * Remove a statusEffect immediately
  * @param {object} champion - The champion instance
  * @param {string} statusEffectName - Name of the statusEffect to remove

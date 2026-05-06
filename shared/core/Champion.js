@@ -4,6 +4,7 @@ import {
   hasStatusEffect,
   getStatusEffect,
   getStatusEffectData,
+  getStatusEffects,
   removeStatusEffect,
   purgeExpiredStatusEffects,
 } from "./championStatus.js";
@@ -470,6 +471,10 @@ export class Champion {
 
   getStatusEffect(statusEffectKey) {
     return getStatusEffect(this, statusEffectKey);
+  }
+
+  getStatusEffects(options = {}) {
+    return getStatusEffects(this, options);
   }
 
   removeStatusEffect(statusEffectKey) {

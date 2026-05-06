@@ -14,14 +14,14 @@ const naelthosSkills = [
     key: "toque_da_mare_serena",
     name: "Toque da Maré Serena",
     bf: 75,
-    healAmount: 45,
+    healAmount: 30,
     damageMode: "standard",
     contact: false,
 
     priority: 0,
     element: "water",
     description() {
-      return `Naelthos causa dano ao inimigo e cura o aliado mais ferido em ${this.healAmount} HP.`;
+      return `Naelthos causa dano ao inimigo. Em seguida, cura o aliado mais ferido em ${this.healAmount} HP e purifica-o de todos efeitos de status negativos.`;
     },
     targetSpec: ["enemy"],
 
@@ -60,9 +60,19 @@ const naelthosSkills = [
       // 💧 Cura no aliado (se existir)
       if (ally) {
         ally.heal(healAmount, context, user);
+        const debuffStatusEffects = ally.getStatusEffects({ type: "debuff" });
+
+        debuffStatusEffects.forEach((statusEffect) => {
+          ally.removeStatusEffect(statusEffect.key);
+        });
+
         const userName = formatChampionName(user);
         const allyName = formatChampionName(ally);
-        allyLog = `${userName} cura ${allyName} em ${healAmount} de HP. HP final de ${allyName}: ${ally.HP}/${ally.maxHP}`;
+        const purificationLog = debuffStatusEffects.length
+          ? ` e purifica ${allyName} de ${debuffStatusEffects.length} efeito(s) negativo(s)`
+          : "";
+
+        allyLog = `${userName} cura ${allyName} em ${healAmount} de HP${purificationLog}. HP final de ${allyName}: ${ally.HP}/${ally.maxHP}`;
       } else {
         const userName = formatChampionName(user);
         allyLog = `${userName} tenta curar um aliado, mas nenhum está disponível.`;

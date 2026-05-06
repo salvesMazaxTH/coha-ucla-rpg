@@ -14,6 +14,7 @@ Last activity: 2026-05-05 - Completed quick task 260505-qa9: refatorar Bleeding 
 
 | #          | Description                                                                      | Date       | Commit  | Directory                                                                                                           |
 | ---------- | -------------------------------------------------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| 260505-nth | Naelthos agora purifica debuffs ao curar via getStatusEffects                    | 2026-05-05 | pending | [260505-naelthos-purifica-debuffs](./quick/260505-naelthos-purifica-debuffs/)                                       |
 | 260505-vpr | Vipranna agora dobra Poisoned na ult antes do dano e ajusta o ratio              | 2026-05-05 | pending | [260505-vipranna-ult-dobra-stacks](./quick/260505-vipranna-ult-dobra-stacks/)                                       |
 | 260505-tox | Tox Vipranna passou a reagir ao dano de Poisoned em DoT                          | 2026-05-05 | pending | [260505-tox-vipranna-reactive-dot-heal](./quick/260505-tox-vipranna-reactive-dot-heal/)                             |
 | 260505-qa9 | Refatorar Bleeding e Poisoned para duração baseada em stacks                     | 2026-05-05 | pending | [260505-qa9-bleeding-e-poisoned-ao-contr-rio-da-maio](./quick/260505-qa9-bleeding-e-poisoned-ao-contr-rio-da-maio/) |
