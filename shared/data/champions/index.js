@@ -33,6 +33,7 @@ import isarelis from "./isarelis/index.js";
 import morakhan from "./morakhan/index.js";
 import noyre from "./noyre/index.js";
 import tox_vipranna from "./tox_vipranna/index.js";
+import drex from "./drex/index.js";
 
 const championDB = {
   ralia,
@@ -70,6 +71,7 @@ const championDB = {
   morakhan,
   noyre,
   tox_vipranna,
+  drex,
 };
 
 export default championDB;

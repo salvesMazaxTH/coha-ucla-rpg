@@ -80,8 +80,17 @@ function transferDerivedStats({ sourceChampion, nextChampion, statMode }) {
       nextCurrentValue = nextBaseValue + (oldCurrentValue - oldBaseValue);
     }
 
-    nextChampion[baseKey] = roundStat(nextBaseValue);
-    nextChampion[currentKey] = roundStat(nextCurrentValue);
+    if (
+      currentKey === "Critical" ||
+      currentKey === "Evasion" ||
+      currentKey === "LifeSteal"
+    ) {
+      nextChampion[baseKey] = Math.ceil(asNumber(nextBaseValue, 0));
+      nextChampion[currentKey] = Math.ceil(asNumber(nextCurrentValue, 0));
+    } else {
+      nextChampion[baseKey] = roundStat(nextBaseValue);
+      nextChampion[currentKey] = roundStat(nextCurrentValue);
+    }
   }
 }
 

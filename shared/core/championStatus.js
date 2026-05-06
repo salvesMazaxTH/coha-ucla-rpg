@@ -30,6 +30,32 @@ function buildStatusEffectApplyResult(
   };
 }
 
+function resolveStatusEffectSource(context, metadata = {}) {
+  const sourceId = metadata?.sourceId ?? context?.actionSource?.id ?? null;
+  if (!sourceId) return context?.actionSource ?? context?.source ?? null;
+
+  const champions = context?.allChampions;
+  if (champions instanceof Map) {
+    return (
+      champions.get(sourceId) ??
+      context?.actionSource ??
+      context?.source ??
+      null
+    );
+  }
+
+  if (Array.isArray(champions)) {
+    return (
+      champions.find((champion) => champion?.id === sourceId) ??
+      context?.actionSource ??
+      context?.source ??
+      null
+    );
+  }
+
+  return context?.actionSource ?? context?.source ?? null;
+}
+
 function assertStatusPreconditions(champion, statusEffectKey, context) {
   if (!(champion?.statusEffects instanceof Map)) {
     throw new TypeError(
@@ -150,6 +176,22 @@ function applyStatusEffectCore({
     });
   }
 
+  emitCombatEvent(
+    "onStatusEffectApplied",
+    {
+      target: champion,
+      source: resolveStatusEffectSource(context, metadata),
+      sourceId: metadata?.sourceId ?? context?.actionSource?.id ?? null,
+      statusEffect: definition,
+      statusEffectKey,
+      effectInstance,
+      stacks: effectInstance?.stacks ?? normalizedStackCount,
+      context,
+      metadata,
+    },
+    context?.allChampions,
+  );
+
   return buildStatusEffectApplyResult(
     champion,
     statusEffectKey,
@@ -191,6 +233,22 @@ function applyStackUpdate({
   };
 
   champion.statusEffects.set(statusEffectKey, existingInstance);
+
+  emitCombatEvent(
+    "onStatusEffectApplied",
+    {
+      target: champion,
+      source: resolveStatusEffectSource(context, metadata),
+      sourceId: metadata?.sourceId ?? context?.actionSource?.id ?? null,
+      statusEffect: StatusEffectsRegistry[statusEffectKey],
+      statusEffectKey,
+      effectInstance: existingInstance,
+      stacks: existingInstance?.stacks ?? newStacks,
+      context,
+      metadata,
+    },
+    context?.allChampions,
+  );
 
   return buildStatusEffectApplyResult(
     champion,

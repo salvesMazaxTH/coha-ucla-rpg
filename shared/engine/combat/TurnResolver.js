@@ -441,6 +441,7 @@ export class TurnResolver {
 
   performSkillExecution(user, skill, targets, context, action = null) {
     context.currentSkill = skill;
+    context.actionSource = user;
     // Verificar executionIndex:
     console.log(
       `[performSkillExecution] executionIndex: ${context.executionIndex}`,
@@ -468,18 +469,23 @@ export class TurnResolver {
       }
     }
 
-    // 🔹 3. Executar skill - Passa o resolver (this) desacoplado do contexto
-    const result = skill.resolve({
-      user,
-      targets,
-      context,
-      resolver: this,
-    });
+    let result;
 
-    // 🔹 4. Limpar contexto
-    this.combat.activeChampions.forEach((champion) => {
-      if (champion.runtime) delete champion.runtime.currentContext;
-    });
+    try {
+      // 🔹 3. Executar skill - Passa o resolver (this) desacoplado do contexto
+      result = skill.resolve({
+        user,
+        targets,
+        context,
+        resolver: this,
+      });
+    } finally {
+      // 🔹 4. Limpar contexto
+      this.combat.activeChampions.forEach((champion) => {
+        if (champion.runtime) delete champion.runtime.currentContext;
+      });
+      delete context.actionSource;
+    }
 
     // 🔹 5. Registrar no histórico do turno
     this.registerSkillUsageInTurn(user, skill, targets);

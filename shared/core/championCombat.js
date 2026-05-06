@@ -245,11 +245,24 @@ export function applyStatModifier(
   } = {},
 ) {
   if (!(statName in champion)) {
-    console.warn(`Tentativa de modificar stat inexistente: ${statName}`);
-    return;
+    throw new Error(`Tentativa de modificar stat inexistente: ${statName}`);
   }
 
-  amount = roundToFive(amount);
+  if (!Number.isFinite(amount)) {
+    throw new Error(
+      `[applyStatModifier] amount inválido para ${statName}: ${amount}`,
+    );
+  }
+
+  if (
+    statName === "Critical" ||
+    statName === "Evasion" ||
+    statName === "LifeSteal"
+  ) {
+    amount = Math.ceil(amount);
+  } else {
+    amount = roundToFive(amount);
+  }
 
   const limits = {
     Critical: { min: 0, max: 95 },
