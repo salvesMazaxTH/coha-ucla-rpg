@@ -29,7 +29,9 @@ const toxViprannaSkills = [
       const [enemy] = targets;
       const baseDamage = (user.Attack * this.bf) / 100;
 
-      const result = new DamageEvent({
+      const results = [];
+
+      const damageResult = new DamageEvent({
         baseDamage,
         attacker: user,
         defender: enemy,
@@ -39,12 +41,26 @@ const toxViprannaSkills = [
         allChampions: context?.allChampions,
       }).execute();
 
-      const alreadyPoisoned = enemy.hasStatusEffect("poisoned");
-      const stacks = alreadyPoisoned ? 2 : 4;
+      const damageArray = Array.isArray(damageResult)
+        ? damageResult
+        : [damageResult];
 
-      enemy.applyStatusEffect("poisoned", undefined, context, {}, stacks);
+      results.push(...damageArray);
 
-      return result;
+      const mainDamage = damageArray[0];
+
+      if (
+        !mainDamage?.evaded &&
+        !mainDamage?.immune &&
+        mainDamage?.totalDamage > 0
+      ) {
+        const alreadyPoisoned = enemy.hasStatusEffect("poisoned");
+        const stacks = alreadyPoisoned ? 2 : 4;
+
+        enemy.applyStatusEffect("poisoned", undefined, context, {}, stacks);
+      }
+
+      return results;
     },
   },
 
