@@ -8,11 +8,11 @@ const toxViprannaSkills = [
   // ========================
   basicStrike,
   // ========================
-  // H1 — Língua Viperina
+  // H1 — Linguada Venenosa
   // ========================
   {
-    key: "lingua_viperina",
-    name: "Língua Viperina",
+    key: "linguada_venenosa",
+    name: "Linguada Venenosa",
 
     bf: 30,
     contact: true,
@@ -141,11 +141,11 @@ const toxViprannaSkills = [
   },
 
   // ========================
-  // ULT — Colapso Ofídico
+  // ULT — Detonação Viperanfíbica
   // ========================
   {
-    key: "colapso_ofidico",
-    name: "Colapso Ofídico",
+    key: "detonacao_viperanfibica",
+    name: "Detonação Viperanfíbica",
 
     contact: false,
     isUltimate: true,

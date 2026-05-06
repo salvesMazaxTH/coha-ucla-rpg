@@ -7,7 +7,7 @@ export default {
   healPercent: 35,
 
   description() {
-    return `Uma porcentagem do dano causado por <b>Poisoned</b> a qualquer personagem é convertida em cura para Tox Vipranna.`;
+    return `Uma porcentagem do dano causado por <b>Envenenado</b> a qualquer personagem é convertida em cura para Tox Vipranna.`;
   },
 
   hookPolicies: {

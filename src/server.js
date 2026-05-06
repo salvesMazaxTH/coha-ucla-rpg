@@ -35,8 +35,8 @@ import {
 // ============================================================
 
 const editMode = {
-  enabled: false,
-  autoLogin: false,
+  enabled: true,
+  autoLogin: true,
   autoSelection: false, // Seleção automática de campeões (sem tela de seleção)
   actMultipleTimesPerTurn: false,
   unavailableChampions: false,
@@ -45,7 +45,7 @@ const editMode = {
   alwaysEvade: false, // Força evasão em todo ataque. (SERVER-ONLY)
   executionOverride: null, // null = normal
   // number = força threshold (ex: 1 = 100%, 0.5 = 50%)
-  freeCostSkills: false, // Habilidades não consomem recurso. (SERVER-ONLY)
+  freeCostSkills: true, // Habilidades não consomem recurso. (SERVER-ONLY)
 };
 
 const TEAM_SIZE = 3;
