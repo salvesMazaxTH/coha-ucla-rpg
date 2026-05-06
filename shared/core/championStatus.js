@@ -95,36 +95,16 @@ function applyStatusEffectCore({
     : resolveStatusEffectDuration(duration, metadata);
 
   if (isStackable && existingInstance) {
-    const newStacks = Math.max(
-      1,
-      (Number(existingInstance.stacks) || 1) + normalizedStackCount,
-    );
-
-    existingInstance.stacks = newStacks;
-    existingInstance.stackCount = newStacks;
-    existingInstance.appliedAtTurn = context.currentTurn;
-
-    if (!durationFromStacks) {
-      existingInstance.expiresAtTurn =
-        resolvedDuration === Infinity
-          ? Infinity
-          : context.currentTurn + resolvedDuration;
-    }
-
-    existingInstance.metadata = {
-      ...(existingInstance.metadata || {}),
-      ...metadata,
-      stacks: newStacks,
-      stackCount: newStacks,
-    };
-
-    champion.statusEffects.set(statusEffectKey, existingInstance);
-
-    return buildStatusEffectApplyResult(
+    return applyStackUpdate({
       champion,
-      statusEffectKey,
       existingInstance,
-    );
+      statusEffectKey,
+      context,
+      metadata,
+      normalizedStackCount,
+      resolvedDuration,
+      durationFromStacks,
+    });
   }
 
   if (typeof definition.createInstance !== "function") {
@@ -174,6 +154,48 @@ function applyStatusEffectCore({
     champion,
     statusEffectKey,
     effectInstance,
+  );
+}
+
+function applyStackUpdate({
+  champion,
+  existingInstance,
+  statusEffectKey,
+  context,
+  metadata,
+  normalizedStackCount,
+  resolvedDuration,
+  durationFromStacks,
+}) {
+  const newStacks = Math.max(
+    1,
+    (Number(existingInstance.stacks) || 1) + normalizedStackCount,
+  );
+
+  existingInstance.stacks = newStacks;
+  existingInstance.stackCount = newStacks;
+  existingInstance.appliedAtTurn = context.currentTurn;
+
+  if (!durationFromStacks) {
+    existingInstance.expiresAtTurn =
+      resolvedDuration === Infinity
+        ? Infinity
+        : context.currentTurn + resolvedDuration;
+  }
+
+  existingInstance.metadata = {
+    ...(existingInstance.metadata || {}),
+    ...metadata,
+    stacks: newStacks,
+    stackCount: newStacks,
+  };
+
+  champion.statusEffects.set(statusEffectKey, existingInstance);
+
+  return buildStatusEffectApplyResult(
+    champion,
+    statusEffectKey,
+    existingInstance,
   );
 }
 

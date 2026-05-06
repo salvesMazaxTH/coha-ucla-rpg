@@ -1,5 +1,6 @@
 import { DamageEvent } from "../../engine/combat/DamageEvent.js";
 import { StatusEffect } from "../../core/StatusEffect.js";
+import { formatChampionName } from "../../ui/formatters.js";
 
 const burning = {
   key: "burning",
@@ -26,11 +27,11 @@ const burning = {
     const result = dmgEvent.execute();
 
     if (result?.immune) {
-      return { log: `${owner.name} é imune ao dano de Queimadura!` };
+      return { log: `${formatChampionName(owner)} é imune ao dano de <b>Queimadura</b>!` };
     }
 
     return {
-      log: `${owner.name} sofre ${result?.totalDamage ?? damage} de dano de <b>Queimadura</b>.`,
+      log: `${formatChampionName(owner)} sofre ${result?.totalDamage ?? damage} de dano de <b>Queimadura</b>.`,
     };
   },
 

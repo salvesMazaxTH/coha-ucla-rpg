@@ -60,19 +60,28 @@ const toxViprannaSkills = [
 
     auraDuration: 2,
     poisonedStacks: 2,
+    defenseBuff: 35,
+
     targetSpec: ["self"],
 
     description() {
-      return `Por ${this.auraDuration} turno(s):\n\n• Inimigos que realizarem ações de contato contra Tox Vipranna recebem ${this.poisonedStacks} stacks de Envenenado\n\nNo turno seguinte:\n\n• O próximo dano de Envenenado sofrido por todos os personagens é dobrado`;
+      return `Por ${this.auraDuration} turno(s):\n\n• Tox Vipranna recebe +${this.defenseBuff} de Defesa\n• Inimigos que realizarem ações de contato contra Tox Vipranna recebem ${this.poisonedStacks} stacks de Envenenado`;
     },
 
     resolve({ user, context = {} }) {
+      user.modifyStat({
+        statName: "Defense",
+        amount: this.defenseBuff,
+        duration: this.auraDuration,
+        context,
+        statModifierSrc: user,
+      });
+
       const activatedTurn = context.currentTurn;
-      const userId = user.id;
 
       user.runtime.hookEffects ??= [];
 
-      // --- Efeito 1: inimigos que atacarem por contato recebem Poisoned ---
+      // --- inimigos que atacarem por contato recebem Poisoned ---
       user.runtime.hookEffects = user.runtime.hookEffects.filter(
         (e) => e.key !== "revestimento_toxico_retaliation",
       );
@@ -104,36 +113,6 @@ const toxViprannaSkills = [
         },
       });
 
-      // --- Efeito 2: próximo tick de Poisoned em todos os personagens é dobrado (próx. turno) ---
-      const aliveChampions = context.aliveChampions ?? [];
-
-      for (const champ of aliveChampions) {
-        champ.runtime.hookEffects ??= [];
-
-        const hookKey = `revestimento_toxico_doubled_${userId}_${champ.id}`;
-
-        champ.runtime.hookEffects = champ.runtime.hookEffects.filter(
-          (e) => e.key !== hookKey,
-        );
-
-        champ.runtime.hookEffects.push({
-          key: hookKey,
-          expiresAtTurn: activatedTurn + 3,
-          _consumed: false,
-          _activatedTurn: activatedTurn,
-
-          onBeforeDmgTaking({ damage, context, skill }) {
-            if (context.currentTurn <= this._activatedTurn) return;
-            if (!context.isDot || skill?.key !== "poisoned_tick") return;
-            if (this._consumed) return;
-
-            this._consumed = true;
-
-            return { damage: damage * 2 };
-          },
-        });
-      }
-
       context.registerDialog?.({
         message: `${formatChampionName(user)} ativa <b>Revestimento Tóxico</b>!`,
         sourceId: user.id,
@@ -155,35 +134,52 @@ const toxViprannaSkills = [
     contact: false,
     isUltimate: true,
     ultCost: 3,
-    damageRatioPerStack: 0.2,
+    damageRatioPerStack: 0.125,
     priority: 1,
 
     targetSpec: ["enemy"],
 
     description() {
-      return `Consome todos os stacks de Envenenado do alvo.\n\nCausa dano absoluto equivalente a:\n\n<b>stacks consumidos × ${this.damageRatioPerStack * 100}% da vida perdida do alvo</b>`;
+      return `Dobra os stacks de Envenenado do alvo e os consome.\n\nCausa dano absoluto equivalente a:\n\n<b>stacks consumidos × ${this.damageRatioPerStack * 100}% da vida perdida do alvo</b>`;
     },
 
     resolve({ user, targets, context = {} }) {
       const [enemy] = targets;
 
+      if (!enemy?.hasStatusEffect("poisoned")) {
+        const failMessage = "Mas falhou.";
+
+        context.registerDialog?.({
+          message: failMessage,
+          sourceId: user.id,
+          targetId: enemy?.id ?? user.id,
+        });
+
+        return {
+          log: failMessage,
+        };
+      }
+
       const poisonInstance = enemy.getStatusEffect("poisoned");
-      const stacks = poisonInstance
-        ? Math.max(1, Number(poisonInstance.stacks) || 1)
-        : 0;
+      const stacks = Number(poisonInstance.stacks) || 0;
 
       if (poisonInstance) {
+        const doubledStacks = Math.max(1, stacks * 2);
+        poisonInstance.stacks = doubledStacks;
+        poisonInstance.stackCount = doubledStacks;
+        poisonInstance.metadata = {
+          ...(poisonInstance.metadata || {}),
+          stacks: doubledStacks,
+          stackCount: doubledStacks,
+        };
         enemy.removeStatusEffect("poisoned");
       }
 
       const lostHP = Math.max(0, enemy.maxHP - enemy.HP);
-      const baseDamage = stacks * this.damageRatioPerStack * lostHP;
-
-      if (baseDamage <= 0) {
-        return {
-          log: `${formatChampionName(user)} usa <b>${this.name}</b>, mas o alvo não possui veneno ou HP suficiente para causar dano significativo!`,
-        };
-      }
+      const baseDamage =
+        Math.max(1, Number(poisonInstance.stacks) || 1) *
+        this.damageRatioPerStack *
+        lostHP;
 
       const result = new DamageEvent({
         baseDamage,
