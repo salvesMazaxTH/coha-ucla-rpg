@@ -41,6 +41,7 @@ import {
 } from "./championUI.js";
 
 import { formatChampionName } from "../ui/formatters.js";
+import { resolveElementalStatusImmunity } from "../engine/combat/statusEffectImmunity.js";
 
 export class Champion {
   constructor(data = {}) {
@@ -151,16 +152,12 @@ export class Champion {
         },
 
         onStatusEffectIncoming({ target, statusEffect }) {
-          console.log(
-            "IMMUNITY TEST",
-            target.name,
-            target.elementalAffinities,
-            statusEffect.subtypes,
-          );
-          const affinities = target.elementalAffinities || [];
-          const effectElements = statusEffect.subtypes || [];
+          const immunity = resolveElementalStatusImmunity({
+            target,
+            statusEffect,
+          });
 
-          if (effectElements.some((e) => affinities.includes(e))) {
+          if (immunity) {
             return {
               cancel: true,
               message: `${formatChampionName(target)} é imune a <b>${statusEffect.name}</b>!`,
