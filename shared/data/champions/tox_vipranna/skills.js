@@ -141,11 +141,11 @@ const toxViprannaSkills = [
   },
 
   // ========================
-  // ULT — Detonação Viperanfíbica
+  // ULT — Mandato da Rainha Peçonhenta
   // ========================
   {
-    key: "detonacao_viperanfibica",
-    name: "Detonação Viperanfíbica",
+    key: "mandato_rainha_peconhenta",
+    name: "Mandato da Rainha Peçonhenta",
 
     contact: false,
     isUltimate: true,
