@@ -589,9 +589,14 @@ export function createCombatAnimationManager(deps) {
     const hasFinishing = !!resolvedFinishingType;
     const usesObliterateStyle = resolvedFinishingType === "obliterate";
 
+    const hpDamage = Math.max(0, Number(rawAmount) || 0);
+    const absorbedFromEvent = Math.max(0, Number(absorbedByShield) || 0);
+    const hasShieldAbsorption = absorbedFromEvent > 0;
+    const hasHpDamage = hpDamage > 0;
+
     if (effect.immune) return await animateImmune(effect);
     if (effect.shieldBlocked) return await animateShieldBlock(effect);
-    if (!hasFinishing && (!amount || amount <= 0)) return;
+    if (!hasFinishing && !hasHpDamage && !hasShieldAbsorption) return;
 
     const targetName = champion ? formatChampionName(champion) : "Alvo";
 
@@ -607,32 +612,39 @@ export function createCombatAnimationManager(deps) {
     // FEEDBACK VISUAL IMEDIATO
     // ========================
 
-    championEl.classList.add("damage");
-    audioManager.play("damage");
+    const shouldPlayDamageFeedback = hasFinishing || hasHpDamage;
+
+    if (shouldPlayDamageFeedback) {
+      championEl.classList.add("damage");
+      audioManager.play("damage");
+    }
 
     if (portraitWrapper) {
-      const hpDamage = Math.max(0, Number(rawAmount) || 0);
-      const hasShieldAbsorption = (Number(absorbedByShield) || 0) > 0;
-      const floatValue =
-        usesObliterateStyle || hasFinishing
-          ? "999"
-          : hpDamage > 0
-            ? `-${hpDamage}`
-            : hasShieldAbsorption
-              ? "🛡️"
-              : "0";
-      const extraClass = usesObliterateStyle
-        ? "obliterate"
-        : hasFinishing
-          ? "finishing"
-          : `damage-tier-${getDamageTier(Math.max(1, hpDamage))}`;
+      if (usesObliterateStyle || hasFinishing) {
+        const extraClass = usesObliterateStyle
+          ? "obliterate"
+          : "finishing";
+        createFloatElement(portraitWrapper, "999", "damage-float", extraClass);
+      } else {
+        if (hasHpDamage) {
+          const damageTierClass = `damage-tier-${getDamageTier(Math.max(1, hpDamage))}`;
+          createFloatElement(
+            portraitWrapper,
+            `-${hpDamage}`,
+            "damage-float",
+            damageTierClass,
+          );
+        }
 
-      createFloatElement(
-        portraitWrapper,
-        floatValue,
-        "damage-float",
-        extraClass,
-      );
+        if (hasShieldAbsorption) {
+          createFloatElement(
+            portraitWrapper,
+            `🛡️ -${absorbedFromEvent}`,
+            "shield-float",
+            "shield-absorbed-float",
+          );
+        }
+      }
     }
 
     // ========================
@@ -652,16 +664,12 @@ export function createCombatAnimationManager(deps) {
       return; // já aguardou tudo
     }
 
-    // dano normal
-    const hpDamage = Math.max(0, Number(rawAmount) || 0);
-
     const hpText = championEl.querySelector(".hp")?.textContent || "";
     const visualState = parseVisualHpState(hpText);
-    const rawHit = Math.max(0, Number(rawAmount));
-    const absorbedFromEvent = Math.max(0, Number(absorbedByShield));
-    const fallbackAbsorbed = visualState
-      ? Math.min(visualState.shield, Math.max(0, rawHit - hpDamage))
-      : 0;
+    const fallbackAbsorbed =
+      visualState && Number.isFinite(remainingShield)
+        ? Math.max(0, visualState.shield - Math.max(0, Number(remainingShield)))
+        : 0;
     const absorbed = absorbedFromEvent || fallbackAbsorbed;
 
     updateVisualHP(targetId, -hpDamage, null, {
@@ -685,12 +693,18 @@ export function createCombatAnimationManager(deps) {
     // ESPERA REAL DA ANIMAÇÃO
     // ========================
 
-    await waitForAnimation(championEl, 600);
+    if (shouldPlayDamageFeedback) {
+      await waitForAnimation(championEl, 600);
 
-    // ⚠️ esse delay é importante pro pacing visual
-    await wait(450);
+      // ⚠️ esse delay é importante pro pacing visual
+      await wait(450);
 
-    championEl.classList.remove("damage");
+      championEl.classList.remove("damage");
+      return;
+    }
+
+    // Caso só tenha absorção de escudo sem dano em HP, mantém o pacing visual
+    await wait(300);
   }
 
   /** * Helper única para limpar o boilerplate de eventos de animação
