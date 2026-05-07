@@ -74,7 +74,7 @@ const drexSkills = [
     targetSpec: ["enemy"],
 
     description() {
-      return `Causa dano moderado. O dano aumenta em +${this.damagePerBleedStack}% para cada stack de Sangramento no alvo. Não consome Sangramento. Se atingir um alvo com ${this.shieldBleedThreshold}+ stacks de Sangramento, Drex ganha um escudo de ${Math.round(this.shieldFromTargetMaxHpRatio * 100)}% do HP máximo do alvo, que permanece intacto por ${this.shieldDecayTurns} turnos e se dissipa ao fim da duração, se ainda existir.`;
+      return `Causa dano moderado. O dano aumenta em +${this.damagePerBleedStack}% para cada stack de Sangramento no alvo. Não consome Sangramento. Se atingir um alvo com ${this.shieldBleedThreshold}+ stacks de Sangramento, Drex ganha um escudo de ${Math.round(this.shieldFromTargetMaxHpRatio * 100)}% do HP máximo do alvo por ${this.shieldDecayTurns} turnos.`;
     },
 
     resolve({ user, targets, context = {} }) {
@@ -111,6 +111,8 @@ const drexSkills = [
           user.addShield(shieldAmount, 0, context, "regular", {
             expiresAtTurn: context.currentTurn + this.shieldDecayTurns,
             sourceKey: this.key,
+
+            visualVariant: "drex_blood",
           });
 
           results.push({

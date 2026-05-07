@@ -68,13 +68,29 @@ function getShieldVFXData(champion) {
     ? champion.runtime.shields
     : [];
 
-  const variant = shields.some((shield) => shield?.type === "spell")
-    ? "spell"
-    : "regular";
+  if (!shields.length) {
+    return {
+      variant: "regular",
+      stateKey: false,
+    };
+  }
+
+  const customShield = [...shields].reverse().find((s) => s?.visualVariant);
+
+  let variant;
+
+  if (customShield?.visualVariant) {
+    variant = customShield.visualVariant;
+  } else {
+    variant = shields.some((shield) => shield?.type === "spell")
+      ? "spell"
+      : "regular";
+  }
 
   return {
     variant,
-    stateKey: shields.length > 0 ? `shield:${variant}` : false,
+    // força recriação do VFX quando a variant mudar
+    stateKey: `shield:${variant}`,
   };
 }
 
