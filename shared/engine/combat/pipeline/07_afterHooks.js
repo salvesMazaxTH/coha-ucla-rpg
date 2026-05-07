@@ -59,7 +59,7 @@ function _applyLifeSteal(event) {
   }
 
   // 4. Dispara evento para passivas reativas a lifesteal (ex: "ao curar, ganhe buff")
-  const results =
+/*   const results =
     emitCombatEvent(
       "onAfterLifeSteal",
       {
@@ -68,16 +68,16 @@ function _applyLifeSteal(event) {
         context: event.context,
       },
       event.allChampions,
-    ) || [];
+    ) || []; */
 
   // 5. Coleta logs de passivas que reagiram ao lifesteal
-  const passiveLogs = [];
+/*   const passiveLogs = [];
   for (const r of results) {
     if (r?.log) {
       if (Array.isArray(r.log)) passiveLogs.push(...r.log);
       else passiveLogs.push(r.log);
     }
-  }
+  } */
 
   if (event.constructor.debugMode) {
     console.log(
@@ -88,8 +88,8 @@ function _applyLifeSteal(event) {
 
   return {
     amount: effectiveHeal,
-    log: `Roubo de vida: ${effectiveHeal} | HP: ${event.attacker.HP}/${event.attacker.maxHP}`,
-    passiveLogs,
+    log: `Roubo de vida: ${effectiveHeal} | HP: ${event.attacker.HP}/${event.attacker.maxHP}`/* ,
+    passiveLogs, */
   };
 }
 

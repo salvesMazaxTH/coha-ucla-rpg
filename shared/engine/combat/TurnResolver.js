@@ -1029,6 +1029,9 @@ export class TurnResolver {
             healTarget: target,
             amount: value,
             context: this,
+
+            healType: "normal",
+            isLifesteal: false,
           },
           this.allChampions,
         );
@@ -1051,6 +1054,21 @@ export class TurnResolver {
         target?.addHealingReceived?.(value);
 
         this._lastEventRef = null;
+
+        emitCombatEvent(
+          "onAfterHealing",
+          {
+            healSrc: sourceChamp || null,
+            healTarget: target,
+            amount: value,
+            context: this,
+
+            healType: "lifesteal",
+            isLifesteal: true,
+            fromTargetId,
+          },
+          this.allChampions,
+        );
 
         const event = {
           type: "lifesteal",

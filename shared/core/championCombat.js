@@ -670,32 +670,67 @@ export function heal(
 ) {
   if (!champion.alive) return 0;
 
-  if (amount > 0) amount = Math.max(Math.floor(amount), 1);
+  const ctx = context || champion.runtime?.currentContext;
+
+  const payload = {
+    source,
+    target: champion,
+    amount,
+
+    context: ctx,
+
+    healType: options?.type || "normal",
+    isLifesteal: options?.type === "lifesteal",
+
+    fromTargetId: options?.fromTargetId ?? null,
+  };
+
+  // 🔹 Normaliza valor inicial antes dos hooks
+  if (payload.amount > 0) {
+    payload.amount = Math.max(Math.floor(payload.amount), 1);
+  }
+
+  // 🔹 Permite que hooks modifiquem a cura antes dela acontecer
+  const beforeResults =
+    emitCombatEvent("onBeforeHealing", payload, ctx?.allChampions) || [];
+
+  for (const result of beforeResults) {
+    if (!result) continue;
+
+    // 🔹 Override explícito do valor final da cura
+    if (typeof result.amount === "number") {
+      payload.amount = result.amount;
+    }
+  }
+
+  // 🔹 Segurança pós-modificações
+  payload.amount = Math.max(0, Math.floor(payload.amount));
+
+  amount = payload.amount;
 
   const before = champion.HP;
+
   champion.HP = Math.min(champion.HP + amount, champion.maxHP);
+
   const healed = Math.max(0, champion.HP - before);
 
   if (healed <= 0) return 0;
 
-  const ctx = context || champion.runtime?.currentContext;
   const isLifesteal = options?.type === "lifesteal";
 
-  if (healed > 0 && !ctx?.suppressHealEvents) {
-    if (isLifesteal && ctx?.registerLifesteal) {
-      ctx.registerLifesteal({
-        target: champion,
-        amount: healed,
-        sourceId: source?.id,
-        fromTargetId: options?.fromTargetId ?? null,
-      });
-    } else if (ctx?.registerHeal) {
-      ctx.registerHeal({
-        target: champion,
-        amount: healed,
-        sourceId: source?.id,
-      });
-    }
+  if (isLifesteal && ctx?.registerLifesteal) {
+    ctx.registerLifesteal({
+      target: champion,
+      amount: healed,
+      sourceId: source?.id,
+      fromTargetId: options?.fromTargetId ?? null,
+    });
+  } else if (ctx?.registerHeal) {
+    ctx.registerHeal({
+      target: champion,
+      amount: healed,
+      sourceId: source?.id,
+    });
   }
 
   return healed;
