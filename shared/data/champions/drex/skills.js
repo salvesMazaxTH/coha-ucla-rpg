@@ -66,7 +66,7 @@ const drexSkills = [
     bf: 55,
     damagePerBleedStack: 18,
     shieldBleedThreshold: 4,
-    shieldFromTargetMaxHpRatio: 0.2,
+    shieldFromTargetMaxHpRatio: 0.35,
     shieldDecayTurns: 3,
     contact: false,
     damageMode: "standard",

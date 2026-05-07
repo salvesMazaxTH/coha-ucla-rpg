@@ -4,18 +4,22 @@ export default {
   key: "sede_de_sangue",
   name: "Sede de Sangue",
 
-  lifeStealPerProc: 3,
-  awakenLifeStealThreshold: 40,
-  lifeStealTierSize: 5,
-  damageBonusPerTierPercent: 10,
-  piercingPerTierPercent: 2.5,
-  damageReductionPerTierPercent: 3,
-  permanentDamageModifierId: "drex_sede_de_sangue_scaling",
-  damageReductionSource: "drex_sede_de_sangue_scaling",
+  lsPerProc: 3,
+  awakenThreshold: 40,
+  lsTierSize: 5,
+  dmgAmpPerTier: 10,
+  piercingRatioPerTier: 2.5,
+  dmgReductPerTier: 3,
+  lsHealAmpPerTier: 12,
+
+  permDmgModId: "drex_sede_de_sangue_scaling",
+  dmgReductionSrc: "drex_sede_de_sangue_scaling",
   pseudoPermanentDurationTurns: 9999,
 
   description() {
-    return `Ganha +${this.lifeStealPerProc}% de Roubo de Vida permanente sempre que um aliado aplica Sangramento ou sempre que um inimigo sofre dano de Sangramento. Ao atingir ${this.awakenLifeStealThreshold}%+ de Roubo de Vida pela primeira vez, desperta um bônus permanente: para cada ${this.lifeStealTierSize}% de Roubo de Vida atual, recebe +${this.damageBonusPerTierPercent}% de dano aumentado, converte dano padrão em perfurante com ${this.piercingPerTierPercent}% de perfuração e ganha ${this.damageReductionPerTierPercent}% de Redução de Dano (atualizada sempre que ganhar Roubo de Vida).`;
+    return `Ganha +${this.lsPerProc}% de Roubo de Vida permanente sempre que um aliado aplica Sangramento ou sempre que um inimigo sofre dano de Sangramento. 
+    Ao atingir ${this.awakenThreshold}%+ de Roubo de Vida pela primeira vez, entra em Frenesi Carmesim permanente. 
+    Para cada ${this.lsTierSize}% de Roubo de Vida atual, recebe +${this.dmgAmpPerTier}% de dano aumentado, converte dano padrão em perfurante com ${this.piercingRatioPerTier}% de perfuração, ganha ${this.dmgReductPerTier}% de Redução de Dano e amplifica em em ${this.lsHealAmpPerTier}% as curas obtidas por Roubo de Vida.`;
   },
 
   hookScope: {
@@ -36,7 +40,7 @@ export default {
 
     const result = owner.modifyStat({
       statName: "LifeSteal",
-      amount: this.lifeStealPerProc,
+      amount: this.lsPerProc,
       context,
       isPermanent: true,
       ignoreMinimum: true,
@@ -64,7 +68,7 @@ export default {
 
     const result = owner.modifyStat({
       statName: "LifeSteal",
-      amount: this.lifeStealPerProc,
+      amount: this.lsPerProc,
       context,
       isPermanent: true,
       ignoreMinimum: true,
@@ -91,7 +95,7 @@ export default {
 
     const awakenResult = this._tryAwaken({ owner, context });
 
-    if (!this._isAwakened(owner)) return awakenResult;
+    if (!owner?.runtime?.drexBloodAscension) return awakenResult;
 
     const refreshResult = this._refreshDamageReduction({ owner, context });
 
@@ -108,46 +112,57 @@ export default {
 
   onBeforeDmgDealing({ attacker, owner, mode }) {
     if (attacker !== owner) return;
-    if (!this._isAwakened(owner)) return;
+    if (!owner?.runtime?.drexBloodAscension) return;
     if (mode && mode !== "standard") return;
 
-    const tiers = this._getLifeStealTiers(owner);
+    const tiers = Math.max(
+      0,
+      Math.floor(Number(owner?.LifeSteal || 0) / this.lsTierSize),
+    );
     if (tiers <= 0) return;
 
     return {
       mode: "piercing",
-      piercingPercentage: Math.min(100, tiers * this.piercingPerTierPercent),
+      piercingPercentage: Math.min(100, tiers * this.piercingRatioPerTier),
     };
   },
 
-  _isAwakened(owner) {
-    return !!owner?.runtime?.drexBloodAscension?.awakened;
-  },
+  onBeforeHealing({ owner, healTarget, amount, isLifesteal }) {
+    if (healTarget !== owner) return;
+    if (!isLifesteal) return;
+    if (!owner?.runtime?.drexBloodAscension) return;
 
-  _getLifeStealTiers(owner) {
-    const ls = Number(owner?.LifeSteal || 0);
-    return Math.max(0, Math.floor(ls / this.lifeStealTierSize));
+    const tiers = Math.max(
+      0,
+      Math.floor(Number(owner?.LifeSteal || 0) / this.lsTierSize),
+    );
+
+    if (tiers <= 0) return;
+
+    return {
+      amount: amount * (1 + tiers * (this.lsHealAmpPerTier / 100)),
+    };
   },
 
   _ensureDamageModifier(owner) {
     const alreadyHasModifier = owner
       .getDamageModifiers()
-      .some((modifier) => modifier.id === this.permanentDamageModifierId);
+      .some((modifier) => modifier.id === this.permDmgModId);
 
     if (alreadyHasModifier) return;
 
     owner.addDamageModifier({
-      id: this.permanentDamageModifierId,
+      id: this.permDmgModId,
       name: "Sede de Sangue (Escalonamento)",
       permanent: true,
       apply: ({ baseDamage, attacker }) => {
         const tiers = Math.max(
           0,
-          Math.floor(Number(attacker?.LifeSteal || 0) / this.lifeStealTierSize),
+          Math.floor(Number(attacker?.LifeSteal || 0) / this.lsTierSize),
         );
         if (tiers <= 0) return baseDamage;
 
-        const bonusPercent = tiers * this.damageBonusPerTierPercent;
+        const bonusPercent = tiers * this.dmgAmpPerTier;
         return baseDamage * (1 + bonusPercent / 100);
       },
     });
@@ -157,11 +172,14 @@ export default {
     if (!owner || !context) return;
 
     owner.damageReductionModifiers = owner.damageReductionModifiers.filter(
-      (modifier) => modifier?.source !== this.damageReductionSource,
+      (modifier) => modifier?.source !== this.dmgReductionSrc,
     );
 
-    const tiers = this._getLifeStealTiers(owner);
-    const amount = tiers * this.damageReductionPerTierPercent;
+    const tiers = Math.max(
+      0,
+      Math.floor(Number(owner?.LifeSteal || 0) / this.lsTierSize),
+    );
+    const amount = tiers * this.dmgReductPerTier;
 
     if (amount <= 0) return;
 
@@ -169,7 +187,7 @@ export default {
       amount,
       duration: this.pseudoPermanentDurationTurns,
       type: "percent",
-      source: this.damageReductionSource,
+      source: this.dmgReductionSrc,
       context,
     });
 
@@ -182,20 +200,16 @@ export default {
     if (!owner) return;
 
     owner.runtime ??= {};
-    owner.runtime.drexBloodAscension ??= {
-      awakened: false,
-    };
+    if (owner.runtime.drexBloodAscension) return;
+    if (Number(owner.LifeSteal || 0) < this.awakenThreshold) return;
 
-    if (owner.runtime.drexBloodAscension.awakened) return;
-    if (Number(owner.LifeSteal || 0) < this.awakenLifeStealThreshold) return;
-
-    owner.runtime.drexBloodAscension.awakened = true;
+    owner.runtime.drexBloodAscension = true;
 
     this._ensureDamageModifier(owner);
     this._refreshDamageReduction({ owner, context });
 
     return {
-      log: `[PASSIVA — ${this.name}] ${formatChampionName(owner)} ultrapassa ${this.awakenLifeStealThreshold}% de Roubo de Vida e entra em Frenesi Carmesim permanente!`,
+      log: `[PASSIVA — ${this.name}] ${formatChampionName(owner)} ultrapassa ${this.awakenThreshold}% de Roubo de Vida e entra em Frenesi Carmesim permanente!`,
     };
   },
 };
