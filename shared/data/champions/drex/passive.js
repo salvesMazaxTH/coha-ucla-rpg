@@ -24,7 +24,8 @@ export default {
 
   hookScope: {
     onBeforeDmgDealing: "attacker",
-    onBuffingStat: undefined,
+    onBuffingStat: "buffTarget",
+    onAfterHealing: undefined,
   },
 
   hookPolicies: {
@@ -91,7 +92,6 @@ export default {
 
   onBuffingStat({ owner, statName, buffTarget, context }) {
     if (statName !== "LifeSteal") return;
-    if (!owner || !buffTarget || buffTarget.id !== owner.id) return;
 
     const awakenResult = this._tryAwaken({ owner, context });
 
